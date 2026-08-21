@@ -1,0 +1,29 @@
+# سير عمل التكامل المستمر — إنفاذ القاعدة الحاكمة RULE-000
+# المالك: القيّم على المستودع | الوثيقة المرتبطة: GOVERNING_RULE.md
+name: بوابة التاج — بناء واختبار وتوثيق
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  gate:
+    name: بناء + اختبار + سلامة السجل + مدقّق التوثيق
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: تحقق الأنواع والبناء
+        run: npm run build
+      - name: اختبارات القبول
+        run: npm test
+      - name: التحقق من سلامة سجل التدقيق
+        run: node dist/scripts/verify_audit_chain.js
+      - name: مدقّق التوثيق (يفشل إذا تغيّر src بلا PROGRESS.md وتقرير اختبار)
+        run: bash scripts/check_documentation.sh
