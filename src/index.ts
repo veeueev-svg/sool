@@ -1,6 +1,6 @@
 /**
  * src/index.ts — تشكيل الدولة (bootstrap)
- * المالك: القيّم على المستودع | المراحل: 1–12
+ * المالك: القيّم على المستودع | المراحل: 1–15
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * المدخلات: config/*.yaml | المخرجات: كائن دولة جاهز بترتيب اعتماد صحيح
  * ثابت RULE-002: لا يُنشأ وكيل واسع الصلاحيات قبل اكتمال:
@@ -23,6 +23,9 @@ import { CommandChannel } from './crown/command_channel';
 import { TerminationOrder, EntityController } from './crown/termination_order';
 import { NetworkEgressGuard } from './external/network_egress';
 import { ToolRegistry } from './agents/tools';
+import { AgentRegistry } from './agents/agent_registry';
+import { PermissionRegistry, DEFAULT_TEMPLATES } from './agents/permissions';
+import { Supervisor } from './agents/supervision';
 import { StateMode } from './kernel/types';
 
 export interface DigitalState {
@@ -41,6 +44,9 @@ export interface DigitalState {
   readonly guard: CrownGuard;
   readonly egress: NetworkEgressGuard;
   readonly tools: ToolRegistry;
+  readonly agents: AgentRegistry;
+  readonly permissions: PermissionRegistry;
+  readonly supervisor: Supervisor;
   readonly mode: () => StateMode;
 }
 
@@ -95,14 +101,22 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   const egress = new NetworkEgressGuard(audit, gateway, killSwitch, { resources });
   const tools = new ToolRegistry({ audit, resources, killSwitch, egress });
 
+  // 7) سكان الدولة: السجل ثم الصلاحيات ثم الإشراف (المرحلتان 13 و14)
+  //    الترتيب مُلزم بـ RULE-002: لا وكيل قبل سجل يحصره وصلاحيات تحدّه وإشراف يراقبه
+  const agents = new AgentRegistry({
+    audit, gateway, killSwitch, resources, quotas: quotas.agents, kingId: king.kingId,
+  });
+  const permissions = new PermissionRegistry({ audit, gateway, templates: DEFAULT_TEMPLATES });
+  const supervisor = new Supervisor({ audit, registry: agents, killSwitch, permissions });
+
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 12, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 15, mode: 'normal' });
 
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
-    resources, gateway, guard, egress, tools,
+    resources, gateway, guard, egress, tools, agents, permissions, supervisor,
     mode: () => gateway.mode,
   };
 }
@@ -120,3 +134,11 @@ export { Sandbox, normalizePath } from './security/sandbox';
 export type { SandboxSpec, SandboxContext, SandboxRun, SandboxFs } from './security/sandbox';
 export { ToolRegistry } from './agents/tools';
 export type { ToolSpec, ToolResult, ToolArgs } from './agents/tools';
+export { AgentRegistry } from './agents/agent_registry';
+export type { AgentRecord, AgentStatus, AgentTransition, AgentActionResult } from './agents/agent_registry';
+export { PermissionRegistry, DEFAULT_TEMPLATES } from './agents/permissions';
+export type { RoleTemplate, Grant } from './agents/permissions';
+export { Supervisor } from './agents/supervision';
+export type { ViolationEvent, ViolationSeverity, SupervisionOutcome } from './agents/supervision';
+export { LimitedAgent } from './agents/first_agent';
+export type { AgentTask, AgentTaskOutcome, LimitedAgentDeps } from './agents/first_agent';
