@@ -37,6 +37,10 @@ import { MassShutdown } from './agents/shutdown';
 import { AlignmentAudit, AlignmentSnapshot } from './alignment/alignment_charter';
 import { DeceptionProbe } from './security/deception_test';
 import { CollusionDetector } from './security/collusion_detector';
+import { LawRegistry } from './law/statutes';
+import { Court } from './law/courts';
+import { AppealsCourt } from './law/appeals';
+import { Enforcement } from './law/enforcement';
 import { ArtifactVerifier } from './models/source_verification';
 import { ModelRegistry } from './models/model_registry';
 import { OpenWeightsImporter } from './models/open_weights_import';
@@ -75,6 +79,10 @@ export interface DigitalState {
   readonly knowledge: KnowledgeGraph;
   readonly retention: RetentionPolicy;
   readonly archive: RoyalArchive;
+  readonly law: LawRegistry;
+  readonly court: Court;
+  readonly appeals: AppealsCourt;
+  readonly enforcement: Enforcement;
   readonly mode: () => StateMode;
 }
 
@@ -86,6 +94,11 @@ export interface BootstrapOptions {
   /** مؤقّت المراقبة بالمللي ثانية — لا يبدأ تلقائيًا إلا عند طلبه */
   readonly monitorTickMs?: number;
   readonly startMonitor?: boolean;
+  /** مُدد العدالة (المرحلة 22): مدة الدفاع ومدة الطعن — تُعلن ولا تُخفى في الكود */
+  readonly justice?: {
+    readonly defenseWindowMs?: number;
+    readonly appealWindowMs?: number;
+  };
 }
 
 export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
@@ -174,7 +187,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 21, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 22, mode: 'normal' });
 
   // 11) الذاكرة والمعرفة (المرحلة 21) — وزارة البيانات
   //     الترتيب مُلزم: أصناف الاحتفاظ تُعرَف عند الكتابة، ثم الذاكرة سندٌ للمعرفة،
@@ -186,6 +199,23 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     audit, gateway, memory, knowledge, freeze: spawnPolicy,
   });
 
+  // 12) القانون والقضاء (المرحلة 22) — وزارة العدل
+  //     الترتيب مُلزم وهو نفسه فصل السلطات: قانون معلن ← محكمة تحكم به ←
+  //     استئناف يراجع الحكم ← تنفيذ لا يقع إلا على حكم نهائي (RULE-004)
+  const law = new LawRegistry({ audit, gateway });
+  const court = new Court({
+    audit,
+    law,
+    ...(options.justice?.defenseWindowMs !== undefined
+      ? { defenseWindowMs: options.justice.defenseWindowMs } : {}),
+    ...(options.justice?.appealWindowMs !== undefined
+      ? { appealWindowMs: options.justice.appealWindowMs } : {}),
+  });
+  const appeals = new AppealsCourt({ audit, court, law, gateway });
+  const enforcement = new Enforcement({
+    audit, court, gateway, agents, permissions, spawnPolicy,
+  });
+
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
     resources, gateway, guard, egress, tools, agents, permissions, supervisor,
@@ -193,6 +223,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     alignment, deception, collusion,
     artifacts, models, weightsImporter, agentImporter,
     memory, knowledge, retention, archive,
+    law, court, appeals, enforcement,
     mode: () => gateway.mode,
   };
 }
@@ -216,6 +247,14 @@ export { RoyalArchive } from './data/royal_archive';
 export type { ArchiveSnapshot } from './data/royal_archive';
 export { RetentionPolicy, DEFAULT_RETENTION_CLASSES, HOLD_AUTHORITIES } from './data/retention';
 export type { RetentionClass, SweepReport } from './data/retention';
+export { LawRegistry, PENALTY_KINDS, PENALTY_SEVERITY, inScope } from './law/statutes';
+export type { Statute, StatuteInput, StatuteSeverity, PenaltyKind, StatuteResult } from './law/statutes';
+export { Court, PROSECUTION_AUTHORITIES, TRIAL_COURTS, PUBLIC_DEFENDER } from './law/courts';
+export type { LegalCase, CaseStatus, ChargeInput, Ruling, Defense, AppealOutcome, CaseResult } from './law/courts';
+export { AppealsCourt, APPEAL_COURTS } from './law/appeals';
+export type { AppealRecord, AppealResult } from './law/appeals';
+export { Enforcement, ENFORCEMENT_AUTHORITIES } from './law/enforcement';
+export type { EnforcementReport, EnforcementResult, ExecuteOptions } from './law/enforcement';
 export { ToolRegistry } from './agents/tools';
 export type { IntentGate } from './agents/tools';
 export type { ToolSpec, ToolResult, ToolArgs } from './agents/tools';

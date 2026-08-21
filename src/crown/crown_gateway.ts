@@ -33,7 +33,7 @@ export const DEFAULT_POLICY: GatewayPolicy = {
   sovereignActions: [
     'create_agent', 'grant_capability', 'appoint_official', 'amend_policy',
     'approve_phase', 'terminate_agent', 'declare_emergency', 'open_external_account',
-    'import_artifact', 'train_model', 'archive_restore',
+    'import_artifact', 'train_model', 'archive_restore', 'judicial_review',
   ],
   requireSignedCommands: true,
   replayProtection: true,

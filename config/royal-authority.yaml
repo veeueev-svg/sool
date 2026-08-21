@@ -20,4 +20,6 @@ sovereign_actions:
   - open_external_account
   - import_artifact
   - train_model
+  - archive_restore
+  - judicial_review
 veto_final: true

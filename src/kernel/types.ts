@@ -24,7 +24,8 @@ export type SovereignAction =
   | 'open_external_account'
   | 'import_artifact'   // استيراد وكيل أو أوزان أو بيانات من الخارج (المرحلتان 16 و17)
   | 'train_model'       // تدريب أو تحديث نموذج (المرحلة 18)
-  | 'archive_restore';  // استعادة حالة الدولة من نسخة أرشيف (المرحلة 21)
+  | 'archive_restore'   // استعادة حالة الدولة من نسخة أرشيف (المرحلة 21)
+  | 'judicial_review';  // مراجعة ملكية لحكم قضائي: عفو أو تثبيت (المرحلة 22)
 
 /** حالة الدولة التشغيلية */
 export type StateMode =
