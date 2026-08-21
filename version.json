@@ -1,10 +1,10 @@
 {
-  "version": "0.2.0",
-  "phase": 10,
-  "completion_percent": 23.0,
-  "phases_complete": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "version": "0.3.0",
+  "phase": 12,
+  "completion_percent": 26.5,
+  "phases_complete": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
   "phases_partial": [32, 35],
-  "tests": { "total": 72, "passing": 72, "command": "npm test" },
+  "tests": { "total": 107, "passing": 107, "command": "npm test" },
   "declared_by": "القيّم على المستودع",
   "declared_at": "2026-08-21",
   "royal_approval": "pending"

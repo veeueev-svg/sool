@@ -1,6 +1,6 @@
 /**
  * src/index.ts — تشكيل الدولة (bootstrap)
- * المالك: القيّم على المستودع | المراحل: 1–10
+ * المالك: القيّم على المستودع | المراحل: 1–12
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * المدخلات: config/*.yaml | المخرجات: كائن دولة جاهز بترتيب اعتماد صحيح
  * ثابت RULE-002: لا يُنشأ وكيل واسع الصلاحيات قبل اكتمال:
@@ -21,6 +21,8 @@ import { CrownGateway, DEFAULT_POLICY } from './crown/crown_gateway';
 import { CrownGuard } from './crown/guardians';
 import { CommandChannel } from './crown/command_channel';
 import { TerminationOrder, EntityController } from './crown/termination_order';
+import { NetworkEgressGuard } from './external/network_egress';
+import { ToolRegistry } from './agents/tools';
 import { StateMode } from './kernel/types';
 
 export interface DigitalState {
@@ -37,6 +39,8 @@ export interface DigitalState {
   readonly resources: ResourceRegistry;
   readonly gateway: CrownGateway;
   readonly guard: CrownGuard;
+  readonly egress: NetworkEgressGuard;
+  readonly tools: ToolRegistry;
   readonly mode: () => StateMode;
 }
 
@@ -87,14 +91,18 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   });
   const guard = new CrownGuard(audit, gateway, killSwitch);
 
+  // 6) العزل والخروج الشبكي والأدوات (المرحلتان 11 و12) — بعد البوابة لأن الإذن يمرّ بها
+  const egress = new NetworkEgressGuard(audit, gateway, killSwitch, { resources });
+  const tools = new ToolRegistry({ audit, resources, killSwitch, egress });
+
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 10, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 12, mode: 'normal' });
 
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
-    resources, gateway, guard,
+    resources, gateway, guard, egress, tools,
     mode: () => gateway.mode,
   };
 }
@@ -106,3 +114,9 @@ export { TerminationOrder } from './crown/termination_order';
 export type { EntityController } from './crown/termination_order';
 export { KingMonitor } from './crown/king_monitor';
 export { ResourceRegistry } from './kernel/resource_registry';
+export { NetworkEgressGuard } from './external/network_egress';
+export type { EgressAllowance, EgressRequest, EgressReport } from './external/network_egress';
+export { Sandbox, normalizePath } from './security/sandbox';
+export type { SandboxSpec, SandboxContext, SandboxRun, SandboxFs } from './security/sandbox';
+export { ToolRegistry } from './agents/tools';
+export type { ToolSpec, ToolResult, ToolArgs } from './agents/tools';
