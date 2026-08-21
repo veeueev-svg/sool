@@ -21,7 +21,9 @@ export type SovereignAction =
   | 'approve_phase'
   | 'terminate_agent'
   | 'declare_emergency'
-  | 'open_external_account';
+  | 'open_external_account'
+  | 'import_artifact'   // استيراد وكيل أو أوزان أو بيانات من الخارج (المرحلتان 16 و17)
+  | 'train_model';      // تدريب أو تحديث نموذج (المرحلة 18)
 
 /** حالة الدولة التشغيلية */
 export type StateMode =

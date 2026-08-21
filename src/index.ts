@@ -1,6 +1,6 @@
 /**
  * src/index.ts — تشكيل الدولة (bootstrap)
- * المالك: القيّم على المستودع | المراحل: 1–15
+ * المالك: القيّم على المستودع | المراحل: 1–18
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * المدخلات: config/*.yaml | المخرجات: كائن دولة جاهز بترتيب اعتماد صحيح
  * ثابت RULE-002: لا يُنشأ وكيل واسع الصلاحيات قبل اكتمال:
@@ -26,6 +26,10 @@ import { ToolRegistry } from './agents/tools';
 import { AgentRegistry } from './agents/agent_registry';
 import { PermissionRegistry, DEFAULT_TEMPLATES } from './agents/permissions';
 import { Supervisor } from './agents/supervision';
+import { AgentImporter } from './agents/import';
+import { ArtifactVerifier } from './models/source_verification';
+import { ModelRegistry } from './models/model_registry';
+import { OpenWeightsImporter } from './models/open_weights_import';
 import { StateMode } from './kernel/types';
 
 export interface DigitalState {
@@ -47,6 +51,10 @@ export interface DigitalState {
   readonly agents: AgentRegistry;
   readonly permissions: PermissionRegistry;
   readonly supervisor: Supervisor;
+  readonly artifacts: ArtifactVerifier;
+  readonly models: ModelRegistry;
+  readonly weightsImporter: OpenWeightsImporter;
+  readonly agentImporter: AgentImporter;
   readonly mode: () => StateMode;
 }
 
@@ -109,14 +117,26 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   const permissions = new PermissionRegistry({ audit, gateway, templates: DEFAULT_TEMPLATES });
   const supervisor = new Supervisor({ audit, registry: agents, killSwitch, permissions });
 
+  // 8) سلسلة التوريد الخارجية: حجر ثم اعتماد (المراحل 16 و17)
+  //    لا شيء من الخارج يعمل قبل تحقق مصدره وبصمته وتوقيعه، ثم إفراج بقرار ثانٍ
+  const artifacts = new ArtifactVerifier({ audit, gateway, killSwitch });
+  const models = new ModelRegistry({ audit, gateway, killSwitch });
+  const weightsImporter = new OpenWeightsImporter({
+    audit, gateway, killSwitch, verifier: artifacts, models,
+  });
+  const agentImporter = new AgentImporter({
+    audit, verifier: artifacts, agents, permissions, killSwitch,
+  });
+
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 15, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 18, mode: 'normal' });
 
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
     resources, gateway, guard, egress, tools, agents, permissions, supervisor,
+    artifacts, models, weightsImporter, agentImporter,
     mode: () => gateway.mode,
   };
 }
@@ -142,3 +162,18 @@ export { Supervisor } from './agents/supervision';
 export type { ViolationEvent, ViolationSeverity, SupervisionOutcome } from './agents/supervision';
 export { LimitedAgent } from './agents/first_agent';
 export type { AgentTask, AgentTaskOutcome, LimitedAgentDeps } from './agents/first_agent';
+export { AgentImporter } from './agents/import';
+export type { ImportAgentRequest, ImportAgentResult } from './agents/import';
+export { ArtifactVerifier } from './models/source_verification';
+export type { ArtifactKind, ArtifactSource, ExternalArtifact, ArtifactRecord, ArtifactStatus } from './models/source_verification';
+export { validateManifest, manifestSignedFacts, KNOWN_MODEL_CAPABILITIES } from './models/model_manifest';
+export type { ModelManifest, ModelShard, ManifestCheck } from './models/model_manifest';
+export { ModelRegistry } from './models/model_registry';
+export type { ModelRecord, ModelStatus } from './models/model_registry';
+export { OpenWeightsImporter } from './models/open_weights_import';
+export { EvaluationSuite, DEFAULT_SAFETY_CASES } from './models/evaluation_suite';
+export type { EvalCase, EvalKind, EvalResult } from './models/evaluation_suite';
+export { FineTuningRun } from './models/fine_tuning';
+export type { TrainingRequest, TrainingInference, TrainingOutcome } from './models/fine_tuning';
+export { ModelRollback } from './models/rollback';
+export type { RollbackOutcome } from './models/rollback';

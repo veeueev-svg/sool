@@ -18,4 +18,6 @@ sovereign_actions:
   - terminate_agent
   - declare_emergency
   - open_external_account
+  - import_artifact
+  - train_model
 veto_final: true

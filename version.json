@@ -1,10 +1,36 @@
 {
-  "version": "0.4.0",
-  "phase": 15,
-  "completion_percent": 33.5,
-  "phases_complete": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-  "phases_partial": [32, 35],
-  "tests": { "total": 149, "passing": 149, "command": "npm test" },
+  "version": "0.5.0",
+  "phase": 18,
+  "completion_percent": 39.0,
+  "phases_complete": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18
+  ],
+  "phases_partial": [
+    32,
+    35
+  ],
+  "tests": {
+    "total": 205,
+    "passing": 205,
+    "command": "npm test"
+  },
   "declared_by": "القيّم على المستودع",
   "declared_at": "2026-08-21",
   "royal_approval": "pending"
