@@ -41,6 +41,9 @@ import { LawRegistry } from './law/statutes';
 import { Court } from './law/courts';
 import { AppealsCourt } from './law/appeals';
 import { Enforcement } from './law/enforcement';
+import { MinistryRegistry } from './governance/ministries';
+import { AppointmentRegistry } from './governance/appointments';
+import { Cabinet } from './governance/cabinet';
 import { ArtifactVerifier } from './models/source_verification';
 import { ModelRegistry } from './models/model_registry';
 import { OpenWeightsImporter } from './models/open_weights_import';
@@ -83,6 +86,9 @@ export interface DigitalState {
   readonly court: Court;
   readonly appeals: AppealsCourt;
   readonly enforcement: Enforcement;
+  readonly ministries: MinistryRegistry;
+  readonly appointments: AppointmentRegistry;
+  readonly cabinet: Cabinet;
   readonly mode: () => StateMode;
 }
 
@@ -98,6 +104,10 @@ export interface BootstrapOptions {
   readonly justice?: {
     readonly defenseWindowMs?: number;
     readonly appealWindowMs?: number;
+  };
+  /** مُدد الحكومة (المرحلة 23): صلاحية الاعتماد غير المنفَّذ — تُعلن ولا تُخفى */
+  readonly government?: {
+    readonly approvalTtlMs?: number;
   };
 }
 
@@ -187,7 +197,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 22, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 23, mode: 'normal' });
 
   // 11) الذاكرة والمعرفة (المرحلة 21) — وزارة البيانات
   //     الترتيب مُلزم: أصناف الاحتفاظ تُعرَف عند الكتابة، ثم الذاكرة سندٌ للمعرفة،
@@ -216,6 +226,17 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     audit, court, gateway, agents, permissions, spawnPolicy,
   });
 
+  // 13) الحكومة والوزارات (المرحلة 23) — الديوان الملكي
+  //     الترتيب مُلزم: وزارات باختصاص معلن ← مناصب ومسار تعيين مفصول ← مجلس يقرّر في اختصاصه.
+  //     وسجل التعيينات يربط نفسه مصدرًا للتحقق من مناصب الوزارة قبل حلّها (فشل مغلق).
+  const ministries = new MinistryRegistry({ audit, gateway });
+  const appointments = new AppointmentRegistry({
+    audit, gateway, ministries,
+    ...(options.government?.approvalTtlMs !== undefined
+      ? { approvalTtlMs: options.government.approvalTtlMs } : {}),
+  });
+  const cabinet = new Cabinet({ audit, gateway, ministries, appointments });
+
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
     resources, gateway, guard, egress, tools, agents, permissions, supervisor,
@@ -224,6 +245,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     artifacts, models, weightsImporter, agentImporter,
     memory, knowledge, retention, archive,
     law, court, appeals, enforcement,
+    ministries, appointments, cabinet,
     mode: () => gateway.mode,
   };
 }
@@ -253,6 +275,16 @@ export { Court, PROSECUTION_AUTHORITIES, TRIAL_COURTS, PUBLIC_DEFENDER } from '.
 export type { LegalCase, CaseStatus, ChargeInput, Ruling, Defense, AppealOutcome, CaseResult } from './law/courts';
 export { AppealsCourt, APPEAL_COURTS } from './law/appeals';
 export type { AppealRecord, AppealResult } from './law/appeals';
+export { MinistryRegistry, ROYAL_COURT } from './governance/ministries';
+export type { Ministry, MinistryInput, MinistryResult, OccupancyProbe } from './governance/ministries';
+export {
+  AppointmentRegistry, APPOINTMENT_EXECUTOR, APPOINTMENT_AUDITOR, APPROVAL_TTL_MS,
+} from './governance/appointments';
+export type {
+  OfficeDefinition, Proposal, ProposalKind, ProposalStatus, OfficeHolder, AppointmentResult,
+} from './governance/appointments';
+export { Cabinet, RESERVED_FOR_CROWN } from './governance/cabinet';
+export type { CabinetSession, CabinetDecision, CabinetResult, Vote } from './governance/cabinet';
 export { Enforcement, ENFORCEMENT_AUTHORITIES } from './law/enforcement';
 export type { EnforcementReport, EnforcementResult, ExecuteOptions } from './law/enforcement';
 export { ToolRegistry } from './agents/tools';
