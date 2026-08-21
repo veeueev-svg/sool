@@ -6,7 +6,7 @@
  * ثابت RULE-002: لا يُنشأ وكيل واسع الصلاحيات قبل اكتمال:
  *   جذر الثقة ← بوابة التاج ← السجل ← المراقبة ← الإيقاف ← الموارد
  */
-import { loadQuotas, loadRoyalAuthority, resolveConfigDir, QuotasConfig, RoyalAuthorityConfig } from './kernel/config';
+import { loadQuotas, loadRegions, loadRoyalAuthority, resolveConfigDir, QuotasConfig, RoyalAuthorityConfig } from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
 import { AuditStore } from './audit/store';
@@ -44,6 +44,10 @@ import { Enforcement } from './law/enforcement';
 import { MinistryRegistry } from './governance/ministries';
 import { AppointmentRegistry } from './governance/appointments';
 import { Cabinet } from './governance/cabinet';
+import { RegionRegistry, RegionalAssembly } from './federation/region_registry';
+import { GovernorRegistry } from './federation/governor';
+import { RegionalTribunal } from './federation/dispute_resolution';
+import { RegionMonitor } from './federation/region_monitor';
 import { ArtifactVerifier } from './models/source_verification';
 import { ModelRegistry } from './models/model_registry';
 import { OpenWeightsImporter } from './models/open_weights_import';
@@ -89,6 +93,11 @@ export interface DigitalState {
   readonly ministries: MinistryRegistry;
   readonly appointments: AppointmentRegistry;
   readonly cabinet: Cabinet;
+  readonly regions: RegionRegistry;
+  readonly assembly: RegionalAssembly;
+  readonly governors: GovernorRegistry;
+  readonly tribunal: RegionalTribunal;
+  readonly regionMonitor: RegionMonitor;
   readonly mode: () => StateMode;
 }
 
@@ -109,6 +118,13 @@ export interface BootstrapOptions {
   readonly government?: {
     readonly approvalTtlMs?: number;
   };
+  /** مُدد الاتحاد (المرحلة 24): مدة ردّ المدّعى عليه ومهل المراقبة — تُعلن ولا تُخفى */
+  readonly federation?: {
+    readonly approvalTtlMs?: number;
+    readonly responseWindowMs?: number;
+    readonly vacancyGraceMs?: number;
+    readonly disputeGraceMs?: number;
+  };
 }
 
 export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
@@ -119,6 +135,8 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   const audit = new AppendOnlyLog();
   const config = loadRoyalAuthority(configDir);
   const quotas = loadQuotas(configDir);
+  // تهيئة الأقاليم تُقرأ مع التهيئة السيادية: لا تشغيل بإعلان أقاليم مخالف (المرحلة 24)
+  const regionsConfig = loadRegions(configDir);
   audit.append('authority:bootstrap', 'config_loaded', {
     state: config.state_name, code: config.state_code, resources: Object.keys(quotas.resources).length,
   });
@@ -197,7 +215,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 23, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 24, mode: 'normal' });
 
   // 11) الذاكرة والمعرفة (المرحلة 21) — وزارة البيانات
   //     الترتيب مُلزم: أصناف الاحتفاظ تُعرَف عند الكتابة، ثم الذاكرة سندٌ للمعرفة،
@@ -237,6 +255,31 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   });
   const cabinet = new Cabinet({ audit, gateway, ministries, appointments });
 
+  // 14) الأقاليم والحكام (المرحلة 24) — مجلس الأقاليم تحت التاج لا بجانبه
+  //     الترتيب مُلزم: أقاليم معلنة في التهيئة ← حكّام بمسار ثلاثي ← محكمة نزاع ← مراقبة.
+  //     وسجل الحكّام يربط نفسه مصدرًا للتحقق من الحاكم قبل حلّ الإقليم (فشل مغلق).
+  const regions = new RegionRegistry({
+    audit, gateway, declaredRegions: regionsConfig.regions.map((r) => r.id),
+  });
+  const assembly = new RegionalAssembly({ audit, gateway, regions });
+  const governors = new GovernorRegistry({
+    audit, gateway, regions,
+    ...(options.federation?.approvalTtlMs !== undefined
+      ? { approvalTtlMs: options.federation.approvalTtlMs } : {}),
+  });
+  const tribunal = new RegionalTribunal({
+    audit, gateway, regions,
+    ...(options.federation?.responseWindowMs !== undefined
+      ? { responseWindowMs: options.federation.responseWindowMs } : {}),
+  });
+  const regionMonitor = new RegionMonitor({
+    audit, regions, governors, tribunal, killSwitch,
+    ...(options.federation?.vacancyGraceMs !== undefined
+      ? { vacancyGraceMs: options.federation.vacancyGraceMs } : {}),
+    ...(options.federation?.disputeGraceMs !== undefined
+      ? { disputeGraceMs: options.federation.disputeGraceMs } : {}),
+  });
+
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
     resources, gateway, guard, egress, tools, agents, permissions, supervisor,
@@ -246,6 +289,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     memory, knowledge, retention, archive,
     law, court, appeals, enforcement,
     ministries, appointments, cabinet,
+    regions, assembly, governors, tribunal, regionMonitor,
     mode: () => gateway.mode,
   };
 }
@@ -284,6 +328,24 @@ export type {
   OfficeDefinition, Proposal, ProposalKind, ProposalStatus, OfficeHolder, AppointmentResult,
 } from './governance/appointments';
 export { Cabinet, RESERVED_FOR_CROWN } from './governance/cabinet';
+export {
+  RegionRegistry, RegionalAssembly, REGIONS_COUNCIL, CROWN_RESERVED_DOMAINS,
+} from './federation/region_registry';
+export type {
+  Region, RegionInput, RegionResult, Autonomy, Petition, AssemblyResult, GovernorProbe,
+} from './federation/region_registry';
+export {
+  GovernorRegistry, GOVERNOR_PROPOSER, GOVERNOR_EXECUTOR, GOVERNOR_APPROVAL_TTL_MS,
+} from './federation/governor';
+export type { Nomination, GovernorSeat, GovernorResult, ActResult } from './federation/governor';
+export {
+  RegionalTribunal, REGIONAL_ARBITER, RESPONSE_WINDOW_MS,
+} from './federation/dispute_resolution';
+export type { Dispute, Ruling as DisputeRuling, RemedyKind, DisputeResult } from './federation/dispute_resolution';
+export {
+  RegionMonitor, REGION_AUDITOR, VACANCY_GRACE_MS, DISPUTE_GRACE_MS,
+} from './federation/region_monitor';
+export type { RegionFlag, FlagKind } from './federation/region_monitor';
 export type { CabinetSession, CabinetDecision, CabinetResult, Vote } from './governance/cabinet';
 export { Enforcement, ENFORCEMENT_AUTHORITIES } from './law/enforcement';
 export type { EnforcementReport, EnforcementResult, ExecuteOptions } from './law/enforcement';
