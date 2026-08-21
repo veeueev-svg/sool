@@ -1,0 +1,10 @@
+# السياسات الحاكمة على التنفيذ (لا تُعدَّل من داخل الوحدة الخاضعة لها — RULE-005)
+policies:
+  audit_every_decision: true
+  fail_closed_on_missing_identity: true
+  fail_closed_on_missing_policy: true
+  require_signed_commands: true
+  replay_protection: true
+  max_command_age_seconds: 120
+  external_egress_default: deny
+  kill_switch_reachable_always: true

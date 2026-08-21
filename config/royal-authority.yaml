@@ -1,0 +1,21 @@
+# سلطة التاج — المصدر الوحيد للسيادة (المرحلة 2)
+# القاعدة الحاكمة: أي تعديل هنا يُسجَّل في docs/royal-orders/ ويُوثَّق في PROGRESS.md
+state_name: "الدولة الملكية الفدرالية الرقمية"
+state_code: "SOOL"
+king_count_max: 1
+king_id: "king:sool:001"
+crown_gateway_required: true
+side_channel_allowed: false
+heartbeat_interval_seconds: 60
+absence_grace_seconds: 300
+absence_mode: "protective"
+sovereign_actions:
+  - create_agent
+  - grant_capability
+  - appoint_official
+  - amend_policy
+  - approve_phase
+  - terminate_agent
+  - declare_emergency
+  - open_external_account
+veto_final: true

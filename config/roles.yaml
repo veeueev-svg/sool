@@ -1,0 +1,8 @@
+# الأدوار وفصل الصلاحيات (RULE-004)
+roles:
+  king:        { propose: true,  approve: true,  execute: false, audit: false }
+  crown_guard: { propose: false, approve: false, execute: true,  audit: false }
+  minister:    { propose: true,  approve: false, execute: true,  audit: false }
+  governor:    { propose: true,  approve: false, execute: true,  audit: false }
+  auditor:     { propose: false, approve: false, execute: false, audit: true  }
+  agent:       { propose: true,  approve: false, execute: true,  audit: false }

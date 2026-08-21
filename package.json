@@ -1,0 +1,20 @@
+{
+  "name": "sool-digital-state",
+  "version": "0.1.0",
+  "private": true,
+  "description": "التنفيذ المرجعي للدولة الملكية الفدرالية الرقمية — نواة السيادة والهوية والتدقيق",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/tests/",
+    "verify": "npm run build && node --test dist/tests/ && node dist/scripts/verify_audit_chain.js",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.4"
+  }
+}

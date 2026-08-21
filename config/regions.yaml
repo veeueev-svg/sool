@@ -1,0 +1,19 @@
+# الأقاليم الفدرالية (المرحلة 2) — لا إقليم يملك حق النقض على الملك
+regions:
+  - id: "region:core"
+    name: "إقليم النواة"
+    governor: "unassigned"
+    autonomy_level: "limited"
+  - id: "region:research"
+    name: "إقليم البحث"
+    governor: "unassigned"
+    autonomy_level: "limited"
+  - id: "region:industry"
+    name: "إقليم الصناعة"
+    governor: "unassigned"
+    autonomy_level: "limited"
+  - id: "region:services"
+    name: "إقليم الخدمات"
+    governor: "unassigned"
+    autonomy_level: "limited"
+collective_override_of_king: forbidden
