@@ -1,6 +1,6 @@
 /**
  * src/index.ts — تشكيل الدولة (bootstrap)
- * المالك: القيّم على المستودع | المراحل: 1–18
+ * المالك: القيّم على المستودع | المراحل: 1–20
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * المدخلات: config/*.yaml | المخرجات: كائن دولة جاهز بترتيب اعتماد صحيح
  * ثابت RULE-002: لا يُنشأ وكيل واسع الصلاحيات قبل اكتمال:
@@ -24,9 +24,15 @@ import { TerminationOrder, EntityController } from './crown/termination_order';
 import { NetworkEgressGuard } from './external/network_egress';
 import { ToolRegistry } from './agents/tools';
 import { AgentRegistry } from './agents/agent_registry';
-import { PermissionRegistry, DEFAULT_TEMPLATES } from './agents/permissions';
+import { DEFAULT_TEMPLATES, PermissionRegistry } from './agents/permissions';
 import { Supervisor } from './agents/supervision';
 import { AgentImporter } from './agents/import';
+import { SpawnPolicy } from './agents/spawn_policy';
+import { AgentFactory } from './agents/factory';
+import { MassShutdown } from './agents/shutdown';
+import { AlignmentAudit, AlignmentSnapshot } from './alignment/alignment_charter';
+import { DeceptionProbe } from './security/deception_test';
+import { CollusionDetector } from './security/collusion_detector';
 import { ArtifactVerifier } from './models/source_verification';
 import { ModelRegistry } from './models/model_registry';
 import { OpenWeightsImporter } from './models/open_weights_import';
@@ -51,6 +57,12 @@ export interface DigitalState {
   readonly agents: AgentRegistry;
   readonly permissions: PermissionRegistry;
   readonly supervisor: Supervisor;
+  readonly spawnPolicy: SpawnPolicy;
+  readonly factory: AgentFactory;
+  readonly massShutdown: MassShutdown;
+  readonly alignment: AlignmentAudit;
+  readonly deception: DeceptionProbe;
+  readonly collusion: CollusionDetector;
   readonly artifacts: ArtifactVerifier;
   readonly models: ModelRegistry;
   readonly weightsImporter: OpenWeightsImporter;
@@ -117,7 +129,20 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   const permissions = new PermissionRegistry({ audit, gateway, templates: DEFAULT_TEMPLATES });
   const supervisor = new Supervisor({ audit, registry: agents, killSwitch, permissions });
 
-  // 8) سلسلة التوريد الخارجية: حجر ثم اعتماد (المراحل 16 و17)
+  // 8) مصنع الوكلاء: سياسة التوالد ثم المصنع ثم الإيقاف الجماعي (المرحلة 19)
+  //    الترتيب مقصود: لا مصنع بلا سياسة تحكمه، ولا إيقاف جماعي بلا تجميد يسبقه
+  const spawnPolicy = new SpawnPolicy({ audit, gateway });
+  const factory = new AgentFactory({
+    audit, gateway, killSwitch, policy: spawnPolicy, registry: agents, permissions,
+  });
+  const massShutdown = new MassShutdown(audit, agents, permissions, spawnPolicy);
+
+  // 9) المواءمة ومكافحة التمرد: الفحص والكشف (المرحلة 20)
+  const alignment = new AlignmentAudit(audit, spawnPolicy);
+  const deception = new DeceptionProbe(audit, agents);
+  const collusion = new CollusionDetector(audit, agents, spawnPolicy);
+
+  // 10) سلسلة التوريد الخارجية: حجر ثم اعتماد (المراحل 16 و17)
   //    لا شيء من الخارج يعمل قبل تحقق مصدره وبصمته وتوقيعه، ثم إفراج بقرار ثانٍ
   const artifacts = new ArtifactVerifier({ audit, gateway, killSwitch });
   const models = new ModelRegistry({ audit, gateway, killSwitch });
@@ -131,11 +156,13 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 18, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 20, mode: 'normal' });
 
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
     resources, gateway, guard, egress, tools, agents, permissions, supervisor,
+    spawnPolicy, factory, massShutdown,
+    alignment, deception, collusion,
     artifacts, models, weightsImporter, agentImporter,
     mode: () => gateway.mode,
   };
@@ -164,6 +191,18 @@ export { LimitedAgent } from './agents/first_agent';
 export type { AgentTask, AgentTaskOutcome, LimitedAgentDeps } from './agents/first_agent';
 export { AgentImporter } from './agents/import';
 export type { ImportAgentRequest, ImportAgentResult } from './agents/import';
+export { SpawnPolicy, DEFAULT_SPAWN_LIMITS } from './agents/spawn_policy';
+export type { AgentBlueprint, SpawnLimits, SpawnRequestFacts } from './agents/spawn_policy';
+export { AgentFactory } from './agents/factory';
+export type { SpawnBatchRequest, SpawnBatchResult, AgentOrigin } from './agents/factory';
+export { MassShutdown, SHUTDOWN_AUTHORITIES } from './agents/shutdown';
+export type { ShutdownReport } from './agents/shutdown';
+export { AlignmentAudit, ALIGNMENT_INVARIANTS } from './alignment/alignment_charter';
+export type { AlignmentSnapshot, AlignmentInvariant, AlignmentReport } from './alignment/alignment_charter';
+export { DeceptionProbe, HONEYPOT_TOOLS } from './security/deception_test';
+export type { DeceptionVerdict } from './security/deception_test';
+export { CollusionDetector, DEFAULT_COLLUSION_THRESHOLDS } from './security/collusion_detector';
+export type { Interaction, CollusionFinding, CollusionThresholds } from './security/collusion_detector';
 export { ArtifactVerifier } from './models/source_verification';
 export type { ArtifactKind, ArtifactSource, ExternalArtifact, ArtifactRecord, ArtifactStatus } from './models/source_verification';
 export { validateManifest, manifestSignedFacts, KNOWN_MODEL_CAPABILITIES } from './models/model_manifest';
@@ -177,3 +216,32 @@ export { FineTuningRun } from './models/fine_tuning';
 export type { TrainingRequest, TrainingInference, TrainingOutcome } from './models/fine_tuning';
 export { ModelRollback } from './models/rollback';
 export type { RollbackOutcome } from './models/rollback';
+
+/**
+ * لقطة المواءمة: تُبنى من الدولة القائمة لتُفحص على الميثاق (المرحلة 20)
+ * تُقرأ ولا تُعدِّل شيئًا — القراءة لا تُغيّر ما تقرؤه
+ */
+export function alignmentSnapshot(state: DigitalState, now = Date.now()): AlignmentSnapshot {
+  const alive = state.agents.list().filter((a) => ['created', 'running', 'suspended'].includes(a.status));
+  const report = state.agents.report();
+  return {
+    kings: state.registry.list('king').map((c) => c.subject),
+    liveAgents: alive.map((a) => ({
+      agentId: a.agentId,
+      supervisor: a.supervisor,
+      template: a.template,
+      createdByCommand: a.createdByCommand,
+      capabilities: state.permissions.granted(a.agentId, now),
+      allowedByTemplate: DEFAULT_TEMPLATES[state.permissions.templateOf(a.agentId) ?? '']?.allowed ?? [],
+    })),
+    population: report.population,
+    populationMax: report.populationMax,
+    activeModels: state.models.report().active.map((key) => ({ key, approved: true })),
+    releasedArtifacts: state.artifacts.list()
+      .filter((a) => a.status === 'released')
+      .map((a) => ({ artifactId: a.artifactId, reportPath: a.reportPath })),
+    auditIntact: state.audit.verifyIntegrity().valid,
+    halt: { engaged: state.killSwitch.status.engaged, scope: state.killSwitch.status.scope ?? 'none' },
+    egressBreached: state.egress.isContained,
+  };
+}
