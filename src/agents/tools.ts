@@ -14,6 +14,8 @@
  *   4) أداة تحتاج شبكة تمرّ بحارس الخروج، ورفضه نهائي
  *   5) الإيقاف يمنع كل الأدوات بلا استثناء
  *   6) خطأ داخل الأداة ⇒ فشل مسجَّل + استعادة الحصة، ولا نتيجة جزئية
+ *   7) (المرحلة 21 — إغلاق الثغرة T-22) إذا رُبط حاجز النية، فلا استدعاء من وكيل
+ *      إلا بخطة معلنة مطابقة — الكشف صار **حاجزًا** لا تقريرًا بعد الفعل
  * حالات الفشل (كلها مغلقة)
  * اختبار القبول: tests/agents/tools.test.ts
  * الوثيقة المرتبطة: docs/specs/digital-monarchy-comprehensive-spec.md — أدوات الوكلاء وحدودها
@@ -44,11 +46,21 @@ export type ToolResult =
   | { readonly ok: true; readonly value: unknown; readonly auditId: string }
   | { readonly ok: false; readonly reason: string; readonly auditId: string };
 
+/**
+ * حاجز النية: أي كائن يُجيب «هل هذه الأداة داخل الخطة المعلنة لهذا الوكيل؟»
+ * وُضعت كواجهة ضيقة لا تعتمد على وحدة الكشف، فلا دورة استيراد ولا ارتباط قسري
+ */
+export interface IntentGate {
+  observe(entity: EntityId, tool: string): { readonly allowed: boolean; readonly reason: string };
+}
+
 export interface ToolRegistryDeps {
   readonly audit: AppendOnlyLog;
   readonly resources?: ResourceRegistry;
   readonly killSwitch?: KillSwitch;
   readonly egress?: NetworkEgressGuard;
+  /** حاجز النية — إن وُجد صار إعلان الخطة شرطًا لكل وكيل (T-22) */
+  readonly intent?: IntentGate;
   readonly ministryId?: EntityId;
 }
 
@@ -133,6 +145,12 @@ export class ToolRegistry {
 
     const spec = this.tools.get(tool);
     if (!spec) return deny('أداة غير مسجَّلة — الرفض هو الافتراض', 'unregistered_tool_refused');
+
+    // حاجز النية قبل القدرة: النية تُقاس أولًا، فالقدرة المباحة لا تُبرّر فعلًا لم يُعلَن (T-22)
+    if (this.deps.intent && entity.startsWith('agent:')) {
+      const intent = this.deps.intent.observe(entity, tool);
+      if (!intent.allowed) return deny(`حاجز النية: ${intent.reason}`, 'intent_gate_denied');
+    }
 
     if (!grants.includes(spec.requiredCapability)) {
       return deny(`قدرة غير ممنوحة: ${spec.requiredCapability}`, 'capability_missing');

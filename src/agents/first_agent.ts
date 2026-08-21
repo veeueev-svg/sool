@@ -57,6 +57,14 @@ export interface LimitedAgentDeps {
   readonly fs?: SandboxFs;
   readonly readRoots?: readonly string[];
   readonly writeRoots?: readonly string[];
+  /**
+   * حاجز النية (المرحلة 21 — إغلاق T-22): يُعلن خطة المهمة قبل تنفيذها ويغلقها بعده.
+   * إن كان سجل الأدوات مربوطًا بحاجز نية ولم يُمرَّر هذا، فستُرفض كل الاستدعاءات — رفض مغلق مقصود.
+   */
+  readonly intent?: {
+    declarePlan(entity: EntityId, tools: readonly string[], by?: EntityId): boolean | unknown;
+    closePlan(entity: EntityId, by?: EntityId): unknown;
+  };
 }
 
 export class LimitedAgent {
@@ -109,6 +117,23 @@ export class LimitedAgent {
       fs: this.deps.fs,
     });
 
+    // إعلان النية قبل أي فعل: الخطة تُعلن ثم تُنفَّذ، ولا فعل خارجها (T-22)
+    let planDeclared = false;
+    if (this.deps.intent) {
+      const tools = [...new Set(task.plan.map((step) => step.tool))];
+      try {
+        const declared = this.deps.intent.declarePlan(this.agentId, tools, this.agentId);
+        if (declared === false) return refuse('رُفض إعلان خطة المهمة — لا تنفيذ بلا نية معلنة مقبولة');
+        planDeclared = true;
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : 'فشل إعلان الخطة';
+        return refuse(`تعذّر إعلان خطة المهمة: ${reason}`);
+      }
+    }
+    const closePlan = (): void => {
+      if (planDeclared && this.deps.intent) this.deps.intent.closePlan(this.agentId, this.agentId);
+    };
+
     this.deps.audit.append(this.agentId, 'agent_task_started', {
       taskId: task.taskId, steps: task.plan.length, capabilities: spec.capabilities,
     });
@@ -131,6 +156,8 @@ export class LimitedAgent {
       }
       return results.length;
     });
+
+    closePlan(); // الخطة تُغلق بانتهاء المهمة نجحت أو فشلت — لا خطة مفتوحة تُستغل لاحقًا
 
     if (!run.completed) {
       if (run.violations.length > 0) {

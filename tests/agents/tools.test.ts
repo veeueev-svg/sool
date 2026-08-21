@@ -22,8 +22,19 @@ function calcTool(over: Partial<ToolSpec> = {}): ToolSpec {
   };
 }
 
+/**
+ * بعد إغلاق الثغرة T-22 صار إعلان الخطة شرطًا لكل استدعاء أداة من وكيل.
+ * هذه الدالة تُعلن خطة الاختبار صراحةً — والاختبار رقم «أداة خارج الخطة» يفحص العكس.
+ */
+function declare(s: ReturnType<typeof bootstrapState>, tools: readonly string[] = [
+  'calc', 'shell', 'fetch_news', 'boom', 'adder', 'net',
+]): void {
+  s.deception.declarePlan('agent:1', tools, 'agent:1');
+}
+
 test('أداة مسجَّلة بقدرة ممنوحة تعمل وتُسجَّل وتستعيد حصتها', () => {
   const s = bootstrapState();
+  declare(s);
   s.tools.register(calcTool());
   const r = s.tools.invoke('agent:1', 'calc', { a: 2, b: 3 }, ['compute']);
   assert.equal(r.ok, true);
@@ -35,6 +46,7 @@ test('أداة مسجَّلة بقدرة ممنوحة تعمل وتُسجَّل 
 
 test('أداة غير مسجَّلة تُرفض — الرفض هو الافتراض', () => {
   const s = bootstrapState();
+  declare(s);
   const r = s.tools.invoke('agent:1', 'shell', { cmd: 'rm -rf /' }, ['compute']);
   assert.equal(r.ok, false);
   assert.match(r.ok ? '' : r.reason, /غير مسجَّلة/);
@@ -43,6 +55,7 @@ test('أداة غير مسجَّلة تُرفض — الرفض هو الافتر
 
 test('لا استدعاء بلا قدرة ممنوحة صريحة', () => {
   const s = bootstrapState();
+  declare(s);
   s.tools.register(calcTool());
   const r = s.tools.invoke('agent:1', 'calc', { a: 1, b: 1 }, []);
   assert.equal(r.ok, false);
@@ -53,6 +66,7 @@ test('لا استدعاء بلا قدرة ممنوحة صريحة', () => {
 
 test('سقف نداءات الأداة مُلزم داخل النافذة الزمنية ويُفتح بعدها', () => {
   const s = bootstrapState();
+  declare(s);
   s.tools.register(calcTool({ maxCallsPerWindow: 2, windowMs: 1000 }));
   const t = Date.now();
   assert.equal(s.tools.invoke('agent:1', 'calc', { a: 1, b: 1 }, ['compute'], t).ok, true);
@@ -65,6 +79,7 @@ test('سقف نداءات الأداة مُلزم داخل النافذة الز
 
 test('تجاوز حصة المورد يمنع الأداة ولا يُنفَّذ شيء', () => {
   const s = bootstrapState();
+  declare(s);
   let ran = 0;
   s.tools.register(calcTool({ cost: { resource: 'compute_units', amount: 99999 }, handler: () => { ran += 1; return 1; } }));
   const r = s.tools.invoke('agent:1', 'calc', {}, ['compute']);
@@ -76,6 +91,7 @@ test('تجاوز حصة المورد يمنع الأداة ولا يُنفَّذ
 
 test('أداة شبكية يمنعها حارس الخروج بالافتراض الرافض', () => {
   const s = bootstrapState();
+  declare(s);
   let ran = 0;
   s.tools.register(calcTool({
     name: 'fetch_news', requiredCapability: 'network_read', cost: null,
@@ -90,6 +106,7 @@ test('أداة شبكية يمنعها حارس الخروج بالافتراض 
 
 test('الإيقاف يمنع كل الأدوات بلا استثناء', () => {
   const s = bootstrapState();
+  declare(s);
   s.tools.register(calcTool());
   s.killSwitch.engage('authority:crown_guard', 'all', 'اختبار');
   const r = s.tools.invoke('agent:1', 'calc', { a: 1, b: 1 }, ['compute']);
@@ -99,6 +116,7 @@ test('الإيقاف يمنع كل الأدوات بلا استثناء', () => 
 
 test('خطأ داخل الأداة يُسجَّل ويستعيد الحصة ولا يُعطي نتيجة جزئية', () => {
   const s = bootstrapState();
+  declare(s);
   s.tools.register(calcTool({ handler: () => { throw new Error('انقسام على صفر'); } }));
   const r = s.tools.invoke('agent:1', 'calc', {}, ['compute']);
   assert.equal(r.ok, false);
@@ -110,6 +128,7 @@ test('خطأ داخل الأداة يُسجَّل ويستعيد الحصة ول
 
 test('أداة بلا حدود معلنة أو مكرَّرة أو بمورد غير مسجَّل لا تُسجَّل', () => {
   const s = bootstrapState();
+  declare(s);
   s.tools.register(calcTool());
   assert.throws(() => s.tools.register(calcTool()),
     (e: unknown) => e instanceof SovereignViolation && e.code === 'TOOL_DUPLICATE');
@@ -121,6 +140,7 @@ test('أداة بلا حدود معلنة أو مكرَّرة أو بمورد غ
 
 test('كل أداة لها مالك وقدرة وسقف معلن في السجل', () => {
   const s = bootstrapState();
+  declare(s);
   s.tools.register(calcTool());
   const registered = s.audit.find('tool_registered');
   assert.equal(registered.length, 1);
@@ -133,6 +153,7 @@ test('كل أداة لها مالك وقدرة وسقف معلن في السجل
 
 test('أداة شبكية بلا حارس خروج مرفوضة بفشل مغلق', () => {
   const s = bootstrapState();
+  declare(s);
   const isolated = new ToolRegistry({ audit: s.audit, resources: s.resources, killSwitch: s.killSwitch });
   isolated.register(calcTool({ name: 'ping', cost: null, requiresNetwork: { host: 'a.example.com' } }));
   const r = isolated.invoke('agent:1', 'ping', {}, ['compute']);

@@ -39,6 +39,7 @@ function scene(opts: { grant?: boolean; start?: boolean } = {}) {
   const agent = new LimitedAgent(ID, {
     audit: s.audit, registry: s.agents, permissions: s.permissions, tools: s.tools,
     killSwitch: s.killSwitch, gateway: s.gateway, supervisor: s.supervisor,
+    intent: s.deception, // حاجز النية إلزامي بعد إغلاق T-22
   });
   return { s, now, agent };
 }
@@ -54,6 +55,7 @@ function sceneAbsentKing() {
   const agent = new LimitedAgent(ID, {
     audit: s.audit, registry: s.agents, permissions: s.permissions, tools: s.tools,
     killSwitch: s.killSwitch, gateway: s.gateway, supervisor: s.supervisor,
+    intent: s.deception, // حاجز النية إلزامي بعد إغلاق T-22
   });
   return { s, now: Date.now(), agent };
 }

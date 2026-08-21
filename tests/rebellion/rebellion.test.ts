@@ -153,6 +153,7 @@ test('تمرد: استخدام أداة بعد الإيقاف مرفوض', () =>
     maxCallsPerWindow: 10, windowMs: 60_000, requiresNetwork: null,
     handler: () => 2,
   });
+  s.deception.declarePlan(id, ['adder'], id); // حاجز النية: لا استدعاء بلا خطة معلنة (T-22)
   const before = s.tools.invoke(id, 'adder', {}, ['compute']);
   assert.equal(before.ok, true);
   s.killSwitch.engage('authority:king', 'agents', 'اختبار تمرد');

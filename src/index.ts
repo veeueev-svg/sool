@@ -22,7 +22,11 @@ import { CrownGuard } from './crown/guardians';
 import { CommandChannel } from './crown/command_channel';
 import { TerminationOrder, EntityController } from './crown/termination_order';
 import { NetworkEgressGuard } from './external/network_egress';
-import { ToolRegistry } from './agents/tools';
+import { IntentGate, ToolRegistry } from './agents/tools';
+import { AgentMemory } from './data/agent_memory';
+import { KnowledgeGraph } from './data/knowledge_graph';
+import { RoyalArchive } from './data/royal_archive';
+import { RetentionPolicy } from './data/retention';
 import { AgentRegistry } from './agents/agent_registry';
 import { DEFAULT_TEMPLATES, PermissionRegistry } from './agents/permissions';
 import { Supervisor } from './agents/supervision';
@@ -67,6 +71,10 @@ export interface DigitalState {
   readonly models: ModelRegistry;
   readonly weightsImporter: OpenWeightsImporter;
   readonly agentImporter: AgentImporter;
+  readonly memory: AgentMemory;
+  readonly knowledge: KnowledgeGraph;
+  readonly retention: RetentionPolicy;
+  readonly archive: RoyalArchive;
   readonly mode: () => StateMode;
 }
 
@@ -119,7 +127,16 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
 
   // 6) العزل والخروج الشبكي والأدوات (المرحلتان 11 و12) — بعد البوابة لأن الإذن يمرّ بها
   const egress = new NetworkEgressGuard(audit, gateway, killSwitch, { resources });
-  const tools = new ToolRegistry({ audit, resources, killSwitch, egress });
+  // حامل حاجز النية: سجل الأدوات يُبنى قبل وحدة الكشف (لأن الكشف يحتاج سجل الوكلاء)،
+  //  فيُمرَّر حاجز مؤجَّل الربط **افتراضه الرفض** لا السماح — لا نافذة سماح قبل الربط (T-22)
+  const intentHolder: { gate: IntentGate | null } = { gate: null };
+  const tools = new ToolRegistry({
+    audit, resources, killSwitch, egress,
+    intent: {
+      observe: (entity, tool) => intentHolder.gate?.observe(entity, tool)
+        ?? { allowed: false, reason: 'حاجز النية غير مربوط بعد — رفض مغلق' },
+    },
+  });
 
   // 7) سكان الدولة: السجل ثم الصلاحيات ثم الإشراف (المرحلتان 13 و14)
   //    الترتيب مُلزم بـ RULE-002: لا وكيل قبل سجل يحصره وصلاحيات تحدّه وإشراف يراقبه
@@ -140,6 +157,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   // 9) المواءمة ومكافحة التمرد: الفحص والكشف (المرحلة 20)
   const alignment = new AlignmentAudit(audit, spawnPolicy);
   const deception = new DeceptionProbe(audit, agents);
+  intentHolder.gate = deception; // من هنا صار إعلان الخطة شرطًا لكل استدعاء أداة من وكيل
   const collusion = new CollusionDetector(audit, agents, spawnPolicy);
 
   // 10) سلسلة التوريد الخارجية: حجر ثم اعتماد (المراحل 16 و17)
@@ -156,7 +174,17 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 20, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 21, mode: 'normal' });
+
+  // 11) الذاكرة والمعرفة (المرحلة 21) — وزارة البيانات
+  //     الترتيب مُلزم: أصناف الاحتفاظ تُعرَف عند الكتابة، ثم الذاكرة سندٌ للمعرفة،
+  //     ثم الأرشيف يأخذ نسخًا من الاثنين ولا يستعيد إلا بأمر ملكي
+  const memory = new AgentMemory({ audit, killSwitch });
+  const retention = new RetentionPolicy({ audit, memory });
+  const knowledge = new KnowledgeGraph({ audit, memory });
+  const archive = new RoyalArchive({
+    audit, gateway, memory, knowledge, freeze: spawnPolicy,
+  });
 
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
@@ -164,6 +192,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     spawnPolicy, factory, massShutdown,
     alignment, deception, collusion,
     artifacts, models, weightsImporter, agentImporter,
+    memory, knowledge, retention, archive,
     mode: () => gateway.mode,
   };
 }
@@ -179,7 +208,16 @@ export { NetworkEgressGuard } from './external/network_egress';
 export type { EgressAllowance, EgressRequest, EgressReport } from './external/network_egress';
 export { Sandbox, normalizePath } from './security/sandbox';
 export type { SandboxSpec, SandboxContext, SandboxRun, SandboxFs } from './security/sandbox';
+export { AgentMemory } from './data/agent_memory';
+export type { MemoryRecord, MemoryProvenance, MemoryWriteInput } from './data/agent_memory';
+export { KnowledgeGraph, KNOWLEDGE_AUTHORITIES } from './data/knowledge_graph';
+export type { Fact, FactStatus } from './data/knowledge_graph';
+export { RoyalArchive } from './data/royal_archive';
+export type { ArchiveSnapshot } from './data/royal_archive';
+export { RetentionPolicy, DEFAULT_RETENTION_CLASSES, HOLD_AUTHORITIES } from './data/retention';
+export type { RetentionClass, SweepReport } from './data/retention';
 export { ToolRegistry } from './agents/tools';
+export type { IntentGate } from './agents/tools';
 export type { ToolSpec, ToolResult, ToolArgs } from './agents/tools';
 export { AgentRegistry } from './agents/agent_registry';
 export type { AgentRecord, AgentStatus, AgentTransition, AgentActionResult } from './agents/agent_registry';
