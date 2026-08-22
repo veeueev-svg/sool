@@ -12,6 +12,7 @@ import {
   resolveConfigDir,
   QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig, ContractsConfig,
   EnterprisesConfig, ServicesConfig, ResearchConfig, ScaleConfig, RecoveryConfig, LoadConfig, ChaosConfig, TerminationConfig,
+  loadStaging, StagingConfig,
 } from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
@@ -91,6 +92,12 @@ import { ChaosDrill } from './chaos/chaos_drill';
 import { TerminationRoll } from './kernel/termination_roll';
 import { StopWitness } from './termination/stop_witness';
 import { TerminationLedger } from './termination/termination_ledger';
+import { OperationScope } from './staging/operation_scope';
+import { IncidentMonitor } from './staging/incident_monitor';
+import { RunbookRunner } from './staging/runbook_runner';
+import { StagingLedger } from './staging/staging_ledger';
+import { buildWatchProbes } from './staging/watch_probes';
+import { StagingManifest, loadStagingManifest, resolveDeployDir } from './staging/manifest';
 
 export interface DigitalState {
   readonly config: RoyalAuthorityConfig;
@@ -181,6 +188,12 @@ export interface DigitalState {
   readonly terminationConfig: TerminationConfig;
   readonly terminationRoll: TerminationRoll;
   readonly terminationLedger: TerminationLedger;
+  readonly stagingConfig: StagingConfig;
+  readonly stagingManifest: StagingManifest;
+  readonly operationScope: OperationScope;
+  readonly incidentMonitor: IncidentMonitor;
+  readonly runbookRunner: RunbookRunner;
+  readonly stagingLedger: StagingLedger;
   readonly mode: () => StateMode;
 }
 
@@ -680,7 +693,29 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     audit, policy: terminationConfig.policy,
     ledgerId: terminationConfig.policy.witness_authority,
   });
-  audit.append('authority:bootstrap', 'state_online', { phase: 35, mode: 'normal' });
+  // 18) التشغيل المحدود (المرحلة 36) — نطاق مُنفَّذ عند البوابة، ومراقب بمؤقّت حقيقي،
+  //     ودفتر يحكم على النافذة. البيان يُقرأ ويُقابَل بالتهيئة فيسقط الإقلاع على تعارضهما.
+  //     النطاق يُربط بالبوابة وهو **مغلق**: دولةٌ لم تُفتح لها نافذة تعمل كما كانت.
+  //     المراقب لا يبدأ هنا: من يبدأ المؤقّت هو من يفتح النافذة، لا من يُقلع الدولة.
+  const stagingConfig = loadStaging(configDir);
+  const stagingManifest = loadStagingManifest(stagingConfig, resolveDeployDir());
+  const operationScope = new OperationScope({ audit, policy: stagingConfig.policy });
+  gateway.bindScope(operationScope);
+  const incidentMonitor = new IncidentMonitor({
+    audit, killSwitch, policy: stagingConfig.policy,
+    observer: stagingConfig.policy.observer_authority,
+    probes: buildWatchProbes({
+      audit, regionMonitor, scope: operationScope, terminationRoll, permissions,
+      modeAt: (at) => (killSwitch.status.engaged ? 'halted' : heartbeat.evaluate(at)),
+    }),
+  });
+  const runbookRunner = new RunbookRunner({ audit, policy: stagingConfig.policy });
+  const stagingLedger = new StagingLedger({
+    audit, policy: stagingConfig.policy,
+    chainValid: () => audit.verifyIntegrity().valid,
+    stateHalted: () => killSwitch.status.engaged,
+  });
+  audit.append('authority:bootstrap', 'state_online', { phase: 36, mode: 'normal' });
 
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
@@ -703,6 +738,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     loadConfig, loadLedger, loadDrill,
     chaosConfig, faultInjector, safeStopLedger, chaosDrill,
     terminationConfig, terminationRoll, terminationLedger,
+    stagingConfig, stagingManifest, operationScope, incidentMonitor, runbookRunner, stagingLedger,
     mode: () => gateway.mode,
   };
 }
@@ -933,6 +969,44 @@ export {
   loadTermination, STOP_KNOWN_PROBES, STOP_REQUIRED_PROBES, TERMINATION_EXECUTORS,
 } from './kernel/config';
 export type { TerminationConfig, StopProbeKind } from './kernel/config';
+
+// المرحلة 36 — التشغيل المحدود
+export { OperationScope } from './staging/operation_scope';
+export type { ScopeViolation, OperationScopeDeps } from './staging/operation_scope';
+export { IncidentMonitor, STAGING_GUARD } from './staging/incident_monitor';
+export type {
+  Incident, Severity, WatchFinding, WatchProbe, IncidentMonitorDeps, MonitorReport,
+} from './staging/incident_monitor';
+export { RunbookRunner } from './staging/runbook_runner';
+export type {
+  Runbook, RunbookStep, StepResult, RunbookResult, RunbookRunnerDeps,
+} from './staging/runbook_runner';
+export {
+  StagingLedger, STAGING_BREACH_CODES,
+  STAGE_OBSERVER_IS_OPERATOR, STAGE_OBSERVER_UNDECLARED, STAGE_WINDOW_INCOMPLETE,
+  STAGE_TICKS_UNDER_MIN, STAGE_WATCH_NOT_OBSERVED, STAGE_WATCH_FAILED,
+  STAGE_CRITICAL_INCIDENT, STAGE_RUNBOOK_NOT_EXECUTED, STAGE_RUNBOOK_FAILED,
+  STAGE_AUDIT_CHAIN_BROKEN, STAGE_STATE_HALTED, STAGE_SCOPE_NOT_OPENED,
+  STAGE_NO_MONITOR_REPORT,
+} from './staging/staging_ledger';
+export type {
+  WindowClaim, RunbookEvidence, StagingVerdict, StagingLedgerDeps,
+} from './staging/staging_ledger';
+export { StagingRun } from './staging/staging_run';
+export type { StagingRunDeps } from './staging/staging_run';
+export {
+  buildWatchProbes, regionsProbe, auditChainProbe, scopeProbe, terminationProbe, kingProbe,
+} from './staging/watch_probes';
+export type { WatchProbeDeps } from './staging/watch_probes';
+export { loadStagingManifest, loadDeclaredRunbook, resolveDeployDir } from './staging/manifest';
+export type { StagingManifest, DeclaredStep, DeclaredRunbook } from './staging/manifest';
+export { buildRunbook, buildDeclaredRunbooks } from './staging/runbook_steps';
+export type { RunbookStepDeps } from './staging/runbook_steps';
+export {
+  loadStaging, STAGING_KNOWN_WATCHES, STAGING_REQUIRED_WATCHES, STAGING_KNOWN_INCIDENTS,
+  STAGING_MUST_BE_CRITICAL, STAGING_KNOWN_RUNBOOKS, STAGING_OPERATORS,
+} from './kernel/config';
+export type { StagingConfig, IncidentKind, WatchKind } from './kernel/config';
 
 /**
  * لقطة المواءمة: تُبنى من الدولة القائمة لتُفحص على الميثاق (المرحلة 20)

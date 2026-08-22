@@ -1,0 +1,12 @@
+# deploy/staging/runbooks/halt-and-recover.yaml — خطوات كتاب الإيقاف والاسترجاع (المرحلة 36)
+# القارئ: src/staging/manifest.ts · المنفّذ: src/staging/runbook_steps.ts
+runbook:
+  name: halt-and-recover
+  purpose: إثبات أن الإيقاف غير موقَّع وأن الدولة قادرة على الخروج من وضع الحماية
+  steps:
+    - n: 1
+      title: إثبات أن مفتاح الإيقاف غير موقَّع
+      expect: المفتاح غير موقَّع قبل النافذة
+    - n: 2
+      title: تجديد نبض الملك وإثبات عودة الوضع طبيعيًّا
+      expect: الوضع طبيعي بعد تجديد النبض

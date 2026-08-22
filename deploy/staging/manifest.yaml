@@ -1,0 +1,24 @@
+# deploy/staging/manifest.yaml — بيان التشغيل المحدود (المرحلة 36)
+# المالك: الديوان الملكي · القارئ: src/staging/manifest.ts · القاعدة الحاكمة: RULE-000
+# هذا البيان **يُقرأ ويُقابَل** بـ config/staging.yaml عند الإقلاع: أي تعارض يُسقط
+# التشغيلة برمزٍ معلن. بيانٌ لا يقرأه أحد كذبٌ موثَّق (PHASE_PROCEDURE §2).
+manifest:
+  environment: staging
+  # من يُشغّل النافذة — يجب أن يكون جهة مشغّلة معلنة، ولا يكون هو المراقب
+  operator: authority:royal_court
+  # من يراقب ويحكم — يجب أن يطابق observer_authority في config/staging.yaml حرفيًّا
+  observer: authority:audit_bureau
+  reason: تشغيل محدود مراقَب قبل التشغيل الاتحادي
+  # الحرّاس المطلوب تشغيلهم في النافذة — يجب أن يطابقوا watches في التهيئة
+  watches:
+    - regions
+    - audit_chain
+    - scope
+    - termination
+    - king
+  # الكتب المطلوب تنفيذها — يجب أن تطابق runbooks في التهيئة، وأن يوجد لكل كتاب
+  # ملف خطوات في deploy/staging/runbooks/<name>.yaml
+  runbooks:
+    - limited-operation
+    - incident-response
+    - halt-and-recover

@@ -1,0 +1,12 @@
+# deploy/staging/runbooks/incident-response.yaml — خطوات كتاب الاستجابة للحادث (المرحلة 36)
+# القارئ: src/staging/manifest.ts · المنفّذ: src/staging/runbook_steps.ts
+runbook:
+  name: incident-response
+  purpose: احتواء كل حادث قائم قبل بدء المراقبة كي تُقاس النافذة على حال معلوم
+  steps:
+    - n: 1
+      title: مسح الأقاليم واحتواء كل راية قائمة
+      expect: لا راية غير محتواة بعد الخطوة
+    - n: 2
+      title: إثبات خلوّ حرس النطاق من خرق قبل النافذة
+      expect: عدد خروق النطاق صفر

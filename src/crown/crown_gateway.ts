@@ -11,7 +11,7 @@
  * حالات الفشل: كلها مغلقة (fail-closed) ومسجَّلة
  */
 import {
-  Decision, EntityId, SignedRoyalCommand, SovereignAction, StateMode,
+  Decision, EntityId, SignedRoyalCommand, SovereignAction, StateMode, SovereignViolation,
 } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { CertificateAuthority } from '../identity/certificate_authority';
@@ -50,10 +50,21 @@ export interface GatewayDeps {
   readonly policy?: GatewayPolicy;
 }
 
+/**
+ * عقد نطاق التشغيل المحدود (المرحلة 36). البوابة تسأله ولا تعرف تفصيله: لو عرفت
+ * لصار تغيير السياسة من داخل الوحدة التي تحكمها (RULE-005). النطاق غير المربوط
+ * لا يغيّر سلوكًا — فالتشغيل الكامل لا يُقيَّد بسياسة تشغيل محدود لم تُعلن.
+ */
+export interface ScopeGuard {
+  readonly active: boolean;
+  permit(action: string, actor: EntityId, now?: number): Decision;
+}
+
 export class CrownGateway {
   private readonly seenNonces = new Set<string>();
   private readonly executedCommands = new Map<string, Decision>();
   private readonly policy: GatewayPolicy;
+  private scope: ScopeGuard | null = null;
 
   constructor(private readonly deps: GatewayDeps) {
     this.policy = deps.policy ?? DEFAULT_POLICY;
@@ -65,6 +76,21 @@ export class CrownGateway {
   get mode(): StateMode {
     if (this.deps.killSwitch.status.engaged) return 'halted';
     return this.deps.heartbeat.evaluate();
+  }
+
+  /**
+   * ربط نطاق التشغيل المحدود (المرحلة 36). يُربط مرة واحدة: ربطٌ ثانٍ قد يُخفي
+   * نطاقًا فعّالًا فيمرّ ما كان ممنوعًا. البوابة لا تفتح النطاق ولا تُغلقه.
+   */
+  bindScope(guard: ScopeGuard): void {
+    if (this.scope) {
+      throw new SovereignViolation(
+        'نطاق التشغيل مربوط سابقًا — ربطٌ ثانٍ يُخفي قيدًا قائمًا',
+        'GATEWAY_SCOPE_ALREADY_BOUND',
+      );
+    }
+    this.scope = guard;
+    this.deps.audit.append('authority:crown', 'gateway_scope_bound', {});
   }
 
   /**
@@ -146,6 +172,13 @@ export class CrownGateway {
     if (this.deps.veto.isVetoed(payload.action) || this.deps.veto.isVetoed(payload.target)) {
       return deny(`نقض ملكي قائم: ${this.deps.veto.reasonFor(payload.action)
         ?? this.deps.veto.reasonFor(payload.target) ?? 'غير محدد'}`);
+    }
+
+    // 10) نطاق التشغيل المحدود (المرحلة 36): آخر بوابة قبل الاعتماد كي يكون الرفض
+    //     منسوبًا إلى القيد وحده لا مُلبِسًا رفضَ تزويرٍ أو انتهاءِ صلاحية بقيدِ نطاق.
+    if (this.scope && this.scope.active) {
+      const inScope = this.scope.permit(payload.action, payload.issuedBy, now);
+      if (!inScope.allowed) return deny(inScope.reason, { scopeViolation: true });
     }
 
     // اعتماد

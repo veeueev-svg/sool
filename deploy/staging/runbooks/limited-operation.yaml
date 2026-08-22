@@ -1,0 +1,17 @@
+# deploy/staging/runbooks/limited-operation.yaml — خطوات كتاب التشغيل المحدود (المرحلة 36)
+# القارئ: src/staging/manifest.ts · المنفّذ: src/staging/runbook_steps.ts
+# كل خطوة معلنة هنا يجب أن يوجد لها فعلٌ وتحقّقٌ مربوطان بالرقم في المنفّذ. خطوة معلنة
+# بلا تنفيذ ⇒ رفض RUNBOOK_STEP_UNBOUND. تنفيذ بلا إعلان ⇒ رفض RUNBOOK_STEP_UNDECLARED.
+runbook:
+  name: limited-operation
+  purpose: تهيئة الدولة لنافذة تشغيل مقيَّدة مراقَبة
+  steps:
+    - n: 1
+      title: إثبات سلامة سلسلة التدقيق قبل النافذة
+      expect: السلسلة تتحقّق ولا كسر فيها
+    - n: 2
+      title: إسقاط صلاحيات كل كائن منتهٍ قبل النافذة
+      expect: لا كائن في سجل الإنهاء يحمل صلاحية سارية
+    - n: 3
+      title: تثبيت وضع الدولة طبيعيًّا وتقييد الفحص القبْلي
+      expect: الوضع طبيعي والفحص مقيَّد في السجل

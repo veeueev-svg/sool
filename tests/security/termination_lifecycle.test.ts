@@ -119,11 +119,11 @@ test('قبول: تهيئة الإنهاء مقروءة من الدولة لا م
   assert.ok(s.terminationConfig.policy.probes.includes('capability'));
 });
 
-test('قبول: التأسيس يبقى مختومًا بسجل state_online وحده، ورقم المرحلة 35', () => {
+test('قبول: التأسيس يبقى مختومًا بسجل state_online وحده، ورقم المرحلة 36', () => {
   const { s } = scene(1);
   const snapshot = s.audit.find('state_online');
   assert.equal(snapshot.length, 1);
-  assert.equal((snapshot.at(-1)?.detail as { phase: number }).phase, 35);
+  assert.equal((snapshot.at(-1)?.detail as { phase: number }).phase, 36);
 });
 
 test('قبول: خرق واحد مصنوع يُسقط الحكم ويُصعَّد — الحكم ليس مطاطًا', () => {
