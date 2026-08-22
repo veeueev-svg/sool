@@ -1,7 +1,7 @@
 {
-  "version": "0.25.0",
-  "phase": 37,
-  "completion_percent": 93.5,
+  "version": "0.26.0",
+  "phase": 38,
+  "completion_percent": 97.0,
   "phases_complete": [
     1,
     2,
@@ -39,7 +39,8 @@
     34,
     35,
     36,
-    37
+    37,
+    38
   ],
   "phases_partial": [],
   "tests": {
@@ -47,7 +48,7 @@
     "passing": 1480,
     "command": "npm test"
   },
-  "declared_by": "حرس التاج",
+  "declared_by": "ديوان التاج للتدقيق",
   "declared_at": "2026-08-22",
   "royal_approval": "pending"
 }

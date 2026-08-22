@@ -1,0 +1,18 @@
+الأمر: npm run verify && bash scripts/check_module_size.sh
+التاريخ: 2026-08-22 · بصمة الالتزام: ea1daf6
+
+# skipped 0
+# todo 0
+# duration_ms 38305.436533
+عدد السجلات: 32
+الحالة: سليمة — سلسلة سليمة
+وضع الدولة: normal
+
+> sool-digital-state@0.1.0 check:size
+> bash scripts/check_module_size.sh
+
+سقف الوحدة المعلن: 400 سطرًا
+✓ لا وحدة تتجاوز سقفها — الاستثناءات المعلنة: 6
+
+سقف الوحدة المعلن: 400 سطرًا
+✓ لا وحدة تتجاوز سقفها — الاستثناءات المعلنة: 6
