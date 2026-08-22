@@ -1,0 +1,16 @@
+# سياسة التوسّع السكاني (المرحلة 31) — هوية مسجّلة وحصة وجدولة، لا عملية نظام
+policy:
+  default: deny
+  population_max: 1000000
+  shard_count: 16
+  per_shard_max: 70000
+  spawn_rate_per_minute: 1000000
+  gateway_p99_ms: 10
+  gateway_max_ms: 25
+  acceptance_population: 50000
+  acceptance_headroom_percent: 20
+  scheduler_max_concurrent: 4
+  scheduler_queue_max: 128
+  scheduler_owner_queue_max: 32
+  rebalance: forbidden
+  resource_name: "identity_slots"

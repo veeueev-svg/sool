@@ -3,6 +3,7 @@ resources:
   compute_units: { total: 1000, per_agent_max: 10, lease_seconds: 3600 }
   memory_mb:     { total: 65536, per_agent_max: 1024, lease_seconds: 3600 }
   egress_calls:  { total: 0, per_agent_max: 0, lease_seconds: 0 }
+  identity_slots: { total: 1000000, per_agent_max: 1, lease_seconds: 3600 }
 agents:
   population_max: 64
   spawn_rate_per_minute: 4

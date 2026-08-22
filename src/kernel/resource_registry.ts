@@ -39,6 +39,11 @@ export type LeaseResult =
 export class ResourceRegistry {
   private readonly specs = new Map<string, ResourceSpec>();
   private readonly leases = new Map<string, Lease>();
+  /**
+   * حصص هويات السكان: سجلّ مورد حقيقي لكن بلا مليون مؤقّت أو مليون سجل تدقيق.
+   * هو تخصيص وحدة لكل هوية في مورد معلن، ويُسجّل منح الدفعة واستعادتها لا كل عنصر داخلي.
+   */
+  private readonly identityReservations = new Map<string, Set<EntityId>>();
   private counter = 0;
 
   constructor(
@@ -50,6 +55,7 @@ export class ResourceRegistry {
         throw new SovereignViolation(`سقف مورد غير صالح: ${name}`, 'RESOURCE_SPEC_INVALID');
       }
       this.specs.set(name, spec);
+      this.identityReservations.set(name, new Set<EntityId>());
     }
     this.audit.append('ministry:infrastructure', 'resource_registry_online', {
       resources: [...this.specs.keys()],
@@ -77,7 +83,7 @@ export class ResourceRegistry {
     for (const lease of this.leases.values()) {
       if (lease.resource === resource && lease.expiresAt > now) sum += lease.amount;
     }
-    return sum;
+    return sum + (this.identityReservations.get(resource)?.size ?? 0);
   }
 
   available(resource: string, now = Date.now()): number {
@@ -90,7 +96,34 @@ export class ResourceRegistry {
     for (const lease of this.leases.values()) {
       if (lease.entity === entity && lease.resource === resource && lease.expiresAt > now) sum += lease.amount;
     }
-    return sum;
+    return sum + (this.identityReservations.get(resource)?.has(entity) ? 1 : 0);
+  }
+
+  /**
+   * يخصص حصة هوية واحدة لكل معرف في دفعة سكان. لا يصنع إيجارًا منفردًا لكل هوية:
+   * هذه الحصص سجلية لا تشغيلية، وتسجل الدفعة كلها كي يبقى قياس المليون ممكنا بلا انفجار سجل.
+   */
+  reserveIdentities(resource: string, entities: readonly EntityId[]): boolean {
+    const spec = this.spec(resource);
+    const reserved = this.identityReservations.get(resource)!;
+    const unique = new Set(entities);
+    if (entities.length === 0 || unique.size !== entities.length || spec.per_agent_max < 1
+      || reserved.size + entities.length > spec.total || entities.some((entity) => reserved.has(entity))) {
+      return false;
+    }
+    for (const entity of entities) reserved.add(entity);
+    this.audit.append('ministry:infrastructure', 'population_resource_reserved', {
+      resource, count: entities.length, allocated: reserved.size,
+    });
+    return true;
+  }
+
+  /** يستعيد حصة الهوية عند الإنهاء؛ لا ينجح مرتين ولا يصنع استعادة وهمية. */
+  releaseIdentity(resource: string, entity: EntityId): boolean {
+    const reserved = this.identityReservations.get(resource);
+    if (!reserved?.delete(entity)) return false;
+    this.audit.append(entity, 'population_resource_released', { resource });
+    return true;
   }
 
   /** منح إيجار مؤقّت — لا استخدام دائم لأي مورد (كل مورد معلن ومسجَّل ومؤقَّت) */
@@ -156,6 +189,12 @@ export class ResourceRegistry {
       if (lease.entity === entity) {
         this.leases.delete(id);
         count += 1;
+      }
+    }
+    for (const [resource, reserved] of this.identityReservations) {
+      if (reserved.delete(entity)) {
+        count += 1;
+        this.audit.append(entity, 'population_resource_released', { resource });
       }
     }
     if (count > 0) this.audit.append(entity, 'resource_all_released', { count });

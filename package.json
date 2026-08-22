@@ -11,6 +11,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test dist/tests/",
     "verify": "npm run build && node --test dist/tests/ && node dist/scripts/verify_audit_chain.js",
+    "bench": "tsc && node dist/scripts/bench_scale.js",
     "clean": "rm -rf dist"
   },
   "devDependencies": {

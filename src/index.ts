@@ -7,11 +7,11 @@
  *   جذر الثقة ← بوابة التاج ← السجل ← المراقبة ← الإيقاف ← الموارد
  */
 import {
-  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch,
+  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadScale,
   loadRoyalAuthority,
   resolveConfigDir,
   QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig, ContractsConfig,
-  EnterprisesConfig, ServicesConfig, ResearchConfig,
+  EnterprisesConfig, ServicesConfig, ResearchConfig, ScaleConfig,
 } from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
@@ -76,6 +76,9 @@ import { ArtifactVerifier } from './models/source_verification';
 import { ModelRegistry } from './models/model_registry';
 import { OpenWeightsImporter } from './models/open_weights_import';
 import { StateMode } from './kernel/types';
+import { PopulationRegistry } from './scale/population';
+import { Sharding } from './scale/sharding';
+import { FairScheduler } from './scale/scheduler';
 
 export interface DigitalState {
   readonly config: RoyalAuthorityConfig;
@@ -146,6 +149,10 @@ export interface DigitalState {
   readonly researchConfig: ResearchConfig;
   readonly mirrorDepartments: MirrorDepartmentRegistry;
   readonly humanResearch: HumanResearchRegistry;
+  readonly scaleConfig: ScaleConfig;
+  readonly sharding: Sharding;
+  readonly population: PopulationRegistry;
+  readonly scheduler: FairScheduler;
   readonly mode: () => StateMode;
 }
 
@@ -196,6 +203,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   const servicesConfig = loadServices(configDir);
   // تهيئة البحث النظري: لا تشغيل إن لم تكن المصادر والأنواع والحد الأخلاقي معلنة ومغلقة.
   const researchConfig = loadResearch(configDir);
+  const scaleConfig = loadScale(configDir);
   audit.append('authority:bootstrap', 'config_loaded', {
     state: config.state_name, code: config.state_code, resources: Object.keys(quotas.resources).length,
   });
@@ -494,10 +502,27 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     departmentFunction: (departmentId) => mirrorDepartments.functionOf(departmentId),
   });
 
+  // 10هـ) توسع السكان (المرحلة 31): هويات مسجلة بحصة مورد ومالك وشريحة حتمية، لا عمليات نظام.
+  // قرار التسجيل أو عزل الشريحة يمر بالبوابة نفسها؛ لا بوابة فرعية ولا إعادة توازن صامتة.
+  const sharding = new Sharding(
+    audit, gateway, scaleConfig.policy.shard_count, scaleConfig.policy.per_shard_max,
+  );
+  const population = new PopulationRegistry(
+    audit, gateway, killSwitch, sharding,
+    scaleConfig.policy.population_max, scaleConfig.policy.spawn_rate_per_minute,
+    resources, scaleConfig.policy.resource_name,
+  );
+  const scheduler = new FairScheduler(
+    audit, killSwitch,
+    scaleConfig.policy.scheduler_max_concurrent,
+    scaleConfig.policy.scheduler_queue_max,
+    scaleConfig.policy.scheduler_owner_queue_max,
+  );
+
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 30, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 31, mode: 'normal' });
 
   // 11) الذاكرة والمعرفة (المرحلة 21) — وزارة البيانات
   //     الترتيب مُلزم: أصناف الاحتفاظ تُعرَف عند الكتابة، ثم الذاكرة سندٌ للمعرفة،
@@ -593,6 +618,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     enterprisesConfig, companies, supply, factories,
     servicesConfig, hospitals, labs, qualityControl,
     researchConfig, mirrorDepartments, humanResearch,
+    scaleConfig, sharding, population, scheduler,
     mode: () => gateway.mode,
   };
 }
@@ -760,6 +786,12 @@ export { FineTuningRun } from './models/fine_tuning';
 export type { TrainingRequest, TrainingInference, TrainingOutcome } from './models/fine_tuning';
 export { ModelRollback } from './models/rollback';
 export type { RollbackOutcome } from './models/rollback';
+export { PopulationRegistry } from './scale/population';
+export type { PopulationIdentity, PopulationInput, PopulationResult } from './scale/population';
+export { Sharding } from './scale/sharding';
+export type { ShardRecord, ShardDrift } from './scale/sharding';
+export { FairScheduler } from './scale/scheduler';
+export type { ScaleTask, ScheduledStatus, ScheduleResult } from './scale/scheduler';
 
 /**
  * لقطة المواءمة: تُبنى من الدولة القائمة لتُفحص على الميثاق (المرحلة 20)
