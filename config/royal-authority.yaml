@@ -24,4 +24,6 @@ sovereign_actions:
   - judicial_review
   # المرحلة 28: إقامة منشأة اقتصادية وحلّها واستئنافها — فعلٌ سيادي لا قرار موظّف
   - establish_facility
+  # المرحلة 29: إقامة خدمة حرجة برمجية أو حلّها أو إعادة رفعها بتحقق مستقل
+  - establish_service
 veto_final: true

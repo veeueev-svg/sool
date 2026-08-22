@@ -1,11 +1,14 @@
 /**
- * tests/services/helpers.ts — أرضية الشركات والمصانع لاختبارات المرحلة 28
- * المالك: وزارة الاقتصاد تحت التاج | يوثّق في: docs/test-reports/phase-28.md
- * لا يحتوي اختبارًا: يبني الأرضية المشتركة (وزارة اقتصاد قائمة، بند موازنة، عقد خارجي
- * قائم لكل نظير مادة، منشأة مُقامة) حتى لا تُخفي كل حالة تهيئتها فتصير النتائج غير قابلة
- * للمقارنة — وحتى يُفصَل رفضُ «المدخل» عن رفضِ «القناة» عن رفضِ «الأمر».
+ * tests/services/helpers.ts — مهاد مشترك لاختبارات مرحلتي 28 و29
+ * المالك: وزارتا الاقتصاد والخدمات تحت التاج | يوثّق في: phase-28.md وphase-29.md
+ * لا يحتوي اختبارًا: يبني أرضية منشآت الاقتصاد وخدمات الوكلاء البرمجية، حتى لا تُخفي كل
+ * حالة تهيئتها فتصير النتائج غير قابلة للمقارنة — ويفصل رفض المدخل والقناة والأمر والمصدر.
+ * ثوابت هذا المهاد: T0 وDAY وHOUR للزمن؛ معرفات الاقتصاد للمرحلة 28؛ وSERVICES/HOSPITAL/LAB
+ * ومصادرهما للمرحلة 29. لا تمثل أسماء الخدمات بشرًا أو بيانات شخصية.
  */
-import { ROYAL_COURT, UNIT_TARGET, bootstrapState } from '../../src/index';
+import {
+  ROYAL_COURT, SERVICES_MINISTRY, UNIT_TARGET, bootstrapState,
+} from '../../src/index';
 
 export const T0 = Date.now();
 export const DAY = 24 * 60 * 60 * 1000;
@@ -31,6 +34,20 @@ export const KIND_ASSEMBLY = 'facility:compute-assembly';
 
 export const BUDGET_LINE = 'budget:industry';
 export const FACILITY = 'facility:index-1';
+
+// المرحلة 29: تسميات الوحدات البرمجية فقط؛ لا تمثّل بشرًا ولا بيانات شخصية.
+export const SERVICES = SERVICES_MINISTRY;
+export const HOSPITAL_DECLARATION = 'service:hospital-core';
+export const LAB_DECLARATION = 'service:lab-core';
+export const HOSPITAL = 'service:hospital-1';
+export const LAB = 'service:lab-1';
+export const AGENT = 'agent:registered-1';
+export const HOSPITAL_SOURCES = [
+  'source:agent-registry', 'source:service-protocol', 'source:diagnostic-history',
+] as const;
+export const LAB_SOURCES = [
+  'source:agent-registry', 'source:service-protocol', 'source:lab-instrument', 'source:sample-chain',
+] as const;
 
 export const CHECKS = [
   'input_provenance', 'output_integrity', 'waste_within_tolerance', 'resource_within_limit',
@@ -95,6 +112,112 @@ export function industrialState(options: { now?: number; withContracts?: boolean
 }
 
 export type Industrial = ReturnType<typeof industrialState>;
+
+/**
+ * أرضية الخدمات الحرجة: وزارة خدمات قائمة ومِجسّ مصادر صريح يبدأ بمصادر التهيئة كلها.
+ * تغيير المصدر هنا يمثل حقيقة تشغيلية فقط؛ لا يخمّنها التشغيل ولا يعيد المصدر الناقص.
+ */
+export function criticalState(options: { now?: number; configDir?: string } = {}) {
+  const now = options.now ?? T0;
+  const s = bootstrapState({ now, configDir: options.configDir });
+  const royal = (target: string, at = now) =>
+    s.king.issueCommand('amend_policy', target, { kind: 'services' }, at);
+  const royalService = (target: string, at = now) =>
+    s.king.issueCommand('establish_service', target, { kind: 'services' }, at);
+  s.ministries.establish(royal(SERVICES), {
+    ministryId: SERVICES,
+    name: 'وزارة الخدمات البرمجية',
+    mandate: ['critical_services'],
+    proposedBy: ROYAL_COURT,
+  }, now);
+  const availability = new Map(s.servicesConfig.sources.map((source) => [source.id, true]));
+  const sourceProbe = (sourceId: string) => availability.get(sourceId) === true;
+  s.hospitals.bindSourceProbe(sourceProbe);
+  s.labs.bindSourceProbe(sourceProbe);
+  const setSource = (sourceId: string, available: boolean) => { availability.set(sourceId, available); };
+  return { s, now, royal, royalService, availability, setSource };
+}
+
+export type Critical = ReturnType<typeof criticalState>;
+
+/** إقامة مستشفى برمجي مؤقت؛ لا ينشأ إلا بأمر establish_service. */
+export function establishHospital(
+  h: Critical,
+  options: { serviceId?: string; declarationId?: string; days?: number; expiresAt?: number; at?: number } = {},
+) {
+  const at = options.at ?? h.now;
+  const serviceId = options.serviceId ?? HOSPITAL;
+  return h.s.hospitals.establish(h.royalService(serviceId, at), {
+    serviceId,
+    declarationId: options.declarationId ?? HOSPITAL_DECLARATION,
+    expiresAt: options.expiresAt ?? at + (options.days ?? 30) * DAY,
+    proposedBy: SERVICES,
+    purpose: 'خدمة برمجية معلنة لوكيل مسجل',
+  }, at);
+}
+
+/** إقامة مختبر برمجي مؤقت؛ حقائق فحوصه تُمرّر لاحقًا إلى مراقبة الجودة المستقلة. */
+export function establishLab(
+  h: Critical,
+  options: { serviceId?: string; declarationId?: string; days?: number; expiresAt?: number; at?: number } = {},
+) {
+  const at = options.at ?? h.now;
+  const serviceId = options.serviceId ?? LAB;
+  return h.s.labs.establish(h.royalService(serviceId, at), {
+    serviceId,
+    declarationId: options.declarationId ?? LAB_DECLARATION,
+    expiresAt: options.expiresAt ?? at + (options.days ?? 30) * DAY,
+    proposedBy: SERVICES,
+    purpose: 'مختبر برمجي معلن لوكيل مسجل',
+  }, at);
+}
+
+/** طلب تشغيل خدمة معلنة لمستفيد وكيل؛ لا يحمل أي بيانات شخصية أو بشرية. */
+export function serviceOperation(
+  h: Critical, serviceId: string, operationId: string,
+  options: { beneficiary?: string; purpose?: string; at?: number; requestedBy?: string } = {},
+) {
+  return h.s.hospitals.execute(serviceId, {
+    operationId,
+    beneficiary: options.beneficiary ?? AGENT,
+    purpose: options.purpose ?? 'تشغيل برمجي معلن',
+    requestedBy: options.requestedBy,
+  }, options.at ?? h.now);
+}
+
+/** إجراء نتيجة مختبر معلقة؛ الاعتماد منفصل في QualityControl. */
+export function performLab(
+  h: Critical, resultId = 'result:lab-1',
+  options: {
+    serviceId?: string; operationId?: string; beneficiary?: string; observedChecks?: Record<string, boolean>;
+    at?: number; requestedBy?: string;
+  } = {},
+) {
+  const observedChecks = options.observedChecks ?? Object.fromEntries(
+    Object.keys(h.s.servicesConfig.quality_checks).map((check) => [check, true]),
+  );
+  return h.s.labs.perform(options.serviceId ?? LAB, {
+    resultId,
+    operationId: options.operationId ?? 'operation:screen',
+    beneficiary: options.beneficiary ?? AGENT,
+    purpose: 'فحص مختبر برمجي معلن',
+    requestedBy: options.requestedBy,
+    observedChecks,
+  }, options.at ?? h.now);
+}
+
+/** تحقق تعافٍ كامل بجهة ديوان التدقيق، منفصل عن مراقب فقد المصدر. */
+export function recoverHospital(
+  h: Critical, serviceId = HOSPITAL,
+  options: { verifiedBy?: string; verifiedSources?: readonly string[]; at?: number; note?: string } = {},
+) {
+  const at = options.at ?? h.now;
+  return h.s.hospitals.verifyRecovery(h.royalService(serviceId, at), serviceId, {
+    verifiedBy: options.verifiedBy ?? AUDITOR,
+    verifiedSources: options.verifiedSources ?? HOSPITAL_SOURCES,
+    note: options.note ?? 'تحقق مستقل معلن من سلامة المصادر العائدة',
+  }, at);
+}
 
 /** إقامة منشأة — الطريق الوحيد: أمر ملكي بفعل establish_facility هدفه معرّف المنشأة */
 export function establish(

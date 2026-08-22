@@ -7,11 +7,11 @@
  *   جذر الثقة ← بوابة التاج ← السجل ← المراقبة ← الإيقاف ← الموارد
  */
 import {
-  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises,
+  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices,
   loadRoyalAuthority,
   resolveConfigDir,
   QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig, ContractsConfig,
-  EnterprisesConfig,
+  EnterprisesConfig, ServicesConfig,
 } from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
@@ -36,6 +36,9 @@ import { ContractTermination } from './external/contract_termination';
 import { CompanyRuntime } from './services/company_runtime';
 import { SupplyChain } from './services/supply_chain';
 import { FactoryRuntime } from './services/factory_runtime';
+import { HospitalRuntime } from './services/hospital_runtime';
+import { LabRuntime } from './services/lab_runtime';
+import { QualityControl } from './services/quality_control';
 import { IntentGate, ToolRegistry } from './agents/tools';
 import { AgentMemory } from './data/agent_memory';
 import { KnowledgeGraph } from './data/knowledge_graph';
@@ -134,6 +137,10 @@ export interface DigitalState {
   readonly companies: CompanyRuntime;
   readonly supply: SupplyChain;
   readonly factories: FactoryRuntime;
+  readonly servicesConfig: ServicesConfig;
+  readonly hospitals: HospitalRuntime;
+  readonly labs: LabRuntime;
+  readonly qualityControl: QualityControl;
   readonly mode: () => StateMode;
 }
 
@@ -180,6 +187,8 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   const contractsConfig = loadContracts(configDir);
   // وتهيئة المنشآت: لا تشغيل بإعلان منشآت فيه نوعٌ لا تنجح فيه دفعة أبدًا (المرحلة 28)
   const enterprisesConfig = loadEnterprises(configDir);
+  // وتهيئة الخدمات الحرجة: لا تشغيل بوضع رابع أو خدمة لا تعرف أدنى مصادر كل وضع (المرحلة 29)
+  const servicesConfig = loadServices(configDir);
   audit.append('authority:bootstrap', 'config_loaded', {
     state: config.state_name, code: config.state_code, resources: Object.keys(quotas.resources).length,
   });
@@ -403,10 +412,57 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     operatorId: enterprisesConfig.policy.operator,
   });
 
+  // 10ج) المستشفيات والمختبرات البرمجية (المرحلة 29) — بعد المنشآت وقبل state_online:
+  //      لا تُقام هنا خدمة؛ الإقامة فعل ملكي لاحق. يُبنى التشغيل من إعلان المصادر والأوضاع
+  //      وحده، ويظل مجسّ المصدر غير مربوط حتى يورّد الواقع الخارجي حقائقه (فشل مغلق).
+  const serviceDeclarations = servicesConfig.services.map((service) => ({
+    id: service.id,
+    name: service.name,
+    kind: service.kind as 'hospital' | 'lab',
+    ministry: service.ministry,
+    modes: {
+      full: service.modes.full.required_sources ?? [],
+      limited: service.modes.limited.required_sources ?? [],
+      halted: service.modes.halted.required_sources ?? [],
+    },
+    operations: service.operations.map((operation) => ({
+      id: operation.id,
+      minimumMode: operation.minimum_mode as 'full' | 'limited',
+      requiredSources: operation.required_sources,
+    })),
+  }));
+  const criticalServiceDeps = {
+    audit,
+    gateway,
+    declarations: serviceDeclarations,
+    maxTermMs: servicesConfig.policy.max_term_days * 24 * 60 * 60 * 1000,
+    maxActivePerMinistry: servicesConfig.policy.max_services_per_ministry,
+    operatorId: servicesConfig.policy.service_operator,
+    beneficiaryPrefix: servicesConfig.policy.beneficiary_prefix,
+    recoveryVerifier: servicesConfig.policy.recovery_verifier,
+  };
+  const hospitals = new HospitalRuntime(criticalServiceDeps);
+  const labs = new LabRuntime({
+    ...criticalServiceDeps,
+    qualityChecks: servicesConfig.quality_checks,
+  });
+  const qualityControl = new QualityControl({
+    audit,
+    qualityChecks: servicesConfig.quality_checks,
+    minQualityScore: servicesConfig.policy.min_quality_score,
+    inspectorId: servicesConfig.policy.quality_inspector,
+  });
+  // سقف الوزارة شامل للمستشفيات والمختبرات، لا سقف مستقل لكل مصفوفة داخلية.
+  const activeServiceCount = (ministryId: string, at: number) =>
+    hospitals.activeServices(at).filter((service) => service.operator === ministryId).length
+    + labs.activeServices(at).filter((service) => service.operator === ministryId).length;
+  hospitals.bindServiceCountProbe(activeServiceCount);
+  labs.bindServiceCountProbe(activeServiceCount);
+
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 28, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 29, mode: 'normal' });
 
   // 11) الذاكرة والمعرفة (المرحلة 21) — وزارة البيانات
   //     الترتيب مُلزم: أصناف الاحتفاظ تُعرَف عند الكتابة، ثم الذاكرة سندٌ للمعرفة،
@@ -477,6 +533,9 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   // ومنشأة المرحلة 28 تلزمها وزارة قائمة: الربط هنا لأن الوزارات تُبنى بعد المنشآت،
   // وقبل الربط كل إقامة مرفوضة (فشل مغلق لا افتراض قيام)
   companies.bindMinistryProbe((ministryId) => ministries.isActive(ministryId));
+  // والخدمات الحرجة لا تفترض قيام الوزارة: قبل هذا الربط كل إقامة ترفض مغلقًا.
+  hospitals.bindMinistryProbe((ministryId) => ministries.isActive(ministryId));
+  labs.bindMinistryProbe((ministryId) => ministries.isActive(ministryId));
 
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
@@ -492,6 +551,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     externalConfig, externalAccounts, payments,
     contractsConfig, partnerRisk, contracts, contractTermination,
     enterprisesConfig, companies, supply, factories,
+    servicesConfig, hospitals, labs, qualityControl,
     mode: () => gateway.mode,
   };
 }
@@ -535,6 +595,19 @@ export { FactoryRuntime, AUDIT_BUREAU } from './services/factory_runtime';
 export type {
   ProductionRun, ProductionRequest, InspectionReport, RunResult, RunStatus,
 } from './services/factory_runtime';
+export { HospitalRuntime, SERVICE_MODE_ORDER, SERVICES_MINISTRY, SERVICE_MONITOR } from './services/hospital_runtime';
+export type {
+  CriticalServiceMode, DeclaredServiceOperation, DeclaredCriticalService, CriticalServiceStatus,
+  CriticalService, EstablishServiceInput, ServiceOperationInput, RecoveryVerificationInput,
+  CriticalServiceResult, ServiceOperationReceipt, MinistryProbe as ServiceMinistryProbe,
+  ServiceSourceProbe, ServiceCountProbe, CriticalServiceRuntimeDeps,
+} from './services/hospital_runtime';
+export { LabRuntime } from './services/lab_runtime';
+export type { LabResultCandidate, LabPerformInput, LabPerformResult, LabRuntimeDeps } from './services/lab_runtime';
+export { QualityControl } from './services/quality_control';
+export type {
+  LabQualityStatus, LabQualityDecision, LabQualityReport, LabQualityResult, QualityControlDeps,
+} from './services/quality_control';
 export { ContractTermination, ALL_CONTRACTS_TARGET } from './external/contract_termination';
 export type { SettlementRecord, SettlementResult } from './external/contract_termination';
 export { Sandbox, normalizePath } from './security/sandbox';

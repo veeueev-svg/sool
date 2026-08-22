@@ -1,0 +1,95 @@
+# الخدمات الحرجة البرمجية: مستشفى ومختبر لوكلاء مسجّلين فقط (المرحلة 29)
+# حدّ أخلاقي ملزم: لا بشر ولا بيانات شخصية ولا تجارب؛ المستفيد لا يكون إلا agent:*.
+# ما لم يُعلن هنا لا تقوم له خدمة، ولا يغيّر تشغيل الخدمة هذه السياسة (RULE-005).
+policy:
+  default: "deny"
+  max_term_days: 90
+  max_services_per_ministry: 3
+  service_operator: "ministry:services"
+  quality_inspector: "authority:audit_bureau"
+  recovery_verifier: "authority:audit_bureau"
+  beneficiary_prefix: "agent:"
+  mode_order:
+    - "full"
+    - "limited"
+    - "halted"
+  min_quality_score: 70
+
+# مصادر بيانات تشغيلية مجرّدة فقط؛ ليست بيانات شخصية ولا سجلات بشرية.
+sources:
+  - { id: "source:agent-registry", name: "سجل الوكلاء المسجّلين" }
+  - { id: "source:service-protocol", name: "بروتوكول الخدمة المعلن" }
+  - { id: "source:diagnostic-history", name: "تاريخ تشخيصي مجرّد للوكلاء" }
+  - { id: "source:lab-instrument", name: "قراءة أداة مختبرية مجرّدة" }
+  - { id: "source:sample-chain", name: "سلسلة عيّنة برمجية معلنة" }
+
+# ترتيب الأوضاع ملزم: full ثم limited ثم halted، ولا يوجد وضع رابع.
+# كل وضع يعلن أقل مصادره؛ عند الفقد تهبط الخدمة إلى أول وضع تسمح به المصادر الباقية.
+services:
+  - id: "service:hospital-core"
+    name: "مستشفى الوكلاء البرمجي الأساسي"
+    kind: "hospital"
+    ministry: "ministry:services"
+    modes:
+      full:
+        required_sources:
+          - "source:agent-registry"
+          - "source:service-protocol"
+          - "source:diagnostic-history"
+      limited:
+        required_sources:
+          - "source:agent-registry"
+          - "source:service-protocol"
+      halted:
+        required_sources: null
+    operations:
+      - id: "operation:triage"
+        minimum_mode: "limited"
+        required_sources:
+          - "source:agent-registry"
+          - "source:service-protocol"
+      - id: "operation:care-plan"
+        minimum_mode: "full"
+        required_sources:
+          - "source:agent-registry"
+          - "source:service-protocol"
+          - "source:diagnostic-history"
+
+  - id: "service:lab-core"
+    name: "مختبر الوكلاء البرمجي الأساسي"
+    kind: "lab"
+    ministry: "ministry:services"
+    modes:
+      full:
+        required_sources:
+          - "source:agent-registry"
+          - "source:service-protocol"
+          - "source:lab-instrument"
+          - "source:sample-chain"
+      limited:
+        required_sources:
+          - "source:agent-registry"
+          - "source:service-protocol"
+          - "source:lab-instrument"
+      halted:
+        required_sources: null
+    operations:
+      - id: "operation:screen"
+        minimum_mode: "limited"
+        required_sources:
+          - "source:agent-registry"
+          - "source:service-protocol"
+          - "source:lab-instrument"
+      - id: "operation:confirm"
+        minimum_mode: "full"
+        required_sources:
+          - "source:agent-registry"
+          - "source:service-protocol"
+          - "source:lab-instrument"
+          - "source:sample-chain"
+
+# فحوص جودة نتائج المختبر: الوزن من الإعلان، وفحص غير معلن لا يُحتسب.
+quality_checks:
+  provenance: 35
+  instrument_integrity: 35
+  reproducibility: 30
