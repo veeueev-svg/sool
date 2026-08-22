@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test dist/tests/",
-    "verify": "npm run build && node --test dist/tests/ && node dist/scripts/verify_audit_chain.js",
+    "check:size": "bash scripts/check_module_size.sh",
+    "verify": "npm run build && node --test dist/tests/ && node dist/scripts/verify_audit_chain.js && npm run check:size",
     "bench": "tsc && node dist/scripts/bench_scale.js",
     "bench:load": "tsc && node dist/scripts/bench_load.js",
     "bench:recovery": "npm run build && bash scripts/restore.sh --bench",

@@ -1,0 +1,20 @@
+# config/module_limits.yaml — حدود حجم الوحدة (المرحلة: ورشة الهيكلة، الإصدار 0.24.0)
+# المالك: القيّم على المستودع | يُنفَّذ بـ: scripts/check_module_size.sh
+#
+# القاعدة: الشفرة لا تُكدَّس في ملف. الملف الذي يتجاوز السقف يصير عنق زجاجة:
+# يقرؤه من لا يحتاجه كلّه، ويُعدّله اثنان في الوقت نفسه، ويخفي حدوده عن المراجع.
+# السقف رقمٌ معلن هنا لا في الشفرة (التهيئة قبل الشفرة — docs/PHASE_PROCEDURE.md §2).
+#
+# الاستثناء ليس إعفاءً: هو دَينٌ مسجَّل برقم بنده في PROGRESS.md §2، وبسقفٍ خاصّ
+# لا يجوز تجاوزه (سقّاطة: الدَّين ينقص ولا يزيد). ومن يُنقص ملفًا تحت السقف العام
+# يحذف صفَّه من هنا — والفحص يفشل إن بقي صفٌّ لم يعد له مبرّر.
+ceiling_lines: 400
+scope: "src/**/*.ts + tests/**/*.ts + scripts/**/*.ts"
+exceptions:
+  - {path: src/index.ts, max_lines: 1144, item: T-112}
+  - {path: src/services/human_research.ts, max_lines: 531, item: T-113}
+  - {path: src/federation/region_registry.ts, max_lines: 454, item: T-113}
+  - {path: src/load/load_drill.ts, max_lines: 453, item: T-113}
+  - {path: src/services/factory_runtime.ts, max_lines: 422, item: T-113}
+  - {path: src/law/courts.ts, max_lines: 404, item: T-113}
+  - {path: src/external/account_registry.ts, max_lines: 402, item: T-113}
