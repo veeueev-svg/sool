@@ -62,6 +62,12 @@ export interface LoadLedgerDeps {
 
 export class LoadLedger {
   private readonly fates = new Map<string, LoadFate | null>();
+  /**
+   * لحظة إدراج كل أمر (المرحلة 37). أُضيفت لأن المراقبة المستمرة تقيس الفقد
+   * بالزمن لا بمقارنة لحظية مع قناة: أمرٌ أُدرج ولم يُثبت مصيره بعد المدة المعلنة
+   * فقدٌ وإن لم يُرصد في قناة — والمطابقة وحدها تحتاج قناةً تُرصد.
+   */
+  private readonly declaredAt = new Map<string, number>();
 
   constructor(private readonly deps: LoadLedgerDeps) {
     if (!Number.isSafeInteger(deps.maxLoss) || deps.maxLoss < 0) {
@@ -83,6 +89,7 @@ export class LoadLedger {
       return false;
     }
     this.fates.set(commandId, null);
+    this.declaredAt.set(commandId, Date.now());
     this.deps.audit.append(this.deps.authority, 'load_command_declared', { commandId });
     return true;
   }
@@ -111,6 +118,21 @@ export class LoadLedger {
 
   get declaredCount(): number {
     return this.fates.size;
+  }
+
+  /**
+   * الأوامر التي أُدرجت ولم يُثبَت مصيرها بعد المدة المعلنة (المرحلة 37).
+   * قراءةٌ لا تُعدّل شيئًا: الماسح يقرأ ولا يُصلح (RULE-004).
+   */
+  overdue(maxAgeMs: number, now = Date.now()): readonly string[] {
+    const late: string[] = [];
+    for (const [commandId, fate] of this.fates) {
+      if (fate !== null) continue;
+      const at = this.declaredAt.get(commandId);
+      if (at === undefined) continue;
+      if (now - at > maxAgeMs) late.push(commandId);
+    }
+    return late;
   }
 
   /**

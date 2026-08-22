@@ -110,11 +110,11 @@ test('الرفض قبل أي أثر: مشغّل غير معلن ودولة مو�
   );
 });
 
-test('التأسيس يبقى مختومًا بسجل state_online وحده، ورقم المرحلة 36 بعد التشغيل المحدود', () => {
+test('التأسيس يبقى مختومًا بسجل state_online وحده، ورقم المرحلة 37 بعد التشغيل الاتحادي', () => {
   const s = bootstrapState({ now: Date.now() });
   const online = s.audit.find('state_online');
   assert.equal(online.length, 1);
-  assert.equal((online[0]?.detail as { phase: number }).phase, 36);
+  assert.equal((online[0]?.detail as { phase: number }).phase, 37);
   // النطاق مربوط بالبوابة ومغلق، والمراقب مبني ولا يعمل: من يفتح النافذة يبدأ المؤقّت
   assert.equal(s.operationScope.active, false);
   assert.equal(s.incidentMonitor.running, false);

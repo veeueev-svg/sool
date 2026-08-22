@@ -1824,7 +1824,13 @@ export type IncidentKind =
   | 'terminated_entity_acting'
   | 'overdue_batch'
   | 'unresolved_dispute'
-  | 'expired_retention';
+  | 'expired_retention'
+  // المرحلة 37: حوادث الماسحات التي كانت دَينًا مفتوحًا (T-105) وحوادث مرور التاج
+  | 'unit_ledger_mismatch'
+  | 'command_loss_over_limit'
+  | 'critical_service_unverified'
+  | 'crown_passage_bypass'
+  | 'region_action_without_passage';
 
 /** الحرّاس المعروفون: كل واحد ماسحٌ حقيقي في وحدة قائمة */
 export type WatchKind = 'regions' | 'audit_chain' | 'scope' | 'termination' | 'king';
@@ -2096,6 +2102,402 @@ export function loadStaging(configDir = resolveConfigDir()): StagingConfig {
     throw new SovereignViolation(
       'سقف سكان التشغيل المحدود فوق السقف السكاني المعلن — قيدٌ أرخى من الأصل',
       'CONFIG_STAGING_AGENTS_OVER_POPULATION',
+    );
+  }
+  return raw;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// المرحلة 37 — سياسة التشغيل الاتحادي
+//
+// الفرق عن المرحلة 36 ليس في العدد بل في طبيعة الشرط: هناك «نافذة» لها مدة تنتهي،
+// وهنا «مراقبة مستمرة» بلا مدة. فكل ما كان يُقاس بطول النافذة يُقاس هنا بالصمت
+// المسموح وبفجوة إعادة التشغيل. والقاعدة نفسها: لكل رقم قيمةٌ تُسقط الإقلاع.
+// ════════════════════════════════════════════════════════════════════════════
+
+/** الماسحات المعروفة: حرّاس المرحلة 36 + الوحدات التي كانت تنتظر نداءً + المرور */
+export type ScannerKind =
+  | WatchKind
+  | 'loads'
+  | 'digital_unit'
+  | 'factories'
+  | 'hospitals'
+  | 'retention'
+  | 'passage';
+
+export interface ProductionConfig {
+  policy: {
+    default: 'deny';
+    observer_authority: string;
+    supervision: {
+      tick_ms: number;
+      start_grace_ms: number;
+      max_silence_ms: number;
+      restart_gap_max_ms: number;
+      min_sweeps: number;
+      checkpoint_directory: string;
+    };
+    loads: { pending_max_ms: number };
+    regions: {
+      required: readonly string[];
+      require_crown_passage: boolean;
+      require_governor: boolean;
+      passage_ttl_ms: number;
+      max_suspended: number;
+    };
+    tolerance: {
+      max_critical: number;
+      max_unwatched: number;
+      max_failed_sweeps: number;
+      max_unpassed_action: number;
+      min_bypass_proof: number;
+    };
+    severity: { critical: readonly IncidentKind[]; high: readonly IncidentKind[] };
+    scanners: readonly ScannerKind[];
+    require_runbook_execution: boolean;
+    runbooks: readonly string[];
+    require_independent_observer: boolean;
+    halt_on_critical: boolean;
+    escalate_on_breach: boolean;
+  };
+}
+
+/** الماسحات المعروفة — ماسحٌ مجهول لا يُعرف ما يمسح فلا تُقاس شهادته */
+export const PRODUCTION_KNOWN_SCANNERS: readonly ScannerKind[] = [
+  'regions', 'audit_chain', 'scope', 'termination', 'king',
+  'loads', 'digital_unit', 'factories', 'hospitals', 'retention', 'passage',
+];
+
+/**
+ * الماسحات التي لا يُعدّ التشغيل الاتحادي مقبولًا بغيرها. شرط القبول نصًّا:
+ * «كل الأقاليم تعمل تحت مرور التاج مع مراقبة مستمرة» — فـ«الأقاليم تعمل» توجب
+ * ماسح الأقاليم، و«تحت مرور التاج» توجب ماسح المرور، و«مراقبة» لا تُبنى على سلسلة
+ * غير مُتحقَّقة (audit_chain) ولا على نطاق غير محروس (scope).
+ */
+export const PRODUCTION_REQUIRED_SCANNERS: readonly ScannerKind[] = [
+  'regions', 'passage', 'audit_chain', 'scope',
+];
+
+/** الحوادث المعروفة في التشغيل الاتحادي */
+export const PRODUCTION_KNOWN_INCIDENTS: readonly IncidentKind[] = [
+  ...STAGING_KNOWN_INCIDENTS,
+  'unit_ledger_mismatch', 'command_loss_over_limit', 'critical_service_unverified',
+  'crown_passage_bypass', 'region_action_without_passage',
+];
+
+/**
+ * ما لا يجوز تصنيفه دون «حرج». يُضاف إلى قائمة المرحلة 36 فعلٌ إقليمي نفُذ بلا إذن
+ * مرور: تصنيفه «جسيمًا» يُسقط شرط القبول ضمنًا — لأن الشرط هو ألّا ينفُذ.
+ */
+export const PRODUCTION_MUST_BE_CRITICAL: readonly IncidentKind[] = [
+  ...STAGING_MUST_BE_CRITICAL,
+  'region_action_without_passage',
+];
+
+/** كتب التشغيل المعروفة في الطور الاتحادي */
+export const PRODUCTION_KNOWN_RUNBOOKS: readonly string[] = [
+  'federated-operation', 'king-absence',
+];
+
+/** الجهات المشغّلة للتشغيل الاتحادي — المراقب ليس منها (RULE-004) */
+export const PRODUCTION_OPERATORS: readonly string[] = STAGING_OPERATORS;
+
+/**
+ * يحمّل سياسة التشغيل الاتحادي ويرفض كل تهيئة تُسمّي المراقبة «مستمرة» وهي منقطعة،
+ * أو تُسمّي الأقاليم «عاملة» وهي معلنة، أو تُسمّي المرور «مُنفَّذًا» بلا دليل رفض.
+ */
+export function loadProduction(configDir = resolveConfigDir()): ProductionConfig {
+  const raw = loadYamlFile(join(configDir, 'production.yaml')) as unknown as ProductionConfig;
+  const policy = raw.policy;
+  if (!policy) {
+    throw new SovereignViolation('سياسة التشغيل الاتحادي غير معلنة', 'CONFIG_NO_PRODUCTION_POLICY');
+  }
+  if (policy.default !== 'deny') {
+    throw new SovereignViolation(
+      'الافتراض في التشغيل الاتحادي منعٌ لا سماح — لا يُرخى بعد التشغيل المحدود',
+      'CONFIG_PRODUCTION_DEFAULT_ALLOW',
+    );
+  }
+  if (!policy.observer_authority || policy.observer_authority.trim().length === 0) {
+    throw new SovereignViolation(
+      'لا مراقب معلن — تشغيلٌ يشهد لنفسه',
+      'CONFIG_PRODUCTION_OBSERVER_AUTHORITY',
+    );
+  }
+  if (PRODUCTION_OPERATORS.includes(policy.observer_authority)) {
+    throw new SovereignViolation(
+      'المراقب من المشغّلين — من يشغّل الاتحاد لا يشهد لنفسه أنه مراقَب (RULE-004)',
+      'CONFIG_PRODUCTION_OBSERVER_IS_OPERATOR',
+    );
+  }
+
+  const sup = policy.supervision;
+  if (!sup) {
+    throw new SovereignViolation(
+      'لا مراقبة معلنة — «مستمرة» بلا أرقام دعوى',
+      'CONFIG_PRODUCTION_NO_SUPERVISION',
+    );
+  }
+  const positives: readonly [string, number][] = [
+    ['tick_ms', sup.tick_ms],
+    ['start_grace_ms', sup.start_grace_ms],
+    ['max_silence_ms', sup.max_silence_ms],
+    ['restart_gap_max_ms', sup.restart_gap_max_ms],
+    ['min_sweeps', sup.min_sweeps],
+    ['pending_max_ms', policy.loads?.pending_max_ms as number],
+    ['passage_ttl_ms', policy.regions?.passage_ttl_ms as number],
+  ];
+  for (const [name, value] of positives) {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+      throw new SovereignViolation(
+        `قيمة غير صالحة في سياسة التشغيل الاتحادي: «${name}»`,
+        'CONFIG_PRODUCTION_SUPERVISION_VALUE',
+      );
+    }
+  }
+  if (sup.min_sweeps < 2) {
+    throw new SovereignViolation(
+      'مسحة واحدة لا تُسمّى مراقبة مستمرة — الاستمرار يُقاس بتكرارٍ لا بحدوث',
+      'CONFIG_PRODUCTION_MIN_SWEEPS',
+    );
+  }
+  if (sup.start_grace_ms < sup.tick_ms) {
+    throw new SovereignViolation(
+      'مهلة البدء أقصر من دورة المسح — خرقٌ حتميّ لا قياس',
+      'CONFIG_PRODUCTION_GRACE_UNDER_TICK',
+    );
+  }
+  if (sup.max_silence_ms <= sup.tick_ms) {
+    throw new SovereignViolation(
+      'الصمت المسموح لا يجاوز دورة المسح — فجوةٌ تُعلن في كل دورة سليمة',
+      'CONFIG_PRODUCTION_SILENCE_UNDER_TICK',
+    );
+  }
+  if (!sup.checkpoint_directory || sup.checkpoint_directory.trim().length === 0) {
+    throw new SovereignViolation(
+      'لا نقطة تفتيش معلنة — مراقبةٌ لا تعبر إعادة التشغيل ليست مستمرة',
+      'CONFIG_PRODUCTION_NO_CHECKPOINT_DIR',
+    );
+  }
+
+  const regions = policy.regions;
+  if (!regions || !Array.isArray(regions.required) || regions.required.length === 0) {
+    throw new SovereignViolation(
+      'لا أقاليم مشترطة — «كل الأقاليم تعمل» بلا مرجع تُقاس عليه',
+      'CONFIG_PRODUCTION_NO_REGIONS',
+    );
+  }
+  const declared = new Set(loadRegions(configDir).regions.map((r) => r.id));
+  const seenRegion = new Set<string>();
+  for (const id of regions.required) {
+    if (seenRegion.has(id)) {
+      throw new SovereignViolation(
+        `إقليم مشترط مكرّر: «${id}» — التكرار يُضخّم العدد ولا يُضيف عملًا`,
+        'CONFIG_PRODUCTION_REGION_DUPLICATE',
+      );
+    }
+    seenRegion.add(id);
+    if (!declared.has(id)) {
+      throw new SovereignViolation(
+        `إقليم مشترط غير معلن في regions.yaml: «${id}» — شرطٌ يستحيل استيفاؤه`,
+        'CONFIG_PRODUCTION_REGION_UNDECLARED',
+      );
+    }
+  }
+  if (regions.require_crown_passage !== true) {
+    throw new SovereignViolation(
+      'مرور التاج غير مشترط — تعطيله ينقض شرط القبول نصًّا',
+      'CONFIG_PRODUCTION_PASSAGE_OPTIONAL',
+    );
+  }
+  if (regions.require_governor !== true) {
+    throw new SovereignViolation(
+      'إقليم مفوَّض بلا حاكم سلطةٌ بلا مسؤول (المرحلة 24)',
+      'CONFIG_PRODUCTION_GOVERNOR_OPTIONAL',
+    );
+  }
+  if (regions.max_suspended !== 0) {
+    throw new SovereignViolation(
+      'إقليم موقوف مُحتمَل في تشغيل يُقال إنه اتحادي كامل',
+      'CONFIG_PRODUCTION_SUSPENDED_TOLERATED',
+    );
+  }
+
+  const tol = policy.tolerance;
+  if (!tol) {
+    throw new SovereignViolation(
+      'لا حدود تحمّل معلنة — تشغيلٌ بلا سقف خرق',
+      'CONFIG_PRODUCTION_NO_TOLERANCE',
+    );
+  }
+  if (tol.max_critical !== 0) {
+    throw new SovereignViolation(
+      'حادث حرج مُحتمَل في تشغيل مستمر — الشرط لا يقبل استثناءً',
+      'CONFIG_PRODUCTION_CRITICAL_TOLERATED',
+    );
+  }
+  if (tol.max_unwatched !== 0) {
+    throw new SovereignViolation(
+      'ماسحٌ معلن لا يمسح مُحتمَل — قدرةٌ لا يناديها أحد (T-105)',
+      'CONFIG_PRODUCTION_UNWATCHED_TOLERATED',
+    );
+  }
+  if (tol.max_failed_sweeps !== 0) {
+    throw new SovereignViolation(
+      'مسحة منهارة مُحتمَلة — صمت الماسح يمرّ بلا أثر',
+      'CONFIG_PRODUCTION_FAILED_SWEEP_TOLERATED',
+    );
+  }
+  if (tol.max_unpassed_action !== 0) {
+    throw new SovereignViolation(
+      'فعل إقليمي بلا إذن مرور مُحتمَل — نقضُ الشرط نفسه',
+      'CONFIG_PRODUCTION_UNPASSED_TOLERATED',
+    );
+  }
+  if (typeof tol.min_bypass_proof !== 'number' || tol.min_bypass_proof < 1) {
+    throw new SovereignViolation(
+      'لا دليل رفض مشترط — «مُنفَّذ» بلا محاولة تجاوزٍ مرفوضة دعوى',
+      'CONFIG_PRODUCTION_BYPASS_UNPROVEN',
+    );
+  }
+
+  const severity = policy.severity;
+  if (!severity || !Array.isArray(severity.critical) || severity.critical.length === 0) {
+    throw new SovereignViolation(
+      'لا حوادث حرجة معلنة — تصنيفٌ يُفرغ التوقف الآمن',
+      'CONFIG_PRODUCTION_NO_CRITICAL_KINDS',
+    );
+  }
+  const high = Array.isArray(severity.high) ? severity.high : [];
+  for (const kind of [...severity.critical, ...high]) {
+    if (!PRODUCTION_KNOWN_INCIDENTS.includes(kind)) {
+      throw new SovereignViolation(
+        `حادث مجهول في التصنيف: «${kind}» — ما لا يُعرف لا يُقاس`,
+        'CONFIG_PRODUCTION_INCIDENT_UNKNOWN',
+      );
+    }
+  }
+  for (const kind of severity.critical) {
+    if (high.includes(kind)) {
+      throw new SovereignViolation(
+        `حادث مصنّف حرجًا وجسيمًا معًا: «${kind}»`,
+        'CONFIG_PRODUCTION_SEVERITY_CONTRADICTION',
+      );
+    }
+  }
+  for (const kind of PRODUCTION_MUST_BE_CRITICAL) {
+    if (!severity.critical.includes(kind)) {
+      throw new SovereignViolation(
+        `حادثٌ لا يجوز تخفيفه: «${kind}» — تصنيفه دون حرج يُسقط شرط القبول`,
+        'CONFIG_PRODUCTION_CRITICAL_DOWNGRADED',
+      );
+    }
+  }
+
+  if (!Array.isArray(policy.scanners) || policy.scanners.length === 0) {
+    throw new SovereignViolation(
+      'لا ماسحات معلنة — مراقبةٌ بلا ما تمسحه',
+      'CONFIG_PRODUCTION_NO_SCANNERS',
+    );
+  }
+  const seenScanner = new Set<string>();
+  for (const scanner of policy.scanners) {
+    if (!PRODUCTION_KNOWN_SCANNERS.includes(scanner)) {
+      throw new SovereignViolation(
+        `ماسح مجهول: «${scanner}»`,
+        'CONFIG_PRODUCTION_SCANNER_UNKNOWN',
+      );
+    }
+    if (seenScanner.has(scanner)) {
+      throw new SovereignViolation(
+        `ماسح مكرّر: «${scanner}» — التكرار يُضخّم عدد المسحات ولا يُضيف مراقبة`,
+        'CONFIG_PRODUCTION_SCANNER_DUPLICATE',
+      );
+    }
+    seenScanner.add(scanner);
+  }
+  for (const required of PRODUCTION_REQUIRED_SCANNERS) {
+    if (!seenScanner.has(required)) {
+      throw new SovereignViolation(
+        `ماسح مشترط غائب: «${required}» — شرط القبول لا يُستوفى بدونه`,
+        'CONFIG_PRODUCTION_REQUIRED_SCANNER_MISSING',
+      );
+    }
+  }
+
+  if (policy.require_runbook_execution !== true) {
+    throw new SovereignViolation(
+      'كتاب التشغيل يُنفَّذ لا يُقرأ (RULE-008)',
+      'CONFIG_PRODUCTION_RUNBOOK_OPTIONAL',
+    );
+  }
+  if (!Array.isArray(policy.runbooks) || policy.runbooks.length === 0) {
+    throw new SovereignViolation(
+      'لا كتب تشغيل معلنة — تنفيذٌ بلا مكتوب',
+      'CONFIG_PRODUCTION_NO_RUNBOOKS',
+    );
+  }
+  const seenBook = new Set<string>();
+  for (const book of policy.runbooks) {
+    if (!PRODUCTION_KNOWN_RUNBOOKS.includes(book)) {
+      throw new SovereignViolation(
+        `كتاب تشغيل مجهول: «${book}»`,
+        'CONFIG_PRODUCTION_RUNBOOK_UNKNOWN',
+      );
+    }
+    if (seenBook.has(book)) {
+      throw new SovereignViolation(
+        `كتاب تشغيل مكرّر: «${book}»`,
+        'CONFIG_PRODUCTION_RUNBOOK_DUPLICATE',
+      );
+    }
+    seenBook.add(book);
+  }
+
+  if (policy.require_independent_observer !== true) {
+    throw new SovereignViolation(
+      'المراقبة المستقلة غير مشترطة — شهادةٌ على النفس',
+      'CONFIG_PRODUCTION_OBSERVER_OPTIONAL',
+    );
+  }
+  if (policy.halt_on_critical !== true) {
+    throw new SovereignViolation(
+      'حادث حرج يوجب التوقف الآمن ولا يُواصَل عليه (RULE-007)',
+      'CONFIG_PRODUCTION_CRITICAL_CONTINUES',
+    );
+  }
+  if (policy.escalate_on_breach !== true) {
+    throw new SovereignViolation(
+      'خرقٌ لا يمرّ بلا تصعيد — لا سياسة تُسكته',
+      'CONFIG_PRODUCTION_BREACH_SILENT',
+    );
+  }
+
+  const load = loadLoad(configDir).policy;
+  if (sup.tick_ms < load.channel_max_ms) {
+    throw new SovereignViolation(
+      'دورة مسح أسرع من أقصى زمن أمر معلن — تُنتج حادثًا حتميًّا لا حقيقيًّا',
+      'CONFIG_PRODUCTION_TICK_UNDER_CHANNEL_MAX',
+    );
+  }
+  if (policy.loads.pending_max_ms < load.channel_max_ms) {
+    throw new SovereignViolation(
+      'عمر الأمر المسموح أقصر من زمن مروره — أمرٌ يُعدّ مفقودًا قبل أن يُمهَل',
+      'CONFIG_PRODUCTION_PENDING_UNDER_CHANNEL_MAX',
+    );
+  }
+  const staging = loadStaging(configDir).policy;
+  if (sup.tick_ms > staging.window.tick_ms) {
+    throw new SovereignViolation(
+      'مسح التشغيل الاتحادي أبطأ من مسح التشغيل المحدود — تدرّجٌ منقوض',
+      'CONFIG_PRODUCTION_TICK_OVER_STAGING',
+    );
+  }
+  const chaos = loadChaos(configDir).policy;
+  if (sup.restart_gap_max_ms < chaos.safe_stop_deadline_ms) {
+    throw new SovereignViolation(
+      'فجوة إعادة التشغيل المسموحة أقصر من مهلة التوقف الآمن — توقفٌ نظاميّ يُعدّ خرقًا',
+      'CONFIG_PRODUCTION_RESTART_GAP_UNDER_SAFE_STOP',
     );
   }
   return raw;

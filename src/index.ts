@@ -13,6 +13,7 @@ import {
   QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig, ContractsConfig,
   EnterprisesConfig, ServicesConfig, ResearchConfig, ScaleConfig, RecoveryConfig, LoadConfig, ChaosConfig, TerminationConfig,
   loadStaging, StagingConfig,
+  loadProduction, ProductionConfig, PRODUCTION_KNOWN_RUNBOOKS, PRODUCTION_OPERATORS,
 } from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
@@ -98,6 +99,15 @@ import { RunbookRunner } from './staging/runbook_runner';
 import { StagingLedger } from './staging/staging_ledger';
 import { buildWatchProbes } from './staging/watch_probes';
 import { StagingManifest, loadStagingManifest, resolveDeployDir } from './staging/manifest';
+import { CheckpointStore, resolveCheckpointPath } from './production/supervision_checkpoint';
+import { RegionalPassage } from './production/regional_passage';
+import { buildProductionScanners } from './production/production_scanners';
+import { ContinuousSupervisor } from './production/continuous_supervisor';
+import { ProductionLedger } from './production/production_ledger';
+import {
+  ProductionManifest, loadProductionManifest, resolveProductionDeployDir,
+} from './production/production_manifest';
+import { FederatedOperation } from './production/federated_operation';
 
 export interface DigitalState {
   readonly config: RoyalAuthorityConfig;
@@ -194,6 +204,12 @@ export interface DigitalState {
   readonly incidentMonitor: IncidentMonitor;
   readonly runbookRunner: RunbookRunner;
   readonly stagingLedger: StagingLedger;
+  readonly productionConfig: ProductionConfig;
+  readonly productionManifest: ProductionManifest;
+  readonly passage: RegionalPassage;
+  readonly continuousSupervisor: ContinuousSupervisor;
+  readonly productionLedger: ProductionLedger;
+  readonly federatedOperation: FederatedOperation;
   readonly mode: () => StateMode;
 }
 
@@ -715,7 +731,47 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     chainValid: () => audit.verifyIntegrity().valid,
     stateHalted: () => killSwitch.status.engaged,
   });
-  audit.append('authority:bootstrap', 'state_online', { phase: 36, mode: 'normal' });
+  // 19) التشغيل الاتحادي (المرحلة 37) — مرور التاج يُربط بسجل الحكّام وهو **مغلق**،
+  //     فدولةٌ لم يُفتح لها تشغيل اتحادي تعمل كما كانت (كما فُعل بالنطاق في 36).
+  //     المراقبة المستمرة تُبنى ولا تبدأ هنا: من يبدأ المؤقّت هو من يفتح التشغيل.
+  //     تأخّر أول مسحة عن مهلة الإقلاع يُقاس في الشهادة خرقًا معلنًا لا يُغتفر صامتًا.
+  const productionConfig = loadProduction(configDir);
+  const productionManifest = loadProductionManifest(productionConfig, resolveProductionDeployDir());
+  const passage = new RegionalPassage({ audit, gateway, policy: productionConfig.policy });
+  governors.bindPassage(passage);
+  const productionScanners = buildProductionScanners(
+    {
+      audit, loads: loadLedger, unit, factories, hospitals, retention, passage,
+      policy: productionConfig.policy, retentionAuthority: 'authority:audit_bureau',
+    },
+    buildWatchProbes({
+      audit, regionMonitor, scope: operationScope, terminationRoll, permissions,
+      modeAt: (at) => (killSwitch.status.engaged ? 'halted' : heartbeat.evaluate(at)),
+    }),
+  );
+  const continuousSupervisor = new ContinuousSupervisor({
+    audit, killSwitch, policy: productionConfig.policy,
+    observer: productionConfig.policy.observer_authority,
+    probes: productionScanners,
+    bootAt: now,
+    checkpoint: new CheckpointStore(
+      resolveCheckpointPath(productionConfig.policy.supervision.checkpoint_directory),
+    ),
+  });
+  const productionLedger = new ProductionLedger({
+    audit, policy: productionConfig.policy,
+    chainValid: () => audit.verifyIntegrity().valid,
+    stateHalted: () => killSwitch.status.engaged,
+  });
+  const federatedOperation = new FederatedOperation({
+    audit, policy: productionConfig.policy, passage, supervisor: continuousSupervisor,
+    runner: new RunbookRunner({
+      audit, policy: productionConfig.policy,
+      known: PRODUCTION_KNOWN_RUNBOOKS, operators: PRODUCTION_OPERATORS,
+    }),
+    ledger: productionLedger, regions, governors, regionMonitor, bootAt: now,
+  });
+  audit.append('authority:bootstrap', 'state_online', { phase: 37, mode: 'normal' });
 
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
@@ -739,6 +795,8 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     chaosConfig, faultInjector, safeStopLedger, chaosDrill,
     terminationConfig, terminationRoll, terminationLedger,
     stagingConfig, stagingManifest, operationScope, incidentMonitor, runbookRunner, stagingLedger,
+    productionConfig, productionManifest, passage, continuousSupervisor, productionLedger,
+    federatedOperation,
     mode: () => gateway.mode,
   };
 }
@@ -1007,6 +1065,54 @@ export {
   STAGING_MUST_BE_CRITICAL, STAGING_KNOWN_RUNBOOKS, STAGING_OPERATORS,
 } from './kernel/config';
 export type { StagingConfig, IncidentKind, WatchKind } from './kernel/config';
+
+// ── المرحلة 37: التشغيل الاتحادي ────────────────────────────────────────────
+// تُصدَّر الرموز كي تُؤكّد الاختبارات على الرمز لا على نصٍّ مشكول (درس المرحلة 30)
+export { CheckpointStore, resolveCheckpointPath } from './production/supervision_checkpoint';
+export type { SupervisionCheckpoint } from './production/supervision_checkpoint';
+export { RegionalPassage } from './production/regional_passage';
+export type {
+  RegionalPassageDeps, PassageRequest, BypassAttempt, PassageResult,
+} from './production/regional_passage';
+export {
+  buildProductionScanners, loadsProbe, digitalUnitProbe, factoriesProbe, hospitalsProbe,
+  retentionProbe, passageProbe,
+} from './production/production_scanners';
+export type { ProductionScannerDeps } from './production/production_scanners';
+export { ContinuousSupervisor, PRODUCTION_GUARD } from './production/continuous_supervisor';
+export type {
+  ContinuousSupervisorDeps, SupervisionReport, SupervisionGap,
+} from './production/continuous_supervisor';
+export {
+  ProductionLedger, PRODUCTION_BREACH_CODES,
+  PROD_OBSERVER_IS_OPERATOR, PROD_OBSERVER_UNDECLARED, PROD_OPERATOR_UNDECLARED,
+  PROD_NO_SUPERVISION_REPORT, PROD_SUPERVISION_NOT_RUNNING, PROD_SUPERVISION_LATE,
+  PROD_SUPERVISION_GAP, PROD_SWEEPS_UNDER_MIN, PROD_SCANNER_NOT_OBSERVED, PROD_SCANNER_FAILED,
+  PROD_CRITICAL_INCIDENT, PROD_REGION_MISSING, PROD_REGION_WITHOUT_GOVERNOR,
+  PROD_REGION_NOT_ACTING, PROD_REGION_SUSPENDED, PROD_PASSAGE_NOT_ENFORCED,
+  PROD_PASSAGE_UNPROVEN, PROD_ACTION_WITHOUT_PASSAGE, PROD_RUNBOOK_NOT_EXECUTED,
+  PROD_RUNBOOK_FAILED, PROD_AUDIT_CHAIN_BROKEN, PROD_STATE_HALTED,
+} from './production/production_ledger';
+export type {
+  ProductionLedgerDeps, ProductionVerdict, OperationClaim, RegionEvidence, PassageEvidence,
+  RunbookEvidence as ProductionRunbookEvidence,
+} from './production/production_ledger';
+export { loadProductionManifest, resolveProductionDeployDir } from './production/production_manifest';
+export type { ProductionManifest } from './production/production_manifest';
+export {
+  buildProductionRunbook, buildDeclaredProductionRunbooks, FEDERATED_ACTION, BYPASS_ACTION,
+} from './production/production_runbook_steps';
+export type { ProductionStepDeps } from './production/production_runbook_steps';
+export { FederatedOperation } from './production/federated_operation';
+export type {
+  FederatedOperationDeps, OperationStartResult, OperationReport,
+} from './production/federated_operation';
+export {
+  loadProduction, PRODUCTION_KNOWN_SCANNERS, PRODUCTION_REQUIRED_SCANNERS,
+  PRODUCTION_KNOWN_INCIDENTS, PRODUCTION_MUST_BE_CRITICAL, PRODUCTION_KNOWN_RUNBOOKS,
+  PRODUCTION_OPERATORS,
+} from './kernel/config';
+export type { ProductionConfig, ScannerKind } from './kernel/config';
 
 /**
  * لقطة المواءمة: تُبنى من الدولة القائمة لتُفحص على الميثاق (المرحلة 20)

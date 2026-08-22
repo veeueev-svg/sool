@@ -62,7 +62,16 @@ export interface RunbookResult {
 
 export interface RunbookRunnerDeps {
   readonly audit: AppendOnlyLog;
-  readonly policy: StagingConfig['policy'];
+  /**
+   * الكتب المعلنة في السياسة الحاكمة للطور. وُسّع النوع في المرحلة 37 إلى ما يكفي
+   * المنفّذ وحده — لأن نسخ المنفّذ للطور الاتحادي كان سيُنشئ مقياسين لفعل واحد،
+   * ومقياسان لشرط واحد باب تخفيف صامت (RULE-005).
+   */
+  readonly policy: StagingConfig['policy'] | { readonly runbooks: readonly string[] };
+  /** الكتب المعروفة للطور — الافتراض كتب التشغيل المحدود (المرحلة 36) */
+  readonly known?: readonly string[];
+  /** الجهات المشغّلة للطور — الافتراض مشغّلو التشغيل المحدود */
+  readonly operators?: readonly string[];
 }
 
 export class RunbookRunner {
@@ -82,14 +91,16 @@ export class RunbookRunner {
       const entry = this.deps.audit.append(by, 'runbook_refused', { name: book?.name, reason: why });
       return { name: book?.name ?? 'unknown', passed: false, steps: [], failures: [why], auditId: entry.hash };
     };
-    if (!STAGING_OPERATORS.includes(by)) {
+    const operators = this.deps.operators ?? STAGING_OPERATORS;
+    const known = this.deps.known ?? STAGING_KNOWN_RUNBOOKS;
+    if (!operators.includes(by)) {
       return refuse('تنفيذ كتاب التشغيل لجهة مشغّلة معلنة وحدها (RULE-004)');
     }
-    if (!STAGING_KNOWN_RUNBOOKS.includes(book.name)) {
+    if (!known.includes(book.name)) {
       return refuse(`كتاب تشغيل غير معروف: ${book.name} (ثابت 6)`);
     }
     if (!this.deps.policy.runbooks.includes(book.name)) {
-      return refuse(`كتاب غير معلن في سياسة التشغيل المحدود: ${book.name}`);
+      return refuse(`كتاب غير معلن في السياسة الحاكمة: ${book.name}`);
     }
     if (this.executed.has(book.name)) {
       return refuse(`الكتاب نُفّذ سابقًا: ${book.name} — لا تنفيذ مرتين (ثابت 5)`);

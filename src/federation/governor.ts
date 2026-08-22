@@ -24,7 +24,7 @@
  * اختبار القبول: tests/federation/federation_lifecycle.test.ts
  * الوثيقة المرتبطة: docs/decisions/ADR-0008-federation-and-governors.md
  */
-import { Decision, EntityId, SignedRoyalCommand, SovereignAction } from '../kernel/types';
+import { Decision, EntityId, SignedRoyalCommand, SovereignAction, SovereignViolation } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
 import { RegionRegistry } from './region_registry';
@@ -71,6 +71,20 @@ export type ActResult =
   | { readonly ok: true; readonly auditId: string }
   | { readonly ok: false; readonly reason: string; readonly auditId: string };
 
+/**
+ * عقد مرور التاج على الفعل الإقليمي (المرحلة 37). السجل يسأله ولا يعرف تفصيله:
+ * لو عرف لصار منح الإذن من داخل الوحدة التي يقيّدها (RULE-005). مرورٌ غير مربوط أو
+ * غير مفتوح لا يغير سلوكًا — فالفعل الإداري خارج التشغيل الاتحادي يبقى كما أعلنته المرحلة 24.
+ */
+export interface PassageGuard {
+  readonly active: boolean;
+  check(
+    governor: EntityId,
+    input: { regionId: EntityId; domain: string; action: string },
+    now?: number,
+  ): { allowed: boolean; reason: string };
+}
+
 export interface GovernorRegistryDeps {
   readonly audit: AppendOnlyLog;
   readonly gateway: CrownGateway;
@@ -82,6 +96,7 @@ export class GovernorRegistry {
   private readonly nominations = new Map<string, Nomination>();
   private readonly seats = new Map<EntityId, GovernorSeat>();
   private readonly trails = new Map<string, { proposed: string; approved?: string; executed?: string }>();
+  private passage: PassageGuard | null = null;
   private readonly approvalTtlMs: number;
 
   constructor(private readonly deps: GovernorRegistryDeps) {
@@ -284,11 +299,32 @@ export class GovernorRegistry {
     if (!this.deps.regions.hasDomain(input.regionId, input.domain)) {
       return refuse('خارج النطاق المفوَّض — أو التفويض مسحوب (ثوابت 3 و4)');
     }
+    // المرحلة 37: داخل تشغيل اتحادي مفتوح لا ينفُذ فعل إقليمي بلا قرار بوابة التاج.
+    // الفحص بعد كل ما سبق كي لا يُستهلك إذنٌ على فعلٍ مرفوض لسبب آخر.
+    if (this.passage?.active) {
+      const passed = this.passage.check(governor, input, now);
+      if (!passed.allowed) return refuse(`لا مرور من التاج: ${passed.reason}`);
+    }
 
     const entry = this.deps.audit.append(governor, 'region_action_executed', {
       regionId: input.regionId, domain: input.domain, action: input.action.trim(), at: now,
     });
     return { ok: true, auditId: entry.hash };
+  }
+
+  /**
+   * ربط مرور التاج (المرحلة 37). يُربط مرة واحدة: ربطٌ ثانٍ قد يُخفي مرورًا فعّالًا
+   * فينفُذ ما كان يُمنع. السجل لا يفتح المرور ولا يمنح إذنًا.
+   */
+  bindPassage(guard: PassageGuard): void {
+    if (this.passage) {
+      throw new SovereignViolation(
+        'مرور التاج مربوط سابقًا — ربطٌ ثانٍ يُخفي قيدًا قائمًا',
+        'GOVERNOR_PASSAGE_ALREADY_BOUND',
+      );
+    }
+    this.passage = guard;
+    this.deps.audit.append(GOVERNOR_EXECUTOR, 'governor_passage_bound', {});
   }
 
   governorOf(regionId: EntityId): GovernorSeat | undefined {

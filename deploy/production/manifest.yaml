@@ -1,0 +1,34 @@
+# deploy/production/manifest.yaml — بيان التشغيل الاتحادي (المرحلة 37)
+# المالك: الديوان الملكي · القارئ: src/production/production_manifest.ts · RULE-000
+# هذا البيان **يُقرأ ويُقابَل** بـ config/production.yaml عند الإقلاع: أي تعارض يُسقط
+# التشغيلة برمزٍ معلن. بيانٌ لا يقرأه أحد كذبٌ موثَّق (PHASE_PROCEDURE §2).
+manifest:
+  environment: production
+  # من يُشغّل الاتحاد — جهة مشغّلة معلنة، وليست هي المراقب (RULE-004)
+  operator: authority:royal_court
+  # من يراقب ويحكم — يطابق observer_authority في config/production.yaml حرفيًّا
+  observer: authority:audit_bureau
+  reason: تشغيل اتحادي مستمر تحت مرور التاج بعد اكتمال التشغيل المحدود
+  # الأقاليم التي لا يُعدّ التشغيل اتحاديًّا بغيرها — تطابق required في التهيئة
+  regions:
+    - "region:core"
+    - "region:research"
+    - "region:industry"
+    - "region:services"
+  # الماسحات المطلوب تشغيلها بلا نهاية — تطابق scanners في التهيئة
+  scanners:
+    - regions
+    - audit_chain
+    - scope
+    - termination
+    - king
+    - loads
+    - digital_unit
+    - factories
+    - hospitals
+    - retention
+    - passage
+  # الكتب المطلوب تنفيذها — لكل كتاب ملف خطوات في deploy/production/runbooks/
+  runbooks:
+    - federated-operation
+    - king-absence
