@@ -1,0 +1,16 @@
+# سياسة اختبارات الضغط (المرحلة 33) — حمل معلن وحدود يُرفض عندها، لا أرقام تسويقية
+# الأرقام هنا سياسة يجري إنفاذها: تغييرها يغيّر سلوك التمرين، وتجاوزها يُفشِل التقرير.
+policy:
+  default: deny
+  drill_authority: "authority:audit_bureau"
+  sustained_commands: 500
+  burst_commands: 100
+  window_seconds: 60
+  max_command_loss: 0
+  max_quota_overrun: 0
+  channel_p99_ms: 8
+  channel_max_ms: 60
+  scheduler_queue_probe: 160
+  resource_name: "compute_units"
+  quota_probe_amount: 10
+  escalate_on_breach: true

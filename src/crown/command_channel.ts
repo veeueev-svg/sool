@@ -9,6 +9,10 @@
  *   - «مرة واحدة فقط»: أمر نُفِّذ لا يُنفَّذ مرة أخرى ولو أُعيد إرساله بعد إعادة التشغيل
  *   - الفشل الجزئي قابل لإعادة المحاولة حتى سقف معلن، ثم يُصنَّف فاشلًا نهائيًا ويُرفع للملك
  *   - الحالة تُحفظ على القرص بعد كل تغيير: انقطاع العملية لا يُفقد الأثر
+ *   - الحفظ لقطة + يوميّة: كل تغيير يُلحَق سطرًا مبصومًا في اليوميّة، واللقطة الكاملة تُكتب
+ *     عند الطيّ. (عيب كشفه تمرين الضغط في المرحلة 33: إعادة كتابة الملف كاملًا بعد كل
+ *     تغيير كلفتها تربيعية — 500 أمر كلّفت 88 مللي ثانية للأمر الواحد. الدواء تغيير
+ *     طريقة الحفظ لا تخفيف العتبة.)
  * حالات الفشل (كلها مغلقة):
  *   - أمر مرفوض من البوابة ⇒ لا تنفيذ، ويُثبَّت الرفض ولا يُعاد
  *   - المنفّذ يرمي استثناءً ⇒ إعادة محاولة مسجَّلة، ولا يُعلَن نجاح
@@ -16,7 +20,9 @@
  * اختبار القبول: tests/crown/command_channel.test.ts
  * الوثيقة المرتبطة: docs/specs/digital-state-build-guide.md — بوابة التاج وقناة الأوامر
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync,
+} from 'node:fs';
 import { dirname } from 'node:path';
 import { SignedRoyalCommand } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
@@ -41,6 +47,24 @@ export interface ChannelFile {
   readonly records: readonly ChannelRecord[];
 }
 
+/** سطر يوميّة: سجل واحد مع بصمته. البصمة تكشف التعديل الخارجي كما تكشفه بصمة اللقطة. */
+export interface ChannelJournalLine {
+  readonly checksum: string;
+  readonly record: ChannelRecord;
+}
+
+/**
+ * سقف الطيّ: بعد هذا العدد من الأسطر تُكتب لقطة كاملة وتُمحى اليوميّة.
+ * القيمة معلنة كي يبقى وقت الاستعادة محدودًا، ولا تُقاس بها الصحة بل الكلفة.
+ */
+export const CHANNEL_JOURNAL_COMPACT_AT = 256;
+
+/**
+ * دون هذا العدد من السجلات تُكتب اللقطة الكاملة بعد كل تغيير: كلفتها مهملة،
+ * وملف الحالة يبقى مقروءًا كاملاً للتدقيق اليدوي. اليوميّة دواء للحمل لا أسلوب دائم.
+ */
+export const CHANNEL_SNAPSHOT_ALWAYS_UNDER = 32;
+
 export interface ProcessOutcome {
   readonly commandId: string;
   readonly status: CommandStatus;
@@ -53,15 +77,24 @@ export type CommandExecutor = (command: SignedRoyalCommand) => void;
 export class CommandChannel {
   private readonly records = new Map<string, ChannelRecord>();
 
+  private readonly journalPath: string;
+
+  private journalLines = 0;
+
   constructor(
     private readonly audit: AppendOnlyLog,
     private readonly gateway: CrownGateway,
     private readonly statePath: string,
     private readonly maxAttempts = 3,
   ) {
+    this.journalPath = `${statePath}.journal`;
     const dir = dirname(statePath);
     if (dir && !existsSync(dir)) mkdirSync(dir, { recursive: true });
     if (existsSync(statePath)) this.restore();
+    else if (existsSync(this.journalPath)) {
+      // يوميّة بلا لقطة: أثرٌ بلا أصل. الفشل مغلق ولا يُخمَّن ما ضاع.
+      throw new Error('يوميّة قناة أوامر بلا لقطة — حالة غير مكتملة');
+    }
     this.audit.append('authority:crown_guard', 'command_channel_online', {
       restored: this.records.size, maxAttempts,
     });
@@ -82,7 +115,7 @@ export class CommandChannel {
     };
     this.records.set(id, record);
     this.audit.append(command.payload.issuedBy, 'command_enqueued', { commandId: id, action: command.payload.action });
-    this.persist();
+    this.save(record);
     return record;
   }
 
@@ -134,9 +167,8 @@ export class CommandChannel {
           outcomes.push({ commandId: record.commandId, status: 'pending', reason: `إعادة محاولة: ${message}` });
         }
       }
-      this.persist();
+      this.save(record); // بعد كل تغيير، لا بعد الدفعة
     }
-    this.persist();
     return outcomes;
   }
 
@@ -158,13 +190,27 @@ export class CommandChannel {
     return [...this.records.values()].map((r) => ({ ...r }));
   }
 
-  /** حفظ الحالة مع بصمة — أي تعديل خارجي يُكشف عند التحميل */
+  /**
+   * حفظ تغيير واحد: سطر يوميّة مبصوم، أو لقطة كاملة عند بلوغ سقف الطيّ.
+   * الضمان نفسه (لا تغيير في الذاكرة بلا أثر على القرص) بكلفة خطية لا تربيعية.
+   */
+  private save(record: ChannelRecord): void {
+    if (this.records.size <= CHANNEL_SNAPSHOT_ALWAYS_UNDER
+      || this.journalLines >= CHANNEL_JOURNAL_COMPACT_AT) { this.persist(); return; }
+    const line: ChannelJournalLine = { checksum: sha256(canonicalize(record)), record };
+    appendFileSync(this.journalPath, `${JSON.stringify(line)}\n`, 'utf8');
+    this.journalLines += 1;
+  }
+
+  /** كتابة اللقطة الكاملة مع بصمة، ومحو اليوميّة — أي تعديل خارجي يُكشف عند التحميل */
   private persist(now = Date.now()): void {
     const records = [...this.records.values()];
     const file: ChannelFile = {
       version: 1, savedAt: now, checksum: sha256(canonicalize(records)), records,
     };
     writeFileSync(this.statePath, JSON.stringify(file), 'utf8');
+    if (existsSync(this.journalPath)) rmSync(this.journalPath);
+    this.journalLines = 0;
   }
 
   private restore(): void {
@@ -174,5 +220,15 @@ export class CommandChannel {
       throw new Error('بصمة ملف قناة الأوامر لا تطابق محتواه — تلاعب مكتشف');
     }
     for (const r of file.records) this.records.set(r.commandId, { ...r });
+    if (!existsSync(this.journalPath)) return;
+    const lines = readFileSync(this.journalPath, 'utf8').split('\n').filter((l) => l.length > 0);
+    for (const raw of lines) {
+      const line = JSON.parse(raw) as ChannelJournalLine;
+      if (sha256(canonicalize(line.record)) !== line.checksum) {
+        throw new Error('بصمة سطر يوميّة القناة لا تطابق محتواه — تلاعب مكتشف');
+      }
+      this.records.set(line.record.commandId, { ...line.record });
+    }
+    this.journalLines = lines.length;
   }
 }

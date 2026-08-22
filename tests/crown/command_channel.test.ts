@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { bootstrapState } from '../../src/index';
@@ -117,4 +117,96 @@ test('تعديل ملف حالة القناة من الخارج يُكشف وي�
   writeFileSync(path, JSON.stringify(file), 'utf8');
 
   assert.throws(() => new CommandChannel(s.audit, s.gateway, path), /بصمة ملف قناة الأوامر/);
+});
+
+/*
+ * ما يلي أُضيف في المرحلة 33 بعد أن كشف تمرين الضغط أن الحفظ الكامل بعد كل تغيير
+ * كلفته تربيعية. الدواء: يوميّة مبصومة تحت الحمل ولقطة كاملة عند الطيّ.
+ * لا يتغيّر الضمان المعلن: لا تغيير في الذاكرة بلا أثر على القرص.
+ */
+import {
+  CHANNEL_JOURNAL_COMPACT_AT, CHANNEL_SNAPSHOT_ALWAYS_UNDER,
+} from '../../src/crown/command_channel';
+
+/** حمل يتجاوز عتبة اللقطة الدائمة فتُستعمل اليوميّة */
+function overSnapshotThreshold(): number { return CHANNEL_SNAPSHOT_ALWAYS_UNDER + 10; }
+
+test('تحت عتبة اللقطة الدائمة تبقى الحالة لقطة كاملة بلا يوميّة', () => {
+  const s = bootstrapState();
+  const path = tmpPath();
+  const channel = new CommandChannel(s.audit, s.gateway, path);
+  channel.submit(s.king.issueCommand('approve_phase', 'phase:33-a'));
+  assert.equal(existsSync(`${path}.journal`), false);
+  assert.equal(JSON.parse(readFileSync(path, 'utf8')).records.length, 1);
+});
+
+test('فوق عتبة اللقطة تُكتب يوميّة، والحالة كلها تُستعاد بعد إعادة التشغيل', () => {
+  const s = bootstrapState();
+  const path = tmpPath();
+  const channel = new CommandChannel(s.audit, s.gateway, path);
+  const count = overSnapshotThreshold();
+  for (let i = 0; i < count; i += 1) channel.submit(s.king.issueCommand('approve_phase', `phase:33-b-${i}`));
+  assert.equal(existsSync(`${path}.journal`), true, 'الحمل يستعمل اليوميّة');
+  const reopened = new CommandChannel(s.audit, s.gateway, path);
+  assert.equal(reopened.list().length, count);
+  assert.equal(reopened.counts().pending, count);
+});
+
+test('اليوميّة تحفظ المصائر لا الإدراج وحده', () => {
+  const s = bootstrapState();
+  const path = tmpPath();
+  const channel = new CommandChannel(s.audit, s.gateway, path);
+  const count = overSnapshotThreshold();
+  const ids: string[] = [];
+  for (let i = 0; i < count; i += 1) ids.push(channel.submit(s.king.issueCommand('approve_phase', `phase:33-c-${i}`)).commandId);
+  channel.process(() => undefined);
+  const reopened = new CommandChannel(s.audit, s.gateway, path);
+  for (const id of ids) assert.equal(reopened.statusOf(id), 'executed');
+  assert.equal(reopened.counts().pending, 0);
+});
+
+test('المنفَّذ قبل إعادة التشغيل لا يُنفَّذ ثانية بعدها ولو مرّ من اليوميّة', () => {
+  const s = bootstrapState();
+  const path = tmpPath();
+  const channel = new CommandChannel(s.audit, s.gateway, path);
+  let executions = 0;
+  for (let i = 0; i < overSnapshotThreshold(); i += 1) channel.submit(s.king.issueCommand('approve_phase', `phase:33-d-${i}`));
+  channel.process(() => { executions += 1; });
+  const before = executions;
+  const reopened = new CommandChannel(s.audit, s.gateway, path);
+  reopened.process(() => { executions += 1; });
+  assert.equal(executions, before, 'لا تنفيذ ثانٍ بعد الاستعادة من اليوميّة');
+});
+
+test('تعديل سطر يوميّة من الخارج يُكشف ويُرفض التحميل', () => {
+  const s = bootstrapState();
+  const path = tmpPath();
+  const channel = new CommandChannel(s.audit, s.gateway, path);
+  for (let i = 0; i < overSnapshotThreshold(); i += 1) channel.submit(s.king.issueCommand('approve_phase', `phase:33-e-${i}`));
+  const journalPath = `${path}.journal`;
+  const lines = readFileSync(journalPath, 'utf8').split('\n').filter((l) => l.length > 0);
+  const tampered = JSON.parse(lines[0]!);
+  tampered.record.status = 'executed'; // تلاعب: إخفاء أمر معلّق
+  lines[0] = JSON.stringify(tampered);
+  writeFileSync(journalPath, `${lines.join('\n')}\n`, 'utf8');
+  assert.throws(() => new CommandChannel(s.audit, s.gateway, path), /بصمة سطر يوميّة القناة/);
+});
+
+test('يوميّة بلا لقطة حالة غير مكتملة ولا تُخمَّن', () => {
+  const s = bootstrapState();
+  const path = tmpPath();
+  writeFileSync(`${path}.journal`, '{"checksum":"x","record":{}}\n', 'utf8');
+  assert.throws(() => new CommandChannel(s.audit, s.gateway, path), /يوميّة قناة أوامر بلا لقطة/);
+});
+
+test('الطيّ يكتب لقطة كاملة ويمحو اليوميّة فلا ينمو وقت الاستعادة بلا حدّ', () => {
+  const s = bootstrapState();
+  const path = tmpPath();
+  const channel = new CommandChannel(s.audit, s.gateway, path);
+  const count = CHANNEL_SNAPSHOT_ALWAYS_UNDER + CHANNEL_JOURNAL_COMPACT_AT + 5;
+  for (let i = 0; i < count; i += 1) channel.submit(s.king.issueCommand('approve_phase', `phase:33-f-${i}`));
+  const snapshot = JSON.parse(readFileSync(path, 'utf8'));
+  assert.equal(snapshot.records.length > CHANNEL_SNAPSHOT_ALWAYS_UNDER, true, 'اللقطة طُويت عند السقف');
+  const reopened = new CommandChannel(s.audit, s.gateway, path);
+  assert.equal(reopened.list().length, count);
 });

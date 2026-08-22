@@ -1,17 +1,17 @@
 /**
  * src/index.ts — تشكيل الدولة (bootstrap)
- * المالك: القيّم على المستودع | المراحل: 1–32
+ * المالك: القيّم على المستودع | المراحل: 1–33
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * المدخلات: config/*.yaml | المخرجات: كائن دولة جاهز بترتيب اعتماد صحيح
  * ثابت RULE-002: لا يُنشأ وكيل واسع الصلاحيات قبل اكتمال:
  *   جذر الثقة ← بوابة التاج ← السجل ← المراقبة ← الإيقاف ← الموارد
  */
 import {
-  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadScale, loadRecovery,
+  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadScale, loadRecovery, loadLoad,
   loadRoyalAuthority,
   resolveConfigDir,
   QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig, ContractsConfig,
-  EnterprisesConfig, ServicesConfig, ResearchConfig, ScaleConfig, RecoveryConfig,
+  EnterprisesConfig, ServicesConfig, ResearchConfig, ScaleConfig, RecoveryConfig, LoadConfig,
 } from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
@@ -83,6 +83,8 @@ import { ContinuityController } from './recovery/continuity';
 import { RecoverySnapshotStore, RecoveryStateParticipant } from './recovery/snapshot';
 import { BackupScheduler } from './recovery/backup_scheduler';
 import { RestoreRunner } from './recovery/restore_runner';
+import { LoadLedger } from './load/load_ledger';
+import { LoadDrill } from './load/load_drill';
 
 export interface DigitalState {
   readonly config: RoyalAuthorityConfig;
@@ -163,6 +165,9 @@ export interface DigitalState {
   readonly recoverySnapshots: RecoverySnapshotStore;
   readonly backupScheduler: BackupScheduler;
   readonly restoreRunner: RestoreRunner;
+  readonly loadConfig: LoadConfig;
+  readonly loadLedger: LoadLedger;
+  readonly loadDrill: LoadDrill;
   readonly mode: () => StateMode;
 }
 
@@ -624,7 +629,19 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     recoverySnapshots, audit, recoveryConfig.policy.backup_interval_seconds,
   );
   const restoreRunner = new RestoreRunner(recoverySnapshots, archive, continuity);
-  audit.append('authority:bootstrap', 'state_online', { phase: 32, mode: 'normal' });
+
+  // 15) اختبارات الضغط (المرحلة 33) — قياس تحت الحمل بيد جهة تدقيق لا جهة تنفيذ.
+  //     الترتيب مُلزم: دفتر الحمل أولًا (المصير المعلن)، ثم التمرين الذي يقرأ منه ويطابقه
+  //     بالقناة. ولا يمنح التمرين حصة ولا يعتمد أمرًا: كل ما يقيسه يمرّ من طريقه المعلن.
+  const loadConfig = loadLoad(configDir);
+  const loadLedger = new LoadLedger({
+    audit, authority: loadConfig.policy.drill_authority, maxLoss: loadConfig.policy.max_command_loss,
+  });
+  const loadDrill = new LoadDrill({
+    audit, killSwitch, resources, ledger: loadLedger, policy: loadConfig.policy,
+    mode: () => gateway.mode,
+  });
+  audit.append('authority:bootstrap', 'state_online', { phase: 33, mode: 'normal' });
 
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
@@ -644,6 +661,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     researchConfig, mirrorDepartments, humanResearch,
     scaleConfig, sharding, population, scheduler,
     recoveryConfig, continuity, recoveryState, recoverySnapshots, backupScheduler, restoreRunner,
+    loadConfig, loadLedger, loadDrill,
     mode: () => gateway.mode,
   };
 }
@@ -823,6 +841,17 @@ export { RecoverySnapshotStore, RecoveryStateParticipant } from './recovery/snap
 export type { RecoveryEnvelope, RecoveryStateSnapshot, RecoveryStep } from './recovery/snapshot';
 export { BackupScheduler } from './recovery/backup_scheduler';
 export { RestoreRunner } from './recovery/restore_runner';
+export { LoadLedger } from './load/load_ledger';
+export type {
+  LoadFate, LoadLedgerReport, LoadMismatch, ChannelObservation, LoadLedgerDeps,
+} from './load/load_ledger';
+export { LoadDrill } from './load/load_drill';
+export type {
+  LoadDrillReport, LoadPolicy, CommandPressureReport, BurstPressureReport,
+  QuotaPressureReport, SchedulerPressureReport, PressureOutcome,
+} from './load/load_drill';
+export { loadLoad, LOAD_FORBIDDEN_DRILL_AUTHORITIES } from './kernel/config';
+export type { LoadConfig } from './kernel/config';
 
 /**
  * لقطة المواءمة: تُبنى من الدولة القائمة لتُفحص على الميثاق (المرحلة 20)
