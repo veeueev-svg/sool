@@ -1,4 +1,4 @@
-# config/module_limits.yaml — حدود حجم الوحدة (المرحلة: ورشة الهيكلة، الإصدار 0.24.0)
+# config/module_limits.yaml — حدود حجم الوحدة (ورشة الهيكلة: 0.24.0، وتفكيك الجذر: 0.25.0)
 # المالك: القيّم على المستودع | يُنفَّذ بـ: scripts/check_module_size.sh
 #
 # القاعدة: الشفرة لا تُكدَّس في ملف. الملف الذي يتجاوز السقف يصير عنق زجاجة:
@@ -10,8 +10,9 @@
 # يحذف صفَّه من هنا — والفحص يفشل إن بقي صفٌّ لم يعد له مبرّر.
 ceiling_lines: 400
 scope: "src/**/*.ts + tests/**/*.ts + scripts/**/*.ts"
+# أُغلق البند T-112 في 0.25.0: صفّ src/index.ts حُذف من هنا لأن الملف صار 148 سطرًا
+# بعد تفكيكه إلى src/composition/ — وهذا هو المقصود بالسقّاطة: الدَّين يُحذف لا يُرفع.
 exceptions:
-  - {path: src/index.ts, max_lines: 1144, item: T-112}
   - {path: src/services/human_research.ts, max_lines: 531, item: T-113}
   - {path: src/federation/region_registry.ts, max_lines: 454, item: T-113}
   - {path: src/load/load_drill.ts, max_lines: 453, item: T-113}

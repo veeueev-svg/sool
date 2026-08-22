@@ -9,15 +9,15 @@
 
 | البند | القيمة |
 |---|---|
-| آخر تحديث | 2026-08-22 (الجلسة 25) |
+| آخر تحديث | 2026-08-22 (الجلسة 26) |
 | المحدِّث | القيّم على المستودع |
-| النسبة المعتمدة | **93.50%** من 100% (مجموع أوزان 1–37 = 93.5%) — ورشة الهيكلة (0.24.0) **لا وزن لها** |
+| النسبة المعتمدة | **93.50%** من 100% (مجموع أوزان 1–37 = 93.5%) — ورشتا الهيكلة (0.24.0 و0.25.0) **لا وزن لهما** |
 | المراحل المكتملة | 1–37 (E0 وE1 وE2 وE3 و**E4 المؤسسات** مكتملة، و**E5 الاقتصاد: 25–29**، و**E6: المراحل 30–32**، و**E7: المراحل 33 و34 و35 و36 و37**) |
 | المراحل الجزئية | لا شيء |
 | الاختبارات | 1480 اختبارًا — كلها ناجحة (`npm test`) |
-| تقارير الاختبار | [`phase-01-10`](docs/test-reports/phase-01-10.md) · [`phase-05-09`](docs/test-reports/phase-05-09.md) · [`phase-11-12`](docs/test-reports/phase-11-12.md) · [`phase-13-15`](docs/test-reports/phase-13-15.md) · [`phase-16-18`](docs/test-reports/phase-16-18.md) · [`phase-19-20`](docs/test-reports/phase-19-20.md) · [`phase-21`](docs/test-reports/phase-21.md) · [`phase-22`](docs/test-reports/phase-22.md) · [`phase-23`](docs/test-reports/phase-23.md) · [`phase-24`](docs/test-reports/phase-24.md) · [`phase-25`](docs/test-reports/phase-25.md) · [`phase-26`](docs/test-reports/phase-26.md) · [`phase-27`](docs/test-reports/phase-27.md) · [`phase-28`](docs/test-reports/phase-28.md) · [`phase-29`](docs/test-reports/phase-29.md) · [`phase-30`](docs/test-reports/phase-30.md) · [`phase-31`](docs/test-reports/phase-31.md) · [`phase-32`](docs/test-reports/phase-32.md) · [`phase-33`](docs/test-reports/phase-33.md) · [`phase-34`](docs/test-reports/phase-34.md) · [`phase-35`](docs/test-reports/phase-35.md) · [`phase-36`](docs/test-reports/phase-36.md) · [`phase-37`](docs/test-reports/phase-37.md) · [`structure-0.24.0`](docs/test-reports/structure-0.24.0.md) (ورشة هيكلة، بلا وزن) |
+| تقارير الاختبار | [`phase-01-10`](docs/test-reports/phase-01-10.md) · [`phase-05-09`](docs/test-reports/phase-05-09.md) · [`phase-11-12`](docs/test-reports/phase-11-12.md) · [`phase-13-15`](docs/test-reports/phase-13-15.md) · [`phase-16-18`](docs/test-reports/phase-16-18.md) · [`phase-19-20`](docs/test-reports/phase-19-20.md) · [`phase-21`](docs/test-reports/phase-21.md) · [`phase-22`](docs/test-reports/phase-22.md) · [`phase-23`](docs/test-reports/phase-23.md) · [`phase-24`](docs/test-reports/phase-24.md) · [`phase-25`](docs/test-reports/phase-25.md) · [`phase-26`](docs/test-reports/phase-26.md) · [`phase-27`](docs/test-reports/phase-27.md) · [`phase-28`](docs/test-reports/phase-28.md) · [`phase-29`](docs/test-reports/phase-29.md) · [`phase-30`](docs/test-reports/phase-30.md) · [`phase-31`](docs/test-reports/phase-31.md) · [`phase-32`](docs/test-reports/phase-32.md) · [`phase-33`](docs/test-reports/phase-33.md) · [`phase-34`](docs/test-reports/phase-34.md) · [`phase-35`](docs/test-reports/phase-35.md) · [`phase-36`](docs/test-reports/phase-36.md) · [`phase-37`](docs/test-reports/phase-37.md) · [`structure-0.24.0`](docs/test-reports/structure-0.24.0.md) · [`structure-0.25.0`](docs/test-reports/structure-0.25.0.md) (ورشتا هيكلة، بلا وزن) |
 | المرحلة المفتوحة التالية | **38 — التدقيق المستقل** (ديوان التدقيق؛ [`docs/audit/`](docs/audit/) — أُنشئ بصيغته المعلنة) — البند **T-110** في §2 |
-| حدود حجم الوحدة | ✅ **مُنفَّذة**: سقف 400 سطر في [`config/module_limits.yaml`](config/module_limits.yaml)، يفحصه `npm run check:size` في البوابة؛ و`src/kernel/config.ts` من **2504** سطرًا إلى **20 وحدة** ([التقرير](docs/test-reports/structure-0.24.0.md)) |
+| حدود حجم الوحدة | ✅ **مُنفَّذة**: سقف 400 سطر في [`config/module_limits.yaml`](config/module_limits.yaml)، يفحصه `npm run check:size` في البوابة؛ و`src/kernel/config.ts` من **2504** سطرًا إلى **20 وحدة** ([التقرير](docs/test-reports/structure-0.24.0.md))، و`src/index.ts` من **1144** إلى **148** سطرًا ([التقرير](docs/test-reports/structure-0.25.0.md)) · الاستثناءات: **6** (T-113 وحده) |
 | ثغرة T-22 الحاكمة | ✅ **أُغلقت** — حاجز النية صار شرط استدعاء لكل أداة ([التقرير §3](docs/test-reports/phase-21.md)) |
 | ثغرة T-103 الحاكمة | ✅ **أُغلقت** — المراقبة صارت مؤقّتًا لا نداءً يدويًّا، والنطاق حدًّا يُرفض عنده أمرٌ ملكيٌّ صحيح، وثلاثة أدلّة تشغيل تُنفَّذ ([التقرير §2](docs/test-reports/phase-36.md)) |
 | ثغرة T-104 (المرحلة 37) | ✅ **أُغلقت** — مرور التاج صار شرطًا مُنفَّذًا عند بوابة الفعل الإقليمي لا قيدًا في سجل، والمراقبة صارت أحد عشر ماسحًا بمؤقّت دائم ([التقرير §2](docs/test-reports/phase-37.md)) |
@@ -27,6 +27,33 @@
 ---
 
 ## 1) ما تم (موثّق ومُختبر)
+
+### الجلسة 26 — 2026-08-22 — تفكيك جذر التركيب: إغلاق دَين T-112
+
+**النتيجة:** **لا وزن ولا نسبة** — النسبة تبقى **93.50%** والمرحلة المفتوحة تبقى **38**.
+إغلاقُ **دَينٍ معلن** لا مرحلةٌ من الجدول. المرجع: [التقرير](docs/test-reports/structure-0.25.0.md)
+و[ADR-0023](docs/decisions/ADR-0023-composition-root.md).
+
+| ما تم بالتحديد | الملف | الدليل |
+|---|---|---|
+| **تفكيك جذر التركيب**: `src/index.ts` كان **1144 سطرًا** يبني الدولة كلها في دالةٍ واحدة؛ صار **148 سطرًا** ينادي ثماني طبقاتٍ ولا يبني ولا يحمل سياسة | `src/index.ts` + `src/composition/` (11 وحدة، أكبرها 322) | 1480/1480 بلا تعديل اختبارٍ واحد |
+| **الاعتماد صار مُعلنًا في التوقيع** لا ضمنيًّا في ترتيب `const`: كل طبقة تستقبل `Parts` مَن قبلها، فحراسةُ ترتيب RULE-002 من **المُجمِّع** لا من انتباه المراجع | `src/composition/*.ts` | `npx tsc --noEmit` نظيف؛ تقديم طبقةٍ على ما تعتمد عليه لا يُجمِّع |
+| **دليل انتفاء الأثر السلوكي مقيسًا** بمقابلة بناءٍ كامل من الالتزام السابق: **235** رمزًا مُصدَّرًا و**101** حقلًا في كائن الدولة و**31** سجلَّ تأسيسٍ — كلها متطابقة بالترتيب | مقارنة `git worktree` على HEAD | [التقرير §3](docs/test-reports/structure-0.25.0.md) |
+| **قائمة الإرجاع بقيت صريحة** (101 حقلًا) ولم تُبنَ بالنشر، فلا يتسلل إلى الدولة حقلٌ داخليٌّ لأن طبقةً أرجعته لجارتها | `src/index.ts` | مطابقة حقول الدولة 101 = 101 |
+| **خاتمة `state_online` وموضع `startMonitor`/`auditPath` لم تتحرك** — تحريكها يُغيّر عدد السجلّات ولحظة الحفظ، وهو أثرٌ سلوكي لا تجميلي | `src/index.ts` | تسلسل السجلّات 31 متطابق سطرًا سطرًا |
+| **الترقيم المكرَّر أُصلح** (كان قسمان «14» و«15» و«16» + `10ب…10و`): لكل وحدةٍ تسلسلها من 1، والإشارات المتقاطعة بالاسم لا بالرقم | `src/composition/*.ts` | [التقرير §5](docs/test-reports/structure-0.25.0.md) |
+| **صفّ الاستثناء حُذف ولم يُرفع سقفه**: 7 استثناءات ← **6**، والسقّاطة أُعيد اختبارها سلبيًّا على الملف المُفكَّك (408 أسطر ⇒ rc 1) | `config/module_limits.yaml` | [التقرير §4](docs/test-reports/structure-0.25.0.md) |
+| T-112 | ✅ **أُغلق** | `src/composition/`, `src/index.ts`, `config/module_limits.yaml` | 1480/1480 + الفحص أخضر بستة استثناءات |
+
+#### انحرافات أُعلنت (RULE-008)
+
+| # | الانحراف | لماذا |
+|---|---|---|
+| 1 | **الملفات الستة فوق السقف لم تُلمس** | لكلٍّ منها مالكٌ ومنطقٌ يخصّه، وتفكيكها في دفعةٍ واحدة يخلط ستة أدلة — البند **T-113** قائمٌ بسقّاطته |
+| 2 | **`state.ts` (227) و`public_api.ts` (322) كبيرتان** ولم تُقسَّما | إعلانٌ لا منطق، وتحت السقف؛ ومتى قاربت 400 فُصلت بالمجال |
+| 3 | **لم يُقَس زمن الإقلاع** قبل/بعد | القياس يحتاج عقدًا معلنًا لا رقمًا يُذكر مرة؛ وإحدى عشرة دالةً بدل واحدة لا تُغيّر عملًا يُنجَز |
+| 4 | **التبعية الدورية غير محروسة بأداة** | الحراسة اليوم من المُجمِّع لا من فحصٍ مستقل يُسقط البوابة |
+| 5 | **T-109 لم يُقترَب منه** | بدء المراقبة داخل `bootstrapState` يكسر تأكيدات عدّ السجلّات في نحو 1400 اختبار؛ التفكيك لم يُقرِّبه ولم يُبعِده |
 
 ### الجلسة 25 — 2026-08-22 — ورشة الهيكلة: تفكيك عنق الزجاجة وسقفٌ مُنفَّذ للوحدة
 
@@ -590,7 +617,7 @@
 | # | البند | الملف المطلوب إنشاؤه | معيار القبول | المالك |
 |---|---|---|---|---|
 | T-110 | **المرحلة 38 — التدقيق المستقل** — هذا عملُك إن وصلت الآن. تُحكَم معايير القبول **C-01…C-21** من خارج سلطة من نفّذها (RULE-004)، ويشمل ذلك البند **T-108**. ولا يُصدّق المعيار **C-18** نفسه بنفسه: مُدقّق الاستقلال لا يشهد لاستقلاله. تسبقها المرحلة 37 مغلقة | `docs/audit/` | كل معيار له حكم مسنَد إلى تقرير أو قياس مُعاد، وصفر معيار حالته أقدم من مرحلته، وصفر معيار صدّق نفسه | ديوان التدقيق |
-| T-112 | **`src/index.ts` جذرُ تركيبٍ متخم** — 1144 سطرًا يبني الحالة كلها ويربطها، وفيه ترقيم أقسامٍ مكرَّر (قسمان «14» و«15» و«16») أثرَ الإلحاق المتكرر. مسجَّلٌ دَينًا بسقّاطة في `config/module_limits.yaml` لا يُتجاوز | `src/composition/{sovereignty,population,institutions,economy,operations}.ts` + `src/index.ts` واجهةً | كل وحدةٍ تحت 400 سطر، و`index.ts` ينادي التركيب بترتيبه الملزم بلا سياسةٍ فيه، و**1480/1480 كما هي** دليلَ انتفاء الأثر السلوكي، والترقيم مُصلَح | القيّم على المستودع |
+| ~~T-112~~ | ✅ **أُغلق في 0.25.0** — `src/index.ts` صار 148 سطرًا وثماني طبقات في `src/composition/`، والترقيم مُصلَح، وصفّ الاستثناء محذوف ([التقرير](docs/test-reports/structure-0.25.0.md) · [ADR-0023](docs/decisions/ADR-0023-composition-root.md)). الوصف الأصلي: **جذرُ تركيبٍ متخم** — 1144 سطرًا يبني الحالة كلها ويربطها، وفيه ترقيم أقسامٍ مكرَّر (قسمان «14» و«15» و«16») أثرَ الإلحاق المتكرر. مسجَّلٌ دَينًا بسقّاطة في `config/module_limits.yaml` لا يُتجاوز | `src/composition/{sovereignty,population,institutions,economy,operations}.ts` + `src/index.ts` واجهةً | كل وحدةٍ تحت 400 سطر، و`index.ts` ينادي التركيب بترتيبه الملزم بلا سياسةٍ فيه، و**1480/1480 كما هي** دليلَ انتفاء الأثر السلوكي، والترقيم مُصلَح | القيّم على المستودع |
 | T-113 | **ستة ملفات فوق سقف 400 سطر** من زمن المراحل 22–33: `services/human_research.ts` (531)، `federation/region_registry.ts` (454)، `load/load_drill.ts` (453)، `services/factory_runtime.ts` (422)، `law/courts.ts` (404)، `external/account_registry.ts` (402). كلها بسقّاطة معلنة: الدَّين ينقص ولا يزيد | `src/services/research/`, `src/law/courts/`, وما يقتضيه كلُّ ملف | كل ملف تحت السقف العام، وصفُّه محذوفٌ من `config/module_limits.yaml`، وخط الأساس أخضر بعد كل تفكيك | مُلّاك الوحدات (انظر `ARCHITECTURE.md`) |
 | T-109 | **المراقبة المستمرة لا تبدأ من الإقلاع نفسه** بل مع `FederatedOperation.begin`؛ والسبب مقيس: بدؤها في `bootstrapState` يكسر تأكيدات عدّ السجلّات في نحو 1400 اختبار قائم. المُقاس اليوم بديلٌ عنه: فارق أول مسحة عن لحظة الإقلاع على `start_grace_ms` (`PROD_SUPERVISION_LATE`) | `src/index.ts`, `src/production/continuous_supervisor.ts` | تبدأ المراقبة مع تأسيس الدولة بلا تشغيل معلن، وتُحدَّث تأكيدات عدّ السجلّات المتأثّرة بإعلانٍ لا صامتة | وزارة البنية + ديوان التدقيق |
 | T-106 | رفع مفتاح الإيقاف بعد إيقافٍ شامل غير مُقاس | `src/kernel/kill_switch.ts`, `docs/runbooks/halt-and-recover.md` | يُقاس الخروج من الإيقاف الشامل نفسه لا من وضع الحماية وحده، بشرط إثبات زوال السبب قبل الرفع | حرس التاج |
