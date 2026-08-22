@@ -22,4 +22,6 @@ sovereign_actions:
   - train_model
   - archive_restore
   - judicial_review
+  # المرحلة 28: إقامة منشأة اقتصادية وحلّها واستئنافها — فعلٌ سيادي لا قرار موظّف
+  - establish_facility
 veto_final: true

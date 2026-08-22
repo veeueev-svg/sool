@@ -7,9 +7,11 @@
  *   جذر الثقة ← بوابة التاج ← السجل ← المراقبة ← الإيقاف ← الموارد
  */
 import {
-  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadRoyalAuthority,
+  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises,
+  loadRoyalAuthority,
   resolveConfigDir,
   QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig, ContractsConfig,
+  EnterprisesConfig,
 } from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
@@ -31,6 +33,9 @@ import { PaymentControls } from './external/payment_controls';
 import { PartnerRisk, RISK_ASSESSOR } from './external/partner_risk';
 import { ExternalContractRegistry } from './external/contract_registry';
 import { ContractTermination } from './external/contract_termination';
+import { CompanyRuntime } from './services/company_runtime';
+import { SupplyChain } from './services/supply_chain';
+import { FactoryRuntime } from './services/factory_runtime';
 import { IntentGate, ToolRegistry } from './agents/tools';
 import { AgentMemory } from './data/agent_memory';
 import { KnowledgeGraph } from './data/knowledge_graph';
@@ -125,6 +130,10 @@ export interface DigitalState {
   readonly partnerRisk: PartnerRisk;
   readonly contracts: ExternalContractRegistry;
   readonly contractTermination: ContractTermination;
+  readonly enterprisesConfig: EnterprisesConfig;
+  readonly companies: CompanyRuntime;
+  readonly supply: SupplyChain;
+  readonly factories: FactoryRuntime;
   readonly mode: () => StateMode;
 }
 
@@ -169,6 +178,8 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   const externalConfig = loadExternal(configDir);
   // وتهيئة العقود: لا تشغيل بإعلان عقود يسمح بعقد بلا نهاية أو بإنهاء غير فوري (المرحلة 27)
   const contractsConfig = loadContracts(configDir);
+  // وتهيئة المنشآت: لا تشغيل بإعلان منشآت فيه نوعٌ لا تنجح فيه دفعة أبدًا (المرحلة 28)
+  const enterprisesConfig = loadEnterprises(configDir);
   audit.append('authority:bootstrap', 'config_loaded', {
     state: config.state_name, code: config.state_code, resources: Object.keys(quotas.resources).length,
   });
@@ -194,7 +205,14 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   // 5) البوابة أخيرًا — لأنها تعتمد على كل ما سبق
   const gateway = new CrownGateway({
     audit, ca, registry, veto, killSwitch, heartbeat,
-    policy: { ...DEFAULT_POLICY, maxCommandAgeSeconds: 120 },
+    // المرحلة 28: الأفعال السيادية تُقرأ من `config/royal-authority.yaml` لا من ثابت في
+    // الشفرة — فما لم تُعلنه التهيئة لا يفتح بابًا، وRULE-005 يمنع أن تُوسّع البوابة
+    // صلاحيتها من داخلها. والتهيئة تُرفض إن ذكرت فعلًا مجهولًا (فشل مغلق).
+    policy: {
+      ...DEFAULT_POLICY,
+      maxCommandAgeSeconds: 120,
+      sovereignActions: config.sovereign_actions,
+    },
   });
   const guard = new CrownGuard(audit, gateway, killSwitch);
 
@@ -342,10 +360,53 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     (accountId) => payments.pendingObligations(accountId),
   );
 
+  // 10ب) الشركات والمصانع (المرحلة 28) — بعد العقود لأن المادة الخارجية تدخل على
+  //     عقد قائم لا على اسم مذكور، وقبل state_online لأن الدولة لا تُعلن جهوزيتها
+  //     وفيها منشأةٌ بلا سلسلة توريد تسندها.
+  const companies = new CompanyRuntime({
+    audit, gateway, resources,
+    kinds: enterprisesConfig.kinds.map((kind) => ({
+      id: kind.id, name: kind.name, sector: kind.sector,
+      inputs: kind.inputs.map((i) => ({ material: i.material, quantity: i.quantity })),
+      output: { material: kind.output.material, quantity: kind.output.quantity },
+      resourceCost: {
+        resource: kind.resource_cost.resource, amount: kind.resource_cost.amount,
+      },
+      requiredChecks: kind.required_checks,
+    })),
+    maxTermMs: enterprisesConfig.policy.max_term_days * 24 * 60 * 60 * 1000,
+    maxPerMinistry: enterprisesConfig.policy.max_facilities_per_ministry,
+    suspendAuthorities: enterprisesConfig.policy.suspend_authorities,
+    operatorId: enterprisesConfig.policy.operator,
+    requireBudgetLine: enterprisesConfig.policy.require_budget_line,
+  });
+  const supply = new SupplyChain({
+    audit, materials: enterprisesConfig.materials,
+    operatorId: enterprisesConfig.policy.operator,
+  });
+  // الأطراف تُربط بمصادر تحقق لا تُبنى داخلها (RULE-005): المنشأة والعقد والموازنة
+  companies.bindBudgetProbe((line) => budget.get(line) !== null);
+  supply.bindFacilityProbe((facilityId, at) => companies.isActive(facilityId, at));
+  supply.bindContractProbe((contractId, at) => {
+    const contract = contracts.get(contractId);
+    if (contract === null || !contracts.isActive(contractId, at)) return null;
+    return contract.counterparty;
+  });
+  const factories = new FactoryRuntime({
+    audit, companies, supply, resources,
+    qualityChecks: enterprisesConfig.quality_checks,
+    minQualityScore: enterprisesConfig.policy.min_quality_score,
+    wasteTolerancePerMille: enterprisesConfig.policy.waste_tolerance_per_mille,
+    maxConcurrentRuns: enterprisesConfig.policy.max_concurrent_runs,
+    maxRunDurationHours: enterprisesConfig.policy.max_run_duration_hours,
+    inspectorId: enterprisesConfig.policy.inspector,
+    operatorId: enterprisesConfig.policy.operator,
+  });
+
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 27, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 28, mode: 'normal' });
 
   // 11) الذاكرة والمعرفة (المرحلة 21) — وزارة البيانات
   //     الترتيب مُلزم: أصناف الاحتفاظ تُعرَف عند الكتابة، ثم الذاكرة سندٌ للمعرفة،
@@ -413,6 +474,9 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   // ربط مصدر التحقق من صاحب بند الموازنة: لا موازنة لجهة لا وجود لها (ثابت 5 للموازنة).
   // يُربط هنا لأن الوزارات والأقاليم تُبنى بعد الاقتصاد، والربط لا يكتب سجلًّا.
   budget.bindOwnerProbe((owner) => ministries.isActive(owner) || regions.isActive(owner));
+  // ومنشأة المرحلة 28 تلزمها وزارة قائمة: الربط هنا لأن الوزارات تُبنى بعد المنشآت،
+  // وقبل الربط كل إقامة مرفوضة (فشل مغلق لا افتراض قيام)
+  companies.bindMinistryProbe((ministryId) => ministries.isActive(ministryId));
 
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
@@ -427,6 +491,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     economyConfig, ledger, unit, budget, treasury, revenue,
     externalConfig, externalAccounts, payments,
     contractsConfig, partnerRisk, contracts, contractTermination,
+    enterprisesConfig, companies, supply, factories,
     mode: () => gateway.mode,
   };
 }
@@ -457,6 +522,19 @@ export { ExternalContractRegistry } from './external/contract_registry';
 export type {
   ExternalContract, SignContractInput, ContractResult, TerminationCapability,
 } from './external/contract_registry';
+export { CompanyRuntime, ECONOMY_MINISTRY } from './services/company_runtime';
+export type {
+  Facility, FacilityStatus, FacilityResult, EstablishFacilityInput, DeclaredFacilityKind,
+  MinistryProbe, BudgetLineProbe,
+} from './services/company_runtime';
+export { SupplyChain } from './services/supply_chain';
+export type {
+  DeclaredMaterial, StockMovement, StockProvenance, StockResult, FacilityProbe, ContractProbe,
+} from './services/supply_chain';
+export { FactoryRuntime, AUDIT_BUREAU } from './services/factory_runtime';
+export type {
+  ProductionRun, ProductionRequest, InspectionReport, RunResult, RunStatus,
+} from './services/factory_runtime';
 export { ContractTermination, ALL_CONTRACTS_TARGET } from './external/contract_termination';
 export type { SettlementRecord, SettlementResult } from './external/contract_termination';
 export { Sandbox, normalizePath } from './security/sandbox';

@@ -34,6 +34,7 @@ export const DEFAULT_POLICY: GatewayPolicy = {
     'create_agent', 'grant_capability', 'appoint_official', 'amend_policy',
     'approve_phase', 'terminate_agent', 'declare_emergency', 'open_external_account',
     'import_artifact', 'train_model', 'archive_restore', 'judicial_review',
+    'establish_facility',
   ],
   requireSignedCommands: true,
   replayProtection: true,

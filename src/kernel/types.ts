@@ -25,7 +25,21 @@ export type SovereignAction =
   | 'import_artifact'   // استيراد وكيل أو أوزان أو بيانات من الخارج (المرحلتان 16 و17)
   | 'train_model'       // تدريب أو تحديث نموذج (المرحلة 18)
   | 'archive_restore'   // استعادة حالة الدولة من نسخة أرشيف (المرحلة 21)
-  | 'judicial_review';  // مراجعة ملكية لحكم قضائي: عفو أو تثبيت (المرحلة 22)
+  | 'judicial_review'   // مراجعة ملكية لحكم قضائي: عفو أو تثبيت (المرحلة 22)
+  | 'establish_facility'; // إقامة منشأة اقتصادية أو حلّها أو استئنافها (المرحلة 28)
+
+/**
+ * قائمة الأفعال السيادية المعروفة بأسمائها — مصدرٌ واحد يُقاس عليه ما يُعلن في
+ * `config/royal-authority.yaml`. سببه (المرحلة 28): كانت القائمة المعلنة في التهيئة
+ * **زينةً**: البوابة تقرأ ثابتًا في الكود، فلو أُعلن في اليامل فعلٌ مجهول لمرّ صامتًا،
+ * ولو حُذف منه فعلٌ لبقي مقبولًا. صارت التهيئة هي المصدر، وهذه القائمة هي المقياس.
+ */
+export const KNOWN_SOVEREIGN_ACTIONS: readonly SovereignAction[] = [
+  'create_agent', 'grant_capability', 'appoint_official', 'amend_policy',
+  'approve_phase', 'terminate_agent', 'declare_emergency', 'open_external_account',
+  'import_artifact', 'train_model', 'archive_restore', 'judicial_review',
+  'establish_facility',
+];
 
 /** حالة الدولة التشغيلية */
 export type StateMode =

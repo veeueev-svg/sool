@@ -1,0 +1,100 @@
+# المنشآت الاقتصادية: الشركات والمصانع (المرحلة 28)
+# القاعدة: ما لم يُعلن في هذا الملف لا تقوم منشأة ولا تُستهلك مادة ولا تُنتج دفعة
+# (RULE-005 — لا توسّع من داخل الوحدة التي تحكمها السياسة).
+#
+# فرق مقصود عن المرحلتين 26 و27: تلك تحكم **المال والالتزام** تجاه الخارج، وهذه تحكم
+# **المادة والإنتاج** داخل الدولة. ولذلك لا يُصرف في هذه المرحلة ريال واحد: مسار المال
+# الوحيد هو الخزانة بأمر (المرحلة 25)، وفتح صرفٍ داخل حلقة الإنتاج مسارٌ جانبي يُمنع
+# بـ RULE-003. الإنتاج يستهلك **موارد معلنة** (حصص المرحلة 5) و**مادة مسجَّلة المصدر**،
+# وبند الموازنة شرطُ **قيام** المنشأة لا وسيلةَ صرفٍ فيها (ADR-0012 قرار 3).
+
+policy:
+  # الافتراض رفض: لا منشأة ولا دفعة إلا بمطابقة إعلان قائم
+  default: "deny"
+  # لا إنتاج بلا مدخل مُقاس: مدخل غائب أو صفر أو غير صحيح ⇒ رفض الدفعة (T-69)
+  require_measured_inputs: true
+  # لا منشأة بلا بند موازنة قائم يحمل نفقتها المعلنة
+  require_budget_line: true
+  # لا منشأة دائمة: أقصى مدة لأي منشأة قبل أن تنتهي بلا تمديد ضمني
+  max_term_days: 180
+  # حدّ لعدد المنشآت القائمة لوزارة واحدة — التفتيت بلا حدّ يُخفي المجموع
+  max_facilities_per_ministry: 4
+  # حدّ للدفعات القائمة في منشأة واحدة — لا طابور إنتاج بلا سقف
+  max_concurrent_runs: 3
+  # دفعة لا تُقفل حتى هذه المدة تُجهض بلا مخرج: لا دفعة قائمة إلى الأبد
+  max_run_duration_hours: 24
+  # درجة الجودة التي لا تُقبل دفعة تحتها — سقف من التهيئة لا من حكم المفتّش
+  min_quality_score: 70
+  # الفقد المقبول من المدخل (بالألف) — وما فوقه يُكذّب دعوى «الفقد داخل الحدّ»
+  waste_tolerance_per_mille: 50
+  # من يشغّل المنشأة ليس من يفتّش جودتها (RULE-004)
+  operator: "ministry:economy"
+  inspector: "authority:audit_bureau"
+  # من يملك التعليق الفوري (ولا يملك الاستئناف بنفسه) — التعليق فعل حماية رخيص الثمن
+  suspend_authorities:
+    - "ministry:economy"
+    - "ministry:cyber_security"
+    - "authority:crown_guard"
+    - "authority:audit_bureau"
+
+# فحوص الجودة المعلنة وأوزانها — الدرجة تُحسب من إعلان لا من حكم شخصي،
+# وفحص غير معلن هنا يُرفض التفتيش كلّه لأجله (فشل مغلق).
+# ومنها ما يتحقق منه السجل نفسه: إن خالفت شهادة المفتّش السجل رُدّ التفتيش كلّه.
+quality_checks:
+  input_provenance: 30
+  output_integrity: 30
+  waste_within_tolerance: 20
+  resource_within_limit: 20
+
+# المواد المعلنة — لا تُستهلك ولا تُنتج مادة ليست هنا، ولكل مادة مصدرها:
+# "internal" أي تُنتَج داخل الدولة، أو معرّف نظير خارجي معلن في config/external.yaml
+# فلا تدخل مادة من الخارج إلا على **عقد قائم** لا على اسم مذكور (ADR-0011 قرار 1).
+materials:
+  - { id: "material:raw-compute", name: "سعة حوسبة خام", unit: "unit", source: "external:compute-provider" }
+  - { id: "material:archive-block", name: "كتلة أرشيف معلنة", unit: "unit", source: "external:data-archive" }
+  - { id: "material:refined-index", name: "فهرس مُعالَج", unit: "unit", source: "internal" }
+  - { id: "material:sealed-archive", name: "أرشيف مختوم", unit: "unit", source: "internal" }
+
+# أنواع المنشآت المعلنة — لا منشأة لغير هذه المعرّفات، ولكل نوع مدخلاته ومخرجه
+# وكلفته من الموارد وفحوصه المطلوبة. ومجموع أوزان فحوص النوع يجب أن يبلغ الحدّ
+# الأدنى للجودة، وإلّا كان النوع إعلانًا ميتًا لا تنجح فيه دفعة أبدًا.
+kinds:
+  - id: "facility:index-factory"
+    name: "مصنع الفهارس المُعالَجة"
+    sector: "data_processing"
+    inputs:
+      - { material: "material:raw-compute", quantity: 4 }
+    output: { material: "material:refined-index", quantity: 1 }
+    resource_cost: { resource: "compute_units", amount: 2 }
+    required_checks:
+      - "input_provenance"
+      - "output_integrity"
+      - "waste_within_tolerance"
+      - "resource_within_limit"
+
+  - id: "facility:archive-plant"
+    name: "معمل ختم الأرشيف"
+    sector: "data_retention"
+    inputs:
+      - { material: "material:archive-block", quantity: 2 }
+      - { material: "material:refined-index", quantity: 1 }
+    output: { material: "material:sealed-archive", quantity: 1 }
+    resource_cost: { resource: "memory_mb", amount: 256 }
+    required_checks:
+      - "input_provenance"
+      - "output_integrity"
+      - "waste_within_tolerance"
+      - "resource_within_limit"
+
+  - id: "facility:compute-assembly"
+    name: "شركة تجميع سعة الحوسبة"
+    sector: "infrastructure"
+    inputs:
+      - { material: "material:raw-compute", quantity: 8 }
+    output: { material: "material:refined-index", quantity: 2 }
+    resource_cost: { resource: "compute_units", amount: 4 }
+    required_checks:
+      - "input_provenance"
+      - "output_integrity"
+      - "resource_within_limit"
+      - "waste_within_tolerance"
