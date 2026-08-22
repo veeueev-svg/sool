@@ -6,7 +6,10 @@
  * ثابت RULE-002: لا يُنشأ وكيل واسع الصلاحيات قبل اكتمال:
  *   جذر الثقة ← بوابة التاج ← السجل ← المراقبة ← الإيقاف ← الموارد
  */
-import { loadQuotas, loadRegions, loadRoyalAuthority, resolveConfigDir, QuotasConfig, RoyalAuthorityConfig } from './kernel/config';
+import {
+  loadQuotas, loadRegions, loadEconomy, loadRoyalAuthority, resolveConfigDir,
+  QuotasConfig, RoyalAuthorityConfig, EconomyConfig,
+} from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
 import { AuditStore } from './audit/store';
@@ -48,6 +51,11 @@ import { RegionRegistry, RegionalAssembly } from './federation/region_registry';
 import { GovernorRegistry } from './federation/governor';
 import { RegionalTribunal } from './federation/dispute_resolution';
 import { RegionMonitor } from './federation/region_monitor';
+import { Ledger } from './economy/ledger';
+import { DigitalUnit } from './economy/digital_unit';
+import { Budget } from './economy/budget';
+import { Treasury } from './economy/treasury';
+import { RevenueService } from './economy/tax';
 import { ArtifactVerifier } from './models/source_verification';
 import { ModelRegistry } from './models/model_registry';
 import { OpenWeightsImporter } from './models/open_weights_import';
@@ -98,6 +106,12 @@ export interface DigitalState {
   readonly governors: GovernorRegistry;
   readonly tribunal: RegionalTribunal;
   readonly regionMonitor: RegionMonitor;
+  readonly economyConfig: EconomyConfig;
+  readonly ledger: Ledger;
+  readonly unit: DigitalUnit;
+  readonly budget: Budget;
+  readonly treasury: Treasury;
+  readonly revenue: RevenueService;
   readonly mode: () => StateMode;
 }
 
@@ -137,6 +151,8 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   const quotas = loadQuotas(configDir);
   // تهيئة الأقاليم تُقرأ مع التهيئة السيادية: لا تشغيل بإعلان أقاليم مخالف (المرحلة 24)
   const regionsConfig = loadRegions(configDir);
+  // تهيئة الاقتصاد كذلك: لا تشغيل بسقوف مالية غير معلنة أو بوحدة تدّعي قيمة خارجية (المرحلة 25)
+  const economyConfig = loadEconomy(configDir);
   audit.append('authority:bootstrap', 'config_loaded', {
     state: config.state_name, code: config.state_code, resources: Object.keys(quotas.resources).length,
   });
@@ -212,10 +228,49 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     audit, verifier: artifacts, agents, permissions, killSwitch,
   });
 
+  // 14) الاقتصاد والخزانة (المرحلة 25) — قبل خاتمة التأسيس عن قصد:
+  //     فتح حسابات الدولة خطوة تأسيس تُسجَّل (account_opened)، وخاتمة التأسيس تبقى
+  //     state_online وحدها. الترتيب مُلزم: دفتر ← حسابات ← إصدار ← موازنة ← خزانة ← رسوم.
+  const ledger = new Ledger({ audit });
+  ledger.openAccount(economyConfig.treasury.account, 'asset', 'خزانة الدولة العامة', now);
+  ledger.openAccount(economyConfig.treasury.equity_account, 'equity', 'حقّ التاج في الإصدار', now);
+  ledger.openAccount(economyConfig.treasury.revenue_account, 'revenue', 'إيرادات الرسوم', now);
+  const unit = new DigitalUnit({
+    audit, gateway, ledger,
+    declaration: {
+      code: economyConfig.unit.code, name: economyConfig.unit.name,
+      minorUnits: economyConfig.unit.minor_units, supplyMax: economyConfig.unit.supply_max,
+      convertible: economyConfig.unit.external_convertibility !== 'forbidden',
+    },
+    treasuryAccount: economyConfig.treasury.account,
+    equityAccount: economyConfig.treasury.equity_account,
+  });
+  const budget = new Budget({
+    audit, gateway,
+    ceilingTotal: economyConfig.budget.ceiling_total,
+    carryoverAllowed: economyConfig.budget.carryover !== 'forbidden',
+  });
+  const treasury = new Treasury({
+    audit, gateway, ledger, budget,
+    account: economyConfig.treasury.account,
+    singleDisbursementMax: economyConfig.treasury.single_disbursement_max,
+    overdraftAllowed: economyConfig.treasury.overdraft !== 'forbidden',
+    // وضع الدولة بزمن العملية: القاطع أولًا ثم النبض (كقراءة البوابة نفسها)
+    modeAt: (at) => (killSwitch.status.engaged ? 'halted' : heartbeat.evaluate(at)),
+  });
+  const revenue = new RevenueService({
+    audit, gateway, treasury,
+    revenueAccount: economyConfig.treasury.revenue_account,
+    rates: economyConfig.revenue.rates.map((r) => ({
+      base: r.base, ratePerMille: r.rate_per_mille, declaredAt: Date.parse(r.declared_at),
+    })),
+    retroactiveAllowed: economyConfig.revenue.retroactive !== 'forbidden',
+  });
+
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 24, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 25, mode: 'normal' });
 
   // 11) الذاكرة والمعرفة (المرحلة 21) — وزارة البيانات
   //     الترتيب مُلزم: أصناف الاحتفاظ تُعرَف عند الكتابة، ثم الذاكرة سندٌ للمعرفة،
@@ -280,6 +335,10 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
       ? { disputeGraceMs: options.federation.disputeGraceMs } : {}),
   });
 
+  // ربط مصدر التحقق من صاحب بند الموازنة: لا موازنة لجهة لا وجود لها (ثابت 5 للموازنة).
+  // يُربط هنا لأن الوزارات والأقاليم تُبنى بعد الاقتصاد، والربط لا يكتب سجلًّا.
+  budget.bindOwnerProbe((owner) => ministries.isActive(owner) || regions.isActive(owner));
+
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
     resources, gateway, guard, egress, tools, agents, permissions, supervisor,
@@ -290,6 +349,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     law, court, appeals, enforcement,
     ministries, appointments, cabinet,
     regions, assembly, governors, tribunal, regionMonitor,
+    economyConfig, ledger, unit, budget, treasury, revenue,
     mode: () => gateway.mode,
   };
 }
@@ -346,6 +406,20 @@ export {
   RegionMonitor, REGION_AUDITOR, VACANCY_GRACE_MS, DISPUTE_GRACE_MS,
 } from './federation/region_monitor';
 export type { RegionFlag, FlagKind } from './federation/region_monitor';
+export { Ledger, FINANCE_MINISTRY, DEBIT_NATURED, isValidAmount } from './economy/ledger';
+export type {
+  Account, AccountKind, EntryLine, EntryInput, LedgerEntry, LedgerResult, TrialBalance,
+} from './economy/ledger';
+export { DigitalUnit, UNIT_TARGET } from './economy/digital_unit';
+export type { UnitDeclaration, UnitResult } from './economy/digital_unit';
+export { Budget, TREASURY_ACTOR } from './economy/budget';
+export type { Appropriation, AppropriationInput, BudgetResult, OwnerProbe } from './economy/budget';
+export { Treasury } from './economy/treasury';
+export type {
+  Disbursement, DisbursementInput, TreasuryResult, FreezeResult,
+} from './economy/treasury';
+export { RevenueService, REVENUE_TARGET } from './economy/tax';
+export type { Levy, LevyStatus, LevyResult, RateDeclaration } from './economy/tax';
 export type { CabinetSession, CabinetDecision, CabinetResult, Vote } from './governance/cabinet';
 export { Enforcement, ENFORCEMENT_AUTHORITIES } from './law/enforcement';
 export type { EnforcementReport, EnforcementResult, ExecuteOptions } from './law/enforcement';

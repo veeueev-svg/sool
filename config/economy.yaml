@@ -1,0 +1,44 @@
+# الاقتصاد والخزانة (المرحلة 25) — كل رقم مالي مُعلن هنا، لا في الكود
+# القاعدة: ما لم يُعلن في هذا الملف لا يقع في الاقتصاد (RULE-005 — لا توسّع من الداخل)
+
+# وحدة الحساب السيادية — وحدة محاسبية داخلية لا أكثر
+unit:
+  code: "SLU"
+  name: "وحدة سول المحاسبية"
+  # كل المبالغ في النظام أعداد صحيحة بالوحدات الصغرى — لا كسور عائمة في المال
+  minor_units: 100
+  # سقف الإصدار الكلي: لا يُتجاوز ولو بأمر — يُعدَّل هنا بإعلان لا في الكود
+  supply_max: 1000000000
+  # تنبيه نطاق مُلزم: الوحدة لا تُحوَّل إلى أي قيمة خارج المستودع، ولا تدّعي أنها مال
+  external_convertibility: "forbidden"
+  legal_tender: false
+
+treasury:
+  account: "treasury:general"
+  equity_account: "equity:sovereign_issue"
+  revenue_account: "revenue:levies"
+  # لا سحب على المكشوف: الخزانة لا تصرف ما لا تملك
+  overdraft: "forbidden"
+  # ما فوق هذا المبلغ لا يُصرف إلا بأمر ملكي معتمد
+  single_disbursement_max: 50000000
+
+budget:
+  fiscal_period_days: 30
+  # لا ترحيل صامت: ما لم يُصرف في فترته يسقط ويُسجَّل سقوطه
+  carryover: "forbidden"
+  # مجموع كل بنود الموازنة لا يتجاوز هذا السقف
+  ceiling_total: 400000000
+
+revenue:
+  # لا أثر رجعي: لا يُطالب أحد برسم لم يكن معلنًا في وقت الواقعة
+  retroactive: "forbidden"
+  rates:
+    - base: "compute_usage"
+      rate_per_mille: 25
+      declared_at: "2026-08-01"
+    - base: "artifact_import"
+      rate_per_mille: 50
+      declared_at: "2026-08-01"
+    - base: "model_training"
+      rate_per_mille: 75
+      declared_at: "2026-08-22"
