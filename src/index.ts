@@ -7,8 +7,9 @@
  *   جذر الثقة ← بوابة التاج ← السجل ← المراقبة ← الإيقاف ← الموارد
  */
 import {
-  loadQuotas, loadRegions, loadEconomy, loadExternal, loadRoyalAuthority, resolveConfigDir,
-  QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig,
+  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadRoyalAuthority,
+  resolveConfigDir,
+  QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig, ContractsConfig,
 } from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
@@ -27,6 +28,9 @@ import { TerminationOrder, EntityController } from './crown/termination_order';
 import { NetworkEgressGuard } from './external/network_egress';
 import { ExternalAccountRegistry } from './external/account_registry';
 import { PaymentControls } from './external/payment_controls';
+import { PartnerRisk, RISK_ASSESSOR } from './external/partner_risk';
+import { ExternalContractRegistry } from './external/contract_registry';
+import { ContractTermination } from './external/contract_termination';
 import { IntentGate, ToolRegistry } from './agents/tools';
 import { AgentMemory } from './data/agent_memory';
 import { KnowledgeGraph } from './data/knowledge_graph';
@@ -46,7 +50,7 @@ import { LawRegistry } from './law/statutes';
 import { Court } from './law/courts';
 import { AppealsCourt } from './law/appeals';
 import { Enforcement } from './law/enforcement';
-import { MinistryRegistry } from './governance/ministries';
+import { MinistryRegistry, ROYAL_COURT } from './governance/ministries';
 import { AppointmentRegistry } from './governance/appointments';
 import { Cabinet } from './governance/cabinet';
 import { RegionRegistry, RegionalAssembly } from './federation/region_registry';
@@ -117,6 +121,10 @@ export interface DigitalState {
   readonly revenue: RevenueService;
   readonly externalAccounts: ExternalAccountRegistry;
   readonly payments: PaymentControls;
+  readonly contractsConfig: ContractsConfig;
+  readonly partnerRisk: PartnerRisk;
+  readonly contracts: ExternalContractRegistry;
+  readonly contractTermination: ContractTermination;
   readonly mode: () => StateMode;
 }
 
@@ -159,6 +167,8 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   // تهيئة الاقتصاد كذلك: لا تشغيل بسقوف مالية غير معلنة أو بوحدة تدّعي قيمة خارجية (المرحلة 25)
   const economyConfig = loadEconomy(configDir);
   const externalConfig = loadExternal(configDir);
+  // وتهيئة العقود: لا تشغيل بإعلان عقود يسمح بعقد بلا نهاية أو بإنهاء غير فوري (المرحلة 27)
+  const contractsConfig = loadContracts(configDir);
   audit.append('authority:bootstrap', 'config_loaded', {
     state: config.state_name, code: config.state_code, resources: Object.keys(quotas.resources).length,
   });
@@ -296,10 +306,46 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   externalAccounts.bindEgressProbe((host, port, at) => egress.hasAllowance(host, port, at));
   externalAccounts.bindObligationProbe((accountId) => payments.pendingObligations(accountId));
 
+  // 16) العقود الخارجية (المرحلة 27) — وزارة الخارجية تقترح، وديوان التدقيق يقدّر،
+  //     والتاج يوقّع ويُنهي، ووزارة المالية تسوّي. الترتيب مُلزم: تقدير المخاطر ←
+  //     سجل العقود ← **منح صلاحية الإنهاء مرة واحدة** ← وحدة الإنهاء ← ربط الالتزامات.
+  //     ولا يُوقَّع هنا أي عقد: التوقيع فعلٌ ملكي لا خطوة تأسيس (RULE-003).
+  const partnerRisk = new PartnerRisk({
+    audit,
+    kinds: contractsConfig.kinds.map((k) => ({
+      id: k.id, name: k.name, counterparty: k.counterparty, purpose: k.purpose,
+      maxValue: k.max_value, riskWeight: k.risk_weight,
+    })),
+    riskFactors: contractsConfig.risk_factors,
+    maxScore: contractsConfig.policy.max_risk_score,
+    reviewIntervalMs: contractsConfig.policy.review_interval_days * 24 * 60 * 60 * 1000,
+    breachPenalty: contractsConfig.policy.breach_penalty,
+    proposerId: contractsConfig.policy.proposer,
+    assessorId: contractsConfig.policy.assessor,
+  });
+  const contracts = new ExternalContractRegistry({
+    audit, gateway, accounts: externalAccounts, risk: partnerRisk,
+    maxTermMs: contractsConfig.policy.max_term_days * 24 * 60 * 60 * 1000,
+    maxOpenPerCounterparty: contractsConfig.policy.max_open_per_counterparty,
+    proposerId: contractsConfig.policy.proposer,
+  });
+  const contractTermination = new ContractTermination({
+    audit, gateway, accounts: externalAccounts,
+    // الباب الوحيد للإنهاء: يُمنح هنا مرة واحدة ولا يُمنح ثانيةً
+    capability: contracts.grantTerminationCapability(ROYAL_COURT),
+    terminationAuthorities: externalConfig.policy.suspend_authorities,
+    settlementWindowMs: contractsConfig.policy.settlement_window_hours * 60 * 60 * 1000,
+    suspendsAccount: contractsConfig.policy.termination_suspends_account,
+    settlerId: contractsConfig.policy.settler,
+  });
+  contractTermination.bindObligationProbe(
+    (accountId) => payments.pendingObligations(accountId),
+  );
+
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 26, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 27, mode: 'normal' });
 
   // 11) الذاكرة والمعرفة (المرحلة 21) — وزارة البيانات
   //     الترتيب مُلزم: أصناف الاحتفاظ تُعرَف عند الكتابة، ثم الذاكرة سندٌ للمعرفة،
@@ -380,6 +426,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     regions, assembly, governors, tribunal, regionMonitor,
     economyConfig, ledger, unit, budget, treasury, revenue,
     externalConfig, externalAccounts, payments,
+    contractsConfig, partnerRisk, contracts, contractTermination,
     mode: () => gateway.mode,
   };
 }
@@ -402,6 +449,16 @@ export type {
   ExternalPayment, ExternalPaymentInput, PaymentResult,
 } from './external/payment_controls';
 export type { EgressAllowance, EgressRequest, EgressReport } from './external/network_egress';
+export { PartnerRisk, RISK_ASSESSOR } from './external/partner_risk';
+export type {
+  DeclaredContractKind, RiskAssessment, BreachNote, RiskResult, AssessInput,
+} from './external/partner_risk';
+export { ExternalContractRegistry } from './external/contract_registry';
+export type {
+  ExternalContract, SignContractInput, ContractResult, TerminationCapability,
+} from './external/contract_registry';
+export { ContractTermination, ALL_CONTRACTS_TARGET } from './external/contract_termination';
+export type { SettlementRecord, SettlementResult } from './external/contract_termination';
 export { Sandbox, normalizePath } from './security/sandbox';
 export type { SandboxSpec, SandboxContext, SandboxRun, SandboxFs } from './security/sandbox';
 export { AgentMemory } from './data/agent_memory';

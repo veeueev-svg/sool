@@ -69,3 +69,62 @@ export function openAccount(
 export function beat(h: ReturnType<typeof externalState>, at: number): void {
   h.s.heartbeat.beat(h.s.king.kingId, at);
 }
+
+/* ————— أرضية العقود الخارجية (المرحلة 27) ————— */
+
+export const AUDITOR = 'authority:audit_bureau';
+export const FINANCE = 'ministry:finance';
+export const CROWN_GUARD = 'authority:crown_guard';
+export const CYBER = 'ministry:cyber_security';
+export const KIND_COMPUTE = 'contract:compute-capacity';
+export const KIND_ARCHIVE = 'contract:archive-retention';
+export const KIND_WEIGHTS = 'contract:model-weights';
+
+/**
+ * دولة عقود جاهزة: كل ما تبنيه `externalState` + حساب خارجي مفتوح تسعين يومًا
+ * لنظير الحوسبة، حتى تكون مدة العقد (60 يومًا كحدّ) مُختبَرةً على قناة تحتملها —
+ * فلا يُخلط رفضُ «مدة العقد» برفضِ «العقد يتجاوز قناته».
+ */
+export function contractState(options: {
+  egressFor?: readonly string[]; egressExpiresAt?: number; now?: number;
+  accountTermDays?: number; counterparty?: string;
+} = {}) {
+  const h = externalState(options);
+  openAccount(h, options.counterparty ?? COMPUTE, h.now, options.accountTermDays ?? 90);
+  return h;
+}
+
+/** تقدير مخاطر معلن — الطريق الوحيد: ديوان التدقيق بعوامل معلنة في التهيئة */
+export function assessRisk(
+  h: ReturnType<typeof externalState>, kindId = KIND_COMPUTE,
+  factors: readonly string[] = [], at?: number,
+) {
+  return h.s.partnerRisk.assess({
+    kindId, factors, assessedBy: AUDITOR,
+    justification: 'تقدير معلن لنوع عقد قائم',
+  }, at ?? h.now);
+}
+
+/** توقيع عقد خارجي — أمر ملكي بفعل open_external_account هدفه معرّف النوع */
+export function signContract(
+  h: ReturnType<typeof externalState>, kindId = KIND_COMPUTE,
+  options: { value?: number; days?: number; endsAt?: number; at?: number } = {},
+) {
+  const at = options.at ?? h.now;
+  const endsAt = options.endsAt ?? at + (options.days ?? 30) * DAY;
+  return h.s.contracts.sign(h.royalOpen(kindId, at), {
+    kindId, value: options.value ?? 5_000_000, endsAt,
+    proposedBy: FOREIGN, purpose: 'تعهّد معلن ضمن نطاق وزارة الخارجية',
+  }, at);
+}
+
+/** إنهاء عقد — فوري وبأمر ملكي هدفه معرّف العقد نفسه */
+export function terminateContract(
+  h: ReturnType<typeof externalState>, contractId: string,
+  by: string = CROWN_GUARD, at?: number, reason = 'قطع معلن لسبب موثَّق',
+) {
+  const when = at ?? h.now;
+  return h.s.contractTermination.terminate(
+    h.royalOpen(contractId, when), contractId, by, reason, when,
+  );
+}

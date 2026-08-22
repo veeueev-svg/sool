@@ -274,7 +274,7 @@ test('التأسيس يبقى مختومًا بسجل state_online وحده بع
   const snapshot = s.audit.snapshot();
   assert.equal(snapshot.at(-1)?.kind, 'state_online', 'خاتمة التأسيس لم تتغيّر');
   // رقم المرحلة يتقدّم مع كل مرحلة تُضاف إلى التأسيس — والمُثبَت هنا أن الخاتمة واحدة لا رقمها
-  assert.equal((snapshot.at(-1)?.detail as { phase: number }).phase, 26);
+  assert.equal((snapshot.at(-1)?.detail as { phase: number }).phase, 27);
   assert.equal(s.audit.find('account_opened').length, 3, 'حسابات الدولة الثلاثة مفتوحة ومسجَّلة');
   assert.equal(s.audit.verifyIntegrity().valid, true);
 });
