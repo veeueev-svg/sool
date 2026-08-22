@@ -1,12 +1,12 @@
 # القياسات المُعادة — `docs/audit/measurements/`
 
-**مُلئ في المرحلة 38** بالخرج **الخام** لكل قياسٍ أعاد ديوانُ التدقيق تشغيله بنفسه، لا بملخّصٍ عنه:
+**مُلئ في المرحلة 38 ويُعاد التقاطه عند كل قياسٍ جديد (آخره المرحلة 39)** بالخرج **الخام** لكل قياسٍ أعاد ديوانُ التدقيق تشغيله بنفسه، لا بملخّصٍ عنه:
 
 | الملف | الأمر المُنفَّذ | ما فيه |
 |---|---|---|
-| [`all-audit_probe.txt`](all-audit_probe.txt) | `node --max-old-space-size=6144 scripts/audit_probe.mjs` | 18 فحصًا · 17 ناجحًا · 1 ساقط (T-114) |
-| [`C-19-npm_test.txt`](C-19-npm_test.txt) | `npm test` | 1480/1480 |
-| [`C-06-verify_chain.txt`](C-06-verify_chain.txt) | `npm run verify` + `scripts/check_module_size.sh` | سلسلةٌ سليمة · 6 استثناءات معلنة |
+| [`all-audit_probe.txt`](all-audit_probe.txt) | `node --max-old-space-size=6144 scripts/audit_probe.mjs` | **18 فحصًا · 18 ناجحًا · 0 ساقط** (المرحلة 39، بعد إغلاق T-114؛ كان 17/18 في المرحلة 38) |
+| [`C-19-npm_test.txt`](C-19-npm_test.txt) | `npm test` | **1484/1484** (المرحلة 39: +4 لحرَس المداخل؛ كان 1480 في المرحلة 38) |
+| [`C-06-verify_chain.txt`](C-06-verify_chain.txt) | `npm run verify` + `scripts/check_module_size.sh` | سلسلةٌ سليمة · 5 استثناءات معلنة (المرحلة 39: حُذف صفُّ `courts.ts`) |
 
 - الصيغة: `<معيار>-<أداة>.txt` — مثال: `C-11-npm-test.txt`، `C-14-verify-audit-chain.txt`.
 - يُرفَق الأمر المُنفَّذ وتاريخه في أول سطرين من الملف.

@@ -8,7 +8,8 @@
  * الصلاحيات (RULE-004): الادعاء لديوان التدقيق، والدفاع للمتهم أو المحامي العام،
  *   والحكم للقضاء، والتنفيذ لحرس التاج — لا جهة تجمع اثنتين في دعوى واحدة
  * السجلات: charge_filed / charge_refused / defense_submitted / defense_defaulted /
- *   ruling_issued / ruling_refused / case_final / case_enforced
+ *   ruling_issued / ruling_refused / case_final / case_enforced /
+ *   enforcement_refused / appeal_refused (كل نداءٍ مرفوض يُقيَّد ولا يُهمَل)
  * ثوابت هذه الوحدة:
  *   1) **لا اتهام بلا قانون نافذ وقت وقوع الفعل** — لا أثر رجعي ولو كان القانون قائمًا اليوم
  *   2) **لا اتهام بلا دليل مسجَّل** في سلسلة التدقيق (بصمة قائمة، لا وصف شفهي)
@@ -19,86 +20,39 @@
  *   6) **الحكم لا يُعدَّل**: حكم ثانٍ في الدعوى مرفوض — التصحيح بالاستئناف لا بالكتابة فوقه
  *   7) **لا محاكمة مرتين على الفعل ذاته** (نفس المتهم ونفس القانون ونفس لحظة الوقوع)
  *   8) الحكم لا يصير نهائيًا قبل انقضاء مدة الطعن أو الفصل في الطعن
+ *   9) **الحرَس في المدخل لا في نيّة المُنادي** (المرحلة 39، البند T-114): `markEnforced`
+ *      و`markAppealPending` مدخلان عامّان، فيتحقّقان بنفسهما من الجهة والحكم والنهائية
+ *      عبر `./case_guards` — ولا يُعتمد على أن المُنادي هو `Enforcement.execute`.
+ *      قبل ذلك كان تعليقٌ في الكود يقول «يُستدعى من التنفيذ»، والتعليق ليس حرَسًا (RULE-001)،
+ *      وقد أثبت قياسُ التدقيق (C-14ب، المرحلة 38) أن الانتزاع كان يمرّ فعلًا.
+ *  10) **الأشكال والإحصاء والحرَس في وحداتٍ مجاورة** (`case_types.ts` · `case_report.ts` ·
+ *      `case_guards.ts`) — بهذا نزل هذا الملف من 404 إلى 347 سطرًا وحُذف صفُّ استثنائه
+ *      من `config/module_limits.yaml` (سقّاطةُ الدَّين: يُحذف ولا يُرفع).
  * حالات الفشل (كلها مغلقة): جهة غير مخوَّلة ⇒ رفض؛ دليل غير موجود ⇒ رفض؛
  *   حكم قبل دفاع ⇒ رفض؛ عقوبة خارج القانون ⇒ رفض
- * اختبار القبول: tests/law/courts.test.ts, tests/law/case_lifecycle.test.ts
+ * اختبار القبول: tests/law/courts.test.ts, tests/law/case_lifecycle.test.ts,
+ *   tests/law/court_guards.test.ts (حرَس المداخل — يسقط إن أُزيل الحرَس)
  * الوثيقة المرتبطة: docs/decisions/ADR-0006-law-and-courts.md
  */
 import { EntityId } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { LawRegistry, PenaltyKind, Statute, inScope } from './statutes';
+import { PROSECUTION_AUTHORITIES, PUBLIC_DEFENDER, TRIAL_COURTS } from './authorities';
+import { guardAppealMark, guardEnforcementMark } from './case_guards';
+import {
+  AppealOutcome, CASE_STATUSES, CaseResult, CaseStatus, ChargeInput, Defense, LegalCase, Ruling,
+} from './case_types';
+import { summarizeCases } from './case_report';
 
-/** جهات الادعاء المخوَّلة — الكشف والاتهام لديوان التدقيق لا للمنفّذ */
-export const PROSECUTION_AUTHORITIES: readonly EntityId[] = ['authority:audit_bureau'];
-/** القضاء الابتدائي */
-export const TRIAL_COURTS: readonly EntityId[] = ['court:first_instance'];
-/** المحامي العام: يُعيَّن للمتهم الساكت بعد انقضاء مدة الدفاع */
-export const PUBLIC_DEFENDER: EntityId = 'office:public_defender';
+// الجهات المعلنة مصدرها `./authorities` — قائمةٌ واحدة لكل دور (T-114)
+export { PROSECUTION_AUTHORITIES, TRIAL_COURTS, PUBLIC_DEFENDER } from './authorities';
 
-export type CaseStatus = 'charged' | 'defended' | 'ruled' | 'appealed' | 'final' | 'enforced';
 
-export interface Defense {
-  readonly by: EntityId;
-  readonly text: string;
-  readonly evidence: readonly string[];
-  readonly at: number;
-  /** true إذا كان دفاعًا حكميًا بعد سكوت المتهم */
-  readonly byDefault: boolean;
-}
-
-export interface Ruling {
-  readonly judge: EntityId;
-  readonly guilty: boolean;
-  readonly penalty: PenaltyKind | 'none';
-  readonly reason: string;
-  readonly at: number;
-  readonly statuteVersion: number;
-}
-
-export interface AppealOutcome {
-  readonly appealId: string;
-  readonly panel: EntityId;
-  readonly verdict: 'upheld' | 'overturned' | 'reduced';
-  readonly penalty: PenaltyKind | 'none';
-  readonly reason: string;
-  readonly at: number;
-  /** true إذا كان الفصل بمراجعة ملكية — لا طعن بعده */
-  readonly royal: boolean;
-}
-
-export interface LegalCase {
-  readonly caseId: string;
-  readonly statuteId: string;
-  readonly statuteVersion: number;
-  readonly defendant: EntityId;
-  readonly prosecutor: EntityId;
-  readonly chargeText: string;
-  readonly evidence: readonly string[];
-  readonly occurredAt: number;
-  readonly chargedAt: number;
-  readonly defense: Defense | null;
-  readonly ruling: Ruling | null;
-  readonly appeal: AppealOutcome | null;
-  readonly appealPending: boolean;
-  readonly status: CaseStatus;
-  readonly finalAt: number | null;
-  readonly enforcedAt: number | null;
-  readonly enforcedBy: EntityId | null;
-}
-
-export interface ChargeInput {
-  readonly caseId: string;
-  readonly statuteId: string;
-  readonly defendant: EntityId;
-  readonly chargeText: string;
-  /** بصمات سجلات تدقيق قائمة — الدليل يجب أن يكون قابلًا للتحقق */
-  readonly evidence: readonly string[];
-  readonly occurredAt: number;
-}
-
-export type CaseResult =
-  | { readonly ok: true; readonly legalCase: LegalCase; readonly auditId: string }
-  | { readonly ok: false; readonly reason: string; readonly auditId: string };
+// أشكالُ الدعوى في `./case_types` — إعلانٌ لا سلوك، ويُعاد تصديرها هنا فلا يتغيّر السطح العام
+export {
+  CASE_STATUSES, Defense, Ruling, AppealOutcome, LegalCase, ChargeInput, CaseResult,
+} from './case_types';
+export type { CaseStatus } from './case_types';
 
 export interface CourtDeps {
   readonly audit: AppendOnlyLog;
@@ -109,6 +63,8 @@ export interface CourtDeps {
   readonly appealWindowMs?: number;
   readonly trialCourts?: readonly EntityId[];
   readonly prosecutors?: readonly EntityId[];
+  /** جهات التنفيذ التي وحدها تُعلن التنفيذ في الدعوى (T-114) */
+  readonly enforcementAuthorities?: readonly EntityId[];
 }
 
 const HOUR = 3_600_000;
@@ -119,8 +75,10 @@ export class Court {
   readonly appealWindowMs: number;
   private readonly trialCourts: readonly EntityId[];
   private readonly prosecutors: readonly EntityId[];
+  private readonly enforcementAuthorities: readonly EntityId[] | undefined;
 
   constructor(private readonly deps: CourtDeps) {
+    this.enforcementAuthorities = deps.enforcementAuthorities;
     this.defenseWindowMs = deps.defenseWindowMs ?? 24 * HOUR;
     this.appealWindowMs = deps.appealWindowMs ?? 48 * HOUR;
     this.trialCourts = deps.trialCourts ?? TRIAL_COURTS;
@@ -324,12 +282,14 @@ export class Court {
     return { ok: true, legalCase: updated, auditId: entry.hash };
   }
 
-  /** يُستدعى من محكمة الاستئناف فقط: تعليق التنفيذ حتى الفصل */
+  /** تعليق التنفيذ لطعن — محروسٌ في المدخل لا بنيّة المُنادي (T-114) */
   markAppealPending(caseId: string, by: EntityId, appealId: string, now = Date.now()): CaseResult {
     const c = this.cases.get(caseId);
-    if (!c) {
-      const entry = this.deps.audit.append(by, 'appeal_refused', { caseId, reason: 'دعوى غير موجودة' });
-      return { ok: false, reason: 'دعوى غير موجودة', auditId: entry.hash };
+    const refused = guardAppealMark(c, by, appealId, PUBLIC_DEFENDER);
+    if (refused !== null || !c) {
+      const reason = refused ?? 'دعوى غير موجودة';
+      const entry = this.deps.audit.append(by, 'appeal_refused', { caseId, reason });
+      return { ok: false, reason, auditId: entry.hash };
     }
     const updated: LegalCase = { ...c, appealPending: true, status: 'appealed' };
     this.cases.set(caseId, updated);
@@ -363,12 +323,14 @@ export class Court {
     return { ok: true, legalCase: updated, auditId: entry.hash };
   }
 
-  /** يُستدعى من التنفيذ بعد إثبات الأثر — لا يُعلن التنفيذ من داخل المحكمة */
+  /** إعلان التنفيذ — محروسٌ في المدخل: جهةٌ مخوَّلة، وحكمٌ قائم، ونهائيةٌ مثبَّتة (T-114) */
   markEnforced(caseId: string, by: EntityId, now = Date.now()): CaseResult {
     const c = this.cases.get(caseId);
-    if (!c) {
-      const entry = this.deps.audit.append(by, 'enforcement_refused', { caseId, reason: 'دعوى غير موجودة' });
-      return { ok: false, reason: 'دعوى غير موجودة', auditId: entry.hash };
+    const refused = guardEnforcementMark(c, by, this.enforcementAuthorities);
+    if (refused !== null || !c) {
+      const reason = refused ?? 'دعوى غير موجودة';
+      const entry = this.deps.audit.append(by, 'enforcement_refused', { caseId, reason });
+      return { ok: false, reason, auditId: entry.hash };
     }
     const updated: LegalCase = { ...c, status: 'enforced', enforcedAt: now, enforcedBy: by };
     this.cases.set(caseId, updated);
@@ -384,16 +346,7 @@ export class Court {
     readonly convictions: number;
     readonly acquittals: number;
   } {
-    const byStatus: Record<CaseStatus, number> = {
-      charged: 0, defended: 0, ruled: 0, appealed: 0, final: 0, enforced: 0,
-    };
-    let convictions = 0;
-    let acquittals = 0;
-    for (const c of this.cases.values()) {
-      byStatus[c.status] += 1;
-      if (c.ruling) (c.ruling.guilty ? convictions++ : acquittals++);
-    }
-    return { total: this.cases.size, byStatus, convictions, acquittals };
+    return summarizeCases<CaseStatus>(this.cases.values(), CASE_STATUSES);
   }
 
   /** الدليل يجب أن يكون بصمة سجل قائم في السلسلة — لا دليل يُدَّعى ولا يُراجَع */

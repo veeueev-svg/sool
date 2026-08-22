@@ -29,9 +29,11 @@ import { PermissionRegistry } from '../agents/permissions';
 import { SpawnPolicy } from '../agents/spawn_policy';
 import { Court, LegalCase } from './courts';
 import { PenaltyKind } from './statutes';
+import { ENFORCEMENT_AUTHORITIES } from './authorities';
 
 /** جهات التنفيذ المعلنة — قائمة مغلقة */
-export const ENFORCEMENT_AUTHORITIES: readonly EntityId[] = ['authority:crown_guard'];
+// قائمةُ جهات التنفيذ مصدرها `./authorities` — يقرؤها حرَسُ المحكمة أيضًا فلا نسختان (T-114)
+export { ENFORCEMENT_AUTHORITIES };
 
 export interface EnforcementReport {
   readonly caseId: string;

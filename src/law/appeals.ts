@@ -26,9 +26,11 @@ import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
 import { LawRegistry, PENALTY_SEVERITY, PenaltyKind } from './statutes';
 import { AppealOutcome, Court, LegalCase, PUBLIC_DEFENDER } from './courts';
+import { APPEAL_COURTS } from './authorities';
 
 /** محاكم الاستئناف المعلنة */
-export const APPEAL_COURTS: readonly EntityId[] = ['court:appeal'];
+// محاكمُ الاستئناف من `./authorities` — مصدرٌ واحد لكل دور (T-114)
+export { APPEAL_COURTS } from './authorities';
 
 export interface AppealRecord {
   readonly appealId: string;

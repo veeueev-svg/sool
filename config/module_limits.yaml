@@ -12,10 +12,12 @@ ceiling_lines: 400
 scope: "src/**/*.ts + tests/**/*.ts + scripts/**/*.ts"
 # أُغلق البند T-112 في 0.25.0: صفّ src/index.ts حُذف من هنا لأن الملف صار 148 سطرًا
 # بعد تفكيكه إلى src/composition/ — وهذا هو المقصود بالسقّاطة: الدَّين يُحذف لا يُرفع.
+# والمرحلة 39 (T-114): صفّ src/law/courts.ts حُذف كذلك — كان 404 وصار 347 سطرًا بعد إخراج
+# الأشكال إلى case_types.ts والإحصاء إلى case_report.ts والحرَس إلى case_guards.ts.
+# فالاستثناءات: 6 ← 5.
 exceptions:
   - {path: src/services/human_research.ts, max_lines: 531, item: T-113}
   - {path: src/federation/region_registry.ts, max_lines: 454, item: T-113}
   - {path: src/load/load_drill.ts, max_lines: 453, item: T-113}
   - {path: src/services/factory_runtime.ts, max_lines: 422, item: T-113}
-  - {path: src/law/courts.ts, max_lines: 404, item: T-113}
   - {path: src/external/account_registry.ts, max_lines: 402, item: T-113}
