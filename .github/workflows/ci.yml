@@ -27,5 +27,7 @@ jobs:
         run: node dist/scripts/verify_audit_chain.js
       - name: حدود حجم الوحدة (يفشل إذا تجاوز ملفٌ سقفه المعلن في config/module_limits.yaml)
         run: bash scripts/check_module_size.sh
+      - name: تطابق حالات معايير القبول مع أحكام التدقيق (T-116)
+        run: bash scripts/check_criteria_status.sh
       - name: مدقّق التوثيق (يفشل إذا تغيّر src بلا PROGRESS.md وتقرير اختبار)
         run: bash scripts/check_documentation.sh
