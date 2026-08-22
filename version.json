@@ -1,7 +1,7 @@
 {
-  "version": "0.20.0",
-  "phase": 34,
-  "completion_percent": 86.5,
+  "version": "0.21.0",
+  "phase": 35,
+  "completion_percent": 87.5,
   "phases_complete": [
     1,
     2,
@@ -36,17 +36,16 @@
     31,
     32,
     33,
-    34
-  ],
-  "phases_partial": [
+    34,
     35
   ],
+  "phases_partial": [],
   "tests": {
-    "total": 1203,
-    "passing": 1203,
+    "total": 1326,
+    "passing": 1326,
     "command": "npm test"
   },
-  "declared_by": "ديوان التدقيق",
+  "declared_by": "حرس التاج",
   "declared_at": "2026-08-22",
   "royal_approval": "pending"
 }

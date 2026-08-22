@@ -63,6 +63,13 @@ export interface AgentRegistryDeps {
   readonly resources?: ResourceRegistry;
   readonly ministryId?: EntityId;
   readonly kingId?: EntityId;
+  /**
+   * سجل المنتهين وسجل الصلاحيات (المرحلة 35). قبلها كان `terminate` يغيّر الحالة
+   * ويستعيد الموارد ويؤكّد التوقف — ولا يسحب قدرةً ولا يمنع فعلًا لاحقًا. فكان
+   * الوكيل «المنتهي» يستدعي أدواته ويستأجر موارده ويُجدوَل. الإنهاء صار هنا فعلًا.
+   */
+  readonly terminationRoll?: { record(entity: EntityId, by: EntityId, reason: string, at?: number): boolean };
+  readonly permissions?: { revokeAll(entity: EntityId, by: EntityId, reason: string): number };
 }
 
 /** جدول الانتقالات المسموحة — ما ليس فيه ممنوع */
@@ -231,6 +238,10 @@ export class AgentRegistry {
   terminate(agentId: EntityId, by: EntityId, reason: string, now = Date.now()): AgentActionResult {
     const result = this.transition(agentId, 'terminated', by, reason, 'agent_terminated', now);
     if (result.ok) {
+      // الترتيب مقصود: القيد أولًا فكل مسلك يرفض فورًا، ثم سحب القدرة، ثم استعادة
+      // المورد، ثم تأكيد التوقف. عكسُه يترك نافذةً يُستأنف فيها الفعل بعد الاستعادة.
+      this.deps.terminationRoll?.record(agentId, by, reason, now);
+      this.deps.permissions?.revokeAll(agentId, by, `إنهاء: ${reason}`);
       this.deps.resources?.releaseAllFor(agentId);
       this.deps.killSwitch.confirmStopped(agentId);
     }

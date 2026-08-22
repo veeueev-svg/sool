@@ -195,7 +195,7 @@ test('قبول: التأسيس يبقى مختومًا بسجل state_online و�
   const s = bootstrapState({ now: Date.now() });
   const snapshot = s.audit.snapshot();
   assert.equal(snapshot.at(-1)?.kind, 'state_online');
-  assert.equal((snapshot.at(-1)?.detail as { phase: number }).phase, 34);
+  assert.equal((snapshot.at(-1)?.detail as { phase: number }).phase, 35);
   assert.equal(s.audit.find('facility_established').length, 0, 'التأسيس لا يُقيم منشأة بنفسه');
   assert.equal(s.companies.report().declaredKinds, 3);
   assert.equal(s.supply.report().declaredMaterials, 4);

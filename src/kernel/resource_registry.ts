@@ -55,6 +55,12 @@ export class ResourceRegistry {
   constructor(
     private readonly audit: AppendOnlyLog,
     specs: Readonly<Record<string, ResourceSpec>>,
+    /**
+     * سجل المنتهين (المرحلة 35). اختياري كي لا تنكسر التركيبات القائمة، لكنه
+     * موصولٌ في `bootstrapState`: كيان منتهٍ ظلّ يستأجر موردًا كان عيبًا حقيقيًّا
+     * مقيسًا قبل هذه المرحلة — الإنهاء كان يستعيد الموارد ولا يمنع استعادتها.
+     */
+    private readonly terminated?: { isTerminated(entity: EntityId): boolean },
   ) {
     for (const [name, spec] of Object.entries(specs)) {
       if (spec.total < 0 || spec.per_agent_max < 0 || spec.lease_seconds < 0) {
@@ -138,6 +144,9 @@ export class ResourceRegistry {
       const entry = this.audit.append(entity, 'resource_denied', { resource, amount, reason });
       return { granted: false, reason, auditId: entry.hash };
     };
+    if (this.terminated?.isTerminated(entity)) {
+      return deny('كيان منتهٍ لا يستأجر موردًا — الإنهاء نهائي (LEASE_ENTITY_TERMINATED)');
+    }
     const spec = this.spec(resource); // مورد غير مسجَّل ⇒ استثناء سيادي
 
     if (!Number.isFinite(amount) || amount <= 0) return deny('كمية غير صالحة');

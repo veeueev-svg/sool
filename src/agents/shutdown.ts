@@ -84,8 +84,12 @@ export class MassShutdown {
     const stopped: EntityId[] = [];
     let capabilitiesRevoked = 0;
     for (const agentId of targeted) {
-      const result = this.registry.terminate(agentId, by, `إيقاف جماعي: ${reason}`);
+      // الترتيب صار: سحب القدرة **قبل** الإنهاء (المرحلة 35). كان بعده، وصار
+      // `terminate` نفسه يسحب القدرة ويقيّد الكيان في سجل المنتهين، فلو بقي
+      // السحب لاحقًا لأبلغ هذا التقرير صفرًا عن قدرات سُحبت فعلًا — عدٌّ مضلِّل.
+      // والترتيب الجديد أشدّ: لا نافذة بين الإنهاء وسحب القدرة (ثابت 3 أعلاه).
       capabilitiesRevoked += this.permissions.revokeAll(agentId, by, `إيقاف جماعي: ${reason}`);
+      const result = this.registry.terminate(agentId, by, `إيقاف جماعي: ${reason}`);
       if (result.ok) stopped.push(agentId);
     }
 

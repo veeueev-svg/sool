@@ -43,6 +43,8 @@ export interface PermissionDeps {
   readonly gateway: CrownGateway;
   readonly templates: Readonly<Record<string, RoleTemplate>>;
   readonly ministryId?: EntityId;
+  /** سجل المنتهين (المرحلة 35): قدرة حيّة بيد كيان منتهٍ خطرٌ معلَّق */
+  readonly terminated?: { isTerminated(entity: EntityId): boolean };
 }
 
 /** قوالب أدوار افتراضية محافظة — أي توسيع قرار سياسة موثّق */
@@ -93,6 +95,9 @@ export class PermissionRegistry {
       return { allowed: false, reason, auditId: entry.hash };
     };
 
+    if (this.deps.terminated?.isTerminated(req.entity)) {
+      return refuse('لا قدرة تُمنح لكيان منتهٍ', 'terminated_grant_refused');
+    }
     const decision = this.deps.gateway.authorize(command, now);
     if (!decision.allowed) return refuse(`أمر المنح مرفوض: ${decision.reason}`);
     if (command.payload.action !== 'grant_capability') return refuse('الفعل لا يخصّ منح قدرة');
@@ -156,6 +161,7 @@ export class PermissionRegistry {
 
   /** القدرات السارية فقط — المنتهية كأنها غير موجودة */
   granted(entity: EntityId, now = Date.now()): readonly string[] {
+    if (this.deps.terminated?.isTerminated(entity)) return [];
     const out: string[] = [];
     for (const grant of this.grants.values()) {
       if (grant.entity !== entity) continue;
@@ -167,6 +173,10 @@ export class PermissionRegistry {
 
   /** الفحص المُلزِم قبل أي استخدام — كل رفض يُسجَّل */
   check(entity: EntityId, capability: string, now = Date.now()): boolean {
+    if (this.deps.terminated?.isTerminated(entity)) {
+      this.deps.audit.append(entity, 'capability_check_denied', { capability, reason: 'كيان منتهٍ' });
+      return false;
+    }
     const grant = this.grants.get(`${entity}|${capability}`);
     if (!grant) {
       this.deps.audit.append(entity, 'capability_check_denied', { capability, reason: 'غير ممنوحة' });

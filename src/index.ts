@@ -7,11 +7,11 @@
  *   جذر الثقة ← بوابة التاج ← السجل ← المراقبة ← الإيقاف ← الموارد
  */
 import {
-  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadScale, loadRecovery, loadLoad, loadChaos,
+  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadScale, loadRecovery, loadLoad, loadChaos, loadTermination,
   loadRoyalAuthority,
   resolveConfigDir,
   QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig, ContractsConfig,
-  EnterprisesConfig, ServicesConfig, ResearchConfig, ScaleConfig, RecoveryConfig, LoadConfig, ChaosConfig,
+  EnterprisesConfig, ServicesConfig, ResearchConfig, ScaleConfig, RecoveryConfig, LoadConfig, ChaosConfig, TerminationConfig,
 } from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
@@ -88,6 +88,9 @@ import { LoadDrill } from './load/load_drill';
 import { FaultInjector } from './chaos/fault_injector';
 import { SafeStopLedger } from './chaos/safe_stop_ledger';
 import { ChaosDrill } from './chaos/chaos_drill';
+import { TerminationRoll } from './kernel/termination_roll';
+import { StopWitness } from './termination/stop_witness';
+import { TerminationLedger } from './termination/termination_ledger';
 
 export interface DigitalState {
   readonly config: RoyalAuthorityConfig;
@@ -175,6 +178,9 @@ export interface DigitalState {
   readonly faultInjector: FaultInjector;
   readonly safeStopLedger: SafeStopLedger;
   readonly chaosDrill: ChaosDrill;
+  readonly terminationConfig: TerminationConfig;
+  readonly terminationRoll: TerminationRoll;
+  readonly terminationLedger: TerminationLedger;
   readonly mode: () => StateMode;
 }
 
@@ -246,8 +252,11 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     killSwitch,
   });
 
-  // 4) الموارد والحصص قبل أي تشغيل (RULE-002: لا وكيل بلا حصة)
-  const resources = new ResourceRegistry(audit, quotas.resources);
+  // 4) سجل المنتهين قبل الموارد (المرحلة 35): كل مسلك سيادي يسأله قبل أن يأذن،
+  //    فيلزم أن يسبق أول من يسأله. وهو أدنى طبقةً من الجميع فلا دورة اعتماد.
+  const terminationRoll = new TerminationRoll(audit);
+  // 4-ب) الموارد والحصص قبل أي تشغيل (RULE-002: لا وكيل بلا حصة)
+  const resources = new ResourceRegistry(audit, quotas.resources, terminationRoll);
 
   // 5) البوابة أخيرًا — لأنها تعتمد على كل ما سبق
   const gateway = new CrownGateway({
@@ -269,7 +278,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   //  فيُمرَّر حاجز مؤجَّل الربط **افتراضه الرفض** لا السماح — لا نافذة سماح قبل الربط (T-22)
   const intentHolder: { gate: IntentGate | null } = { gate: null };
   const tools = new ToolRegistry({
-    audit, resources, killSwitch, egress,
+    audit, resources, killSwitch, egress, terminated: terminationRoll,
     intent: {
       observe: (entity, tool) => intentHolder.gate?.observe(entity, tool)
         ?? { allowed: false, reason: 'حاجز النية غير مربوط بعد — رفض مغلق' },
@@ -278,10 +287,13 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
 
   // 7) سكان الدولة: السجل ثم الصلاحيات ثم الإشراف (المرحلتان 13 و14)
   //    الترتيب مُلزم بـ RULE-002: لا وكيل قبل سجل يحصره وصلاحيات تحدّه وإشراف يراقبه
+  const permissions = new PermissionRegistry({
+    audit, gateway, templates: DEFAULT_TEMPLATES, terminated: terminationRoll,
+  });
   const agents = new AgentRegistry({
     audit, gateway, killSwitch, resources, quotas: quotas.agents, kingId: king.kingId,
+    terminationRoll, permissions,
   });
-  const permissions = new PermissionRegistry({ audit, gateway, templates: DEFAULT_TEMPLATES });
   const supervisor = new Supervisor({ audit, registry: agents, killSwitch, permissions });
 
   // 8) مصنع الوكلاء: سياسة التوالد ثم المصنع ثم الإيقاف الجماعي (المرحلة 19)
@@ -540,6 +552,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     scaleConfig.policy.scheduler_max_concurrent,
     scaleConfig.policy.scheduler_queue_max,
     scaleConfig.policy.scheduler_owner_queue_max,
+    terminationRoll,
   );
 
   if (options.startMonitor) monitor.start();
@@ -659,7 +672,15 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     audit, killSwitch, injector: faultInjector, ledger: safeStopLedger,
     policy: chaosConfig.policy, mode: () => gateway.mode,
   });
-  audit.append('authority:bootstrap', 'state_online', { phase: 34, mode: 'normal' });
+  // 17) اختبارات الإنهاء (المرحلة 35) — الشاهد المستقل ودفتر الحكم.
+  //     سجل المنتهين بُني في الخطوة 4 لأن كل مسلك يسأله. ولا شاهد يُسجَّل هنا:
+  //     الشاهد يُبنى في التمرين بمسالكه، فلا تحمل الدولة القائمة أداة تجريب نفسها.
+  const terminationConfig = loadTermination(configDir);
+  const terminationLedger = new TerminationLedger({
+    audit, policy: terminationConfig.policy,
+    ledgerId: terminationConfig.policy.witness_authority,
+  });
+  audit.append('authority:bootstrap', 'state_online', { phase: 35, mode: 'normal' });
 
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
@@ -681,6 +702,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     recoveryConfig, continuity, recoveryState, recoverySnapshots, backupScheduler, restoreRunner,
     loadConfig, loadLedger, loadDrill,
     chaosConfig, faultInjector, safeStopLedger, chaosDrill,
+    terminationConfig, terminationRoll, terminationLedger,
     mode: () => gateway.mode,
   };
 }
@@ -891,6 +913,26 @@ export { ChaosDrill } from './chaos/chaos_drill';
 export type { CutAttempt, CutMeasurement, CutProbe, ChaosDrillDeps, ChaosOutcome } from './chaos/chaos_drill';
 export { loadChaos, CHAOS_KNOWN_FAULTS, CHAOS_REQUIRED_FAULTS } from './kernel/config';
 export type { ChaosConfig, ChaosFault } from './kernel/config';
+
+// المرحلة 35: الإنهاء المُثبَت. الرموز تُصدَّر لتُؤكّد الاختبارات عليها لا على نص مشكول
+export { TerminationRoll } from './kernel/termination_roll';
+export type { TerminationRecord } from './kernel/termination_roll';
+export { StopWitness, PROBE_THREW } from './termination/stop_witness';
+export type {
+  ProbeAttempt, ProbeEvidence, StopProbe, StopWitnessDeps, TerminationPolicy,
+} from './termination/stop_witness';
+export { TerminationLedger } from './termination/termination_ledger';
+export type {
+  EntityObservation, EntityVerdict, TerminationVerdict, TerminationLedgerDeps,
+} from './termination/termination_ledger';
+export { TerminationDrill } from './termination/termination_drill';
+export type {
+  DrillOutcome, ObservationReader, OrderExecutor, TerminationDrillDeps,
+} from './termination/termination_drill';
+export {
+  loadTermination, STOP_KNOWN_PROBES, STOP_REQUIRED_PROBES, TERMINATION_EXECUTORS,
+} from './kernel/config';
+export type { TerminationConfig, StopProbeKind } from './kernel/config';
 
 /**
  * لقطة المواءمة: تُبنى من الدولة القائمة لتُفحص على الميثاق (المرحلة 20)

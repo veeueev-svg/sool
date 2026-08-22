@@ -45,6 +45,8 @@ export class FairScheduler {
     readonly maxConcurrent: number,
     readonly queueMax: number,
     readonly ownerQueueMax: number,
+    /** سجل المنتهين (المرحلة 35): وكيل منتهٍ كان ينال حصةً عادلة من الجدولة */
+    private readonly terminated?: { isTerminated(entity: string): boolean },
   ) {
     audit.append('ministry:infrastructure', 'scale_scheduler_online', { maxConcurrent, queueMax, ownerQueueMax });
   }
@@ -52,6 +54,7 @@ export class FairScheduler {
   enqueue(taskId: string, owner: string): ScheduleResult {
     if (this.killSwitch.status.engaged || this.frozen) return this.refuse(taskId, 'SCHEDULER_HALTED');
     if (!taskId || !owner) return this.refuse(taskId, 'SCHEDULER_TASK_INCOMPLETE');
+    if (this.terminated?.isTerminated(owner)) return this.refuse(taskId, 'SCHEDULER_OWNER_TERMINATED');
     if (this.tasks.has(taskId)) return this.refuse(taskId, 'SCHEDULER_DUPLICATE_TASK');
     const total = [...this.queues.values()].reduce((sum, queue) => sum + queue.length, 0);
     if (total >= this.queueMax) return this.refuse(taskId, 'SCHEDULER_QUEUE_FULL');

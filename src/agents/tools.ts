@@ -61,6 +61,8 @@ export interface ToolRegistryDeps {
   readonly egress?: NetworkEgressGuard;
   /** حاجز النية — إن وُجد صار إعلان الخطة شرطًا لكل وكيل (T-22) */
   readonly intent?: IntentGate;
+  /** سجل المنتهين (المرحلة 35): كيان منتهٍ كان يستدعي أدواته بقدرة لم تُسحب */
+  readonly terminated?: { isTerminated(entity: EntityId): boolean };
   readonly ministryId?: EntityId;
 }
 
@@ -141,6 +143,10 @@ export class ToolRegistry {
     const halt = this.deps.killSwitch?.status;
     if (halt?.engaged && (halt.scope === 'all' || halt.scope === 'agents')) {
       return deny('الإيقاف مُشتغل — لا استخدام لأي أداة');
+    }
+
+    if (this.deps.terminated?.isTerminated(entity)) {
+      return deny('كيان منتهٍ لا يستدعي أداة — الإنهاء نهائي', 'terminated_entity_refused');
     }
 
     const spec = this.tools.get(tool);
