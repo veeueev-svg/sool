@@ -191,11 +191,11 @@ test('قبول: البوابة تُبنى من قائمة الأفعال الم�
   assert.equal(s.gateway.authorize(bogus, Date.now()).allowed, true, 'المعلن يمرّ');
 });
 
-test('قبول: التأسيس يبقى مختومًا بسجل state_online وحده، ورقم المرحلة 29 بعد تكامل الخدمات', () => {
+test('قبول: التأسيس يبقى مختومًا بسجل state_online وحده، ورقم المرحلة 30 بعد تكامل البحث والخدمات', () => {
   const s = bootstrapState({ now: Date.now() });
   const snapshot = s.audit.snapshot();
   assert.equal(snapshot.at(-1)?.kind, 'state_online');
-  assert.equal((snapshot.at(-1)?.detail as { phase: number }).phase, 29);
+  assert.equal((snapshot.at(-1)?.detail as { phase: number }).phase, 30);
   assert.equal(s.audit.find('facility_established').length, 0, 'التأسيس لا يُقيم منشأة بنفسه');
   assert.equal(s.companies.report().declaredKinds, 3);
   assert.equal(s.supply.report().declaredMaterials, 4);

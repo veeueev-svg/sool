@@ -1,0 +1,33 @@
+# أبحاث البشر والمرآة (المرحلة 30): بحث نظري في النظير البشري عبر مصادر معلنة.
+# حد أخلاقي ملزم: لا يمس هذا الإعلان إنسانًا ولا بياناته، ولا يسمح بخروج شبكي.
+# لا يغيّر أي تشغيل أو قسم مرآة هذه السياسة (RULE-005).
+policy:
+  default: "deny"
+  max_departments: 3
+  max_concurrent_researches: 2
+  max_sources_per_research: 3
+  max_research_term_days: 30
+  review_interval_days: 14
+  min_lesson_quality_score: 70
+  max_egress_calls: 0
+  research_operator: "ministry:research"
+  lesson_approver: "authority:audit_bureau"
+  beneficiary_prefix: "agent:"
+
+# الأنواع الآتية وحدها تقبل. كل مصدر بلا نوع أو بنوع آخر يوقف البحث كله فشلًا مغلقًا.
+allowed_source_types:
+  - "public_literature"
+  - "statistical_aggregate"
+  - "historical_record"
+
+# وثائق معلنة فقط؛ لا أسماء أشخاص ولا حسابات ولا اتصالات ولا مصدر شبكي حي.
+sources:
+  - id: "source:public-administration"
+    type: "public_literature"
+    title: "أدبيات الإدارة العامة المنشورة"
+  - id: "source:institutional-statistics"
+    type: "statistical_aggregate"
+    title: "إحصاءات مؤسسية كلية معلنة"
+  - id: "source:administrative-history"
+    type: "historical_record"
+    title: "سجل تاريخي منشور للمؤسسات"

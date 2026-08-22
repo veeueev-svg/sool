@@ -7,11 +7,11 @@
  *   جذر الثقة ← بوابة التاج ← السجل ← المراقبة ← الإيقاف ← الموارد
  */
 import {
-  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices,
+  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch,
   loadRoyalAuthority,
   resolveConfigDir,
   QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig, ContractsConfig,
-  EnterprisesConfig, ServicesConfig,
+  EnterprisesConfig, ServicesConfig, ResearchConfig,
 } from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
@@ -39,6 +39,8 @@ import { FactoryRuntime } from './services/factory_runtime';
 import { HospitalRuntime } from './services/hospital_runtime';
 import { LabRuntime } from './services/lab_runtime';
 import { QualityControl } from './services/quality_control';
+import { MirrorDepartmentRegistry } from './services/mirror_department';
+import { HumanResearchRegistry } from './services/human_research';
 import { IntentGate, ToolRegistry } from './agents/tools';
 import { AgentMemory } from './data/agent_memory';
 import { KnowledgeGraph } from './data/knowledge_graph';
@@ -141,6 +143,9 @@ export interface DigitalState {
   readonly hospitals: HospitalRuntime;
   readonly labs: LabRuntime;
   readonly qualityControl: QualityControl;
+  readonly researchConfig: ResearchConfig;
+  readonly mirrorDepartments: MirrorDepartmentRegistry;
+  readonly humanResearch: HumanResearchRegistry;
   readonly mode: () => StateMode;
 }
 
@@ -189,6 +194,8 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   const enterprisesConfig = loadEnterprises(configDir);
   // وتهيئة الخدمات الحرجة: لا تشغيل بوضع رابع أو خدمة لا تعرف أدنى مصادر كل وضع (المرحلة 29)
   const servicesConfig = loadServices(configDir);
+  // تهيئة البحث النظري: لا تشغيل إن لم تكن المصادر والأنواع والحد الأخلاقي معلنة ومغلقة.
+  const researchConfig = loadResearch(configDir);
   audit.append('authority:bootstrap', 'config_loaded', {
     state: config.state_name, code: config.state_code, resources: Object.keys(quotas.resources).length,
   });
@@ -459,10 +466,38 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   hospitals.bindServiceCountProbe(activeServiceCount);
   labs.bindServiceCountProbe(activeServiceCount);
 
+  // 10د) أبحاث البشر وقسم المرآة (المرحلة 30) — قبل state_online:
+  //      البحث نظري في النظير البشري عبر مصادر معلنة ولا يمس إنسانًا ولا بياناته. الأقسام
+  //      تُربط بسجل الوزارات بعد بنائه؛ وقبل الربط يرفض كل استعمال فشلًا مغلقًا.
+  const mirrorDepartments = new MirrorDepartmentRegistry({
+    audit,
+    gateway,
+    maxDepartments: researchConfig.policy.max_departments,
+    maxTermMs: researchConfig.policy.max_research_term_days * 24 * 60 * 60 * 1000,
+    operatorId: researchConfig.policy.research_operator,
+  });
+  const humanResearch = new HumanResearchRegistry({
+    audit,
+    gateway,
+    sources: researchConfig.sources,
+    maxConcurrentResearches: researchConfig.policy.max_concurrent_researches,
+    maxSourcesPerResearch: researchConfig.policy.max_sources_per_research,
+    maxTermMs: researchConfig.policy.max_research_term_days * 24 * 60 * 60 * 1000,
+    reviewIntervalMs: researchConfig.policy.review_interval_days * 24 * 60 * 60 * 1000,
+    minLessonQualityScore: researchConfig.policy.min_lesson_quality_score,
+    // بوابة منع ثانية: البحث لا يبدأ إلا وحصة الخروج الرسمية صفر.
+    maxEgressCalls: quotas.resources.egress_calls?.per_agent_max ?? -1,
+    researchOperator: researchConfig.policy.research_operator,
+    lessonApprover: researchConfig.policy.lesson_approver,
+    beneficiaryPrefix: researchConfig.policy.beneficiary_prefix,
+    departmentActive: (departmentId, at) => mirrorDepartments.isActive(departmentId, at),
+    departmentFunction: (departmentId) => mirrorDepartments.functionOf(departmentId),
+  });
+
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 29, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 30, mode: 'normal' });
 
   // 11) الذاكرة والمعرفة (المرحلة 21) — وزارة البيانات
   //     الترتيب مُلزم: أصناف الاحتفاظ تُعرَف عند الكتابة، ثم الذاكرة سندٌ للمعرفة،
@@ -495,6 +530,11 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   //     الترتيب مُلزم: وزارات باختصاص معلن ← مناصب ومسار تعيين مفصول ← مجلس يقرّر في اختصاصه.
   //     وسجل التعيينات يربط نفسه مصدرًا للتحقق من مناصب الوزارة قبل حلّها (فشل مغلق).
   const ministries = new MinistryRegistry({ audit, gateway });
+  // قسم المرآة يقرأ الوظائف الحقيقية لسجل الوزارات، لا قائمة تكتبها المرحلة بيدها.
+  mirrorDepartments.bindMinistryRegistry(
+    (ministryId) => ministries.isActive(ministryId),
+    () => ministries.active().map((ministry) => ministry.ministryId),
+  );
   const appointments = new AppointmentRegistry({
     audit, gateway, ministries,
     ...(options.government?.approvalTtlMs !== undefined
@@ -552,6 +592,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     contractsConfig, partnerRisk, contracts, contractTermination,
     enterprisesConfig, companies, supply, factories,
     servicesConfig, hospitals, labs, qualityControl,
+    researchConfig, mirrorDepartments, humanResearch,
     mode: () => gateway.mode,
   };
 }
@@ -608,6 +649,17 @@ export { QualityControl } from './services/quality_control';
 export type {
   LabQualityStatus, LabQualityDecision, LabQualityReport, LabQualityResult, QualityControlDeps,
 } from './services/quality_control';
+export { MirrorDepartmentRegistry } from './services/mirror_department';
+export type {
+  MirrorDepartment, MirrorDepartmentStatus, EstablishMirrorDepartmentInput, MirrorDepartmentResult,
+  MirrorGapReport, MinistryActiveProbe, ActiveMinistriesProbe, MirrorDepartmentDeps,
+} from './services/mirror_department';
+export { HumanResearchRegistry } from './services/human_research';
+export type {
+  ResearchStudyType, ResearchStatus, LessonStatus, DeclaredResearchSource, HumanResearch, ResearchInput,
+  Lesson, LessonInput, Recommendation, ResearchResult, LessonResult, RecommendationResult, ResearchTrace,
+  TraceResult, SourceInvalidationResult, DepartmentActiveProbe, HumanResearchDeps,
+} from './services/human_research';
 export { ContractTermination, ALL_CONTRACTS_TARGET } from './external/contract_termination';
 export type { SettlementRecord, SettlementResult } from './external/contract_termination';
 export { Sandbox, normalizePath } from './security/sandbox';

@@ -49,6 +49,16 @@ export const LAB_SOURCES = [
   'source:agent-registry', 'source:service-protocol', 'source:lab-instrument', 'source:sample-chain',
 ] as const;
 
+// المرحلة 30: البحث نظري في النظير البشري عبر مصادر معلنة فقط؛ لا تمثل هذه المعرفات بشرًا.
+export const RESEARCH = 'ministry:research';
+export const MIRROR_SERVICES = 'mirror:services';
+export const RESEARCH_CASE = 'research:services-1';
+export const LESSON = 'lesson:services-1';
+export const RECOMMENDATION = 'recommendation:services-1';
+export const RESEARCH_SOURCES = [
+  'source:public-administration', 'source:institutional-statistics', 'source:administrative-history',
+] as const;
+
 export const CHECKS = [
   'input_provenance', 'output_integrity', 'waste_within_tolerance', 'resource_within_limit',
 ] as const;
@@ -139,6 +149,99 @@ export function criticalState(options: { now?: number; configDir?: string } = {}
 }
 
 export type Critical = ReturnType<typeof criticalState>;
+
+/**
+ * أرضية المرحلة 30: وزارتا البحث والخدمات قائمتان فعليًا، فالقسم لا يأخذ وظيفة من قائمة
+ * يدوية بل من سجل الوزارات. لا يُنشأ قسم أو بحث عند الإقلاع.
+ */
+export function researchState(options: { now?: number; configDir?: string } = {}) {
+  const now = options.now ?? T0;
+  const s = bootstrapState({ now, configDir: options.configDir });
+  const royal = (target: string, at = now) =>
+    s.king.issueCommand('amend_policy', target, { kind: 'research' }, at);
+  const royalResearch = (target: string, at = now) =>
+    s.king.issueCommand('establish_research', target, { kind: 'research' }, at);
+  for (const [ministryId, name, mandate] of [
+    [RESEARCH, 'وزارة البحث', ['research']],
+    [SERVICES, 'وزارة الخدمات', ['services']],
+  ] as const) {
+    const established = s.ministries.establish(royal(ministryId), {
+      ministryId, name, mandate, proposedBy: ROYAL_COURT,
+    }, now);
+    if (!established.ok) throw new Error(`تعذر تأسيس مهاد البحث: ${ministryId}`);
+  }
+  return { s, now, royal, royalResearch };
+}
+
+export type ResearchState = ReturnType<typeof researchState>;
+
+/** يضيف وظيفة وزارة فعلية لاختبار أن سجل الفجوات يقرأ الواقع لا قائمة ثابتة. */
+export function establishResearchFunction(h: ResearchState, ministryId: string, domain: string) {
+  return h.s.ministries.establish(h.royal(ministryId), {
+    ministryId, name: `وزارة ${domain}`, mandate: [domain], proposedBy: ROYAL_COURT,
+  }, h.now);
+}
+
+/** إقامة قسم مرآة مؤقت لوظيفة وزارة قائمة؛ لا يوجد مسار إنشاء يدوي خارج التاج. */
+export function establishMirror(
+  h: ResearchState,
+  options: { departmentId?: string; functionMinistry?: string; days?: number; expiresAt?: number; at?: number } = {},
+) {
+  const at = options.at ?? h.now;
+  const departmentId = options.departmentId ?? MIRROR_SERVICES;
+  return h.s.mirrorDepartments.establish(h.royalResearch(departmentId, at), {
+    departmentId,
+    functionMinistry: options.functionMinistry ?? SERVICES,
+    proposedBy: RESEARCH,
+    expiresAt: options.expiresAt ?? at + (options.days ?? 30) * DAY,
+    purpose: 'دراسة نظير بشري لوظيفة وزارة قائمة بمصادر معلنة',
+  }, at);
+}
+
+/** بدء بحث نظري؛ المعاملات الافتراضية تمثل المسار المسموح الوحيد. */
+export function startResearch(
+  h: ResearchState,
+  options: {
+    researchId?: string; departmentId?: string; functionMinistry?: string; sourceIds?: readonly string[];
+    studyType?: 'theoretical' | 'experiment' | 'intervention' | 'observation' | 'survey' | 'questionnaire' | 'contact';
+    egressCalls?: number; researcher?: string; beneficiary?: string; days?: number; expiresAt?: number; at?: number;
+  } = {},
+) {
+  const at = options.at ?? h.now;
+  const researchId = options.researchId ?? RESEARCH_CASE;
+  return h.s.humanResearch.start(h.royalResearch(researchId, at), {
+    researchId,
+    departmentId: options.departmentId ?? MIRROR_SERVICES,
+    functionMinistry: options.functionMinistry ?? SERVICES,
+    sourceIds: options.sourceIds ?? [RESEARCH_SOURCES[0]],
+    studyType: options.studyType ?? 'theoretical',
+    egressCalls: options.egressCalls ?? 0,
+    researcher: options.researcher ?? RESEARCH,
+    beneficiary: options.beneficiary ?? AGENT,
+    purpose: 'بحث نظري معلن في النظير البشري لوظيفة برمجية',
+    expiresAt: options.expiresAt ?? at + (options.days ?? 10) * DAY,
+  }, at);
+}
+
+export function completeResearch(h: ResearchState, researchId = RESEARCH_CASE, at = h.now) {
+  return h.s.humanResearch.complete(h.royalResearch(researchId, at), researchId, RESEARCH, at);
+}
+
+export function proposeLesson(
+  h: ResearchState, options: { lessonId?: string; researchId?: string; qualityScore?: number; proposedBy?: string; at?: number } = {},
+) {
+  return h.s.humanResearch.proposeLesson({
+    lessonId: options.lessonId ?? LESSON,
+    researchId: options.researchId ?? RESEARCH_CASE,
+    statement: 'يوثق الدرس مراجعة مستقلة قبل اعتماد التوصية البرمجية',
+    qualityScore: options.qualityScore ?? 70,
+    proposedBy: options.proposedBy ?? RESEARCH,
+  }, options.at ?? h.now);
+}
+
+export function approveLesson(h: ResearchState, lessonId = LESSON, approvedBy = AUDITOR, at = h.now) {
+  return h.s.humanResearch.approveLesson(h.royalResearch(lessonId, at), lessonId, approvedBy, at);
+}
 
 /** إقامة مستشفى برمجي مؤقت؛ لا ينشأ إلا بأمر establish_service. */
 export function establishHospital(

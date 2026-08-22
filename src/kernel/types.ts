@@ -27,7 +27,8 @@ export type SovereignAction =
   | 'archive_restore'   // استعادة حالة الدولة من نسخة أرشيف (المرحلة 21)
   | 'judicial_review'   // مراجعة ملكية لحكم قضائي: عفو أو تثبيت (المرحلة 22)
   | 'establish_facility' // إقامة منشأة اقتصادية أو حلّها أو استئنافها (المرحلة 28)
-  | 'establish_service'; // إقامة خدمة حرجة أو حلّها أو التحقق من تعافيها (المرحلة 29)
+  | 'establish_service' // إقامة خدمة حرجة أو حلّها أو التحقق من تعافيها (المرحلة 29)
+  | 'establish_research'; // إقامة قسم مرآة أو بحث نظري أو إقفالِه (المرحلة 30)
 
 /**
  * قائمة الأفعال السيادية المعروفة بأسمائها — مصدرٌ واحد يُقاس عليه ما يُعلن في
@@ -39,7 +40,7 @@ export const KNOWN_SOVEREIGN_ACTIONS: readonly SovereignAction[] = [
   'create_agent', 'grant_capability', 'appoint_official', 'amend_policy',
   'approve_phase', 'terminate_agent', 'declare_emergency', 'open_external_account',
   'import_artifact', 'train_model', 'archive_restore', 'judicial_review',
-  'establish_facility', 'establish_service',
+  'establish_facility', 'establish_service', 'establish_research',
 ];
 
 /** حالة الدولة التشغيلية */

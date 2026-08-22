@@ -26,4 +26,6 @@ sovereign_actions:
   - establish_facility
   # المرحلة 29: إقامة خدمة حرجة برمجية أو حلّها أو إعادة رفعها بتحقق مستقل
   - establish_service
+  # المرحلة 30: إقامة قسم مرآة أو بحث نظري معلن وإقفاله — لا بحث على بشر
+  - establish_research
 veto_final: true
