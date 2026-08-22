@@ -1,0 +1,23 @@
+# سياسة اختبارات الانقطاع (المرحلة 34) — أي قطع يُمارَس، وما الذي يُعدّ توقفًا آمنًا
+# كل رقم وكل علم هنا سياسة يجري إنفاذها: له قيمة تُسقط الإقلاع، وتغييره يغيّر سلوك التمرين.
+# القطع لا يُثبت شيئًا إن لم يُقاس تحته فعلٌ سيادي واحد على الأقل ويُرفَض برمز معلن.
+policy:
+  default: deny
+  drill_authority: "authority:audit_bureau"
+  # القطوع الممارسة. الثلاثة الأولى شرط قبول المرحلة، والقرص بند T-90.
+  faults:
+    - "network"
+    - "identity"
+    - "power"
+    - "disk"
+  probe_commands: 12
+  max_half_executed: 0
+  max_dangling_lease: 0
+  require_audit_intact: true
+  require_declared_stop: true
+  safe_stop_deadline_ms: 250
+  # وضع الاستمرارية الواجب إعلانه بعد القطع. لا يجوز أن يكون full — دولة تستمر
+  # كاملةً بعد قطع تُخمِّن. وهو مربوط بـ recovery.yaml: لا يكون أرخى من وضع الانقطاع
+  # المعلن هناك (limited)، فتمرينٌ يرضى بما دون ما توجبه خطة الاستمرارية تمرينٌ يكذب.
+  fallback_mode: "limited"
+  escalate_on_breach: true

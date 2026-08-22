@@ -9,6 +9,12 @@
  *   - «مرة واحدة فقط»: أمر نُفِّذ لا يُنفَّذ مرة أخرى ولو أُعيد إرساله بعد إعادة التشغيل
  *   - الفشل الجزئي قابل لإعادة المحاولة حتى سقف معلن، ثم يُصنَّف فاشلًا نهائيًا ويُرفع للملك
  *   - الحالة تُحفظ على القرص بعد كل تغيير: انقطاع العملية لا يُفقد الأثر
+ *   - **النيّة تُثبَّت قبل الأثر**: قبل استدعاء المنفّذ تُكتب المحاولة على القرص. عيب كشفه
+ *     تمرين الانقطاع في المرحلة 34 (البند T-90): كان الأثر يجري ثم يُحفظ، فانقطاع القرص
+ *     كان يُنتج أمرًا نُفِّذ في الذاكرة ومعلَّق على القرص — أي تنفيذًا مزدوجًا بعد إعادة
+ *     التشغيل. الدواء تقديم الكتابة على الأثر، لا تخفيف الضمان.
+ *   - **سلسلة التدقيق تُصحِّح اللقطة**: أمرٌ سجّل التدقيق تنفيذه لا يُنفَّذ ثانيًا ولو قال
+ *     ملف الحالة إنه معلَّق (RULE-006: السجل لا يُمحى فهو المرجع عند التعارض).
  *   - الحفظ لقطة + يوميّة: كل تغيير يُلحَق سطرًا مبصومًا في اليوميّة، واللقطة الكاملة تُكتب
  *     عند الطيّ. (عيب كشفه تمرين الضغط في المرحلة 33: إعادة كتابة الملف كاملًا بعد كل
  *     تغيير كلفتها تربيعية — 500 أمر كلّفت 88 مللي ثانية للأمر الواحد. الدواء تغيير
@@ -17,6 +23,8 @@
  *   - أمر مرفوض من البوابة ⇒ لا تنفيذ، ويُثبَّت الرفض ولا يُعاد
  *   - المنفّذ يرمي استثناءً ⇒ إعادة محاولة مسجَّلة، ولا يُعلَن نجاح
  *   - ملف الحالة معدَّل بما يخالف بصمته ⇒ التحميل يُرفض
+ *   - فشل الكتابة على القرص ⇒ تراجعٌ معلن أو تصعيد للملك ورمي استثناء برمز معلن،
+ *     ولا يُكمَل العمل على حالة لا تُثبَّت (T-90: توقف معلن لا حالة مجهولة)
  * اختبار القبول: tests/crown/command_channel.test.ts
  * الوثيقة المرتبطة: docs/specs/digital-state-build-guide.md — بوابة التاج وقناة الأوامر
  */
@@ -65,6 +73,25 @@ export const CHANNEL_JOURNAL_COMPACT_AT = 256;
  */
 export const CHANNEL_SNAPSHOT_ALWAYS_UNDER = 32;
 
+/**
+ * رمز فشل التثبيت على القرص. يُرمى نصًّا في رسالة الاستثناء كي يُميَّز عن أي خطأ آخر،
+ * فرفضٌ بلا رمز رفضٌ غير موثَّق (المرحلة 34).
+ */
+export const CHANNEL_PERSIST_FAILED = 'CHANNEL_PERSIST_FAILED';
+
+/**
+ * وسم السجل الذي صُحِّح من سلسلة التدقيق بعد انقطاع: أُعلن تنفيذه في السجل ولم
+ * يُثبَّت في اللقطة. يُثبَّت في `lastError` كي يبقى التصحيح مقروءًا لا صامتًا.
+ */
+export const CHANNEL_RECONCILED_FROM_AUDIT = 'CHANNEL_RECONCILED_FROM_AUDIT';
+
+/**
+ * رمز فشل القراءة عند بناء القناة. مسارُ حالةٍ لا يُقرأ (مجلد باسم الملف، أو قرص
+ * معطوب) كان يُخرج خطأ نظامٍ خامًا لا رمز له، فيصير الرفض غير موثَّق. القراءة الآن
+ * ملفوفة: يبقى سبب النظام في الرسالة، ويُقدَّم الرمز عليه (المرحلة 34).
+ */
+export const CHANNEL_RESTORE_FAILED = 'CHANNEL_RESTORE_FAILED';
+
 export interface ProcessOutcome {
   readonly commandId: string;
   readonly status: CommandStatus;
@@ -90,7 +117,10 @@ export class CommandChannel {
     this.journalPath = `${statePath}.journal`;
     const dir = dirname(statePath);
     if (dir && !existsSync(dir)) mkdirSync(dir, { recursive: true });
-    if (existsSync(statePath)) this.restore();
+    if (existsSync(statePath)) {
+      this.restore();
+      this.reconcileFromAudit();
+    }
     else if (existsSync(this.journalPath)) {
       // يوميّة بلا لقطة: أثرٌ بلا أصل. الفشل مغلق ولا يُخمَّن ما ضاع.
       throw new Error('يوميّة قناة أوامر بلا لقطة — حالة غير مكتملة');
@@ -114,8 +144,18 @@ export class CommandChannel {
       commandId: id, command, status: 'pending', attempts: 0, lastError: null, decidedAt: null,
     };
     this.records.set(id, record);
+    // القبول لا يُعلن قبل تثبيته: إن تعذّر الحفظ يُمحى السجل من الذاكرة كي لا يبقى
+    // أمرٌ مقبولٌ بلا أثر على القرص — وهي الحالة المجهولة التي يمنعها البند T-90.
+    try {
+      this.save(record);
+    } catch (err) {
+      this.records.delete(id);
+      this.audit.append('authority:crown_guard', 'command_channel_persist_failed', {
+        commandId: id, stage: 'submit', code: CHANNEL_PERSIST_FAILED, error: (err as Error).message,
+      });
+      throw new Error(`${CHANNEL_PERSIST_FAILED} — تعذّر تثبيت أمر على القرص فلم يُقبل`);
+    }
     this.audit.append(command.payload.issuedBy, 'command_enqueued', { commandId: id, action: command.payload.action });
-    this.save(record);
     return record;
   }
 
@@ -138,6 +178,19 @@ export class CommandChannel {
       }
 
       record.attempts += 1;
+      // تثبيت النيّة قبل الأثر: منفّذٌ يجري على قرص لا يُكتب عليه يُنتج تنفيذًا لا سجل له.
+      try {
+        this.save(record);
+      } catch (err) {
+        record.attempts -= 1;
+        this.audit.append('authority:crown_guard', 'command_channel_persist_failed', {
+          commandId: record.commandId, stage: 'intent', code: CHANNEL_PERSIST_FAILED, error: (err as Error).message,
+        });
+        this.audit.append('authority:crown_guard', 'escalated_to_king', {
+          commandId: record.commandId, reason: 'تعذّر تثبيت نيّة التنفيذ — لا أثر بلا سجل',
+        });
+        throw new Error(`${CHANNEL_PERSIST_FAILED} — تعذّر تثبيت نيّة تنفيذ أمر`);
+      }
       try {
         executor(record.command);
         record.status = 'executed';
@@ -167,7 +220,19 @@ export class CommandChannel {
           outcomes.push({ commandId: record.commandId, status: 'pending', reason: `إعادة محاولة: ${message}` });
         }
       }
-      this.save(record); // بعد كل تغيير، لا بعد الدفعة
+      // بعد كل تغيير، لا بعد الدفعة. وإن تعذّر التثبيت هنا فالأثر قد جرى بالفعل:
+      // لا تراجع، بل تصعيد ورمي استثناء — والسجل يبقى مرجعًا يُصحِّح اللقطة عند العودة.
+      try {
+        this.save(record);
+      } catch (err) {
+        this.audit.append('authority:crown_guard', 'command_channel_persist_failed', {
+          commandId: record.commandId, stage: 'outcome', code: CHANNEL_PERSIST_FAILED, error: (err as Error).message,
+        });
+        this.audit.append('authority:crown_guard', 'escalated_to_king', {
+          commandId: record.commandId, reason: 'تعذّر تثبيت نتيجة أمر بعد جريان أثره',
+        });
+        throw new Error(`${CHANNEL_PERSIST_FAILED} — تعذّر تثبيت نتيجة أمر`);
+      }
     }
     return outcomes;
   }
@@ -214,7 +279,12 @@ export class CommandChannel {
   }
 
   private restore(): void {
-    const file = JSON.parse(readFileSync(this.statePath, 'utf8')) as ChannelFile;
+    let text: string;
+    try { text = readFileSync(this.statePath, 'utf8'); }
+    catch (err) {
+      throw new Error(`${CHANNEL_RESTORE_FAILED} — تعذّر قراءة ملف حالة القناة: ${(err as Error).message}`);
+    }
+    const file = JSON.parse(text) as ChannelFile;
     if (file.version !== 1) throw new Error('إصدار ملف قناة غير مدعوم');
     if (sha256(canonicalize(file.records)) !== file.checksum) {
       throw new Error('بصمة ملف قناة الأوامر لا تطابق محتواه — تلاعب مكتشف');
@@ -230,5 +300,33 @@ export class CommandChannel {
       this.records.set(line.record.commandId, { ...line.record });
     }
     this.journalLines = lines.length;
+  }
+
+  /**
+   * تصحيح اللقطة من سلسلة التدقيق بعد انقطاع: أمرٌ سُجِّل تنفيذه ولم تُثبَّت نتيجته
+   * يُقرأ منفَّذًا لا معلَّقًا، فلا يُنفَّذ مرة ثانية. المرجع عند التعارض هو السجل
+   * غير القابل للمحو لا الملف القابل للكتابة (RULE-006)، والتصحيح نفسه يُسجَّل.
+   */
+  private reconcileFromAudit(): void {
+    const executedAt = new Map<string, number>();
+    for (const entry of this.audit.find('command_channel_executed')) {
+      const id = (entry.detail as { commandId?: unknown }).commandId;
+      if (typeof id === 'string') executedAt.set(id, entry.at);
+    }
+    const reconciled: string[] = [];
+    for (const record of this.records.values()) {
+      if (record.status !== 'pending') continue;
+      const at = executedAt.get(record.commandId);
+      if (at === undefined) continue;
+      record.status = 'executed';
+      record.decidedAt = at;
+      record.lastError = CHANNEL_RECONCILED_FROM_AUDIT;
+      reconciled.push(record.commandId);
+    }
+    if (reconciled.length === 0) return;
+    this.audit.append('authority:crown_guard', 'command_channel_reconciled', {
+      count: reconciled.length, commandIds: reconciled,
+    });
+    this.persist();
   }
 }

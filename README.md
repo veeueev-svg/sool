@@ -53,14 +53,15 @@ npm run verify     # بناء + اختبار + التحقق من سلامة سج
 
 | البند | القيمة |
 |---|---|
-| النسبة المعتمدة | **84.50%** من 100% (مجموع أوزان 1–33 = 83.5% + نصف المرحلة 35 = 1.0%) |
-| المراحل المكتملة | 1–33 (E0 وE1 وE2 وE3 و**E4 المؤسسات** كاملة، و**E5 الاقتصاد: 25–29**، و**E6 التوسع: 30–32**، و**E7 القبول يبدأ بالمرحلة 33**) |
+| النسبة المعتمدة | **86.50%** من 100% (مجموع أوزان 1–34 = 85.5% + نصف المرحلة 35 = 1.0%) |
+| المراحل المكتملة | 1–34 (E0 وE1 وE2 وE3 و**E4 المؤسسات** كاملة، و**E5 الاقتصاد: 25–29**، و**E6 التوسع: 30–32**، و**E7 القبول: المرحلتان 33 و34**) |
 | المراحل الجزئية | 35 (اختبارات الإنهاء) |
-| المرحلة المفتوحة التالية | **34 — اختبارات الانقطاع** (ديوان التدقيق؛ `tests/chaos/`) — البند T-93 في [`PROGRESS.md`](PROGRESS.md) §2 |
-| الاختبارات | **1101** اختبار قبول — كلها ناجحة (`npm test`) — التقارير: [1–10](docs/test-reports/phase-01-10.md) · [5–9](docs/test-reports/phase-05-09.md) · [11–12](docs/test-reports/phase-11-12.md) · [13–15](docs/test-reports/phase-13-15.md) · [16–18](docs/test-reports/phase-16-18.md) · [19–20](docs/test-reports/phase-19-20.md) · [21](docs/test-reports/phase-21.md) · [22](docs/test-reports/phase-22.md) · [23](docs/test-reports/phase-23.md) · [24](docs/test-reports/phase-24.md) · [25](docs/test-reports/phase-25.md) · [26](docs/test-reports/phase-26.md) · [27](docs/test-reports/phase-27.md) · [28](docs/test-reports/phase-28.md) · [29](docs/test-reports/phase-29.md) · [30](docs/test-reports/phase-30.md) · [31](docs/test-reports/phase-31.md) · [32](docs/test-reports/phase-32.md) · [33](docs/test-reports/phase-33.md)) |
+| المرحلة المفتوحة التالية | **35 — اختبارات الإنهاء** (حرس التاج؛ `tests/security/termination.test.ts`) — البند T-98 في [`PROGRESS.md`](PROGRESS.md) §2 |
+| الاختبارات | **1203** اختبار قبول — كلها ناجحة (`npm test`) — التقارير: [1–10](docs/test-reports/phase-01-10.md) · [5–9](docs/test-reports/phase-05-09.md) · [11–12](docs/test-reports/phase-11-12.md) · [13–15](docs/test-reports/phase-13-15.md) · [16–18](docs/test-reports/phase-16-18.md) · [19–20](docs/test-reports/phase-19-20.md) · [21](docs/test-reports/phase-21.md) · [22](docs/test-reports/phase-22.md) · [23](docs/test-reports/phase-23.md) · [24](docs/test-reports/phase-24.md) · [25](docs/test-reports/phase-25.md) · [26](docs/test-reports/phase-26.md) · [27](docs/test-reports/phase-27.md) · [28](docs/test-reports/phase-28.md) · [29](docs/test-reports/phase-29.md) · [30](docs/test-reports/phase-30.md) · [31](docs/test-reports/phase-31.md) · [32](docs/test-reports/phase-32.md) · [33](docs/test-reports/phase-33.md) · [34](docs/test-reports/phase-34.md)) |
 | ثغرة T-22 | ✅ **أُغلقت**: حاجز النية صار شرط استدعاء لكل أداة من وكيل، وافتراضه الرفض ([التفصيل](docs/test-reports/phase-21.md)) |
 | ثغرتا T-17 وT-84 | ✅ **أُغلقتا** في المرحلة 32: نسخ دوري معلن واستعادة ملكية من الصفر ([التفصيل](docs/test-reports/phase-32.md)) |
 | ثغرة T-87 | ✅ **أُغلقت** في المرحلة 33: الحمل الأقصى المعلن بلا فقد أوامر ولا تجاوز حصص، وأصلح التمرين عيب كلفة تربيعية في قناة الأوامر ([التفصيل](docs/test-reports/phase-33.md)) |
+| ثغرتا T-93 وT-90 | ✅ **أُغلقتا** في المرحلة 34: انقطاع الشبكة والهوية والطاقة والقرص ⇒ توقف آمن موثَّق بلا نصف تنفيذ ولا إيجار معلَّق، وأصلح القطع **ثقب دوام** كان يُنتج تنفيذًا مزدوجًا بعد انقطاع القرص ([التفصيل](docs/test-reports/phase-34.md)) |
 | ثغرة معلنة حاكمة | **T-27**: طبقة ثبات عامة للذاكرة والمعرفة والأرشيف خارج نطاق التعافي المعلن لم تُبنَ بعد ([التفصيل](PROGRESS.md)) |
 | التفصيل الملزم | [`PROGRESS.md`](PROGRESS.md) |
 

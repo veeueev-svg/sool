@@ -1,17 +1,17 @@
 /**
  * src/index.ts — تشكيل الدولة (bootstrap)
- * المالك: القيّم على المستودع | المراحل: 1–33
+ * المالك: القيّم على المستودع | المراحل: 1–34
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * المدخلات: config/*.yaml | المخرجات: كائن دولة جاهز بترتيب اعتماد صحيح
  * ثابت RULE-002: لا يُنشأ وكيل واسع الصلاحيات قبل اكتمال:
  *   جذر الثقة ← بوابة التاج ← السجل ← المراقبة ← الإيقاف ← الموارد
  */
 import {
-  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadScale, loadRecovery, loadLoad,
+  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadScale, loadRecovery, loadLoad, loadChaos,
   loadRoyalAuthority,
   resolveConfigDir,
   QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig, ContractsConfig,
-  EnterprisesConfig, ServicesConfig, ResearchConfig, ScaleConfig, RecoveryConfig, LoadConfig,
+  EnterprisesConfig, ServicesConfig, ResearchConfig, ScaleConfig, RecoveryConfig, LoadConfig, ChaosConfig,
 } from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
@@ -85,6 +85,9 @@ import { BackupScheduler } from './recovery/backup_scheduler';
 import { RestoreRunner } from './recovery/restore_runner';
 import { LoadLedger } from './load/load_ledger';
 import { LoadDrill } from './load/load_drill';
+import { FaultInjector } from './chaos/fault_injector';
+import { SafeStopLedger } from './chaos/safe_stop_ledger';
+import { ChaosDrill } from './chaos/chaos_drill';
 
 export interface DigitalState {
   readonly config: RoyalAuthorityConfig;
@@ -168,6 +171,10 @@ export interface DigitalState {
   readonly loadConfig: LoadConfig;
   readonly loadLedger: LoadLedger;
   readonly loadDrill: LoadDrill;
+  readonly chaosConfig: ChaosConfig;
+  readonly faultInjector: FaultInjector;
+  readonly safeStopLedger: SafeStopLedger;
+  readonly chaosDrill: ChaosDrill;
   readonly mode: () => StateMode;
 }
 
@@ -641,7 +648,18 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     audit, killSwitch, resources, ledger: loadLedger, policy: loadConfig.policy,
     mode: () => gateway.mode,
   });
-  audit.append('authority:bootstrap', 'state_online', { phase: 33, mode: 'normal' });
+  // 16) اختبارات الانقطاع (المرحلة 34) — القطع المعلن وحُكم التوقف الآمن.
+  //     الترتيب مُلزم: الحاقن ثم الدفتر ثم التمرين — من يُحدث العطب ليس من يحكم عليه
+  //     (RULE-004). ولا مقعد قطع يُسجَّل هنا: المقاعد تُمرَّر من التمرين المُشغَّل
+  //     كي لا تحمل الدولة القائمة قدرةَ قطعِ نفسها في مسارها الطبيعي.
+  const chaosConfig = loadChaos(configDir);
+  const faultInjector = new FaultInjector({ audit, policy: chaosConfig.policy });
+  const safeStopLedger = new SafeStopLedger({ audit, policy: chaosConfig.policy });
+  const chaosDrill = new ChaosDrill({
+    audit, killSwitch, injector: faultInjector, ledger: safeStopLedger,
+    policy: chaosConfig.policy, mode: () => gateway.mode,
+  });
+  audit.append('authority:bootstrap', 'state_online', { phase: 34, mode: 'normal' });
 
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
@@ -662,6 +680,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     scaleConfig, sharding, population, scheduler,
     recoveryConfig, continuity, recoveryState, recoverySnapshots, backupScheduler, restoreRunner,
     loadConfig, loadLedger, loadDrill,
+    chaosConfig, faultInjector, safeStopLedger, chaosDrill,
     mode: () => gateway.mode,
   };
 }
@@ -669,6 +688,14 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
 export * from './kernel/types';
 export { AuditStore } from './audit/store';
 export { CommandChannel } from './crown/command_channel';
+// رموز دوام القناة (المرحلة 34): تُصدَّر لتُؤكّد الاختبارات على الرمز لا على نص مشكول
+export {
+  CHANNEL_PERSIST_FAILED, CHANNEL_RECONCILED_FROM_AUDIT, CHANNEL_RESTORE_FAILED,
+  CHANNEL_JOURNAL_COMPACT_AT, CHANNEL_SNAPSHOT_ALWAYS_UNDER,
+} from './crown/command_channel';
+export type {
+  ChannelRecord, ChannelFile, ChannelJournalLine, CommandExecutor, CommandStatus, ProcessOutcome,
+} from './crown/command_channel';
 export { TerminationOrder } from './crown/termination_order';
 export type { EntityController } from './crown/termination_order';
 export { KingMonitor } from './crown/king_monitor';
@@ -852,6 +879,18 @@ export type {
 } from './load/load_drill';
 export { loadLoad, LOAD_FORBIDDEN_DRILL_AUTHORITIES } from './kernel/config';
 export type { LoadConfig } from './kernel/config';
+export { matchEffects } from './chaos/effect_matcher';
+export type { EffectMatchInput, EffectMatchReport, MatchedRecord, MatchedStatus } from './chaos/effect_matcher';
+export { FaultInjector } from './chaos/fault_injector';
+export type { ChaosPolicy, FaultSeam, InjectOutcome, InjectorDeps } from './chaos/fault_injector';
+export { SafeStopLedger } from './chaos/safe_stop_ledger';
+export type {
+  ContinuityAfterCut, CutObservation, CutVerdict, SafeStopReport, SafeStopLedgerDeps,
+} from './chaos/safe_stop_ledger';
+export { ChaosDrill } from './chaos/chaos_drill';
+export type { CutAttempt, CutMeasurement, CutProbe, ChaosDrillDeps, ChaosOutcome } from './chaos/chaos_drill';
+export { loadChaos, CHAOS_KNOWN_FAULTS, CHAOS_REQUIRED_FAULTS } from './kernel/config';
+export type { ChaosConfig, ChaosFault } from './kernel/config';
 
 /**
  * لقطة المواءمة: تُبنى من الدولة القائمة لتُفحص على الميثاق (المرحلة 20)
