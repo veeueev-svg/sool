@@ -1,5 +1,7 @@
 node_modules/
 dist/
+.sool/
+recovery-*.json
 *.log
 .state/
 .env

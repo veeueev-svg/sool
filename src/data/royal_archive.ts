@@ -37,7 +37,20 @@ export interface ArchiveSnapshot {
   readonly payload: {
     readonly memory: ReturnType<AgentMemory['exportAll']>;
     readonly knowledge: ReturnType<KnowledgeGraph['exportAll']>;
+    /** حالة التشغيل المتغيرة الملحقة بالاستعادة الملكية الوحيدة (المرحلة 32). */
+    readonly recovery?: unknown;
   };
+}
+
+/**
+ * ملحق الاستعادة التشغيلية. لا يملك أمرًا ولا يقرأ قرصًا: الأرشيف الملكي هو الذي
+ * يستدعيه بعد تحقق البصمة والتاج والتجميد، فيبقى مسار الاستعادة واحدًا.
+ */
+export interface ArchiveRecoveryParticipant {
+  exportAll(): unknown;
+  importAll(snapshot: unknown, by: EntityId): boolean;
+  verify(): boolean;
+  prepareRestore(): void;
 }
 
 export interface ArchiveDeps {
@@ -48,6 +61,7 @@ export interface ArchiveDeps {
   /** تجميد التوالد قبل الاستعادة — دولة تُستعاد لا تُنجب في أثناء ذلك */
   readonly freeze?: { freeze(by: EntityId, reason: string): unknown };
   readonly ministryId?: EntityId;
+  readonly recovery?: ArchiveRecoveryParticipant;
 }
 
 function stableHash(value: unknown): string {
@@ -67,6 +81,7 @@ export class RoyalArchive {
     const payload = {
       memory: this.deps.memory.exportAll(),
       knowledge: this.deps.knowledge.exportAll(),
+      ...(this.deps.recovery ? { recovery: this.deps.recovery.exportAll() } : {}),
     };
     this.seq += 1;
     const entries = this.deps.audit.snapshot();
@@ -100,6 +115,16 @@ export class RoyalArchive {
     return this.snapshots.get(snapshotId);
   }
 
+  /**
+   * يسجّل نسخة جرى التحقق منها في مخزن القرص، من غير أن يستعيدها. فلا تكون قراءة
+   * القرص طريق تبديل موازيا؛ التبديل اللاحق يستدعي `restore()` أدناه فقط.
+   */
+  install(snapshot: ArchiveSnapshot): boolean {
+    if (!snapshot || !snapshot.snapshotId || stableHash(snapshot.payload) !== snapshot.contentHash) return false;
+    this.snapshots.set(snapshot.snapshotId, snapshot);
+    return true;
+  }
+
   list(): readonly ArchiveSnapshot[] {
     return [...this.snapshots.values()];
   }
@@ -131,26 +156,49 @@ export class RoyalArchive {
     const before = {
       memory: this.deps.memory.exportAll(),
       knowledge: this.deps.knowledge.exportAll(),
+      recovery: this.deps.recovery?.exportAll(),
     };
 
     try {
+      this.deps.recovery?.prepareRestore();
       this.deps.memory.importAll(snapshot.payload.memory, this.ministryId);
       this.deps.knowledge.importAll(snapshot.payload.knowledge, this.ministryId);
+      if (this.deps.recovery) {
+        if (snapshot.payload.recovery === undefined) throw new Error('حمولة التعافي ناقصة');
+        if (!this.deps.recovery.importAll(snapshot.payload.recovery, this.ministryId)) {
+          throw new Error('استيراد حالة التعافي مرفوض');
+        }
+      }
 
       const okMemory = this.deps.memory.all().length === snapshot.counts.memory;
       const okFacts = this.deps.knowledge.all().length === snapshot.counts.facts;
-      if (!okMemory || !okFacts) {
+      const okRecovery = !this.deps.recovery || this.deps.recovery.verify();
+      const okAudit = this.deps.audit.verifyIntegrity().valid;
+      if (!okMemory || !okFacts || !okRecovery || !okAudit) {
         this.deps.memory.importAll(before.memory, this.ministryId);
         this.deps.knowledge.importAll(before.knowledge, this.ministryId);
+        if (this.deps.recovery && before.recovery !== undefined) {
+          this.deps.recovery.importAll(before.recovery, this.ministryId);
+        }
         return refuse('التحقّق البعدي فشل — أُرجعت الحالة السابقة ولا استعادة جزئية');
       }
     } catch (err) {
       this.deps.memory.importAll(before.memory, this.ministryId);
       this.deps.knowledge.importAll(before.knowledge, this.ministryId);
+      if (this.deps.recovery && before.recovery !== undefined) {
+        try { this.deps.recovery.importAll(before.recovery, this.ministryId); } catch { /* الحالة تبقى مجمّدة */ }
+      }
       const reason = err instanceof Error ? err.message : 'فشل غير معروف';
       return refuse(`فشل التبديل: ${reason} — أُرجعت الحالة السابقة`);
     }
 
+    // ملحق التعافي يعيد السجل في آخر التبديل، فيستبدل سجلات الاستيراد المؤقتة.
+    // نعيد تسجيل النتيجة بعد ذلك كي يبقى أثر القراءة والكتابة في السلسلة المستعادة.
+    if (this.deps.recovery) {
+      this.deps.audit.append(this.ministryId, 'memory_restored', { records: snapshot.counts.memory });
+      this.deps.audit.append(this.ministryId, 'knowledge_restored', { facts: snapshot.counts.facts });
+      this.deps.audit.append(this.ministryId, 'recovery_state_restored', { snapshotId });
+    }
     const entry = this.deps.audit.append(this.ministryId, 'archive_restored', {
       snapshotId, commandId: command.payload.commandId,
       ...snapshot.counts, auditHeadAtSnapshot: snapshot.auditHead,

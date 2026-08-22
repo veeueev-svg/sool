@@ -1,17 +1,17 @@
 /**
  * src/index.ts — تشكيل الدولة (bootstrap)
- * المالك: القيّم على المستودع | المراحل: 1–20
+ * المالك: القيّم على المستودع | المراحل: 1–32
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * المدخلات: config/*.yaml | المخرجات: كائن دولة جاهز بترتيب اعتماد صحيح
  * ثابت RULE-002: لا يُنشأ وكيل واسع الصلاحيات قبل اكتمال:
  *   جذر الثقة ← بوابة التاج ← السجل ← المراقبة ← الإيقاف ← الموارد
  */
 import {
-  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadScale,
+  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadScale, loadRecovery,
   loadRoyalAuthority,
   resolveConfigDir,
   QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig, ContractsConfig,
-  EnterprisesConfig, ServicesConfig, ResearchConfig, ScaleConfig,
+  EnterprisesConfig, ServicesConfig, ResearchConfig, ScaleConfig, RecoveryConfig,
 } from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
@@ -79,6 +79,10 @@ import { StateMode } from './kernel/types';
 import { PopulationRegistry } from './scale/population';
 import { Sharding } from './scale/sharding';
 import { FairScheduler } from './scale/scheduler';
+import { ContinuityController } from './recovery/continuity';
+import { RecoverySnapshotStore, RecoveryStateParticipant } from './recovery/snapshot';
+import { BackupScheduler } from './recovery/backup_scheduler';
+import { RestoreRunner } from './recovery/restore_runner';
 
 export interface DigitalState {
   readonly config: RoyalAuthorityConfig;
@@ -153,6 +157,12 @@ export interface DigitalState {
   readonly sharding: Sharding;
   readonly population: PopulationRegistry;
   readonly scheduler: FairScheduler;
+  readonly recoveryConfig: RecoveryConfig;
+  readonly continuity: ContinuityController;
+  readonly recoveryState: RecoveryStateParticipant;
+  readonly recoverySnapshots: RecoverySnapshotStore;
+  readonly backupScheduler: BackupScheduler;
+  readonly restoreRunner: RestoreRunner;
   readonly mode: () => StateMode;
 }
 
@@ -204,6 +214,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   // تهيئة البحث النظري: لا تشغيل إن لم تكن المصادر والأنواع والحد الأخلاقي معلنة ومغلقة.
   const researchConfig = loadResearch(configDir);
   const scaleConfig = loadScale(configDir);
+  const recoveryConfig = loadRecovery(configDir);
   audit.append('authority:bootstrap', 'config_loaded', {
     state: config.state_name, code: config.state_code, resources: Object.keys(quotas.resources).length,
   });
@@ -522,18 +533,12 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 31, mode: 'normal' });
-
   // 11) الذاكرة والمعرفة (المرحلة 21) — وزارة البيانات
   //     الترتيب مُلزم: أصناف الاحتفاظ تُعرَف عند الكتابة، ثم الذاكرة سندٌ للمعرفة،
   //     ثم الأرشيف يأخذ نسخًا من الاثنين ولا يستعيد إلا بأمر ملكي
   const memory = new AgentMemory({ audit, killSwitch });
   const retention = new RetentionPolicy({ audit, memory });
   const knowledge = new KnowledgeGraph({ audit, memory });
-  const archive = new RoyalArchive({
-    audit, gateway, memory, knowledge, freeze: spawnPolicy,
-  });
-
   // 12) القانون والقضاء (المرحلة 22) — وزارة العدل
   //     الترتيب مُلزم وهو نفسه فصل السلطات: قانون معلن ← محكمة تحكم به ←
   //     استئناف يراجع الحكم ← تنفيذ لا يقع إلا على حكم نهائي (RULE-004)
@@ -602,6 +607,25 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   hospitals.bindMinistryProbe((ministryId) => ministries.isActive(ministryId));
   labs.bindMinistryProbe((ministryId) => ministries.isActive(ministryId));
 
+  // 10و) التعافي والاستمرارية (المرحلة 32): تبقى استعادة القرص داخل الأرشيف الملكي
+  // نفسه، وتضم اللقطة حالة السكان والشرائح والمجدول وحجوز الهوية والوزارات والعقود
+  // والسجل. لا يفك نجاحها التوالد، بل ينقل وضع الاستمرارية إلى limited فقط.
+  const continuity = new ContinuityController(audit, recoveryConfig.policy.continuity_mode);
+  const recoveryState = new RecoveryStateParticipant(
+    audit, resources, sharding, population, scheduler, ministries, contracts, continuity,
+  );
+  const archive = new RoyalArchive({
+    audit, gateway, memory, knowledge, freeze: spawnPolicy, recovery: recoveryState,
+  });
+  const recoverySnapshots = new RecoverySnapshotStore(
+    recoveryConfig.policy.backup_directory, recoveryConfig.policy.retention_count, archive, audit,
+  );
+  const backupScheduler = new BackupScheduler(
+    recoverySnapshots, audit, recoveryConfig.policy.backup_interval_seconds,
+  );
+  const restoreRunner = new RestoreRunner(recoverySnapshots, archive, continuity);
+  audit.append('authority:bootstrap', 'state_online', { phase: 32, mode: 'normal' });
+
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
     resources, gateway, guard, egress, tools, agents, permissions, supervisor,
@@ -619,6 +643,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     servicesConfig, hospitals, labs, qualityControl,
     researchConfig, mirrorDepartments, humanResearch,
     scaleConfig, sharding, population, scheduler,
+    recoveryConfig, continuity, recoveryState, recoverySnapshots, backupScheduler, restoreRunner,
     mode: () => gateway.mode,
   };
 }
@@ -792,6 +817,12 @@ export { Sharding } from './scale/sharding';
 export type { ShardRecord, ShardDrift } from './scale/sharding';
 export { FairScheduler } from './scale/scheduler';
 export type { ScaleTask, ScheduledStatus, ScheduleResult } from './scale/scheduler';
+export { ContinuityController } from './recovery/continuity';
+export type { ContinuityMode, ContinuityState } from './recovery/continuity';
+export { RecoverySnapshotStore, RecoveryStateParticipant } from './recovery/snapshot';
+export type { RecoveryEnvelope, RecoveryStateSnapshot, RecoveryStep } from './recovery/snapshot';
+export { BackupScheduler } from './recovery/backup_scheduler';
+export { RestoreRunner } from './recovery/restore_runner';
 
 /**
  * لقطة المواءمة: تُبنى من الدولة القائمة لتُفحص على الميثاق (المرحلة 20)

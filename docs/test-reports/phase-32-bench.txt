@@ -1,0 +1,12 @@
+> sool-digital-state@0.1.0 bench:recovery
+> npm run build && bash scripts/restore.sh --bench
+
+> sool-digital-state@0.1.0 build
+> tsc -p tsconfig.json
+
+بيئة القياس: Node v20.20.1؛ 2 vCPU؛ ذاكرة 8GB
+حجم النسخة: 64491 بايت
+زمن أخذ النسخة: 2.085 مللي ثانية
+زمن الاستعادة من دولة فارغة: 5.957 مللي ثانية
+الحالة المستعادة: سكان=300؛ مهام=1؛ وزارات=1؛ سجل=36
+الأهداف المعلنة: RTO=30 ثانية؛ RPO=60 ثانية؛ الفاصل=30 ثانية

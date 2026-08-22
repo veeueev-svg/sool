@@ -36,6 +36,12 @@ export type LeaseResult =
   | { readonly granted: true; readonly lease: Lease; readonly auditId: string }
   | { readonly granted: false; readonly reason: string; readonly auditId: string };
 
+export interface ResourceRegistrySnapshot {
+  readonly leases: readonly Lease[];
+  readonly reservations: readonly [string, readonly EntityId[]][];
+  readonly counter: number;
+}
+
 export class ResourceRegistry {
   private readonly specs = new Map<string, ResourceSpec>();
   private readonly leases = new Map<string, Lease>();
@@ -203,5 +209,55 @@ export class ResourceRegistry {
 
   activeLeases(now = Date.now()): readonly Lease[] {
     return [...this.leases.values()].filter((l) => l.expiresAt > now);
+  }
+
+  /** تصدير مُغلق للحالة المتغيرة؛ المواصفة والسياسة لا تُنسخان من الذاكرة. */
+  exportAll(): ResourceRegistrySnapshot {
+    return {
+      leases: [...this.leases.values()].map((lease) => ({ ...lease })),
+      reservations: [...this.identityReservations.entries()]
+        .map(([resource, entities]) => [resource, [...entities]] as const),
+      counter: this.counter,
+    };
+  }
+
+  /** استيراد متحقق يستعمله الأرشيف الملكي وحده أثناء الاستعادة الذرية. */
+  importAll(snapshot: ResourceRegistrySnapshot, by: EntityId): boolean {
+    if (!Number.isSafeInteger(snapshot.counter) || snapshot.counter < 0) {
+      throw new SovereignViolation('عداد موارد مستعاد غير صالح', 'RECOVERY_RESOURCE_COUNTER_INVALID');
+    }
+    const nextReservations = new Map<string, Set<EntityId>>();
+    for (const resource of this.specs.keys()) nextReservations.set(resource, new Set<EntityId>());
+    for (const [resource, entities] of snapshot.reservations) {
+      const spec = this.specs.get(resource);
+      if (!spec || !Array.isArray(entities) || new Set(entities).size !== entities.length
+        || entities.some((entity) => typeof entity !== 'string') || entities.length > spec.total) {
+        throw new SovereignViolation('حجوز مورد مستعادة غير صالحة', 'RECOVERY_RESOURCE_RESERVATION_INVALID');
+      }
+      nextReservations.set(resource, new Set(entities));
+    }
+    const nextLeases = new Map<string, Lease>();
+    for (const lease of snapshot.leases) {
+      if (!lease || typeof lease.leaseId !== 'string' || !this.specs.has(lease.resource)
+        || !Number.isSafeInteger(lease.amount) || lease.amount <= 0 || nextLeases.has(lease.leaseId)) {
+        throw new SovereignViolation('إيجار مستعاد غير صالح', 'RECOVERY_RESOURCE_LEASE_INVALID');
+      }
+      nextLeases.set(lease.leaseId, Object.freeze({ ...lease }));
+    }
+    for (const [resource, reserved] of nextReservations) {
+      const leased = [...nextLeases.values()]
+        .filter((lease) => lease.resource === resource)
+        .reduce((sum, lease) => sum + lease.amount, 0);
+      if (reserved.size + leased > this.spec(resource).total) {
+        throw new SovereignViolation('تخصيص المورد المستعاد يتجاوز سقفه', 'RECOVERY_RESOURCE_CAP_EXCEEDED');
+      }
+    }
+    this.leases.clear();
+    for (const [id, lease] of nextLeases) this.leases.set(id, lease);
+    this.identityReservations.clear();
+    for (const [resource, entities] of nextReservations) this.identityReservations.set(resource, entities);
+    this.counter = snapshot.counter;
+    this.audit.append(by, 'resources_restored', { leases: nextLeases.size });
+    return true;
   }
 }

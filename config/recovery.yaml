@@ -1,0 +1,9 @@
+# سياسة التعافي والاستمرارية (المرحلة 32) — لا وعد زمني بلا نسخ يبلغه
+policy:
+  rto_seconds: 30
+  rpo_seconds: 60
+  backup_interval_seconds: 30
+  retention_count: 3
+  verify_after_restore: true
+  backup_directory: "/var/lib/sool/recovery"
+  continuity_mode: limited

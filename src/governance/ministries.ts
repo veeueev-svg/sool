@@ -49,6 +49,7 @@ export interface MinistryInput {
 export type MinistryResult =
   | { readonly ok: true; readonly ministry: Ministry; readonly auditId: string }
   | { readonly ok: false; readonly reason: string; readonly auditId: string };
+export interface MinistrySnapshot { readonly ministries: readonly Ministry[]; }
 
 /** مصدر يتحقق من المناصب المشغولة في وزارة — يُربط من سجل التعيينات */
 export type OccupancyProbe = (ministryId: EntityId) => readonly string[];
@@ -220,6 +221,38 @@ export class MinistryRegistry {
       dissolved: all.length - active.length,
       domains: domains.size,
     };
+  }
+
+  /** لقطة للحالة المتغيرة وحدها؛ الاعتماد يبقى في بوابة التاج عند الاستعمال التالي. */
+  exportAll(): MinistrySnapshot {
+    return { ministries: [...this.ministries.values()].map((ministry) => ({ ...ministry, mandate: [...ministry.mandate] })) };
+  }
+
+  /** لا يستدعى إلا داخل الأرشيف الملكي؛ يفحص تزاحم الاختصاص قبل التبديل. */
+  importAll(snapshot: MinistrySnapshot, by: EntityId): boolean {
+    if (!Array.isArray(snapshot.ministries)
+      || new Set(snapshot.ministries.map((ministry) => ministry.ministryId)).size !== snapshot.ministries.length) {
+      throw new Error('RECOVERY_MINISTRY_INVALID');
+    }
+    const domains = new Set<string>();
+    for (const ministry of snapshot.ministries) {
+      if (!ministry.ministryId.startsWith('ministry:') || !ministry.name
+        || !Array.isArray(ministry.mandate) || ministry.mandate.length === 0) {
+        throw new Error('RECOVERY_MINISTRY_INVALID');
+      }
+      if (ministry.dissolvedAt === null) {
+        for (const domain of ministry.mandate) {
+          if (domains.has(domain)) throw new Error('RECOVERY_MINISTRY_MANDATE_CONFLICT');
+          domains.add(domain);
+        }
+      }
+    }
+    this.ministries.clear();
+    for (const ministry of snapshot.ministries) {
+      this.ministries.set(ministry.ministryId, { ...ministry, mandate: [...ministry.mandate] });
+    }
+    this.deps.audit.append(by, 'ministries_restored', { total: this.ministries.size });
+    return true;
   }
 
   /** الاعتماد: فعل amend_policy وهدفه الوزارة نفسها لا غيرها */

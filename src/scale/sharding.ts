@@ -32,6 +32,7 @@ export interface ShardDrift {
   readonly agentId?: string;
   readonly shardId: number;
 }
+export interface ShardingSnapshot { readonly isolated: readonly number[]; }
 
 export class Sharding {
   private readonly isolated = new Set<number>();
@@ -105,5 +106,18 @@ export class Sharding {
 
   private validShard(shardId: number): boolean {
     return Number.isSafeInteger(shardId) && shardId >= 0 && shardId < this.shardCount;
+  }
+
+  exportAll(): ShardingSnapshot { return { isolated: [...this.isolated] }; }
+
+  importAll(snapshot: ShardingSnapshot, by: string): boolean {
+    if (!Array.isArray(snapshot.isolated) || new Set(snapshot.isolated).size !== snapshot.isolated.length
+      || snapshot.isolated.some((shardId) => !this.validShard(shardId))) {
+      throw new Error('RECOVERY_SHARDING_INVALID');
+    }
+    this.isolated.clear();
+    for (const shardId of snapshot.isolated) this.isolated.add(shardId);
+    this.audit.append(by, 'sharding_restored', { isolated: this.isolated.size });
+    return true;
   }
 }

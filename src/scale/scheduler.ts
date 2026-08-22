@@ -22,6 +22,14 @@ import { KillSwitch } from '../security/kill_switch';
 export type ScheduledStatus = 'queued' | 'running' | 'completed' | 'frozen';
 export interface ScaleTask { readonly taskId: string; readonly owner: string; status: ScheduledStatus; }
 export type ScheduleResult = { ok: true } | { ok: false; code: string };
+export interface SchedulerSnapshot {
+  readonly tasks: readonly ScaleTask[];
+  readonly queues: readonly [string, readonly string[]][];
+  readonly owners: readonly string[];
+  readonly cursor: number;
+  readonly running: number;
+  readonly frozen: boolean;
+}
 
 export class FairScheduler {
   private readonly tasks = new Map<string, ScaleTask>();
@@ -101,5 +109,40 @@ export class FairScheduler {
   private refuse(taskId: string, code: string): ScheduleResult {
     this.audit.append('ministry:infrastructure', 'scale_task_refused', { taskId, code });
     return { ok: false, code };
+  }
+
+  exportAll(): SchedulerSnapshot {
+    return {
+      tasks: [...this.tasks.values()].map((task) => ({ ...task })),
+      queues: [...this.queues.entries()].map(([owner, queue]) => [owner, [...queue]] as const),
+      owners: [...this.owners], cursor: this.cursor, running: this.running, frozen: this.frozen,
+    };
+  }
+
+  importAll(snapshot: SchedulerSnapshot, by: string): boolean {
+    const statuses: readonly ScheduledStatus[] = ['queued', 'running', 'completed', 'frozen'];
+    if (!Array.isArray(snapshot.tasks) || !Array.isArray(snapshot.queues) || !Array.isArray(snapshot.owners)
+      || !Number.isSafeInteger(snapshot.cursor) || !Number.isSafeInteger(snapshot.running)
+      || snapshot.running < 0 || snapshot.running > this.maxConcurrent
+      || snapshot.tasks.some((task) => !task.taskId || !task.owner || !statuses.includes(task.status))
+      || new Set(snapshot.tasks.map((task) => task.taskId)).size !== snapshot.tasks.length) {
+      throw new Error('RECOVERY_SCHEDULER_INVALID');
+    }
+    const tasks = new Map(snapshot.tasks.map((task) => [task.taskId, { ...task }]));
+    const queues = new Map<string, string[]>();
+    for (const [owner, queue] of snapshot.queues) {
+      if (!owner || !Array.isArray(queue) || queue.some((id) => !tasks.has(id))) {
+        throw new Error('RECOVERY_SCHEDULER_QUEUE_INVALID');
+      }
+      queues.set(owner, [...queue]);
+    }
+    if (new Set(snapshot.owners).size !== snapshot.owners.length
+      || snapshot.owners.some((owner) => !queues.has(owner))) throw new Error('RECOVERY_SCHEDULER_OWNERS_INVALID');
+    this.tasks.clear(); for (const [id, task] of tasks) this.tasks.set(id, task);
+    this.queues.clear(); for (const [owner, queue] of queues) this.queues.set(owner, queue);
+    this.owners.splice(0, this.owners.length, ...snapshot.owners);
+    this.cursor = snapshot.cursor; this.running = snapshot.running; this.frozen = snapshot.frozen;
+    this.audit.append(by, 'scale_scheduler_restored', { tasks: this.tasks.size });
+    return true;
   }
 }

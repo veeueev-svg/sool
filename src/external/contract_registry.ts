@@ -64,6 +64,10 @@ export interface SignContractInput {
 export type ContractResult =
   | { readonly ok: true; readonly contract: ExternalContract; readonly auditId: string }
   | { readonly ok: false; readonly reason: string; readonly auditId: string };
+export interface ContractRegistrySnapshot {
+  readonly contracts: readonly ExternalContract[];
+  readonly sequence: number;
+}
 
 /**
  * صلاحية الإنهاء: الباب الوحيد الذي يُغيّر حالة عقدٍ قائم (ثابت 8).
@@ -298,5 +302,30 @@ export class ExternalContractRegistry {
       committedValue: committed, maxTermMs: this.deps.maxTermMs,
       maxOpenPerCounterparty: this.deps.maxOpenPerCounterparty,
     };
+  }
+
+  /** لقطة العقود الموقعة فقط؛ الأنواع والسياسة تبقى مقروءة من التهيئة. */
+  exportAll(): ContractRegistrySnapshot {
+    return {
+      contracts: [...this.contracts.values()].map((contract) => ({ ...contract })),
+      sequence: this.sequence,
+    };
+  }
+
+  /** يستعيد الأرشيف الملكي عقودًا متحققة البنية؛ لا يمنح صلاحية إنهاء جديدة. */
+  importAll(snapshot: ContractRegistrySnapshot, by: EntityId): boolean {
+    if (!Array.isArray(snapshot.contracts) || !Number.isSafeInteger(snapshot.sequence)
+      || snapshot.sequence < 0
+      || new Set(snapshot.contracts.map((contract) => contract.contractId)).size !== snapshot.contracts.length
+      || snapshot.contracts.some((contract) => !contract.contractId.startsWith('extc:')
+        || !this.deps.risk.kind(contract.kindId) || !Number.isSafeInteger(contract.value)
+        || contract.value <= 0 || !Number.isSafeInteger(contract.endsAt))) {
+      throw new Error('RECOVERY_CONTRACT_INVALID');
+    }
+    this.contracts.clear();
+    for (const contract of snapshot.contracts) this.contracts.set(contract.contractId, { ...contract });
+    this.sequence = snapshot.sequence;
+    this.deps.audit.append(by, 'external_contracts_restored', { signed: this.contracts.size });
+    return true;
   }
 }

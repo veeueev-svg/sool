@@ -37,6 +37,11 @@ export type PopulationResult =
   | { readonly ok: true; readonly registered: number; readonly auditId: string }
   | { readonly ok: false; readonly code: string; readonly auditId: string };
 
+export interface PopulationSnapshot {
+  readonly identities: readonly PopulationIdentity[];
+  readonly spawned: readonly { readonly at: number; readonly count: number }[];
+}
+
 export class PopulationRegistry {
   private readonly identities = new Map<string, PopulationIdentity>();
   private readonly spawned: { at: number; count: number }[] = [];
@@ -135,6 +140,29 @@ export class PopulationRegistry {
     this.resources.releaseIdentity(this.resourceName, entity);
     this.releaseQuota(identity);
     this.identities.delete(entity);
+    return true;
+  }
+
+  exportAll(): PopulationSnapshot {
+    return {
+      identities: [...this.identities.values()].map((identity) => ({ ...identity })),
+      spawned: this.spawned.map((item) => ({ ...item })),
+    };
+  }
+
+  importAll(snapshot: PopulationSnapshot, by: string): boolean {
+    if (!Array.isArray(snapshot.identities) || !Array.isArray(snapshot.spawned)
+      || new Set(snapshot.identities.map((identity) => identity.agentId)).size !== snapshot.identities.length
+      || snapshot.identities.length > this.populationMax
+      || snapshot.identities.some((identity) => !identity.agentId.startsWith('agent:')
+        || !identity.owner || identity.resourceQuota !== `${this.resourceName}:1`
+        || identity.shardId !== this.sharding.shardFor(identity.agentId))) {
+      throw new Error('RECOVERY_POPULATION_INVALID');
+    }
+    this.identities.clear();
+    for (const identity of snapshot.identities) this.identities.set(identity.agentId, Object.freeze({ ...identity }));
+    this.spawned.splice(0, this.spawned.length, ...snapshot.spawned.map((item) => ({ ...item })));
+    this.audit.append(by, 'population_restored', { population: this.population });
     return true;
   }
 }

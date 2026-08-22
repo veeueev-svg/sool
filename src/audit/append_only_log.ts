@@ -81,6 +81,15 @@ export class AppendOnlyLog {
     return log;
   }
 
+  /**
+   * يستبدل محتوى السجل بنسخة سبق التحقق منها. لا يستورد المسار الاستعادةُ بنفسه:
+   * الأرشيف الملكي وحده يستدعيه داخل تبديلٍ ذري في المرحلة 32.
+   */
+  replaceFrom(serialized: string): void {
+    const restored = AppendOnlyLog.import(serialized);
+    this.entries = restored.snapshot().map((entry) => Object.freeze({ ...entry }));
+  }
+
   /** حقن سجل خام — للاختبار السلبي فقط (محاكاة تلاعب) */
   static unsafeFromEntries(entries: AuditEntry[]): AppendOnlyLog {
     const log = new AppendOnlyLog();
