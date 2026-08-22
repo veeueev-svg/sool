@@ -7,8 +7,8 @@
  *   جذر الثقة ← بوابة التاج ← السجل ← المراقبة ← الإيقاف ← الموارد
  */
 import {
-  loadQuotas, loadRegions, loadEconomy, loadRoyalAuthority, resolveConfigDir,
-  QuotasConfig, RoyalAuthorityConfig, EconomyConfig,
+  loadQuotas, loadRegions, loadEconomy, loadExternal, loadRoyalAuthority, resolveConfigDir,
+  QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig,
 } from './kernel/config';
 import { ResourceRegistry } from './kernel/resource_registry';
 import { AppendOnlyLog } from './audit/append_only_log';
@@ -25,6 +25,8 @@ import { CrownGuard } from './crown/guardians';
 import { CommandChannel } from './crown/command_channel';
 import { TerminationOrder, EntityController } from './crown/termination_order';
 import { NetworkEgressGuard } from './external/network_egress';
+import { ExternalAccountRegistry } from './external/account_registry';
+import { PaymentControls } from './external/payment_controls';
 import { IntentGate, ToolRegistry } from './agents/tools';
 import { AgentMemory } from './data/agent_memory';
 import { KnowledgeGraph } from './data/knowledge_graph';
@@ -107,11 +109,14 @@ export interface DigitalState {
   readonly tribunal: RegionalTribunal;
   readonly regionMonitor: RegionMonitor;
   readonly economyConfig: EconomyConfig;
+  readonly externalConfig: ExternalConfig;
   readonly ledger: Ledger;
   readonly unit: DigitalUnit;
   readonly budget: Budget;
   readonly treasury: Treasury;
   readonly revenue: RevenueService;
+  readonly externalAccounts: ExternalAccountRegistry;
+  readonly payments: PaymentControls;
   readonly mode: () => StateMode;
 }
 
@@ -153,6 +158,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   const regionsConfig = loadRegions(configDir);
   // تهيئة الاقتصاد كذلك: لا تشغيل بسقوف مالية غير معلنة أو بوحدة تدّعي قيمة خارجية (المرحلة 25)
   const economyConfig = loadEconomy(configDir);
+  const externalConfig = loadExternal(configDir);
   audit.append('authority:bootstrap', 'config_loaded', {
     state: config.state_name, code: config.state_code, resources: Object.keys(quotas.resources).length,
   });
@@ -267,10 +273,33 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     retroactiveAllowed: economyConfig.revenue.retroactive !== 'forbidden',
   });
 
+  // 15) الحسابات الخارجية والدفع الخارجي (المرحلة 26) — وزارة الخارجية تحت التاج.
+  //     الترتيب مُلزم: سجل النظائر ← ضوابط الدفع ← ربط المصدرين (قناة الشبكة والالتزامات).
+  //     ولا يُفتح هنا أي حساب: الفتح فعلٌ ملكي لا خطوة تأسيس (RULE-003)، فخاتمة
+  //     التأسيس تبقى state_online وحدها، ولا يزيد عدد حسابات الدفتر عن الثلاثة السيادية.
+  const externalAccounts = new ExternalAccountRegistry({
+    audit, gateway, ledger,
+    counterparties: externalConfig.counterparties.map((cp) => ({
+      id: cp.id, name: cp.name, host: cp.host, port: cp.port, purpose: cp.purpose,
+      singleMax: cp.single_max, dailyMax: cp.daily_max, totalCap: cp.total_cap,
+    })),
+    maxTermMs: externalConfig.policy.max_term_days * 24 * 60 * 60 * 1000,
+    suspendAuthorities: externalConfig.policy.suspend_authorities,
+    unitConvertible: externalConfig.policy.unit_convertibility !== 'forbidden',
+  });
+  const payments = new PaymentControls({
+    audit, treasury, registry: externalAccounts,
+    confirmationWindowMs: externalConfig.policy.confirmation_window_hours * 60 * 60 * 1000,
+    // قناة المال مربوطة بقناة الشبكة: تُفحص لحظة الفتح ولحظة كل دفعة
+    egressProbe: (host, port, at) => egress.hasAllowance(host, port, at),
+  });
+  externalAccounts.bindEgressProbe((host, port, at) => egress.hasAllowance(host, port, at));
+  externalAccounts.bindObligationProbe((accountId) => payments.pendingObligations(accountId));
+
   if (options.startMonitor) monitor.start();
   if (options.auditPath) new AuditStore(options.auditPath).save(audit, now);
 
-  audit.append('authority:bootstrap', 'state_online', { phase: 25, mode: 'normal' });
+  audit.append('authority:bootstrap', 'state_online', { phase: 26, mode: 'normal' });
 
   // 11) الذاكرة والمعرفة (المرحلة 21) — وزارة البيانات
   //     الترتيب مُلزم: أصناف الاحتفاظ تُعرَف عند الكتابة، ثم الذاكرة سندٌ للمعرفة،
@@ -350,6 +379,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     ministries, appointments, cabinet,
     regions, assembly, governors, tribunal, regionMonitor,
     economyConfig, ledger, unit, budget, treasury, revenue,
+    externalConfig, externalAccounts, payments,
     mode: () => gateway.mode,
   };
 }
@@ -362,6 +392,15 @@ export type { EntityController } from './crown/termination_order';
 export { KingMonitor } from './crown/king_monitor';
 export { ResourceRegistry } from './kernel/resource_registry';
 export { NetworkEgressGuard } from './external/network_egress';
+export { ExternalAccountRegistry, FOREIGN_MINISTRY } from './external/account_registry';
+export type {
+  DeclaredCounterparty, ExternalAccount, OpenAccountInput, AccountResult,
+  EgressProbe, ObligationProbe,
+} from './external/account_registry';
+export { PaymentControls } from './external/payment_controls';
+export type {
+  ExternalPayment, ExternalPaymentInput, PaymentResult,
+} from './external/payment_controls';
 export type { EgressAllowance, EgressRequest, EgressReport } from './external/network_egress';
 export { Sandbox, normalizePath } from './security/sandbox';
 export type { SandboxSpec, SandboxContext, SandboxRun, SandboxFs } from './security/sandbox';

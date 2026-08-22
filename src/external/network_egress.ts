@@ -212,6 +212,18 @@ export class NetworkEgressGuard {
     return { allowed: false, reason: 'مضيف غير معلن — الرفض هو الافتراض', auditId: entry.hash };
   }
 
+  /**
+   * استعلام للقراءة فقط: هل لهذا المضيف والمنفذ إذن خروج معلن غير منتهٍ؟
+   * أُضيف في المرحلة 26 ليربط **قناة المال بقناة الشبكة**: سجل الحسابات الخارجية
+   * لا يفتح حسابًا لمضيف لا إذن له، وضوابط الدفع تعيد الفحص لحظة الدفع لا لحظة الفتح.
+   * لا يمنح صلاحية ولا يعدّل حالة ولا يُعَدّ نداءً — فلا يستهلك سقفًا ولا يُسجَّل.
+   */
+  hasAllowance(host: string, port = 443, now = Date.now()): boolean {
+    const allowance = this.allowances.get(NetworkEgressGuard.key((host ?? '').trim(), port));
+    if (!allowance) return false;
+    return allowance.expiresAt > now;
+  }
+
   get isContained(): boolean {
     return this.contained;
   }

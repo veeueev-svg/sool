@@ -1,0 +1,53 @@
+# الحسابات الخارجية (المرحلة 26) — كل نافذة إلى الخارج معلنة هنا، لا في الكود
+# القاعدة: ما لم يُعلن في هذا الملف لا يقوم حسابٌ خارجي (RULE-005 — لا توسّع من الداخل)
+# تنبيه نطاق مُلزم: فتح حساب خارجي **لا** يجعل وحدة سول قابلة للتحويل
+# (ADR-0009 قرار 5) — الخارج يُدفع له مسجَّلًا في الدفتر، ولا قيمة نقدية تُدَّعى.
+
+policy:
+  # الافتراض رفض: لا حساب ولا دفعة إلا بمطابقة إعلان قائم
+  default: "deny"
+  # الوحدة تبقى محاسبية داخلية مهما فُتح من حسابات
+  unit_convertibility: "forbidden"
+  # التعليق فوري: يقع بلا أمر ملكي لأنه فعل حماية لا فعل توسيع
+  suspension: "immediate"
+  # الاستئناف بأمر ملكي: رفع الحماية أغلى من إنزالها
+  resume_requires_royal_command: true
+  # لا حساب دائم: أقصى مدة لأي حساب خارجي قبل أن ينتهي بلا تمديد ضمني
+  max_term_days: 90
+  # كل دفعة تُثبَت باستلام موثَّق خلال هذه المدة، وإلا رُفعت متأخرةً
+  confirmation_window_hours: 72
+  # من يملك التعليق الفوري (ولا يملك الاستئناف بنفسه)
+  suspend_authorities:
+    - "ministry:foreign_affairs"
+    - "ministry:cyber_security"
+    - "authority:crown_guard"
+    - "authority:audit_bureau"
+
+# النظائر الخارجية المعلنة — لا يُفتح حساب لغير هذه المعرّفات
+counterparties:
+  - id: "external:compute-provider"
+    name: "مزوّد سعة الحوسبة المعلن"
+    host: "api.compute.example"
+    port: 443
+    purpose: "سعة حوسبة للنماذج المعتمدة"
+    single_max: 2000000
+    daily_max: 5000000
+    total_cap: 40000000
+
+  - id: "external:data-archive"
+    name: "مستودع أرشفة خارجي معلن"
+    host: "archive.data.example"
+    port: 443
+    purpose: "حفظ نسخ الأرشيف الملكي خارج المستودع"
+    single_max: 1000000
+    daily_max: 2000000
+    total_cap: 20000000
+
+  - id: "external:model-registry"
+    name: "سجل أوزان خارجي معلن"
+    host: "weights.registry.example"
+    port: 443
+    purpose: "استيراد أوزان بأمر واعتماد (المراحل 16–18)"
+    single_max: 1500000
+    daily_max: 3000000
+    total_cap: 30000000

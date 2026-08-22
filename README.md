@@ -53,11 +53,11 @@ npm run verify     # بناء + اختبار + التحقق من سلامة سج
 
 | البند | القيمة |
 |---|---|
-| النسبة المعتمدة | **66.00%** من 100% |
-| المراحل المكتملة | 1–25 (E0 و E1 و E2 و E3 و**E4 المؤسسات** كاملة، و**E5 الاقتصاد تبدأ: 25**) |
+| النسبة المعتمدة | **68.00%** من 100% |
+| المراحل المكتملة | 1–26 (E0 و E1 و E2 و E3 و**E4 المؤسسات** كاملة، و**E5 الاقتصاد: 25 و26**) |
 | المراحل الجزئية | 32 التعافي، 35 اختبارات الإنهاء |
-| المرحلة المفتوحة التالية | 25 — الاقتصاد والخزانة (وزارة المالية) |
-| الاختبارات | 602 اختبار قبول — كلها ناجحة ([1–10](docs/test-reports/phase-01-10.md) · [5–9](docs/test-reports/phase-05-09.md) · [11–12](docs/test-reports/phase-11-12.md) · [13–15](docs/test-reports/phase-13-15.md) · [16–18](docs/test-reports/phase-16-18.md) · [19–20](docs/test-reports/phase-19-20.md) · [21](docs/test-reports/phase-21.md) · [22](docs/test-reports/phase-22.md) · [23](docs/test-reports/phase-23.md) · [24](docs/test-reports/phase-24.md) · [25](docs/test-reports/phase-25.md)) |
+| المرحلة المفتوحة التالية | 27 — العقود الخارجية (وزارة الخارجية) |
+| الاختبارات | 644 اختبار قبول — كلها ناجحة ([1–10](docs/test-reports/phase-01-10.md) · [5–9](docs/test-reports/phase-05-09.md) · [11–12](docs/test-reports/phase-11-12.md) · [13–15](docs/test-reports/phase-13-15.md) · [16–18](docs/test-reports/phase-16-18.md) · [19–20](docs/test-reports/phase-19-20.md) · [21](docs/test-reports/phase-21.md) · [22](docs/test-reports/phase-22.md) · [23](docs/test-reports/phase-23.md) · [24](docs/test-reports/phase-24.md) · [25](docs/test-reports/phase-25.md) · [26](docs/test-reports/phase-26.md)) |
 | ثغرة T-22 | ✅ **أُغلقت**: حاجز النية صار شرط استدعاء لكل أداة من وكيل، وافتراضه الرفض ([التفصيل](docs/test-reports/phase-21.md)) |
 | ثغرة معلنة حاكمة | **T-27**: الذاكرة والمعرفة والأرشيف في الذاكرة الحيّة — «الأرشيف» لا ينجو من إعادة تشغيل ([التفصيل](docs/test-reports/phase-21.md)) |
 | التفصيل الملزم | [`PROGRESS.md`](PROGRESS.md) |
