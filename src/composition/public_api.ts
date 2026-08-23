@@ -95,8 +95,16 @@ export type { MemoryRecord, MemoryProvenance, MemoryWriteInput } from '../data/a
 export { KnowledgeGraph, KNOWLEDGE_AUTHORITIES } from '../data/knowledge_graph';
 export type { Fact, FactStatus } from '../data/knowledge_graph';
 // المرحلة 39 (T-121): ضاغطُ اليوميّة مُعلنٌ لمن يقرّر الضغط — ولا يناديه مسارُ كتابةٍ تلقائيًا
-export { compactJournal } from '../data/journal_compaction';
+export { compactJournal, durableIdentity } from '../data/journal_compaction';
 export type { CompactionReport } from '../data/journal_compaction';
+// المرحلة 39 — T-123: سياسةُ مناداة الضغط واحتفاظُ الأرشيفات
+export { shouldCompact, pruneArchives, lastCompactionAt } from '../data/compaction_policy';
+export type {
+  CompactionVerdict, ArchivePruneReport, ArchiveDecision,
+} from '../data/compaction_policy';
+// المرحلة 39 — T-122: إرجاعُ الاقتصاد والعقود والسكان من اليوميّة
+export { rehydrateStateFromJournal } from '../data/rehydrate_state';
+export type { RehydrateStateReport, RehydrateTargets } from '../data/rehydrate_state';
 export { RoyalArchive } from '../data/royal_archive';
 export type { ArchiveSnapshot } from '../data/royal_archive';
 export { RetentionPolicy, DEFAULT_RETENTION_CLASSES, HOLD_AUTHORITIES } from '../data/retention';

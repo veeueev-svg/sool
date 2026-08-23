@@ -9,6 +9,8 @@
  *   - verify_chain_on_boot ≠ true ⇒ CONFIG_PERSISTENCE_VERIFY_REQUIRED
  *   - حدّ قيود غير صحيح ⇒ CONFIG_PERSISTENCE_LIMIT
  *   - نطاق فارغ أو صنف غير معروف ⇒ CONFIG_PERSISTENCE_SCOPE
+ *   - عتبة ضغط غائبة أو غير موجبة أو لا تقلّ عن سقف القيود ⇒ CONFIG_PERSISTENCE_COMPACTION (T-123)
+ *   - سياسة احتفاظ أرشيفات غائبة أو حرسُ الشاهد مُعطَّل ⇒ CONFIG_PERSISTENCE_ARCHIVES (T-123)
  *
  * القاعدة: التهيئة قبل الشفرة. كل قيمة هنا يقرؤها `src/data/persistence.ts` ويُنفذها،
  * ولا قيمة زينة: النطاق يمنع تدوين ما ليس فيه، والحدّ يرفض القيد بعده مغلقًا.
@@ -25,8 +27,25 @@ export const DURABLE_KINDS = [
   // T-121: علامةُ الضغط — أوّل قيد في يوميّةٍ مضغوطة، يشهد من أين جاءت وأين أُرشف
   // أصلُها. ليس لوحدات الحالة أن تُدوّنه — الضاغط وحده يكتبه، والإرجاع يتجاوزه.
   'journal_compacted',
+  // T-122: أنظمةُ السجل الثلاثة التي كانت خارج التدوين اللحظي: الدفترُ المزدوج،
+  // وسجلُ العقود الخارجيّة، والسكان. والسكانُ بالدفعة لا بالهويّة — والرقمُ المقيس
+  // هو الحجّة (docs/audit/measurements/phase-39-T122-T123.txt): 4.34ms للقيد الواحد.
+  'ledger_entry', 'contract_record', 'population_batch', 'population_terminated',
 ] as const;
 export type DurableKind = (typeof DURABLE_KINDS)[number];
+
+/** عتبةُ مناداةِ الضغط (T-123) — رأيٌ يُحسَب، والقرارُ لمن يُقيّده في السجل */
+export interface CompactionPolicyConfig {
+  compact_at_records: number;
+  min_interval_ms: number;
+}
+
+/** احتفاظُ الأرشيفات (T-123) — وحرسُ الشاهد مُثبَّت لا مُخَيَّر */
+export interface ArchiveRetentionConfig {
+  keep_min: number;
+  max_age_ms: number;
+  require_witness_coverage: boolean;
+}
 
 export interface PersistenceConfig {
   policy: {
@@ -38,6 +57,8 @@ export interface PersistenceConfig {
     max_journal_records: number;
     scope: readonly DurableKind[];
   };
+  compaction: CompactionPolicyConfig;
+  archives: ArchiveRetentionConfig;
 }
 
 export function loadPersistence(configDir = resolveConfigDir()): PersistenceConfig {
@@ -85,5 +106,66 @@ export function loadPersistence(configDir = resolveConfigDir()): PersistenceConf
       throw new SovereignViolation(`صنف تدوين غير معروف: ${kind}`, 'CONFIG_PERSISTENCE_SCOPE');
     }
   }
+  validateCompaction(raw);
+  validateArchives(raw);
   return raw;
+}
+
+/**
+ * T-123: العتبةُ تُعلَن أو يُرفض الإقلاع. وشرطُ كونها دون سقفِ القيود جوهريّ:
+ * عتبةٌ فوق السقف تعني أن اليوميّة ترفض الكتابة قبل أن يُنادى الضغطُ مرّةً — فتكون
+ * السياسةُ حرفًا لا حكمًا (RULE-005: لا قيمةَ زينة في التهيئة).
+ */
+function validateCompaction(raw: PersistenceConfig): void {
+  const compaction = raw.compaction;
+  if (!compaction) {
+    throw new SovereignViolation(
+      'عتبة مناداة الضغط غير معلنة — و«يُنادى يدويًّا» ليست سياسة (T-123)',
+      'CONFIG_PERSISTENCE_COMPACTION',
+    );
+  }
+  if (!Number.isSafeInteger(compaction.compact_at_records) || compaction.compact_at_records <= 0) {
+    throw new SovereignViolation('عتبة الضغط غير صالحة', 'CONFIG_PERSISTENCE_COMPACTION');
+  }
+  if (compaction.compact_at_records >= raw.policy.max_journal_records) {
+    throw new SovereignViolation(
+      'عتبة الضغط يجب أن تقلّ عن سقف قيود اليوميّة — وإلا رُفضت الكتابة قبل أن يُنادى الضغط',
+      'CONFIG_PERSISTENCE_COMPACTION',
+    );
+  }
+  if (!Number.isSafeInteger(compaction.min_interval_ms) || compaction.min_interval_ms <= 0) {
+    throw new SovereignViolation(
+      'فاصل الضغط الأدنى يجب أن يكون موجبًا — الضغط بلا فاصل استنزافٌ لا حماية',
+      'CONFIG_PERSISTENCE_COMPACTION',
+    );
+  }
+}
+
+/**
+ * T-123: الاحتفاظُ يُعلَن، وحرسُ الشاهد لا يُعطَّل بتهيئة: `false` رفضُ إقلاع.
+ * ومحوُ الأرشيفات كلّها ممنوع بـ`keep_min ≥ 1`: مقابلةُ المضغوطِ بأصله حقٌّ لا يسقط.
+ */
+function validateArchives(raw: PersistenceConfig): void {
+  const archives = raw.archives;
+  if (!archives) {
+    throw new SovereignViolation(
+      'سياسة احتفاظ الأرشيفات غير معلنة — والتراكم بلا حدّ ليس سياسة (T-123)',
+      'CONFIG_PERSISTENCE_ARCHIVES',
+    );
+  }
+  if (!Number.isSafeInteger(archives.keep_min) || archives.keep_min < 1) {
+    throw new SovereignViolation(
+      'أقلّ ما يُحتفظ به من الأرشيفات أرشيفٌ واحد على الأقل',
+      'CONFIG_PERSISTENCE_ARCHIVES',
+    );
+  }
+  if (!Number.isSafeInteger(archives.max_age_ms) || archives.max_age_ms <= 0) {
+    throw new SovereignViolation('عمر الأرشيف الأقصى غير صالح', 'CONFIG_PERSISTENCE_ARCHIVES');
+  }
+  if (archives.require_witness_coverage !== true) {
+    throw new SovereignViolation(
+      'إثبات تغطية الشاهد قبل المحو إلزامٌ — لا تُمحى شهادةٌ مطلوبة بسياسة تُعطّله',
+      'CONFIG_PERSISTENCE_ARCHIVES',
+    );
+  }
 }

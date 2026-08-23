@@ -23,6 +23,7 @@
  */
 import { AuditStore } from './audit/store';
 import { rehydrateFromJournal } from './data/persistence';
+import { rehydrateStateFromJournal } from './data/rehydrate_state';
 import { resolveConfigDir } from './kernel/config';
 import { composeSovereignty } from './composition/sovereignty';
 import { composePopulation } from './composition/population';
@@ -127,6 +128,21 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     })
     : null;
 
+  // 8.6) إرجاعُ الاقتصاد والعقود والسكان من اليوميّة (المرحلة 39، البند T-122)، ثم **ربطُ**
+  //      الوسيط. والترتيبُ حرسٌ لا ترتيب: لو رُبط الوسيط قبل الإرجاع لأُعيد تدوينُ كلِّ
+  //      ما استُعيد، فتتضاعف اليوميّة مع كلِّ إقلاعٍ حتّى تبلغ سقفَ القيود فيرفض النظامُ الكتابة.
+  //      والحساباتُ السياديّة الثلاثة تُفتح في الخطوة 5 قبل الربط، فلذلك `restore` يدمج ولا يستبدل.
+  const rehydratedState = journal
+    ? rehydrateStateFromJournal(journal.read(), {
+      ledger, contracts, population: populationRegistry,
+    }, 'ministry:data')
+    : null;
+  if (journal) {
+    ledger.attachJournal(journal);
+    contracts.attachJournal(journal);
+    populationRegistry.attachJournal(journal);
+  }
+
   // 9) خاتمة التأسيس: سجلٌّ واحد لا يكتبه غير هذا الملف
   audit.append('authority:bootstrap', 'state_online', { phase: 37, mode: 'normal' });
 
@@ -154,7 +170,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     stagingConfig, stagingManifest, operationScope, incidentMonitor, runbookRunner, stagingLedger,
     productionConfig, productionManifest, passage, continuousSupervisor, productionLedger,
     federatedOperation,
-    persistenceConfig, journal, rehydrated,
+    persistenceConfig, journal, rehydrated, rehydratedState,
     mode: () => gateway.mode,
   };
 }

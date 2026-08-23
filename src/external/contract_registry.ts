@@ -20,6 +20,9 @@
  *   6) **لا عقود قائمة لنظير واحد فوق الحدّ المعلن**: التفتيت بلا حدّ يُخفي المجموع
  *   7) **لا تعهّد يتجاوز سقف القناة**: مجموع قيم العقود القائمة ≤ السقف الكلي للحساب
  *   8) **باب واحد للإنهاء**: صلاحية الإنهاء تُمنح مرة واحدة لوحدة الإنهاء، ولا تُمنح ثانيةً
+ *   9) **العقدُ يُدوّن لحطةَ توقيعه ولحطةَ إنهائه** (المرحلة 39 — T-122): إن رُبط
+ *      وسيطٌ دائم، دُوّنت حالةُ العقد كاملةً مع تسلسلِ السجل — فالإقلاعُ التالي لا
+ *      يُعيد إصدار معرّفٍ ممنوحٍ سابقًا (تسلسلٌ يُصفَّر يولّد عقدًا بمعرّف عقدٍ مُنهَى).
  * حالات الفشل (كلها مغلقة): نوع غير معلن ⇒ رفض؛ بلا تاريخ انتهاء ⇒ رفض؛ مدة تفوق الحدّ
  *   ⇒ رفض؛ انتهاء بعد انتهاء الحساب ⇒ رفض؛ حساب معلَّق أو منتهٍ أو مغلق ⇒ رفض؛
  *   قيمة تفوق سقف النوع ⇒ رفض؛ تقدير بالٍ أو مفقود أو فوق السقف ⇒ رفض؛
@@ -29,6 +32,7 @@
  */
 import { EntityId, SignedRoyalCommand, SovereignViolation } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
+import type { DurableSink } from '../data/persistence';
 import { CrownGateway } from '../crown/crown_gateway';
 import { ExternalAccountRegistry, FOREIGN_MINISTRY } from './account_registry';
 import { PartnerRisk } from './partner_risk';
@@ -96,6 +100,8 @@ export class ExternalContractRegistry {
   private readonly proposerId: EntityId;
   private terminationGranted = false;
   private sequence = 0;
+  /** وسيطُ الثبات (T-122) — يُربط بعد الإرجاع، وغيابُه لا يمنع التوقيع */
+  private sink: DurableSink | null = null;
 
   constructor(private readonly deps: ContractRegistryDeps) {
     this.proposerId = deps.proposerId ?? FOREIGN_MINISTRY;
@@ -194,6 +200,8 @@ export class ExternalContractRegistry {
       terminatedAt: null, terminatedBy: null, terminationReason: null,
     };
     this.contracts.set(contract.contractId, contract);
+    // ثابت 9: التسلسلُ يُدوّن مع العقد فلا يُعاد منحُ معرّفٍ بعد إقلاع.
+    this.recordDurably(contract, now);
     const entry = this.deps.audit.append(this.proposerId, 'external_contract_signed', {
       contractId: contract.contractId, kindId: kind.id, counterparty: kind.counterparty,
       value: contract.value, endsAt: contract.endsAt, termMs: contract.endsAt - now,
@@ -241,6 +249,9 @@ export class ExternalContractRegistry {
     contract.terminatedAt = at;
     contract.terminatedBy = by;
     contract.terminationReason = reason;
+    // ثابت 9: الإنهاءُ تغييرُ حالةٍ لا حذفُ عقد — فيُدوّن العقدُ بحالته الجديدة،
+    // وإقلاعٌ ينسى الإنهاء يُحيي التزامًا أنهاه التاج.
+    this.recordDurably(contract, at);
     const entry = this.deps.audit.append(by, 'external_contract_terminated', {
       contractId, kindId: contract.kindId, counterparty: contract.counterparty,
       reason, at, immediate: true, value: contract.value,
@@ -302,6 +313,18 @@ export class ExternalContractRegistry {
       committedValue: committed, maxTermMs: this.deps.maxTermMs,
       maxOpenPerCounterparty: this.deps.maxOpenPerCounterparty,
     };
+  }
+
+  /** ربطُ وسيط الثبات بعد الإرجاع (T-122) — لا قبله، فلا تُدوّن الاستعادةُ نفسها */
+  attachJournal(sink: DurableSink): void {
+    this.sink = sink;
+  }
+
+  /** موضعٌ واحد للتدوين: حالةُ العقد كاملةً مع تسلسلِ السجل لحطةَ التغيير */
+  private recordDurably(contract: ExternalContract, at: number): void {
+    this.sink?.record('contract_record', {
+      contractId: contract.contractId, contract: { ...contract }, sequence: this.sequence,
+    }, at);
   }
 
   /** لقطة العقود الموقعة فقط؛ الأنواع والسياسة تبقى مقروءة من التهيئة. */

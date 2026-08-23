@@ -11,8 +11,10 @@
  *   1) **لا ضغط على سلسلةٍ مشكوكة**: يُتحقَّق من السلسلة أولًا؛ يوميّةٌ محرَّفة تُرفض
  *      رفضًا مغلقًا ولا تُلمس — الضغط لا يُستعمل مطهِّرًا لتحريف.
  *   2) **قيدُ التدقيق لا يُحذف أبدًا**: سلسلة التدقيق أبديّة (RULE-006)، فالمكسب هنا
- *      محدودٌ بالقيود المنسوخة من الذاكرة والمعرفة والمشاركات واللقطات — وهذا **يُعلن**
- *      انحرافًا عن أي فهمٍ بأن الضغط يُقلّص كل شيء (RULE-008).
+ *      محدودٌ بالقيود المنسوخة من الذاكرة والمعرفة والمشاركات واللقطات والعقود — وهذا
+ *      **يُعلن** انحرافًا عن أي فهمٍ بأن الضغط يُقلّص كل شيء (RULE-008). وأصنافُ T-122
+ *      الحدثيّة — قيدُ الدفتر ودفعةُ السكان وإنهاءُ الهويّة — لا تُسقَط ألبتةً: من أراد
+ *      تقليصَ اليوميّة دونهما فليحتفظ بأرشيفها، فالتاريخُ لا يُضغط (انظر ADR-0030).
  *   3) **الأصل لا يُحذف**: الملف السابق يُنقل إلى `<file>.<seq>.archive` فيبقى شاهدًا؛
  *      من أراد التحقق من الضغط نفسه قابَل الأرشيف بالجديد.
  *   4) **الكتابة ذرّية**: يُكتب ملفٌ مؤقّت ويُزامن ثم يُنقل نقلًا واحدًا — انقطاعُ
@@ -51,8 +53,12 @@ export interface CompactionReport {
   readonly previousHead: string;
 }
 
-/** مفتاحُ الهويّة لكل صنفٍ يُنسخ: القيدُ الأحدث بالمفتاح نفسه يُسقط ما قبله */
-function identityOf(entry: DurableRecord): string | null {
+/**
+ * مفتاحُ الهويّة لكل صنفٍ يُنسخ: القيدُ الأحدث بالمفتاح نفسه يُسقط ما قبله.
+ * مُصدَّرٌ لأن سياسةَ الاحتفاظ (T-123) تبرهن به على بقاء الشاهد: ما له هويّةٌ باقيةٌ
+ * في اليوميّة فقد بقي شاهدُه؛ فالتعريفُ واحدٌ في الموضعين ولا يُنسخ نسخًا.
+ */
+export function durableIdentity(entry: DurableRecord): string | null {
   const payload = entry.payload as Record<string, unknown> | null;
   if (payload === null || typeof payload !== 'object') return null;
   switch (entry.kind) {
@@ -66,6 +72,12 @@ function identityOf(entry: DurableRecord): string | null {
     case 'archive_snapshot':
       // لقطةٌ واحدة تكفي: الأحدث تُغني عن كل ما قبلها بحكم كونها لقطةً كاملة.
       return 'archive_snapshot';
+    // T-122: أنواعُ أنظمةِ السجل المُدوّنة لحظًا. ولا واحدٌ منها يُسقَط بمنسوخٍ:
+    // قيدُ الدفتر لا يُمحى (ثابت 3 في ledger.ts)، والدفعةُ والإنهاءُ حدثان لا
+    // حالتان — فإسقاطُ أيّهما يُفقد التاريخَ لا يُقلّص المنسوخ. أمّا العقدُ فحالةٌ
+    // تُحدَّث (الإنهاء يُعدّل حقولَه) فأحدثُ قيدٍ للعقد نفسه يُغني عمّا قبله.
+    case 'contract_record':
+      return typeof payload.contractId === 'string' ? `contract:${payload.contractId}` : null;
     default:
       // قيد التدقيق وعلامات الضغط السابقة: لا هويّة ⇒ لا إسقاط (ثابت 2).
       return null;
@@ -80,7 +92,7 @@ function selectSurvivors(entries: readonly DurableRecord[]): readonly DurableRec
   const seen = new Set<string>();
   const keep = new Array<boolean>(entries.length).fill(false);
   for (let i = entries.length - 1; i >= 0; i--) {
-    const key = identityOf(entries[i]!);
+    const key = durableIdentity(entries[i]!);
     if (key === null) { keep[i] = true; continue; }
     if (seen.has(key)) continue;
     seen.add(key);

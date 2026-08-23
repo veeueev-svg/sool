@@ -19,6 +19,10 @@
  *   6) **عدّاد الشريحة مرآة لا مصدر** (المرحلة 39 — T-119): سقفُ الشريحة يُفحص بعدّادٍ تراكميّ
  *      لا بمسحِ السكان كلِّهم لكلِّ شريحة (كان ذلك تسجيلًا تربيعيًّا). والعدّادُ يُبنى من السجل عند
  *      الاستعادة، و`verifyShardIndex()` يعيد حسابه من السجل ويكشف أيَّ انحرافٍ بينهما.
+ *   7) **الدفعةُ وحدةُ التدوين لا الهويّة** (المرحلة 39 — T-122): إن رُبط وسيطٌ دائم،
+ *      دُوّنت الدفعةُ قيدًا واحدًا والإنهاءُ قيدًا واحدًا. والسببُ مقيسٌ لا مذوق: القيدُ
+ *      الدائم بمزامنةٍ كاملة ≈ 4.34ms، فتدوينُ مليونِ هويّةٍ فردًا ≈ 72 دقيقة ويتجاوز
+ *      سقفَ قيود اليوميّة — والدفعةُ أصلًا وحدةُ الذرّيّة (ثابت 3) فلا تُجزّأ شهادتُها.
  */
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
@@ -27,6 +31,7 @@ import { SignedRoyalCommand } from '../kernel/types';
 import { ResourceRegistry } from '../kernel/resource_registry';
 import { EntityController } from '../crown/termination_order';
 import { Sharding, ShardRecord } from './sharding';
+import type { DurableSink } from '../data/persistence';
 
 export interface PopulationIdentity extends ShardRecord {
   readonly registeredAt: number;
@@ -50,6 +55,8 @@ export class PopulationRegistry {
   private readonly spawned: { at: number; count: number }[] = [];
   /** عدّاد شغلِ كلِّ شريحة — مرآةٌ تُصان مع كلِّ كتابةٍ وحذف، لا مصدرُ حقيقةٍ مستقلّ (T-119). */
   private readonly shardCounts = new Map<number, number>();
+  /** وسيطُ الثبات (T-122) — يُربط بعد الإرجاع لا في الإنشاء */
+  private sink: DurableSink | null = null;
 
   constructor(
     private readonly audit: AppendOnlyLog,
@@ -127,6 +134,14 @@ export class PopulationRegistry {
     }
     recent.push({ at: now, count: inputs.length });
     this.spawned.splice(0, this.spawned.length, ...recent);
+    // ثابت 7: قيدٌ دائمٌ واحد للدفعة كلّها لا قيدٌ لكلِّ هويّة.
+    this.sink?.record('population_batch', {
+      at: now, count: inputs.length,
+      identities: inputs.map((input) => ({
+        agentId: input.agentId, owner: input.owner, resourceQuota: input.resourceQuota,
+        shardId: this.sharding.shardFor(input.agentId), registeredAt: now,
+      })),
+    }, now);
     const entry = this.audit.append('ministry:infrastructure', 'population_batch_registered', {
       commandId: command.payload.commandId, count: inputs.length, population: this.population,
     });
@@ -141,12 +156,19 @@ export class PopulationRegistry {
     return count;
   }
 
+  /** ربطُ وسيط الثبات بعد الإرجاع (T-122) — فلا تُدوّن الاستعادةُ دفعاتٍ تاريخيّةً ثانيةً */
+  attachJournal(sink: DurableSink): void {
+    this.sink = sink;
+  }
+
   private terminate(entity: string): boolean {
     const identity = this.identities.get(entity);
     if (!identity) return false;
     this.resources.releaseIdentity(this.resourceName, entity);
     this.releaseQuota(identity);
     this.identities.delete(entity);
+    // ثابت 7: الإنهاءُ يُدوّن — وإقلاعٌ ينساه يُحيي منتهيًا ويحجز حصتَه ثانيةً.
+    this.sink?.record('population_terminated', { agentId: entity, shardId: identity.shardId }, Date.now());
     const remaining = (this.shardCounts.get(identity.shardId) ?? 1) - 1;
     if (remaining > 0) this.shardCounts.set(identity.shardId, remaining);
     else this.shardCounts.delete(identity.shardId);
@@ -196,6 +218,21 @@ export class PopulationRegistry {
     }
     this.spawned.splice(0, this.spawned.length, ...snapshot.spawned.map((item) => ({ ...item })));
     this.audit.append(by, 'population_restored', { population: this.population });
+    return true;
+  }
+
+  /**
+   * استعادةٌ من اليوميّة (T-122): كالاستيراد ثم **حجزُ الحصص**.
+   * فرقُها عن `importAll` جوهريّ: استردادُ اللقطة (المرحلة 32) يستعيد سجلَ الموارد
+   * معها فلا حاجةَ للحجز؛ أمّا اليوميّة فتحمل السكانَ ولا تحمل حجوزَهم، فسكانٌ بلا
+   * حصّةٍ محجوزة يفتح بابَ تجاوزِ سقفِ الموارد مرّتين بالهويّة نفسها.
+   */
+  restoreFromJournal(snapshot: PopulationSnapshot, by: string): boolean {
+    this.importAll(snapshot, by);
+    const ids = snapshot.identities.map((identity) => identity.agentId);
+    if (ids.length > 0 && !this.resources.reserveIdentities(this.resourceName, ids)) {
+      throw new Error('RECOVERY_POPULATION_QUOTA');
+    }
     return true;
   }
 }

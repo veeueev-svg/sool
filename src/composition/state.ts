@@ -42,6 +42,7 @@ import { KnowledgeGraph } from '../data/knowledge_graph';
 import { RoyalArchive } from '../data/royal_archive';
 import { RetentionPolicy } from '../data/retention';
 import { StateJournal, RehydrateReport } from '../data/persistence';
+import type { RehydrateStateReport } from '../data/rehydrate_state';
 import { AgentRegistry } from '../agents/agent_registry';
 import { PermissionRegistry } from '../agents/permissions';
 import { Supervisor } from '../agents/supervision';
@@ -215,6 +216,8 @@ export interface DigitalState {
   readonly journal: StateJournal | null;
   /** تقرير الإرجاع عند الإقلاع — `null` حين لا يوميّة، و`restored:false` ليوميّة فارغة */
   readonly rehydrated: RehydrateReport | null;
+  /** تقريرُ إرجاعِ الاقتصاد والعقود والسكان (المرحلة 39 — T-122) */
+  readonly rehydratedState: RehydrateStateReport | null;
   readonly mode: () => StateMode;
 }
 

@@ -17,6 +17,9 @@
  *      والتصحيح يقع في الفترة المفتوحة بقيد معاكس
  *   6) لا قيد بلا بيان (memo): مبلغ بلا سبب معلن مرفوض (RULE-006)
  *   7) الميزان الكلي ثابت: بعد أي عدد من القيود يبقى مجموع المدين = مجموع الدائن
+ *   8) **القيدُ يُدوّن لحظةَ إثباته لا عند لقطة** (المرحلة 39 — T-122): إن رُبط وسيطٌ
+ *      دائم، دُوّن كلُّ ما يُغيّر الدفتر (فتحُ حساب، قيدٌ، إغلاقُ فترة) قيدًا دائمًا
+ *      قبل أن تعود الدالّة. والرفضُ لا يُدوّن هنا: شاهدُه قيدُ التدقيق وهو مُدوَّن أصلًا.
  * حالات الفشل (كلها مغلقة): قيد غير متوازن ⇒ رفض؛ مبلغ كسري أو سالب أو صفر ⇒ رفض؛
  *   حساب غير مفتوح ⇒ رفض؛ فترة مغلقة ⇒ رفض؛ معرّف قيد مكرَّر ⇒ رفض
  * اختبار القبول: tests/economy/economy_lifecycle.test.ts
@@ -24,6 +27,7 @@
  */
 import { EntityId } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
+import type { DurableSink } from '../data/persistence';
 
 /** وزارة المالية: الجهة الوحيدة التي تفتح حسابًا وتُثبت قيدًا */
 export const FINANCE_MINISTRY: EntityId = 'ministry:finance';
@@ -81,6 +85,21 @@ export interface TrialBalance {
 export interface LedgerDeps {
   readonly audit: AppendOnlyLog;
   readonly actorId?: EntityId;
+  /** وسيطُ الثبات (T-122) — اختياريٌّ في الإنشاء، ويُربط بعد الإرجاع لا قبله */
+  readonly journal?: DurableSink;
+}
+
+/** ما يُدوّن عن الدفتر (T-122): حدثٌ من ثلاثة، ولا رابعَ يُغيّر حالته */
+export type LedgerJournalRecord =
+  | { readonly op: 'account_opened'; readonly account: Account }
+  | { readonly op: 'entry'; readonly entry: LedgerEntry }
+  | { readonly op: 'period_closed'; readonly upTo: number; readonly by: EntityId };
+
+/** لقطةُ استعادةٍ تُبنى من قيود اليوميّة لا من ملفٍ خارجيّ */
+export interface LedgerSnapshot {
+  readonly accounts: readonly Account[];
+  readonly entries: readonly LedgerEntry[];
+  readonly closedThrough: number | null;
 }
 
 /** مبلغ سليم: عدد صحيح موجب داخل المدى الآمن (ثابت 2) */
@@ -96,8 +115,17 @@ export class Ledger {
   /** آخر لحظة مغلقة: لا قيد عندها أو قبلها (ثابت 5) */
   private closedThrough: number | null = null;
 
+  /** وسيطُ الثبات — يُربط بعد الإرجاع فلا تُدوَّن الاستعادةُ نفسها قيودًا مكرّرة (T-122) */
+  private sink: DurableSink | null;
+
   constructor(private readonly deps: LedgerDeps) {
     this.actorId = deps.actorId ?? FINANCE_MINISTRY;
+    this.sink = deps.journal ?? null;
+  }
+
+  /** ربطُ الوسيط بعد الإقلاع والإرجاع — ترتيبٌ مُلزم كترتيب سجل التدقيق */
+  attachJournal(sink: DurableSink): void {
+    this.sink = sink;
   }
 
   /** 1) فتح حساب: مرة واحدة، بنوع معلن واسم معلن (ثابت 4) */
@@ -121,6 +149,8 @@ export class Ledger {
       entryId: `open:${accountId}`, memo: `فتح حساب ${account.name}`, lines: [],
       by: this.actorId, at: now, total: 0, reverses: null, auditId: audit.hash,
     };
+    // ثابت 8: الحسابُ حالةٌ لا حدث — فمن لا يُدوّن فتحَه يرجع بدفترٍ قيودُه بلا حسابات.
+    this.sink?.record('ledger_entry', { op: 'account_opened', account }, now);
     return { ok: true, entry, auditId: audit.hash };
   }
 
@@ -182,6 +212,8 @@ export class Ledger {
     const audit = this.deps.audit.append(this.actorId, 'period_closed', {
       upTo, by, debits: balance.debits, credits: balance.credits, entries: balance.entries,
     });
+    // الفترةُ المغلقة لا تُعاد فتحًا (ثابت 5)، وإقلاعٌ ينسى إغلاقَها يفتحُها نسيانًا.
+    this.sink?.record('ledger_entry', { op: 'period_closed', upTo, by }, now);
     const entry: LedgerEntry = {
       entryId: `close:${upTo}`, memo: 'إغلاق فترة', lines: [], by, at: now,
       total: 0, reverses: null, auditId: audit.hash,
@@ -292,6 +324,39 @@ export class Ledger {
     const stored: LedgerEntry = { ...entry, auditId: audit.hash };
     this.entries.push(stored);
     this.byId.set(stored.entryId, stored);
+    this.sink?.record('ledger_entry', { op: 'entry', entry: stored }, now);
     return { ok: true, entry: stored, auditId: audit.hash };
+  }
+
+  /**
+   * استعادةُ الدفتر من اليوميّة (T-122). لا تُدوّن ولا تُنادي `write`: إعادةُ القيود
+   * من الباب العاديّ تُنشئ قيودَ تدقيقٍ جديدة لأفعالٍ قديمة — وذلك تزييفٌ لا استعادة.
+   * والحساباتُ **تُدمج لا تُستبدل**: حساباتُ الدولة السياديّة تُفتح في التأسيس
+   * قبل ربط الوسيط (فلا تُدوّن)، فاستبدالُ الجدول يُسقطُها ويجعل قيودَها بلا حساب.
+   * والميزانُ يُفحص بعد الاستعادة: دفترٌ غير متوازن لا يُقلع عليه (ثابت 1 و 7).
+   */
+  restore(snapshot: LedgerSnapshot, by: EntityId): void {
+    for (const account of snapshot.accounts) {
+      if (!this.accounts.has(account.accountId)) this.accounts.set(account.accountId, { ...account });
+    }
+    this.entries.splice(0, this.entries.length);
+    this.byId.clear();
+    for (const entry of snapshot.entries) {
+      const stored: LedgerEntry = { ...entry, lines: [...entry.lines] };
+      this.entries.push(stored);
+      this.byId.set(stored.entryId, stored);
+    }
+    this.closedThrough = snapshot.closedThrough;
+    const balance = this.trialBalance();
+    if (!balance.balanced) throw new Error('RECOVERY_LEDGER_UNBALANCED');
+    for (const entry of this.entries) {
+      for (const line of entry.lines) {
+        if (!this.accounts.has(line.account)) throw new Error('RECOVERY_LEDGER_ACCOUNT_MISSING');
+      }
+    }
+    this.deps.audit.append(by, 'ledger_restored', {
+      accounts: this.accounts.size, entries: this.entries.length,
+      debits: balance.debits, closedThrough: this.closedThrough,
+    });
   }
 }

@@ -63,6 +63,19 @@ const SOUND = [
   '    - memory_share',
   '    - knowledge_fact',
   '    - archive_snapshot',
+  // T-122: أصنافُ أنظمةِ السجل الأربعة تُقرأ كما تُقرأ سابقاتُها بلا استثناءٍ في الشفرة.
+  '    - ledger_entry',
+  '    - contract_record',
+  '    - population_batch',
+  '    - population_terminated',
+  // T-123: عتبةُ الضغط واحتفاظُ الأرشيفات — كتلتان مُلزمتان لا اختياريّتان.
+  'compaction:',
+  '  compact_at_records: 100000',
+  '  min_interval_ms: 3600000',
+  'archives:',
+  '  keep_min: 2',
+  '  max_age_ms: 2592000000',
+  '  require_witness_coverage: true',
   '',
 ].join('\n');
 
@@ -72,7 +85,10 @@ test('التهيئة المعلنة تُقرأ كما هي بلا افتراض �
     const config = loadPersistence(yaml(dir, SOUND));
     assert.equal(config.policy.journal_file, 'state.jsonl');
     assert.equal(config.policy.max_journal_records, 500_000);
-    assert.equal(config.policy.scope.length, 5);
+    assert.equal(config.policy.scope.length, 9);
+    // T-123: الرقمُ مقروءٌ من الملف لا مُضمَّنٌ في الشفرة (RULE-005)
+    assert.equal(config.compaction.compact_at_records, 100_000);
+    assert.equal(config.archives.keep_min, 2);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
