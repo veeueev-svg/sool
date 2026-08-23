@@ -71,6 +71,8 @@ import { RevenueService } from '../economy/tax';
 import { ArtifactVerifier } from '../models/source_verification';
 import { ModelRegistry } from '../models/model_registry';
 import { OpenWeightsImporter } from '../models/open_weights_import';
+import { SafetyAttestor } from '../models/safety_attestation';
+import { InferenceEngine } from '../models/inference';
 import { StateMode } from '../kernel/types';
 import { PopulationRegistry } from '../scale/population';
 import { Sharding } from '../scale/sharding';
@@ -124,6 +126,9 @@ export interface DigitalState {
   readonly collusion: CollusionDetector;
   readonly artifacts: ArtifactVerifier;
   readonly models: ModelRegistry;
+  /** المُشهِدُ للسلامة والمحرّكُ الذي لا يُشغَّل نموذجٌ إلا منه (المرحلة 39 — T-21) */
+  readonly safetyAttestor: SafetyAttestor;
+  readonly inference: InferenceEngine;
   readonly weightsImporter: OpenWeightsImporter;
   readonly agentImporter: AgentImporter;
   readonly memory: AgentMemory;

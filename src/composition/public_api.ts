@@ -173,6 +173,10 @@ export type {
 export { deriveLineage, derivePendingLineage, verifyLineageClaims } from '../agents/lineage';
 export type { LineageChain, LineageDrift, LineageFailureCode, ParentLookup } from '../agents/lineage';
 export { loadReproduction } from '../kernel/config/reproduction';
+export { loadInference } from '../kernel/config/inference';
+export type {
+  InferenceConfig, InferenceLimits, SafetyRigorPolicy, InferenceLoadPolicy,
+} from '../kernel/config/inference';
 export type {
   ReproductionConfig, ReproductionLimits, ReproductionLoadPolicy,
 } from '../kernel/config/reproduction';
@@ -198,6 +202,13 @@ export { EvaluationSuite, DEFAULT_SAFETY_CASES } from '../models/evaluation_suit
 export type { EvalCase, EvalKind, EvalResult } from '../models/evaluation_suite';
 export { FineTuningRun } from '../models/fine_tuning';
 export type { TrainingRequest, TrainingInference, TrainingOutcome } from '../models/fine_tuning';
+export { referenceResponder, REFERENCE_ANSWER_COUNT } from '../models/reference_responder';
+export { InferenceEngine } from '../models/inference';
+export type { InferenceOutcome, InferenceRefusalCode, InferenceDeps } from '../models/inference';
+export { SafetyAttestor, suiteDigestOf } from '../models/safety_attestation';
+export type { AttestationRecord } from '../models/safety_attestation';
+export { RIGOROUS_SAFETY_CASES, coveredCategories } from '../models/safety_cases';
+export type { RigorousCase, SafetyCategory } from '../models/safety_cases';
 export { ModelRollback } from '../models/rollback';
 export type { RollbackOutcome } from '../models/rollback';
 export { PopulationRegistry } from '../scale/population';

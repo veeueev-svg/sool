@@ -24,10 +24,14 @@ import { CollusionDetector } from '../security/collusion_detector';
 import { ArtifactVerifier } from '../models/source_verification';
 import { ModelRegistry } from '../models/model_registry';
 import { OpenWeightsImporter } from '../models/open_weights_import';
+import { SafetyAttestor, suiteDigestOf } from '../models/safety_attestation';
+import { RIGOROUS_SAFETY_CASES } from '../models/safety_cases';
+import { InferenceEngine } from '../models/inference';
 
 export function composePopulation(parts: SovereigntyParts) {
   const {
     audit, quotas, king, killSwitch, resources, gateway, terminationRoll, reproductionConfig,
+    inferenceConfig,
   } = parts;
 
   // 1) العزل والخروج الشبكي والأدوات (المرحلتان 11 و12) — بعد البوابة لأن الإذن يمرّ بها
@@ -76,6 +80,14 @@ export function composePopulation(parts: SovereigntyParts) {
   const weightsImporter = new OpenWeightsImporter({
     audit, gateway, killSwitch, verifier: artifacts, models,
   });
+  // 5-ب) محرّكُ الاستدلال (المرحلة 39 — T-21، إكمالُ C-13): قبله لم يكن في الدولة
+  //      طريقُ تشغيلٍ للنموذج، فكان المقيسُ الحجرَ لا منعَ التشغيل. والمُشهِدُ يسبق
+  //      المحرّك لأن بصمةَ مجموعةِ السلامة شرطٌ من شروطه، والحدودُ من التهيئة (RULE-005).
+  const safetyAttestor = new SafetyAttestor(audit, inferenceConfig, RIGOROUS_SAFETY_CASES);
+  const inference = new InferenceEngine({
+    audit, registry: models, killSwitch, config: inferenceConfig,
+    suiteDigest: suiteDigestOf(RIGOROUS_SAFETY_CASES),
+  });
   const agentImporter = new AgentImporter({
     audit, verifier: artifacts, agents, permissions, killSwitch,
   });
@@ -83,6 +95,7 @@ export function composePopulation(parts: SovereigntyParts) {
   return {
     egress, tools, permissions, agents, supervisor, spawnPolicy, factory, massShutdown,
     alignment, deception, collusion, artifacts, models, weightsImporter, agentImporter,
+    safetyAttestor, inference,
   };
 }
 

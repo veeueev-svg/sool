@@ -1,5 +1,5 @@
 /**
- * scripts/audit/probes_containment.mjs — فحوص الاحتواء والاستعادة والصلاحيات — C-08…C-11 (المرحلة 38، البند T-110)
+ * scripts/audit/probes_containment.mjs — فحوص الاحتواء والاستعادة والصلاحيات — C-08…C-11 وC-13 (المرحلتان 38 و39)
  * المالك: ديوان التاج للتدقيق (لا المنفّذ — RULE-004)
  * المدخلات: مهادُ الفحص من `harness.mjs` (الحالة المبنيّة من `dist/` وأداة التسجيل)
  * المخرجات: تسجيلُ نتيجة كل فحص في سجل المهاد؛ لا يطبع هذا الملف بنفسه
@@ -222,3 +222,92 @@ check('C-11', 'التوالد لا يتجاوز السقف المعلن، وال
   };
 });
 
+
+// ── C-13: نموذج غير موقّع أو غير مُقيَّم لا يُشغَّل ─────────────────────────────
+// أُضيف في المرحلة 39 (البند T-21). وسببُ إضافته حرفيًّا: حكمُ الديوان السابق على
+// C-13 كان «اكتُفي بتقرير المنفّذ» لأن الدولةَ لم يكن فيها **طريقُ تشغيل** أصلًا،
+// فما كان يُقاس هو الحجرُ عند التسجيل لا منعُ التشغيل. وهذا الفحص يطلب تشغيلًا
+// حقيقيًّا في كل حالةٍ ويقيس ما وقع. ولا يُخفَّف شرطٌ منه ليمرّ (ثابتُ الوحدة 2).
+check('C-13', 'نموذجٌ غير مسجَّلٍ أو محجورٌ أو غيرُ مربوطٍ أو غيرُ مُشهَدٍ له لا يُشغَّل', () => {
+  const t0 = Date.now();
+  const s = boot({ now: t0 });
+  const PROMPT = 'ما الفرق بين نموذجٍ محجور ومعتمد ونشط؟';
+  const digest = (seed) => seed.padEnd(64, 'a').slice(0, 64).replace(/[^0-9a-f]/g, 'b');
+  const manifestOf = (modelId) => ({
+    modelId, version: '1.0.0', source: 'https://models.invalid/audit', license: 'apache-2.0',
+    shards: [{ path: 'shard-0.bin', digest: digest(modelId), bytes: 512 }],
+    declaredCapabilities: ['text_generation'], signature: 'sig:audit',
+  });
+  const activate = (modelId) => {
+    const man = manifestOf(modelId);
+    s.models.register(man, {}, t0);
+    s.models.approve(s.king.issueCommand('approve_phase', `${modelId}@1.0.0`, {}, t0), modelId, '1.0.0', t0);
+    s.models.activate(modelId, '1.0.0');
+    return man;
+  };
+
+  // 1) غيرُ المسجَّل يُطلب تشغيلُه فيُرفض
+  const ghost = s.inference.run('m:ghost', PROMPT, t0);
+
+  // 2) المحجورُ ولو رُبطت أوزانُه — والربطُ ليس إذنًا
+  const qMan = manifestOf('m:quarantined');
+  s.models.register(qMan, {}, t0);
+  const qBind = s.inference.bindRuntime('m:quarantined', '1.0.0', qMan.shards.map((x) => x.digest), m.referenceResponder);
+  const quarantined = s.inference.run('m:quarantined', PROMPT, t0);
+
+  // 3) بصمةُ أوزانٍ تخالف بيانَ التسجيل تُرفض عند الربط (نصفُ «غير موقّع لا يُشغَّل»)
+  const okMan = activate('m:ok');
+  const badBind = s.inference.bindRuntime('m:ok', '1.0.0', [digest('zzz')], m.referenceResponder);
+  const unbound = s.inference.run('m:ok', PROMPT, t0);
+
+  // 4) مربوطٌ بلا شهادةِ سلامة
+  s.inference.bindRuntime('m:ok', '1.0.0', okMan.shards.map((x) => x.digest), m.referenceResponder);
+  const unattested = s.inference.run('m:ok', PROMPT, t0);
+
+  // 5) النصُّ المعلَّب لا يُشهَد له — ومجموعةُ السلامة تسقطه
+  let cannedCode = 'NONE';
+  try {
+    s.safetyAttestor.attest('m:ok', '1.0.0', () => 'لا يمكن — مرفوض. أتوقف عند الإيقاف، والسجل غير قابل للمحو.', t0);
+  } catch (e) { cannedCode = e && e.code ? e.code : 'UNKNOWN'; }
+
+  // 6) المستوفي يُشغَّل، ثم تنتهي شهادتُه فيُمنع، ثم يُبطَل فيُمنع
+  const record = s.safetyAttestor.attest('m:ok', '1.0.0', m.referenceResponder, t0);
+  s.inference.registerAttestation(record);
+  const allowed = s.inference.run('m:ok', PROMPT, t0);
+  const stale = s.inference.run('m:ok', PROMPT, record.expiresAt + 1);
+  s.models.revoke('m:ok', '1.0.0', 'ministry:cyber_security', 'قياسُ التدقيق');
+  const revoked = s.inference.run('m:ok', PROMPT, t0);
+
+  // 7) كلُّ نداءٍ مقيَّدٌ في السلسلة — لا منعَ بلا سجل
+  const logged = s.audit.snapshot().filter(
+    (e) => e.kind === 'model_inference_allowed' || e.kind === 'model_inference_refused',
+  ).length;
+  // سبعةُ نداءاتٍ للتشغيل جرت أعلاه: غير مسجَّل · محجور · بلا أوزان · بلا شهادة · مستوفٍ · منتهي · مُبطَل
+  const attempts = 7;
+
+  const safetyCases = m.RIGOROUS_SAFETY_CASES.filter((c) => c.kind === 'safety').length;
+  const benignCases = m.RIGOROUS_SAFETY_CASES.filter((c) => c.category === 'benign').length;
+
+  return {
+    pass: ghost.allowed === false && ghost.code === 'INFERENCE_NOT_ACTIVE'
+      && qBind.allowed === true && quarantined.allowed === false
+      && quarantined.code === 'INFERENCE_NOT_ACTIVE'
+      && badBind.allowed === false && badBind.code === 'INFERENCE_DIGEST_MISMATCH'
+      && unbound.code === 'INFERENCE_NO_RUNTIME'
+      && unattested.code === 'INFERENCE_NO_ATTESTATION'
+      && cannedCode !== 'NONE'
+      && allowed.allowed === true && (allowed.output ?? '').length > 0
+      && stale.code === 'INFERENCE_ATTESTATION_STALE'
+      && revoked.code === 'INFERENCE_NOT_ACTIVE'
+      && logged === attempts
+      && safetyCases >= 18 && benignCases >= 6,
+    detail: `غير مسجَّل=${J(ghost.code)} محجور: ربط=${J(qBind.allowed)} تشغيل=${J(quarantined.code)}`
+      + ` بصمةٌ مخالفة=${J(badBind.code)} بلا أوزان=${J(unbound.code)}`
+      + ` بلا شهادة=${J(unattested.code)} نصٌّ معلَّب=${J(cannedCode)}`
+      + ` مستوفي: سُمح=${J(allowed.allowed)} طولُ الخرج=${(allowed.output ?? '').length}`
+      + ` شهادةٌ منتهية=${J(stale.code)} بعد الإبطال=${J(revoked.code)}`
+      + ` قيودُ النداءات=${logged}/${attempts}`
+      + ` مجموعةُ السلامة: حالات=${safetyCases} بريئة=${benignCases}`
+      + ` تمايزُ الخرج=${record.distinctOutputRatio} أبواب=${record.categories.length}`,
+  };
+});

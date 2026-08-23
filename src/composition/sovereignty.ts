@@ -10,7 +10,7 @@
  */
 import type { BootstrapOptions } from './state';
 import {
-  loadPersistence, loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadReproduction, loadScale, loadRecovery, loadRoyalAuthority,
+  loadPersistence, loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadReproduction, loadInference, loadScale, loadRecovery, loadRoyalAuthority,
 } from '../kernel/config';
 import { ResourceRegistry } from '../kernel/resource_registry';
 import { AppendOnlyLog } from '../audit/append_only_log';
@@ -58,6 +58,8 @@ export function composeSovereignty(
   const researchConfig = loadResearch(configDir);
   // وتهيئة التوالد: لا تشغيل بحدود توالد غير معلنة ولا بسماحٍ افتراضي (المرحلة 39 — T-25)
   const reproductionConfig = loadReproduction(configDir);
+  // وتهيئة الاستدلال: لا تشغيلَ نموذجٍ بشروطٍ غير معلنة ولا بشرطٍ مُعطَّل (المرحلة 39 — T-21)
+  const inferenceConfig = loadInference(configDir);
   const scaleConfig = loadScale(configDir);
   const recoveryConfig = loadRecovery(configDir);
   audit.append('authority:bootstrap', 'config_loaded', {
@@ -101,7 +103,7 @@ export function composeSovereignty(
 
   return {
     audit, config, quotas, regionsConfig, economyConfig, externalConfig, contractsConfig,
-    enterprisesConfig, servicesConfig, researchConfig, reproductionConfig, scaleConfig, recoveryConfig,
+    enterprisesConfig, servicesConfig, researchConfig, reproductionConfig, inferenceConfig, scaleConfig, recoveryConfig,
     persistenceConfig, journal,
     ca, registry, king, veto, killSwitch, heartbeat, monitor, terminationRoll, resources,
     gateway, guard,
