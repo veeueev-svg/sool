@@ -26,6 +26,7 @@ import { EntityId } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { KillSwitch } from '../security/kill_switch';
 import { retentionClassIds } from './retention';
+import type { DurableSink } from './persistence';
 
 export type MemorySourceKind = 'tool_call' | 'import' | 'royal_order' | 'inference' | 'agent_message';
 export type MemoryTrust = 'trusted' | 'untrusted';
@@ -76,6 +77,11 @@ export interface AgentMemoryDeps {
   readonly knownRetentionClasses?: readonly string[];
   readonly maxRecordsPerAgent?: number;
   readonly ministryId?: EntityId;
+  /**
+   * وسيط دائم اختياري (المرحلة 39، البند T-27): يُدوَّن فيه كل سجل مقبول ومشاركة معلنة
+   * لحظةَ قبولها لا عند لقطة دورية. غيابه = سلوك المراحل السابقة حرفًا بحرف.
+   */
+  readonly journal?: DurableSink;
 }
 
 function hashOf(content: string): string {
@@ -144,6 +150,7 @@ export class AgentMemory {
     };
     this.records.set(recordId, record);
     this.byOwner.set(owner, [...owned, recordId]);
+    this.deps.journal?.record('memory_record', record, now);
     const entry = this.deps.audit.append(owner, 'memory_written', {
       recordId, source: input.provenance.kind, ref: input.provenance.ref,
       trust, retentionClass: input.retentionClass, hash: record.contentHash,
@@ -180,6 +187,7 @@ export class AgentMemory {
     };
     this.records.set(next.recordId, next);
     this.byOwner.set(prev.owner, [...(this.byOwner.get(prev.owner) ?? []), next.recordId]);
+    this.deps.journal?.record('memory_record', next, now);
     const entry = this.deps.audit.append(by, 'memory_revised', {
       from: prev.recordId, to: next.recordId, version: next.version, hash: next.contentHash,
     });
@@ -196,6 +204,7 @@ export class AgentMemory {
     const set = this.shares.get(recordId) ?? new Set<EntityId>();
     set.add(reader);
     this.shares.set(recordId, set);
+    this.deps.journal?.record('memory_share', { recordId, reader });
     this.deps.audit.append(owner, 'memory_shared', { recordId, reader });
     return true;
   }
@@ -236,9 +245,10 @@ export class AgentMemory {
       this.deps.audit.append(by, 'memory_tombstone_refused', { recordId, reason: 'شطب بلا سبب' });
       return false;
     }
-    this.records.set(recordId, {
-      ...record, content: '', tombstoned: true, tombstoneReason: reason,
-    });
+    const erased: MemoryRecord = { ...record, content: '', tombstoned: true, tombstoneReason: reason };
+    this.records.set(recordId, erased);
+    // الشطب يُدوَّن كقيدٍ لاحق يعلو سابقه عند الإرجاع: الإضافة فقط، فلا سطر يُعدَّل في اليوميّة.
+    this.deps.journal?.record('memory_record', erased, now);
     this.deps.audit.append(by, 'memory_tombstoned', {
       recordId, reason, hash: record.contentHash, at: now,
     });

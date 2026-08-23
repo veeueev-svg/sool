@@ -22,6 +22,7 @@ export * from './config/services';
 export * from './config/research';
 export * from './config/scale';
 export * from './config/recovery';
+export * from './config/persistence';
 export * from './config/load';
 export * from './config/chaos';
 export * from './config/termination';

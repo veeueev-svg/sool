@@ -1,0 +1,25 @@
+# سياسة الثبات العام (المرحلة 39 — البند T-27) — لا حالة تُدَّعى ناجيةً بلا وسيط يحملها
+# المالك: وزارة البيانات | يقرؤها: src/kernel/config/persistence.ts ⇒ src/data/persistence.ts
+#
+# القاعدة: ما كُتب في الذاكرة والمعرفة والسجل يُدوَّن على وسيطٍ دائم لحظةَ كتابته،
+# لا عند لقطةٍ دورية. لقطةُ المرحلة 32 تحمي من فقد الجهاز، وهذه اليوميّة تحمي من
+# فقد العملية بين لقطتين — وهي نطاقُ RPO الحقيقي لا الموعود.
+#
+# ولكل حدٍّ هنا قيمةٌ تُوقعه: max_journal_records تُختبر بـ3 في
+# tests/data/persistence.test.ts، وscope تُختبر بإسقاط memory_record فلا يُدوَّن.
+policy:
+  journal_directory: "/var/lib/sool/state"
+  journal_file: "state.jsonl"
+  # مزامنة القرص لكل قيد: وعدُ النجاة من فقد العملية لا يُوفى بذاكرة نظام الملفات
+  fsync_every_record: true
+  # التحقق من سلسلة اليوميّة عند الإقلاع: يوميّةٌ محرَّفة لا يُبنى عليها إقلاع
+  verify_chain_on_boot: true
+  # سجل المنتهين يُعاد بناؤه من السلسلة الأبدية عند الإقلاع (البند T-99)
+  rebuild_termination_roll: true
+  max_journal_records: 500000
+  scope:
+    - audit_entry
+    - memory_record
+    - memory_share
+    - knowledge_fact
+    - archive_snapshot

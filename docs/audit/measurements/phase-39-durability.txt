@@ -1,0 +1,11 @@
+# قياس نجاة الحالة عبر عمليتين — المرحلة 39 (البند T-27)
+# الأداة: dist/scripts/durability_probe.js — عمليتان مستقلتان على مجلد يوميّة واحد
+# التاريخ: 2026-08-23T13:36:53Z · العقدة: v20.20.1
+--- الطور الأول (كتابة، ثم موت العملية)
+{"phase":"write","restored":false,"recordId":"mem:agent:probe-1:00001","factId":"fact:00001","journalRecords":37}
+--- الطور الثاني (عملية جديدة تقرأ)
+{"phase":"read","restored":true,"memoryRecords":1,"facts":1,"terminated":true,"auditValid":true,"journalValid":true,"content":"جوهر يعبر حدود العملية","rehydratedLogs":1}
+--- الطور الثالث (عملية ثالثة: لا تدهور بعد استعادة)
+{"phase":"read","restored":true,"memoryRecords":1,"facts":1,"terminated":true,"auditValid":true,"journalValid":true,"content":"جوهر يعبر حدود العملية","rehydratedLogs":2}
+--- حجم اليوميّة
+     47   24173

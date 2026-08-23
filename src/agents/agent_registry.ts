@@ -269,6 +269,35 @@ export class AgentRegistry {
     };
   }
 
+  /**
+   * تصدير للأرشيف ولقطة التعافي فقط (المرحلة 39، البندان T-29 وT-88) — نسخة عميقة
+   * تشمل التاريخ، فلا تُفقد مسارات التحول بالاستعادة. وسجل التوالد يُصدّر معها:
+   * لقطةٌ تنسى معدل التوالد تفتح باب تجاوز الحصة بإعادة استعادة متكررة.
+   */
+  exportAll(): {
+    readonly agents: readonly AgentRecord[];
+    readonly spawns: readonly number[];
+  } {
+    return {
+      agents: [...this.agents.values()].map((a) => ({ ...a, history: a.history.map((h) => ({ ...h })) })),
+      spawns: [...this.spawns],
+    };
+  }
+
+  /** استعادة كاملة: استبدال كلي ذرّي — لا دمج ولا استعادة جزئية */
+  importAll(snapshot: ReturnType<AgentRegistry['exportAll']>, by: EntityId): boolean {
+    this.agents.clear();
+    this.spawns.length = 0;
+    for (const record of snapshot.agents) {
+      this.agents.set(record.agentId, { ...record, history: record.history.map((h) => ({ ...h })) });
+    }
+    for (const at of snapshot.spawns) this.spawns.push(at);
+    this.deps.audit.append(by, 'agents_restored', {
+      agents: snapshot.agents.length, spawns: snapshot.spawns.length,
+    });
+    return true;
+  }
+
   report(): {
     readonly population: number;
     readonly byStatus: Readonly<Record<AgentStatus, number>>;

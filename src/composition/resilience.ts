@@ -33,15 +33,19 @@ export function composeResilience(
   const {
     audit, gateway, killSwitch, resources, recoveryConfig, spawnPolicy,
     memory, knowledge, sharding, population, scheduler, ministries, contracts,
+    agents, permissions, models, terminationRoll,
   } = parts;
 
   // 1) التعافي والاستمرارية (المرحلة 32): تبقى استعادة القرص داخل الأرشيف الملكي
   // نفسه، وتضم اللقطة حالة السكان والشرائح والمجدول وحجوز الهوية والوزارات والعقود
   // والسجل. لا يفك نجاحها التوالد، بل ينقل وضع الاستمرارية إلى limited فقط.
   const continuity = new ContinuityController(audit, recoveryConfig.policy.continuity_mode);
-  const recoveryState = new RecoveryStateParticipant(
-    audit, resources, sharding, population, scheduler, ministries, contracts, continuity,
-  );
+  //     ووسّع البند T-29 (المرحلة 39) نطاق اللقطة: سجل الوكلاء والصلاحيات والنماذج معها،
+  //     وسجل المنتهين يُعاد بناؤه من السلسلة الأبدية بعد استبدالها لا يُنقل في الحمولة.
+  const recoveryState = new RecoveryStateParticipant({
+    audit, resources, sharding, population, scheduler, ministries, contracts,
+    agents, permissions, models, terminationRoll, continuity,
+  });
   const archive = new RoyalArchive({
     audit, gateway, memory, knowledge, freeze: spawnPolicy, recovery: recoveryState,
   });

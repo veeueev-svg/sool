@@ -9,7 +9,7 @@
  * أُضيف ولا حُذف ولا أُعيد ترتيبه. الترتيب داخل الوحدة مُلزم كما كان في الجذر.
  */
 import {
-  QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig, ContractsConfig, EnterprisesConfig, ServicesConfig, ResearchConfig, ScaleConfig, RecoveryConfig, LoadConfig, ChaosConfig, TerminationConfig, StagingConfig, ProductionConfig,
+  PersistenceConfig, QuotasConfig, RoyalAuthorityConfig, EconomyConfig, ExternalConfig, ContractsConfig, EnterprisesConfig, ServicesConfig, ResearchConfig, ScaleConfig, RecoveryConfig, LoadConfig, ChaosConfig, TerminationConfig, StagingConfig, ProductionConfig,
 } from '../kernel/config';
 import { ResourceRegistry } from '../kernel/resource_registry';
 import { AppendOnlyLog } from '../audit/append_only_log';
@@ -41,6 +41,7 @@ import { AgentMemory } from '../data/agent_memory';
 import { KnowledgeGraph } from '../data/knowledge_graph';
 import { RoyalArchive } from '../data/royal_archive';
 import { RetentionPolicy } from '../data/retention';
+import { StateJournal, RehydrateReport } from '../data/persistence';
 import { AgentRegistry } from '../agents/agent_registry';
 import { PermissionRegistry } from '../agents/permissions';
 import { Supervisor } from '../agents/supervision';
@@ -197,6 +198,12 @@ export interface DigitalState {
   readonly continuousSupervisor: ContinuousSupervisor;
   readonly productionLedger: ProductionLedger;
   readonly federatedOperation: FederatedOperation;
+  /** سياسة الثبات المعلنة (المرحلة 39، البند T-27) — تُقرأ دائمًا وتُنفَّذ عند إعلان المجلد */
+  readonly persistenceConfig: PersistenceConfig;
+  /** اليوميّة الدائمة إن أُعلن `persistenceDir`، وإلا `null`: لا ادّعاء ثباتٍ بلا وسيط */
+  readonly journal: StateJournal | null;
+  /** تقرير الإرجاع عند الإقلاع — `null` حين لا يوميّة، و`restored:false` ليوميّة فارغة */
+  readonly rehydrated: RehydrateReport | null;
   readonly mode: () => StateMode;
 }
 
@@ -205,6 +212,12 @@ export interface BootstrapOptions {
   readonly now?: number;
   /** مسار حفظ سجل التدقيق على القرص (المرحلة 32) — إن غاب، تبقى الحالة في الذاكرة */
   readonly auditPath?: string;
+  /**
+   * مجلد اليوميّة الدائمة (المرحلة 39، البند T-27). إن أُعلن: تُدوَّن كتابات السجل والذاكرة
+   * والمعرفة لحظتها، ويُرجَع ما فيه عند الإقلاع. وإن غاب: لا تدوين ولا إرجاع ولا ادّعاء نجاة.
+   * يُقدَّم على المجلد المعلن في `config/persistence.yaml` — والباقي (النطاق والحدّ والمزامنة) من التهيئة.
+   */
+  readonly persistenceDir?: string;
   /** مؤقّت المراقبة بالمللي ثانية — لا يبدأ تلقائيًا إلا عند طلبه */
   readonly monitorTickMs?: number;
   readonly startMonitor?: boolean;

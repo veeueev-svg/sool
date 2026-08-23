@@ -4,9 +4,14 @@
  * المدخلات: أحداث (فاعل، نوع، تفصيل) | المخرجات: سلسلة تجزئة مترابطة + تحقق سلامة
  * الصلاحيات: الإضافة فقط. لا حذف ولا تعديل — ولا حتى للملك (RULE-006)
  * حالات الفشل: أي تلاعب يُكشف عبر verifyIntegrity() ويُصنَّف حادثًا
+ *
+ * المرحلة 39 (البند T-27): يقبل السجل وسيطًا دائمًا اختياريًّا (`DurableSink`) يُدوَّن فيه
+ * كل قيد لحظةَ إضافته. لا يعرف السجل ملفًا ولا مسارًا — يعرف دالّة تدوين واحدة، فتبقى
+ * الوحدة قابلة للاختبار بلا قرص، ويبقى الافتراضي كما كان: بلا وسيط ⇒ سلوكٌ سابق حرفًا بحرف.
  */
 import { AuditEntry, EntityId } from '../kernel/types';
 import { canonicalize, sha256 } from '../identity/keys';
+import type { DurableSink } from '../data/persistence';
 
 export const GENESIS_HASH = '0'.repeat(64);
 
@@ -19,6 +24,19 @@ export interface IntegrityReport {
 
 export class AppendOnlyLog {
   private entries: AuditEntry[] = [];
+  private sink: DurableSink | null;
+
+  constructor(sink?: DurableSink) {
+    this.sink = sink ?? null;
+  }
+
+  /**
+   * يربط وسيطًا دائمًا بعد الإنشاء. الربط لا يُدوّن ما سبق: من أراد يوميّة كاملة
+   * يربط عند الإنشاء. وهذا معلن لا مسكوت عنه (RULE-008).
+   */
+  attachSink(sink: DurableSink): void {
+    this.sink = sink;
+  }
 
   /** الإضافة هي العملية الوحيدة المسموحة */
   append(actor: EntityId, kind: string, detail: Record<string, unknown> = {}): AuditEntry {
@@ -29,6 +47,7 @@ export class AppendOnlyLog {
     const hash = sha256(canonicalize({ seq, at, actor, kind, detail, prevHash }));
     const entry: AuditEntry = Object.freeze({ seq, at, actor, kind, detail, prevHash, hash });
     this.entries.push(entry);
+    this.sink?.record('audit_entry', entry, at);
     return entry;
   }
 

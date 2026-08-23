@@ -34,15 +34,17 @@ export function composeInstitutions(
 ) {
   const {
     audit, gateway, killSwitch, regionsConfig, agents, permissions, spawnPolicy,
-    budget, companies, hospitals, labs, mirrorDepartments,
+    budget, companies, hospitals, labs, mirrorDepartments, journal,
   } = parts;
 
   // 1) الذاكرة والمعرفة (المرحلة 21) — وزارة البيانات
   //     الترتيب مُلزم: أصناف الاحتفاظ تُعرَف عند الكتابة، ثم الذاكرة سندٌ للمعرفة،
   //     ثم الأرشيف يأخذ نسخًا من الاثنين ولا يستعيد إلا بأمر ملكي
-  const memory = new AgentMemory({ audit, killSwitch });
+  //     واليوميّة الدائمة (المرحلة 39، البند T-27) تُمرَّر هنا إن أُعلنت: تُدوَّن الكتابة لحظتها
+  //     لا عند لقطةٍ دورية. وغيابها يعني سلوك المراحل السابقة حرفًا بحرف.
+  const memory = new AgentMemory({ audit, killSwitch, ...(journal ? { journal } : {}) });
   const retention = new RetentionPolicy({ audit, memory });
-  const knowledge = new KnowledgeGraph({ audit, memory });
+  const knowledge = new KnowledgeGraph({ audit, memory, ...(journal ? { journal } : {}) });
   // 2) القانون والقضاء (المرحلة 22) — وزارة العدل
   //     الترتيب مُلزم وهو نفسه فصل السلطات: قانون معلن ← محكمة تحكم به ←
   //     استئناف يراجع الحكم ← تنفيذ لا يقع إلا على حكم نهائي (RULE-004)

@@ -22,6 +22,7 @@
 import { EntityId } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { AgentMemory } from './agent_memory';
+import type { DurableSink } from './persistence';
 
 export type FactStatus = 'pending' | 'official' | 'contradicted' | 'withdrawn';
 
@@ -62,6 +63,11 @@ export interface KnowledgeDeps {
   readonly audit: AppendOnlyLog;
   readonly memory: AgentMemory;
   readonly ministryId?: EntityId;
+  /**
+   * وسيط دائم اختياري (المرحلة 39، البند T-27): تُدوَّن فيه الحقائق المتغيرة وحدها —
+   * لا لقطة كاملة لكل دعوى، فلا يدفع أمرٌ واحد كلفة الرسم الكامل (درس البند T-92).
+   */
+  readonly journal?: DurableSink;
 }
 
 export class KnowledgeGraph {
@@ -71,6 +77,16 @@ export class KnowledgeGraph {
 
   constructor(private readonly deps: KnowledgeDeps) {
     this.ministryId = deps.ministryId ?? 'ministry:data';
+  }
+
+  /** يُدوّن الحقائق التي تغيرت فقط — بحالتها بعد التغيير */
+  private persist(ids: readonly string[], at?: number): void {
+    const journal = this.deps.journal;
+    if (!journal) return;
+    for (const id of ids) {
+      const fact = this.facts.get(id);
+      if (fact) journal.record('knowledge_fact', fact, at);
+    }
   }
 
   assert(by: EntityId, input: FactInput, now = Date.now()): AssertResult {
@@ -130,6 +146,7 @@ export class KnowledgeGraph {
       });
     }
 
+    this.persist([factId, ...clashing.map((f) => f.factId)], now);
     const entry = this.deps.audit.append(by, 'fact_asserted', {
       factId, subject: input.subject, predicate: input.predicate,
       source: input.sourceRecordId, trust: source.trust, status,
@@ -150,6 +167,7 @@ export class KnowledgeGraph {
       return false;
     }
     this.facts.set(factId, { ...fact, status: 'official', attestedBy: by, note: null });
+    this.persist([factId], now);
     this.deps.audit.append(by, 'fact_attested', { factId, at: now });
     return true;
   }
@@ -173,6 +191,7 @@ export class KnowledgeGraph {
     for (const rival of rivals) {
       this.facts.set(rival.factId, { ...rival, status: 'withdrawn', note: `سُحبت بالفصل لصالح ${factId}` });
     }
+    this.persist([factId, ...rivals.map((f) => f.factId)], now);
     this.deps.audit.append(by, 'fact_resolved', {
       factId, withdrawn: rivals.map((f) => f.factId), reason, at: now,
     });
@@ -206,6 +225,7 @@ export class KnowledgeGraph {
         }
       }
     }
+    this.persist(withdrawn);
     this.deps.audit.append(by, 'facts_invalidated', { recordId, reason, count: withdrawn.length, facts: withdrawn });
     return withdrawn;
   }

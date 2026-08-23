@@ -65,6 +65,29 @@ export class TerminationRoll {
     return record ? { ...record } : undefined;
   }
 
+  /**
+   * إعادة البناء من السلسلة الأبدية (المرحلة 39، البند T-99): بعد إعادة تشغيل، لا يُصدَّق
+   * سجلٌ في الذاكرة ولا لقطةٌ منفصلة — تُقرأ قيود `entity_terminated_recorded` من السجل
+   * نفسه فتعود الأجوبة القاطعة كما كانت. المصدر واحد لا اثنان (الثابت 2).
+   * لا يُعيد البناء قيدًا جديدًا لكل كيان (وإلا انتفخ السجل كل إقلاع)؛ يُسجَّل حدثٌ واحد.
+   * يُرجع عدد الكيانات المستعادة.
+   */
+  rebuildFrom(audit: AppendOnlyLog, by: EntityId = 'authority:crown_guard'): number {
+    this.records.clear();
+    for (const entry of audit.find('entity_terminated_recorded')) {
+      const detail = entry.detail as { entity?: unknown; reason?: unknown; at?: unknown };
+      if (typeof detail.entity !== 'string' || detail.entity.trim() === '') continue;
+      this.records.set(detail.entity, {
+        entity: detail.entity,
+        by: entry.actor,
+        reason: typeof detail.reason === 'string' ? detail.reason : '',
+        at: typeof detail.at === 'number' ? detail.at : entry.at,
+      });
+    }
+    this.audit.append(by, 'termination_roll_rebuilt', { entities: this.records.size });
+    return this.records.size;
+  }
+
   list(): readonly TerminationRecord[] {
     return [...this.records.values()].map((record) => ({ ...record }));
   }

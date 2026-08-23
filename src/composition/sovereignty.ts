@@ -10,7 +10,7 @@
  */
 import type { BootstrapOptions } from './state';
 import {
-  loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadScale, loadRecovery, loadRoyalAuthority,
+  loadPersistence, loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadScale, loadRecovery, loadRoyalAuthority,
 } from '../kernel/config';
 import { ResourceRegistry } from '../kernel/resource_registry';
 import { AppendOnlyLog } from '../audit/append_only_log';
@@ -24,10 +24,20 @@ import { KingMonitor } from '../crown/king_monitor';
 import { CrownGateway, DEFAULT_POLICY } from '../crown/crown_gateway';
 import { CrownGuard } from '../crown/guardians';
 import { TerminationRoll } from '../kernel/termination_roll';
+import { StateJournal } from '../data/persistence';
 
 export function composeSovereignty(
   configDir: string, now: number, options: BootstrapOptions,
 ) {
+
+  // 0) الوسيط الدائم قبل السجل — انحراف مُعلن عن قاعدة «السجل أولًا» وسببه ضرورة (RULE-008):
+  //     السجل نفسه يُدوَّن في هذا الوسيط، فلا يمكن أن يتأخر عنه. والوسيط لا يكتب قيدًا في
+  //     السجل ولا يقرأ منه، وغيابُ `persistenceDir` يعني غيابَه كليًّا: سلوكٌ سابق حرفًا بحرف.
+  //     ولا يُربط الوسيط بالسجل هنا: الربط في جذر التركيب بعد الإرجاع (انظر `rehydrateFromJournal`).
+  const persistenceConfig = loadPersistence(configDir);
+  const journal = options.persistenceDir
+    ? StateJournal.fromConfig(persistenceConfig, options.persistenceDir)
+    : null;
 
   // 1) السجل أولًا: لا خطوة تأسيس بلا تدقيق
   const audit = new AppendOnlyLog();
@@ -90,6 +100,7 @@ export function composeSovereignty(
   return {
     audit, config, quotas, regionsConfig, economyConfig, externalConfig, contractsConfig,
     enterprisesConfig, servicesConfig, researchConfig, scaleConfig, recoveryConfig,
+    persistenceConfig, journal,
     ca, registry, king, veto, killSwitch, heartbeat, monitor, terminationRoll, resources,
     gateway, guard,
   };

@@ -22,6 +22,7 @@
  *    وحده، فلا يتسلل إليها حقلٌ داخليٌّ لأن طبقةً أرجعته لجارتها.
  */
 import { AuditStore } from './audit/store';
+import { rehydrateFromJournal } from './data/persistence';
 import { resolveConfigDir } from './kernel/config';
 import { composeSovereignty } from './composition/sovereignty';
 import { composePopulation } from './composition/population';
@@ -49,7 +50,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   const sovereignty = composeSovereignty(configDir, now, options);
   const {
     audit, config, quotas, ca, registry, king, veto, killSwitch, heartbeat, monitor,
-    terminationRoll, resources, gateway, guard,
+    terminationRoll, resources, gateway, guard, persistenceConfig, journal,
     economyConfig, externalConfig, contractsConfig, enterprisesConfig, servicesConfig,
     researchConfig, scaleConfig, recoveryConfig,
   } = sovereignty;
@@ -116,6 +117,15 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     federatedOperation,
   } = operations;
 
+  // 8.5) الإرجاع من اليوميّة الدائمة (المرحلة 39، البند T-27): آخر خطوةٍ قبل الخاتمة، لأن
+  //      الإرجاع يستبدل سلسلة السجل ويستورد الذاكرة والمعرفة، فلا يجوز أن تكتب طبقةٌ بعده
+  //      كتابةً تظنّها في السلسلة القديمة. وسجل المنتهين يُعاد بناؤه من السلسلة (البند T-99).
+  const rehydrated = journal
+    ? rehydrateFromJournal(journal, { audit, memory, knowledge, terminationRoll }, 'ministry:data', {
+      rebuildTerminationRoll: persistenceConfig.policy.rebuild_termination_roll,
+    })
+    : null;
+
   // 9) خاتمة التأسيس: سجلٌّ واحد لا يكتبه غير هذا الملف
   audit.append('authority:bootstrap', 'state_online', { phase: 37, mode: 'normal' });
 
@@ -143,6 +153,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     stagingConfig, stagingManifest, operationScope, incidentMonitor, runbookRunner, stagingLedger,
     productionConfig, productionManifest, passage, continuousSupervisor, productionLedger,
     federatedOperation,
+    persistenceConfig, journal, rehydrated,
     mode: () => gateway.mode,
   };
 }

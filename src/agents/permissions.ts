@@ -204,4 +204,31 @@ export class PermissionRegistry {
       auditId: entry.hash,
     };
   }
+
+  /**
+   * تصدير للأرشيف ولقطة التعافي فقط (المرحلة 39، البند T-29). يُصدّر مع المنح
+   * ربطَ الكيان بقالبه: منحتان بلا قالب تعني فحصًا لا يعرف سقف ما مُنح.
+   * والمنح تُصدّر بمددها كما هي: منحةٌ منتهية تبقى منتهية بعد الاستعادة لا تتجدد.
+   */
+  exportAll(): {
+    readonly grants: readonly [string, Grant][];
+    readonly templates: readonly [EntityId, string][];
+  } {
+    return {
+      grants: [...this.grants.entries()].map(([k, g]) => [k, { ...g }] as [string, Grant]),
+      templates: [...this.entityTemplate.entries()].map(([e, t]) => [e, t] as [EntityId, string]),
+    };
+  }
+
+  /** استعادة كاملة: استبدال كلي ذرّي — لا دمج يُبقي منحةً سُحبت */
+  importAll(snapshot: ReturnType<PermissionRegistry['exportAll']>, by: EntityId): boolean {
+    this.grants.clear();
+    this.entityTemplate.clear();
+    for (const [k, grant] of snapshot.grants) this.grants.set(k, { ...grant });
+    for (const [entity, template] of snapshot.templates) this.entityTemplate.set(entity, template);
+    this.deps.audit.append(by, 'permissions_restored', {
+      grants: snapshot.grants.length, templates: snapshot.templates.length,
+    });
+    return true;
+  }
 }

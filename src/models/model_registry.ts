@@ -163,6 +163,37 @@ export class ModelRegistry {
     return { allowed: true, reason: 'أُبطل النموذج فورًا', auditId: entry.hash };
   }
 
+  /**
+   * تصدير للأرشيف ولقطة التعافي فقط (المرحلة 39، البند T-29). النسخة تشمل
+   * الإصدارات النشطة: لقطةٌ تنسى أيُّ إصدار نشط تُعيد دولةً تعرف نماذجها ولا تعرف
+   * أيًّا منها تعمل — وهو فراغٌ يُملأ بالتخمين لا بالإعلان.
+   */
+  exportAll(): {
+    readonly models: readonly [string, ModelRecord][];
+    readonly active: readonly [string, string][];
+  } {
+    return {
+      models: [...this.models.entries()].map(([k, m]) => [k, {
+        ...m, capabilities: [...m.capabilities], digests: [...m.digests],
+      }] as [string, ModelRecord]),
+      active: [...this.active.entries()].map(([id, v]) => [id, v] as [string, string]),
+    };
+  }
+
+  /** استعادة كاملة: استبدال كلي ذرّي — لا دمج يُحيي نموذجًا أُبطل */
+  importAll(snapshot: ReturnType<ModelRegistry['exportAll']>, by: EntityId): boolean {
+    this.models.clear();
+    this.active.clear();
+    for (const [k, model] of snapshot.models) {
+      this.models.set(k, { ...model, capabilities: [...model.capabilities], digests: [...model.digests] });
+    }
+    for (const [id, version] of snapshot.active) this.active.set(id, version);
+    this.deps.audit.append(by, 'models_restored', {
+      models: snapshot.models.length, active: snapshot.active.length,
+    });
+    return true;
+  }
+
   report(): {
     readonly total: number;
     readonly byStatus: Readonly<Record<ModelStatus, number>>;

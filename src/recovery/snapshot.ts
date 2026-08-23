@@ -14,6 +14,12 @@
  *   1) ملف القرص غلاف موثق لا مسار استعادة: يمر إلى RoyalArchive.install ثم restore فقط.
  *   2) السجل آخر ما يبدل: فتظل كتابات تجهيز الوحدات خارج الرأس المستعاد ولا تلوثه.
  *   3) السكان والحصص والشرائح والمهام يعادون معا: لا هوية بلا حجز أو تعيين.
+ *   4) (المرحلة 39، البند T-29) نطاق اللقطة يشمل سجل الوكلاء والصلاحيات والنماذج وسجل
+ *      المنتهين. لقطةٌ تعيد السكان وتنسى المنح تُعيد دولةً قادرةً بلا سلطة معلنة،
+ *      ولقطةٌ تنسى سجل المنتهين تُحيي من أُنهي. وسجل المنتهين لا يُنقل في الحمولة:
+ *      يُعاد بناؤه من السلسلة الأبدية بعد استبدالها (البند T-99) فيبقى المصدر واحدًا،
+ *      وتحمل الحمولة العددَ المتوقع ليُقارن في التحقق لا ليُصدَّق بلا فحص.
+ *   5) الغلاف صار الإصدار 2: حمولةٌ بالإصدار 1 تُرفض مغلقًا ولا تُستعاد جزئيًا.
  */
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -26,18 +32,44 @@ import { Sharding } from '../scale/sharding';
 import { FairScheduler } from '../scale/scheduler';
 import { MinistryRegistry } from '../governance/ministries';
 import { ExternalContractRegistry } from '../external/contract_registry';
+import { AgentRegistry } from '../agents/agent_registry';
+import { PermissionRegistry } from '../agents/permissions';
+import { ModelRegistry } from '../models/model_registry';
+import { TerminationRoll } from '../kernel/termination_roll';
 import { ContinuityController } from './continuity';
 
-export type RecoveryStep = 'resources' | 'sharding' | 'population' | 'scheduler' | 'ministries' | 'contracts' | 'audit';
+export type RecoveryStep = 'resources' | 'sharding' | 'population' | 'scheduler' | 'ministries'
+  | 'contracts' | 'agents' | 'permissions' | 'models' | 'audit' | 'terminations';
 export interface RecoveryStateSnapshot {
-  readonly version: 1;
+  readonly version: 2;
   readonly resources: ReturnType<ResourceRegistry['exportAll']>;
   readonly sharding: ReturnType<Sharding['exportAll']>;
   readonly population: ReturnType<PopulationRegistry['exportAll']>;
   readonly scheduler: ReturnType<FairScheduler['exportAll']>;
   readonly ministries: ReturnType<MinistryRegistry['exportAll']>;
   readonly contracts: ReturnType<ExternalContractRegistry['exportAll']>;
+  readonly agents: ReturnType<AgentRegistry['exportAll']>;
+  readonly permissions: ReturnType<PermissionRegistry['exportAll']>;
+  readonly models: ReturnType<ModelRegistry['exportAll']>;
+  /** العدد المتوقع لسجل المنتهين — يُقارن بعد إعادة بنائه من السلسلة، ولا يُنقل السجل نفسه */
+  readonly terminations: number;
   readonly audit: string;
+}
+
+/** وحدات الحالة المشمولة بنطاق اللقطة — بديل قائمة وسائط طويلة يُنسى ترتيبها */
+export interface RecoveryStateDeps {
+  readonly audit: AppendOnlyLog;
+  readonly resources: ResourceRegistry;
+  readonly sharding: Sharding;
+  readonly population: PopulationRegistry;
+  readonly scheduler: FairScheduler;
+  readonly ministries: MinistryRegistry;
+  readonly contracts: ExternalContractRegistry;
+  readonly agents: AgentRegistry;
+  readonly permissions: PermissionRegistry;
+  readonly models: ModelRegistry;
+  readonly terminationRoll: TerminationRoll;
+  readonly continuity: ContinuityController;
 }
 export interface RecoveryEnvelope {
   readonly version: 1;
@@ -49,22 +81,38 @@ function hash(value: unknown): string { return createHash('sha256').update(JSON.
 
 export class RecoveryStateParticipant implements ArchiveRecoveryParticipant {
   private failure: RecoveryStep | null = null;
-  constructor(
-    private readonly audit: AppendOnlyLog, private readonly resources: ResourceRegistry,
-    private readonly sharding: Sharding, private readonly population: PopulationRegistry,
-    private readonly scheduler: FairScheduler, private readonly ministries: MinistryRegistry,
-    private readonly contracts: ExternalContractRegistry, private readonly continuity: ContinuityController,
-  ) {}
+  private readonly audit: AppendOnlyLog;
+  private readonly resources: ResourceRegistry;
+  private readonly sharding: Sharding;
+  private readonly population: PopulationRegistry;
+  private readonly scheduler: FairScheduler;
+  private readonly ministries: MinistryRegistry;
+  private readonly contracts: ExternalContractRegistry;
+  private readonly agents: AgentRegistry;
+  private readonly permissions: PermissionRegistry;
+  private readonly models: ModelRegistry;
+  private readonly terminationRoll: TerminationRoll;
+  private readonly continuity: ContinuityController;
+  constructor(deps: RecoveryStateDeps) {
+    this.audit = deps.audit; this.resources = deps.resources; this.sharding = deps.sharding;
+    this.population = deps.population; this.scheduler = deps.scheduler; this.ministries = deps.ministries;
+    this.contracts = deps.contracts; this.agents = deps.agents; this.permissions = deps.permissions;
+    this.models = deps.models; this.terminationRoll = deps.terminationRoll; this.continuity = deps.continuity;
+  }
   injectFailure(step: RecoveryStep | null): void { this.failure = step; }
   exportAll(): RecoveryStateSnapshot {
-    return { version: 1, resources: this.resources.exportAll(), sharding: this.sharding.exportAll(),
+    return { version: 2, resources: this.resources.exportAll(), sharding: this.sharding.exportAll(),
       population: this.population.exportAll(), scheduler: this.scheduler.exportAll(),
-      ministries: this.ministries.exportAll(), contracts: this.contracts.exportAll(), audit: this.audit.export() };
+      ministries: this.ministries.exportAll(), contracts: this.contracts.exportAll(),
+      agents: this.agents.exportAll(), permissions: this.permissions.exportAll(),
+      models: this.models.exportAll(), terminations: this.terminationRoll.size, audit: this.audit.export() };
   }
   prepareRestore(): void { this.continuity.beginRestore(); }
   importAll(raw: unknown, by: string): boolean {
     const snapshot = raw as RecoveryStateSnapshot;
-    if (!snapshot || snapshot.version !== 1 || typeof snapshot.audit !== 'string') throw new Error('RECOVERY_PAYLOAD_INVALID');
+    if (!snapshot || snapshot.version !== 2 || typeof snapshot.audit !== 'string'
+      || !snapshot.agents || !snapshot.permissions || !snapshot.models
+      || typeof snapshot.terminations !== 'number') throw new Error('RECOVERY_PAYLOAD_INVALID');
     const apply = (step: RecoveryStep, fn: () => boolean): void => {
       if (this.failure === step) {
         this.failure = null; // الحقن اختبار أحادي؛ يلزم أن تستطيع عملية الرجوع نفسها العمل.
@@ -78,11 +126,21 @@ export class RecoveryStateParticipant implements ArchiveRecoveryParticipant {
     apply('scheduler', () => this.scheduler.importAll(snapshot.scheduler, by));
     apply('ministries', () => this.ministries.importAll(snapshot.ministries, by));
     apply('contracts', () => this.contracts.importAll(snapshot.contracts, by));
+    apply('agents', () => this.agents.importAll(snapshot.agents, by));
+    apply('permissions', () => this.permissions.importAll(snapshot.permissions, by));
+    apply('models', () => this.models.importAll(snapshot.models, by));
     if (this.failure === 'audit') {
       this.failure = null;
       throw new Error('RECOVERY_INJECTED_audit');
     }
     this.audit.replaceFrom(snapshot.audit);
+    // سجل المنتهين آخر ما يُبنى: مصدره السلسلة، فلا يُبنى إلا بعد استبدالها (البند T-99).
+    if (this.failure === 'terminations') {
+      this.failure = null;
+      throw new Error('RECOVERY_INJECTED_terminations');
+    }
+    this.expectedTerminations = snapshot.terminations;
+    this.terminationRoll.rebuildFrom(this.audit, by);
     return true;
   }
   verify(): boolean {
@@ -91,8 +149,11 @@ export class RecoveryStateParticipant implements ArchiveRecoveryParticipant {
     return this.audit.verifyIntegrity().valid
       && identities.length === resource.length
       && identities.every((identity) => resource.includes(identity.agentId))
+      && (this.expectedTerminations === null || this.terminationRoll.size >= this.expectedTerminations)
       && this.sharding.auditRecords(identities).length === 0;
   }
+  /** العدد المتوقع لسجل المنتهين من آخر حمولة مستعادة — `null` قبل أي استعادة */
+  private expectedTerminations: number | null = null;
 }
 
 export class RecoverySnapshotStore {
