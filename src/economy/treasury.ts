@@ -16,6 +16,11 @@
  *   5) الصارف ليس المستفيد: لا يصرف أحد لنفسه ولو في نطاق اختصاصه
  *   6) **لا رصيد موازٍ**: الخزانة لا تحتفظ بعدّاد خاص — رصيدها استعلام من الدفتر (حجّة واحدة)
  *   7) الخزانة المجمَّدة لا تصرف شيئًا ولو كان مُقرًّا ومموَّلًا — والتجميد والفكّ بأمر ملكي
+ *   9) **ما تراكم يُدوَّن لحظتَه** (T-125): المصروفُ قيدٌ يُضاف ولا يُمحى، والتجميدُ
+ *      والعدّادُ حالةٌ يُغني أحدثُها عمّا قبله. والعدّادُ ليس زينةً: معرّفُ المصروف هو
+ *      معرّفُ قيدِ الدفتر، فعدّادٌ يعود إلى الصفر بعد إقلاعٍ يصطدم بقيدٍ قائمٍ فيُرفض الصرف.
+ *  10) **الإرجاعُ لا يُنفّذ فعلًا**: `restore` يُثبت حالةً مشهودةً ولا ينادي `disburse`،
+ *      فلا يُقيَّد صرفٌ قديمٌ مرّتين ولا يُحجز سقفٌ ثانيةً.
  *   8) **لا يخرج مال بغياب النبض الملكي** (RULE-007): في الوضع الحمائي أو المتوقف
  *      يُرفض الصرف ولو كان دون الحدّ ومُقرًّا. والقبض (receive) يبقى جائزًا
  *      عن قصد: حجز الوارد لا يحمي الدولة بل يُخرج المال من الدفتر إلى العدم.
@@ -29,6 +34,7 @@ import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
 import { Ledger, FINANCE_MINISTRY, isValidAmount } from './ledger';
 import { Budget, TREASURY_ACTOR } from './budget';
+import type { DurableSink } from '../data/persistence';
 
 export interface DisbursementInput {
   readonly line: string;
@@ -53,6 +59,14 @@ export interface Disbursement {
 export type TreasuryResult =
   | { readonly ok: true; readonly disbursement: Disbursement; readonly auditId: string }
   | { readonly ok: false; readonly reason: string; readonly auditId: string };
+
+/** لقطةُ إرجاعٍ للخزينة (T-125): مصروفاتٌ مشهودةٌ وحالةُ تجميدٍ وعدّاد */
+export interface TreasurySnapshot {
+  readonly disbursements: readonly Disbursement[];
+  readonly frozen: boolean;
+  readonly frozenReason: string | null;
+  readonly sequence: number;
+}
 
 export type FreezeResult =
   | { readonly ok: true; readonly frozen: boolean; readonly auditId: string }
@@ -83,9 +97,19 @@ export class Treasury {
   private frozen = false;
   private frozenReason: string | null = null;
   private sequence = 0;
+  private sink: DurableSink | null = null;
 
   constructor(private readonly deps: TreasuryDeps) {
     this.actorId = deps.actorId ?? FINANCE_MINISTRY;
+  }
+
+  /** ثابت 9: يُربط بعد الإرجاع لا قبله — وإلا دُوِّن المُستعادُ ثانيةً كلَّ إقلاع */
+  attachJournal(sink: DurableSink): void { this.sink = sink; }
+
+  private journalState(): void {
+    this.sink?.record('treasury_state', {
+      frozen: this.frozen, frozenReason: this.frozenReason, sequence: this.sequence,
+    });
   }
 
   /**
@@ -180,6 +204,7 @@ export class Treasury {
       entryId: posted.entry.entryId,
     };
     this.disbursements.push(disbursement);
+    this.sink?.record('treasury_disbursement', { disbursement, sequence: this.sequence });
     const entry = this.deps.audit.append(this.actorId, 'disbursement_executed', {
       disbursementId, line: input.line, amount: input.amount, to: input.to,
       purpose: disbursement.purpose, entryId: disbursement.entryId,
@@ -220,6 +245,11 @@ export class Treasury {
       purpose: memo.trim(), by: this.actorId, at: now, royalCommandId: null,
       entryId: posted.entry.entryId,
     };
+    // الإيصالُ **لا يُدوَّن كمصروف**: `receive` لا يُلحقه بـ`disbursements` أصلًا، فتدوينُه
+    // بصنفِ المصروفِ يُضخّم المُستعادَ بإيصالاتٍ لم تكن فيه (T-125). والمُدوَّنُ العدّادُ
+    // وحده، وهو الذي يجب أن ينجو: `rcpt:N` معرّفُ قيدٍ في الدفتر، وعدّادٌ يعود صفرًا
+    // يصطدم بقيدٍ قائمٍ فيُرفض كلُّ إيرادٍ بعد الإقلاع.
+    this.journalState();
     const entry = this.deps.audit.append(this.actorId, 'revenue_received', {
       receiptId, amount, source, entryId: receipt.entryId, balanceAfter: this.balance(),
     });
@@ -244,6 +274,7 @@ export class Treasury {
 
     this.frozen = true;
     this.frozenReason = reason.trim();
+    this.journalState();
     const entry = this.deps.audit.append(this.actorId, 'treasury_frozen', {
       reason: this.frozenReason, commandId: command.payload.commandId, balance: this.balance(),
     });
@@ -269,6 +300,7 @@ export class Treasury {
     this.frozen = false;
     const previous = this.frozenReason;
     this.frozenReason = null;
+    this.journalState();
     const entry = this.deps.audit.append(this.actorId, 'treasury_unfrozen', {
       reason: reason.trim(), previous, commandId: command.payload.commandId,
     });
@@ -297,6 +329,29 @@ export class Treasury {
       singleDisbursementMax: this.deps.singleDisbursementMax,
       overdraftAllowed: this.deps.overdraftAllowed,
     };
+  }
+
+  /**
+   * بابُ الإرجاع الذرّيّ (T-125 — ثابت 10). يُثبت ما شهدت به اليوميّة ولا يُنشئ شيئًا:
+   * المصروفاتُ تُستبدل بالمشهودة، والعدّادُ يُرفع إلى أعلى معرّفٍ رآه فلا يتصادم.
+   * ويرفض ما لا يُصدَّق: مصروفٌ لا قيدَ له في الدفتر ⇒ RECOVERY_TREASURY_ENTRY_MISSING.
+   */
+  restore(snapshot: TreasurySnapshot, by: EntityId): void {
+    for (const disbursement of snapshot.disbursements) {
+      if (this.deps.ledger.entry(disbursement.entryId) === null) {
+        throw new Error('RECOVERY_TREASURY_ENTRY_MISSING');
+      }
+    }
+    this.disbursements.splice(0, this.disbursements.length, ...snapshot.disbursements.map(
+      (d) => ({ ...d }),
+    ));
+    this.frozen = snapshot.frozen;
+    this.frozenReason = snapshot.frozenReason;
+    this.sequence = Math.max(snapshot.sequence, this.sequence);
+    this.deps.audit.append(by, 'treasury_restored', {
+      disbursements: this.disbursements.length, frozen: this.frozen,
+      sequence: this.sequence, balance: this.balance(),
+    });
   }
 
   private authorize(command: SignedRoyalCommand, now: number): Decision {

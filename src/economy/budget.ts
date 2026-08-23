@@ -25,6 +25,7 @@ import { Decision, EntityId, SignedRoyalCommand } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
 import { FINANCE_MINISTRY, isValidAmount } from './ledger';
+import type { DurableSink } from '../data/persistence';
 
 /** الجهة الوحيدة التي تحجز على بند: الخزانة — والحجز لا يقع من صاحب البند */
 export const TREASURY_ACTOR: EntityId = 'treasury:general';
@@ -70,6 +71,7 @@ export class Budget {
   private readonly lines = new Map<string, Appropriation>();
   private readonly actorId: EntityId;
   private ownerProbe: OwnerProbe | null = null;
+  private sink: DurableSink | null = null;
 
   constructor(private readonly deps: BudgetDeps) {
     this.actorId = deps.actorId ?? FINANCE_MINISTRY;
@@ -79,6 +81,38 @@ export class Budget {
    * ربط مصدر التحقق من صاحب البند. لا سجل تدقيق هنا عن قصد (درس المرحلة 23):
    * التأسيس يُختم بـ state_online وحده، وغياب الربط ليس صامتًا لأن الإقرار يُرفض ويُسجَّل.
    */
+  /** T-125: يُربط بعد الإرجاع لا قبله — وإلا دُوِّن المُستعادُ ثانيةً كلَّ إقلاع */
+  attachJournal(sink: DurableSink): void { this.sink = sink; }
+
+  /**
+   * كلُّ تغييرٍ على بندٍ يمرّ من هنا: يُخزَّن ثم يُدوَّن (T-125).
+   * والبابُ واحدٌ عن قصد: بابٌ ثانٍ يُغري بتغييرٍ لا يُدوَّن — وذاك عينُ الفجوة.
+   */
+  private commit(appropriation: Appropriation): void {
+    this.lines.set(appropriation.line, appropriation);
+    this.sink?.record('budget_appropriation', { appropriation });
+  }
+
+  /**
+   * بابُ الإرجاع الذرّيّ (T-125): يُثبت بنودًا مشهودةً ولا يُقرّ بندًا من عنده.
+   * ويرفض ما يخرق ثابت 4: مجموعُ سقوفٍ فوق السقف الكلّي المعلن ⇒
+   * RECOVERY_BUDGET_CEILING_TOTAL — فلا يُدخل الإقلاعُ ما ترفضه البوابة.
+   */
+  restore(lines: readonly Appropriation[], by: EntityId): void {
+    let ceilings = 0;
+    for (const line of lines) {
+      if (line.lapsedAt === null) ceilings += line.ceiling;
+      if (line.spent > line.ceiling) throw new Error('RECOVERY_BUDGET_OVERSPENT');
+    }
+    if (ceilings > this.deps.ceilingTotal) throw new Error('RECOVERY_BUDGET_CEILING_TOTAL');
+    this.lines.clear();
+    for (const line of lines) this.lines.set(line.line, { ...line });
+    this.deps.audit.append(by, 'budget_restored', {
+      lines: this.lines.size, active: this.active().length,
+      ceilings: this.totalCeilings(), spent: this.totalSpent(),
+    });
+  }
+
   bindOwnerProbe(probe: OwnerProbe): void {
     this.ownerProbe = probe;
   }
@@ -123,7 +157,7 @@ export class Budget {
       periodStart: input.periodStart, periodEnd: input.periodEnd,
       commandId: command.payload.commandId, lapsedAt: null, lapsedAmount: null,
     };
-    this.lines.set(appropriation.line, appropriation);
+    this.commit(appropriation);
     const entry = this.deps.audit.append(this.actorId, 'appropriation_declared', {
       line: appropriation.line, owner: appropriation.owner, ceiling: appropriation.ceiling,
       periodStart: appropriation.periodStart, periodEnd: appropriation.periodEnd,
@@ -161,7 +195,7 @@ export class Budget {
     if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
 
     const updated: Appropriation = { ...current, ceiling: newCeiling };
-    this.lines.set(line, updated);
+    this.commit(updated);
     const entry = this.deps.audit.append(this.actorId, 'appropriation_amended', {
       line, from: current.ceiling, to: newCeiling, spent: current.spent,
       reason: reason.trim(), commandId: command.payload.commandId,
@@ -202,7 +236,7 @@ export class Budget {
     }
 
     const updated: Appropriation = { ...current, spent: current.spent + amount };
-    this.lines.set(line, updated);
+    this.commit(updated);
     const entry = this.deps.audit.append(this.actorId, 'budget_reserved', {
       line, amount, purpose: purpose.trim(), spent: updated.spent,
       remaining: updated.ceiling - updated.spent,
@@ -228,7 +262,7 @@ export class Budget {
     if (amount > current.spent) return refuse('لا فكّ لأكثر من المحجوز');
 
     const updated: Appropriation = { ...current, spent: current.spent - amount };
-    this.lines.set(line, updated);
+    this.commit(updated);
     const entry = this.deps.audit.append(this.actorId, 'budget_released', {
       line, amount, reason: reason.trim(), spent: updated.spent, at: now,
     });
@@ -250,7 +284,7 @@ export class Budget {
 
     const unspent = current.ceiling - current.spent;
     const lapsed: Appropriation = { ...current, lapsedAt: now, lapsedAmount: unspent };
-    this.lines.set(line, lapsed);
+    this.commit(lapsed);
     const entry = this.deps.audit.append(this.actorId, 'appropriation_lapsed', {
       line, ceiling: current.ceiling, spent: current.spent, lapsedAmount: unspent,
       carryover: 'forbidden',

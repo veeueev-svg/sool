@@ -25,6 +25,7 @@ import { Decision, EntityId, SignedRoyalCommand } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
 import { Ledger, isValidAmount } from './ledger';
+import type { DurableSink } from '../data/persistence';
 
 /** هدف الأمر الملكي لكل فعل إصدار أو إحراق */
 export const UNIT_TARGET: EntityId = 'economy:unit';
@@ -55,12 +56,44 @@ export class DigitalUnit {
   private issued = 0;
   private burned = 0;
   private readonly actorId: EntityId;
+  private sink: DurableSink | null = null;
 
   constructor(private readonly deps: DigitalUnitDeps) {
     this.actorId = deps.actorId ?? 'authority:crown_guard';
   }
 
   /** 1) الإصدار: بأمر ملكي، تحت السقف المعلن، وبقيد مزدوج (ثوابت 1–4) */
+  /** T-125: يُربط بعد الإرجاع لا قبله — وإلا دُوِّن المُستعادُ ثانيةً كلَّ إقلاع */
+  attachJournal(sink: DurableSink): void { this.sink = sink; }
+
+  /** عدّادا العرض حالةٌ واحدة: أحدثُ قيدٍ يُغني عمّا قبله (T-125) */
+  private journalSupply(): void {
+    this.sink?.record('unit_supply', {
+      code: this.deps.declaration.code, issued: this.issued, burned: this.burned,
+    });
+  }
+
+  /**
+   * بابُ الإرجاع الذرّيّ (T-125): يُثبت عدّادَي العرض المشهودَين، ولا يُصدر ولا يحرق.
+   * ويرفض ما يخرق سقفَ العرض المعلن ⇒ RECOVERY_UNIT_SUPPLY_MAX، وما ينقض المطابقةَ
+   * مع الدفتر ⇒ RECOVERY_UNIT_INCONSISTENT: العدّادُ مرآةٌ للدفتر لا حجّةٌ فوقه.
+   */
+  restore(issued: number, burned: number, by: EntityId): void {
+    if (!Number.isSafeInteger(issued) || !Number.isSafeInteger(burned)) {
+      throw new Error('RECOVERY_UNIT_COUNTER_INVALID');
+    }
+    if (issued < 0 || burned < 0 || burned > issued) throw new Error('RECOVERY_UNIT_COUNTER_INVALID');
+    if (issued - burned > this.deps.declaration.supplyMax) {
+      throw new Error('RECOVERY_UNIT_SUPPLY_MAX');
+    }
+    this.issued = issued;
+    this.burned = burned;
+    if (!this.reconcile().consistent) throw new Error('RECOVERY_UNIT_INCONSISTENT');
+    this.deps.audit.append(by, 'unit_restored', {
+      code: this.deps.declaration.code, issued, burned, circulating: this.circulating(),
+    });
+  }
+
   issue(command: SignedRoyalCommand, amount: number, reason: string, now = Date.now()): UnitResult {
     const refuse = (why: string, extra: Record<string, unknown> = {}): UnitResult => {
       const entry = this.deps.audit.append(this.actorId, 'issuance_refused', {
@@ -96,6 +129,7 @@ export class DigitalUnit {
     if (!posted.ok) return refuse(`قيد الإصدار مرفوض: ${posted.reason}`);
 
     this.issued += amount;
+    this.journalSupply();
     const entry = this.deps.audit.append(this.actorId, 'unit_issued', {
       amount, reason: reason.trim(), commandId: command.payload.commandId,
       entryId: posted.entry.entryId, circulating: this.circulating(),
@@ -139,6 +173,7 @@ export class DigitalUnit {
     if (!posted.ok) return refuse(`قيد الإحراق مرفوض: ${posted.reason}`);
 
     this.burned += amount;
+    this.journalSupply();
     const entry = this.deps.audit.append(this.actorId, 'unit_burned', {
       amount, reason: reason.trim(), commandId: command.payload.commandId,
       entryId: posted.entry.entryId, circulating: this.circulating(),

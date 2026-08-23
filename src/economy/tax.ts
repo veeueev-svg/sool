@@ -26,6 +26,7 @@ import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
 import { FINANCE_MINISTRY, isValidAmount } from './ledger';
 import { Treasury } from './treasury';
+import type { DurableSink } from '../data/persistence';
 
 /** هدف الأمر الملكي لكل إعفاء */
 export const REVENUE_TARGET: EntityId = 'economy:revenue';
@@ -74,12 +75,40 @@ export class RevenueService {
   private readonly levies = new Map<string, Levy>();
   private readonly actorId: EntityId;
   private sequence = 0;
+  private sink: DurableSink | null = null;
 
   constructor(private readonly deps: RevenueDeps) {
     this.actorId = deps.actorId ?? FINANCE_MINISTRY;
   }
 
   /** 1) التقدير: بنصّ معلن، وبلا أثر رجعي، وبحساب صحيح (ثوابت 1–4) */
+  /** T-125: يُربط بعد الإرجاع لا قبله — وإلا دُوِّن المُستعادُ ثانيةً كلَّ إقلاع */
+  attachJournal(sink: DurableSink): void { this.sink = sink; }
+
+  /** كلُّ تغييرٍ على التزامٍ يمرّ من هنا: يُخزَّن ثم يُدوَّن (T-125) */
+  private commit(levy: Levy): void {
+    this.levies.set(levy.levyId, levy);
+    this.sink?.record('tax_levy', { levy, sequence: this.sequence });
+  }
+
+  /**
+   * بابُ الإرجاع الذرّيّ (T-125): يُثبت التزاماتٍ مشهودةً ويرفع العدّاد فلا يتصادم
+   * معرّفٌ جديدٌ بقديم. ويرفض ما لا يُصدَّق: محصَّلٌ بلا قيدِ إيصالٍ في الدفتر ⇒
+   * RECOVERY_TAX_RECEIPT_MISSING — فالمُحصَّلُ دعوى، وقيدُ الدفتر شاهدُها.
+   */
+  restore(levies: readonly Levy[], sequence: number, by: EntityId): void {
+    for (const levy of levies) {
+      if (levy.status !== 'collected') continue;
+      if (levy.receiptEntryId === null) throw new Error('RECOVERY_TAX_RECEIPT_MISSING');
+    }
+    this.levies.clear();
+    for (const levy of levies) this.levies.set(levy.levyId, { ...levy });
+    this.sequence = Math.max(sequence, this.sequence);
+    this.deps.audit.append(by, 'revenue_restored', {
+      levies: this.levies.size, collectedTotal: this.collectedTotal(), sequence: this.sequence,
+    });
+  }
+
   assess(
     base: string, payer: EntityId, amountBase: number, occurredAt: number, now = Date.now(),
   ): LevyResult {
@@ -120,7 +149,7 @@ export class RevenueService {
       ratePerMille: rate.ratePerMille, levied, status: 'assessed',
       occurredAt, assessedAt: now, collectedAt: null, receiptEntryId: null, waiveReason: null,
     };
-    this.levies.set(levy.levyId, levy);
+    this.commit(levy);
     const entry = this.deps.audit.append(this.actorId, 'levy_assessed', {
       levyId: levy.levyId, base, payer, amountBase, ratePerMille: levy.ratePerMille,
       levied, occurredAt, declaredAt: rate.declaredAt,
@@ -151,7 +180,7 @@ export class RevenueService {
       ...levy, status: 'collected', collectedAt: now,
       receiptEntryId: received.disbursement.entryId,
     };
-    this.levies.set(levyId, collected);
+    this.commit(collected);
     const entry = this.deps.audit.append(this.actorId, 'levy_collected', {
       levyId, base: levy.base, payer: levy.payer, levied: levy.levied,
       receiptEntryId: collected.receiptEntryId,
@@ -187,7 +216,7 @@ export class RevenueService {
     if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
 
     const waived: Levy = { ...levy, status: 'waived', waiveReason: reason.trim() };
-    this.levies.set(levyId, waived);
+    this.commit(waived);
     const entry = this.deps.audit.append(this.actorId, 'levy_waived', {
       levyId, payer: levy.payer, levied: levy.levied, reason: waived.waiveReason,
       commandId: command.payload.commandId,

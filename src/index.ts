@@ -24,6 +24,7 @@
 import { AuditStore } from './audit/store';
 import { rehydrateFromJournal } from './data/persistence';
 import { rehydrateStateFromJournal } from './data/rehydrate_state';
+import { rehydrateFiscalFromJournal } from './data/rehydrate_fiscal';
 import { resolveConfigDir } from './kernel/config';
 import { composeSovereignty } from './composition/sovereignty';
 import { composePopulation } from './composition/population';
@@ -137,10 +138,26 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
       ledger, contracts, population: populationRegistry,
     }, 'ministry:data')
     : null;
+  // 8.7) إرجاعُ الماليّة والنافذة الخارجيّة (المرحلة 39، البند T-125). بعد 8.6 لا قبلها:
+  //      بابُ الخزينة يتحقّق من قيدِ كلِّ مصروفٍ في الدفتر، والدفترُ إنّما أُرجع قبل قليل.
+  //      والقياسُ الذي أوجب البند في docs/audit/measurements/phase-39-T125.txt: بندُ موازنةٍ
+  //      مستهلَكٌ 1,800,000 يعود 0، وسقفٌ 60,000,000 يُعاد تعبئتُه بإقلاعٍ والدفترُ يشهد بالصرف.
+  const rehydratedFiscal = journal
+    ? rehydrateFiscalFromJournal(journal.read(), {
+      treasury, budget, revenue, unit, accounts: externalAccounts, payments, risk: partnerRisk,
+    }, 'ministry:data')
+    : null;
   if (journal) {
     ledger.attachJournal(journal);
     contracts.attachJournal(journal);
     populationRegistry.attachJournal(journal);
+    treasury.attachJournal(journal);
+    budget.attachJournal(journal);
+    revenue.attachJournal(journal);
+    unit.attachJournal(journal);
+    externalAccounts.attachJournal(journal);
+    payments.attachJournal(journal);
+    partnerRisk.attachJournal(journal);
   }
 
   // 9) خاتمة التأسيس: سجلٌّ واحد لا يكتبه غير هذا الملف
@@ -170,7 +187,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     stagingConfig, stagingManifest, operationScope, incidentMonitor, runbookRunner, stagingLedger,
     productionConfig, productionManifest, passage, continuousSupervisor, productionLedger,
     federatedOperation,
-    persistenceConfig, journal, rehydrated, rehydratedState,
+    persistenceConfig, journal, rehydrated, rehydratedState, rehydratedFiscal,
     mode: () => gateway.mode,
   };
 }

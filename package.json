@@ -21,6 +21,7 @@
     "bench:load": "tsc && node dist/scripts/bench_load.js",
     "bench:recovery": "npm run build && bash scripts/restore.sh --bench",
     "probe:compaction": "npm run build && node dist/scripts/compaction_probe.js 200",
+    "probe:fiscal-scope": "npm run build && node dist/scripts/fiscal_scope_probe.js",
     "probe:durability-scope": "npm run build && node dist/scripts/durability_scope_probe.js",
     "probe:journal-cost": "npm run build && node scripts/journal_cost_probe.mjs",
     "probe:confinement": "npm run build && node dist/scripts/confinement_probe.js",

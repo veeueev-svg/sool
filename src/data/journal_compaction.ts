@@ -78,8 +78,31 @@ export function durableIdentity(entry: DurableRecord): string | null {
     // تُحدَّث (الإنهاء يُعدّل حقولَه) فأحدثُ قيدٍ للعقد نفسه يُغني عمّا قبله.
     case 'contract_record':
       return typeof payload.contractId === 'string' ? `contract:${payload.contractId}` : null;
+    // T-125: الوحداتُ الماليّةُ والخارجيّة. القسمةُ ليست تسميةً بل أثرًا: ما كان **حالةً**
+    // يُغني أحدثُه عمّا قبله، وما كان **واقعةً** لا يُسقَط قطّ وإن تكرّر شكلُه — فالمصروفُ
+    // والدفعةُ والتقديرُ والخرقُ تاريخٌ يُطالب به، لا صورةٌ آنيّة.
+    case 'treasury_state':
+      // حالةُ تجميدٍ وعدّاد: لقطةٌ واحدةٌ كاملة، فأحدثُها يكفي.
+      return 'treasury_state';
+    case 'budget_appropriation':
+      return typeof (payload.appropriation as { line?: unknown })?.line === 'string'
+        ? `budget:${(payload.appropriation as { line: string }).line}` : null;
+    case 'tax_levy':
+      return typeof (payload.levy as { levyId?: unknown })?.levyId === 'string'
+        ? `levy:${(payload.levy as { levyId: string }).levyId}` : null;
+    case 'unit_supply':
+      return typeof payload.code === 'string' ? `unit:${payload.code}` : null;
+    case 'external_account':
+      return typeof (payload.account as { accountId?: unknown })?.accountId === 'string'
+        ? `account:${(payload.account as { accountId: string }).accountId}` : null;
+    case 'external_payment':
+      // الدفعةُ حالةٌ تُقرّ وتُرفع (إقرارُ استلامٍ · تجاوزُ أجل)، فأحدثُ صورةٍ لها تكفي —
+      // وهي مُعرَّفةٌ بمعرّفٍ ثابت، فلا يُفقد تاريخُ دفعةٍ بإسقاطِ صورةٍ أقدمَ منها.
+      return typeof (payload.payment as { paymentId?: unknown })?.paymentId === 'string'
+        ? `payment:${(payload.payment as { paymentId: string }).paymentId}` : null;
     default:
       // قيد التدقيق وعلامات الضغط السابقة: لا هويّة ⇒ لا إسقاط (ثابت 2).
+      // ومنها `treasury_disbursement` و`partner_assessment` و`partner_breach` عن قصد.
       return null;
   }
 }

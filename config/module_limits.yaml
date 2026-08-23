@@ -15,9 +15,13 @@ scope: "src/**/*.ts + tests/**/*.ts + scripts/**/*.ts"
 # والمرحلة 39 (T-114): صفّ src/law/courts.ts حُذف كذلك — كان 404 وصار 347 سطرًا بعد إخراج
 # الأشكال إلى case_types.ts والإحصاء إلى case_report.ts والحرَس إلى case_guards.ts.
 # فالاستثناءات: 6 ← 5.
+# والمرحلة 39 (T-125): صفّ src/external/account_registry.ts حُذف كذلك — كان 402 (حدَّ سقفه
+# الخاصّ بالضبط، فلا مساحةَ لسطرٍ واحد) وصار 370 سطرًا بعد إخراج الأشكال إلى
+# account_types.ts وقراءةِ الحالِ والتقريرِ إلى account_view.ts. والدافعُ عملٌ لا تجميل:
+# البندُ T-125 يستلزم `attachJournal` و`restore` في الوحدة، ولا يُضاف سطرٌ إلى ملفٍ على حدِّه.
+# فالاستثناءات: 5 ← 4.
 exceptions:
   - {path: src/services/human_research.ts, max_lines: 531, item: T-113}
   - {path: src/federation/region_registry.ts, max_lines: 454, item: T-113}
   - {path: src/load/load_drill.ts, max_lines: 453, item: T-113}
   - {path: src/services/factory_runtime.ts, max_lines: 422, item: T-113}
-  - {path: src/external/account_registry.ts, max_lines: 402, item: T-113}

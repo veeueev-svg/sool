@@ -31,6 +31,13 @@ export const DURABLE_KINDS = [
   // وسجلُ العقود الخارجيّة، والسكان. والسكانُ بالدفعة لا بالهويّة — والرقمُ المقيس
   // هو الحجّة (docs/audit/measurements/phase-39-T122-T123.txt): 4.34ms للقيد الواحد.
   'ledger_entry', 'contract_record', 'population_batch', 'population_terminated',
+  // T-125: الوحداتُ الماليّةُ والخارجيّة. حالةٌ تُحدَّث (`treasury_state` · `unit_supply` ·
+  // `budget_appropriation` · `tax_levy` · `external_account`) وسلسلةٌ تُضاف ولا تُمحى
+  // (`treasury_disbursement` · `external_payment` · `partner_assessment` · `partner_breach`).
+  // والفرقُ ليس تسميةً: الأولى يُغني أحدثُها عمّا قبله في الضغط، والثانية لا تُسقَط قطّ.
+  'treasury_disbursement', 'treasury_state', 'budget_appropriation', 'tax_levy',
+  'unit_supply', 'external_account', 'external_payment', 'partner_assessment',
+  'partner_breach',
 ] as const;
 export type DurableKind = (typeof DURABLE_KINDS)[number];
 

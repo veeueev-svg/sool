@@ -28,60 +28,16 @@ import { Decision, EntityId, SignedRoyalCommand } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
 import { Ledger } from '../economy/ledger';
+export * from './account_types';
+import {
+  AccountResult, DeclaredCounterparty, EgressProbe, ExternalAccount, ObligationProbe,
+  OpenAccountInput,
+} from './account_types';
+import type { DurableSink } from '../data/persistence';
+import { AccountReport, accountInactiveReason, buildAccountReport, isAccountActive } from './account_view';
 
 /** وزارة الخارجية: صاحبة الاختصاص في النوافذ الخارجية — تطلب ولا تدفع */
 export const FOREIGN_MINISTRY: EntityId = 'ministry:foreign_affairs';
-
-/** نظير خارجي معلن في config/external.yaml — سقوفه إعلان لا طلب (ثابت 3) */
-export interface DeclaredCounterparty {
-  readonly id: string;
-  readonly name: string;
-  readonly host: string;
-  readonly port: number;
-  readonly purpose: string;
-  readonly singleMax: number;
-  readonly dailyMax: number;
-  readonly totalCap: number;
-}
-
-export interface ExternalAccount {
-  readonly accountId: string;
-  readonly name: string;
-  readonly host: string;
-  readonly port: number;
-  readonly purpose: string;
-  /** الحساب المقابل في الدفتر المزدوج — كل دفعة تُقيَّد فيه */
-  readonly ledgerAccount: string;
-  readonly singleMax: number;
-  readonly dailyMax: number;
-  readonly totalCap: number;
-  readonly openedBy: EntityId;
-  readonly openedAt: number;
-  readonly expiresAt: number;
-  readonly commandId: string;
-  suspended: boolean;
-  suspendedBy: EntityId | null;
-  suspendedReason: string | null;
-  suspendedAt: number | null;
-  closedAt: number | null;
-}
-
-export interface OpenAccountInput {
-  readonly counterparty: string;
-  readonly expiresAt: number;
-  readonly requestedBy: EntityId;
-  readonly justification: string;
-}
-
-export type AccountResult =
-  | { readonly ok: true; readonly account: ExternalAccount; readonly auditId: string }
-  | { readonly ok: false; readonly reason: string; readonly auditId: string };
-
-/** هل للمضيف إذن خروج معلن غير منتهٍ؟ (ثابت 5) — يُربط من حارس الخروج */
-export type EgressProbe = (host: string, port: number, now: number) => boolean;
-
-/** هل للحساب دفعة لم يُقرّ استلامها؟ (ثابت 7) — يُربط من ضوابط الدفع */
-export type ObligationProbe = (accountId: string) => number;
 
 export interface AccountRegistryDeps {
   readonly audit: AppendOnlyLog;
@@ -99,6 +55,7 @@ export interface AccountRegistryDeps {
 
 export class ExternalAccountRegistry {
   private readonly accounts = new Map<string, ExternalAccount>();
+  private sink: DurableSink | null = null;
   private readonly declared = new Map<string, DeclaredCounterparty>();
   private readonly ministryId: EntityId;
   private egressProbe: EgressProbe | null = null;
@@ -197,6 +154,7 @@ export class ExternalAccountRegistry {
       closedAt: null,
     };
     this.accounts.set(declared.id, account);
+    this.journalAccount(account);
     const entry = this.deps.audit.append(this.ministryId, 'external_account_opened', {
       accountId: account.accountId, host: account.host, port: account.port,
       ledgerAccount, expiresAt: account.expiresAt,
@@ -230,6 +188,7 @@ export class ExternalAccountRegistry {
     account.suspendedBy = by;
     account.suspendedReason = reason.trim();
     account.suspendedAt = now;
+    this.journalAccount(account);
     const entry = this.deps.audit.append(by, 'external_account_suspended', {
       accountId, reason: account.suspendedReason, at: now, immediate: true,
     });
@@ -257,6 +216,7 @@ export class ExternalAccountRegistry {
       account.suspendedBy = by;
       account.suspendedReason = reason.trim();
       account.suspendedAt = now;
+      this.journalAccount(account);
       affected.push(account.accountId);
     }
     const entry = this.deps.audit.append(by, 'external_accounts_suspended_all', {
@@ -305,6 +265,7 @@ export class ExternalAccountRegistry {
     account.suspendedBy = null;
     account.suspendedReason = null;
     account.suspendedAt = null;
+    this.journalAccount(account);
     const entry = this.deps.audit.append(by, 'external_account_resumed', {
       accountId, reason: reason.trim(), previousBy, previousReason,
       commandId: command.payload.commandId,
@@ -339,6 +300,7 @@ export class ExternalAccountRegistry {
     if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
 
     account.closedAt = now;
+    this.journalAccount(account);
     const entry = this.deps.audit.append(by, 'external_account_closed', {
       accountId, reason: reason.trim(), paidTotal: this.paidTotal(accountId),
       commandId: command.payload.commandId,
@@ -348,19 +310,12 @@ export class ExternalAccountRegistry {
 
   /** الحساب القائم فعلًا: موجود، غير مغلق، غير معلَّق، وغير منتهي المدة (ثوابت 2 و4) */
   isActive(accountId: string, now = Date.now()): boolean {
-    const account = this.accounts.get(accountId);
-    if (!account) return false;
-    return account.closedAt === null && !account.suspended && account.expiresAt > now;
+    return isAccountActive(this.accounts.get(accountId), now);
   }
 
   /** سبب عدم القيام — يُستعمل في الرفض حتى لا يكون الرفض بلا بيان (RULE-006) */
   inactiveReason(accountId: string, now = Date.now()): string | null {
-    const account = this.accounts.get(accountId);
-    if (!account) return 'حساب خارجي غير معلن ولا مفتوح';
-    if (account.closedAt !== null) return 'حساب مغلق';
-    if (account.suspended) return `حساب معلَّق: ${account.suspendedReason ?? 'بلا بيان'}`;
-    if (account.expiresAt <= now) return 'انتهت مدة الحساب — لا تمديد ضمني';
-    return null;
+    return accountInactiveReason(this.accounts.get(accountId), now);
   }
 
   /** ثابت 8: ما دُفع للنظير يُقرأ من الدفتر — لا عدّاد في هذا السجل يُصدَّق دونه */
@@ -381,22 +336,35 @@ export class ExternalAccountRegistry {
     return [...this.accounts.values()].filter((a) => this.isActive(a.accountId, now));
   }
 
-  report(now = Date.now()): {
-    declared: number; opened: number; active: number; suspended: number; closed: number;
-    paidTotal: number; unitConvertible: boolean; maxTermMs: number;
-  } {
-    let suspended = 0;
-    let closed = 0;
-    let paid = 0;
-    for (const account of this.accounts.values()) {
-      if (account.suspended) suspended += 1;
-      if (account.closedAt !== null) closed += 1;
-      paid += this.paidTotal(account.accountId);
-    }
-    return {
-      declared: this.declared.size, opened: this.accounts.size,
-      active: this.active(now).length, suspended, closed, paidTotal: paid,
+  report(now = Date.now()): AccountReport {
+    return buildAccountReport({
+      accounts: [...this.accounts.values()], declaredCount: this.declared.size, now,
+      paidOf: (account) => this.paidTotal(account.accountId),
       unitConvertible: this.deps.unitConvertible, maxTermMs: this.deps.maxTermMs,
-    };
+    });
+  }
+
+  /** T-125: يُربط بعد الإرجاع لا قبله — وإلا دُوِّن المُستعادُ ثانيةً كلَّ إقلاع */
+  attachJournal(sink: DurableSink): void { this.sink = sink; }
+
+  /** كلُّ تغيّرٍ في حالِ حسابٍ يُدوَّن لحظتَه — والحسابُ كائنٌ يُعدَّل، فالتدوينُ بعده (T-125) */
+  private journalAccount(account: ExternalAccount): void {
+    this.sink?.record('external_account', { account });
+  }
+
+  /**
+   * بابُ الإرجاع الذرّيّ (T-125): يُثبت حساباتٍ مشهودةً ولا يفتح حسابًا من عنده.
+   * ويرفض ما لا نظيرَ له في التهيئة ⇒ RECOVERY_ACCOUNT_UNDECLARED: نظيرٌ يُمحى من
+   * `config/foreign.yaml` لا يُعاد إحياؤه بيوميّةٍ قديمة (ثابت 1).
+   */
+  restore(accounts: readonly ExternalAccount[], by: EntityId): void {
+    for (const account of accounts) {
+      if (!this.declared.has(account.accountId)) throw new Error('RECOVERY_ACCOUNT_UNDECLARED');
+    }
+    this.accounts.clear();
+    for (const account of accounts) this.accounts.set(account.accountId, { ...account });
+    this.deps.audit.append(by, 'external_accounts_restored', {
+      accounts: this.accounts.size, active: this.active().length,
+    });
   }
 }

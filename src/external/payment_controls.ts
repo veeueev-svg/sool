@@ -31,6 +31,7 @@ import { EntityId, SignedRoyalCommand } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { Treasury } from '../economy/treasury';
 import { FINANCE_MINISTRY } from '../economy/ledger';
+import type { DurableSink } from '../data/persistence';
 import { ExternalAccountRegistry, FOREIGN_MINISTRY, EgressProbe } from './account_registry';
 
 export interface ExternalPaymentInput {
@@ -78,6 +79,7 @@ export class PaymentControls {
   private readonly payments: ExternalPayment[] = [];
   private readonly ministryId: EntityId;
   private sequence = 0;
+  private sink: DurableSink | null = null;
 
   constructor(private readonly deps: PaymentControlsDeps) {
     this.ministryId = deps.ministryId ?? FOREIGN_MINISTRY;
@@ -89,6 +91,32 @@ export class PaymentControls {
    * سقف الدفعة ← سقف اليوم ← السقف الكلي ← ثم **الخزانة** (ثابت 1).
    * ولا يُعَدّ شيء من السقوف مستهلكًا إن رفضت الخزانة (ثابت 6).
    */
+  /** T-125: يُربط بعد الإرجاع لا قبله — وإلا دُوِّن المُستعادُ ثانيةً كلَّ إقلاع */
+  attachJournal(sink: DurableSink): void { this.sink = sink; }
+
+  /** الدفعةُ كائنٌ يُعدَّل (إقرارٌ أو رفعُ تجاوز)، فتُدوَّن كاملةً بعد كلِّ تغيّر (T-125) */
+  private journalPayment(payment: ExternalPayment): void {
+    this.sink?.record('external_payment', { payment, sequence: this.sequence });
+  }
+
+  /**
+   * بابُ الإرجاع الذرّيّ (T-125): يُثبت دفعاتٍ مشهودةً ولا يدفع شيئًا، ويرفع العدّاد
+   * فلا يتصادم معرّفٌ جديد. ويرفض دفعةً لحسابٍ لا وجودَ له بعد الإرجاع ⇒
+   * RECOVERY_PAYMENT_ACCOUNT_MISSING: دفعةٌ بلا حسابٍ تُخفي أجلًا لا يُطالب به أحد.
+   */
+  restore(payments: readonly ExternalPayment[], sequence: number, by: EntityId): void {
+    for (const payment of payments) {
+      if (this.deps.registry.get(payment.accountId) === null) {
+        throw new Error('RECOVERY_PAYMENT_ACCOUNT_MISSING');
+      }
+    }
+    this.payments.splice(0, this.payments.length, ...payments.map((p) => ({ ...p })));
+    this.sequence = Math.max(sequence, this.sequence);
+    this.deps.audit.append(by, 'payments_restored', {
+      payments: this.payments.length, sequence: this.sequence,
+    });
+  }
+
   pay(
     input: ExternalPaymentInput, now = Date.now(), command?: SignedRoyalCommand,
   ): PaymentResult {
@@ -162,6 +190,7 @@ export class PaymentControls {
       confirmedAt: null, confirmedBy: null, evidence: null, overdueRaisedAt: null,
     };
     this.payments.push(payment);
+    this.journalPayment(payment);
     const entry = this.deps.audit.append(this.ministryId, 'external_payment_executed', {
       paymentId: payment.paymentId, accountId: payment.accountId, amount: payment.amount,
       line: payment.line, host: account.host, disbursementId: payment.disbursementId,
@@ -191,6 +220,7 @@ export class PaymentControls {
 
     payment.confirmedAt = now;
     payment.confirmedBy = by;
+    this.journalPayment(payment);
     payment.evidence = evidence.trim();
     const entry = this.deps.audit.append(by, 'external_payment_confirmed', {
       paymentId, accountId: payment.accountId, amount: payment.amount,
@@ -210,6 +240,7 @@ export class PaymentControls {
       if (payment.confirmedAt !== null || payment.overdueRaisedAt !== null) continue;
       if (now - payment.at <= this.deps.confirmationWindowMs) continue;
       payment.overdueRaisedAt = now;
+      this.journalPayment(payment);
       this.deps.audit.append(this.ministryId, 'external_settlement_overdue', {
         paymentId: payment.paymentId, accountId: payment.accountId, amount: payment.amount,
         elapsedMs: now - payment.at, windowMs: this.deps.confirmationWindowMs,

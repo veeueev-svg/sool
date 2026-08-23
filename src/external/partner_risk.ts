@@ -26,6 +26,7 @@
  */
 import { EntityId } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
+import type { DurableSink } from '../data/persistence';
 
 /** ديوان التدقيق: صاحب الاختصاص في تقدير المخاطر — يقدّر ولا يقترح */
 export const RISK_ASSESSOR: EntityId = 'authority:audit_bureau';
@@ -94,6 +95,7 @@ export class PartnerRisk {
   private readonly kinds = new Map<string, DeclaredContractKind>();
   private readonly assessorId: EntityId;
   private sequence = 0;
+  private sink: DurableSink | null = null;
 
   constructor(private readonly deps: PartnerRiskDeps) {
     this.assessorId = deps.assessorId ?? RISK_ASSESSOR;
@@ -106,6 +108,30 @@ export class PartnerRisk {
    * ولا يمنع ارتفاعُ الدرجة التسجيلَ: الدرجة العالية تُسجَّل ثم يمنع **العقدُ** لأجلها،
    * فلا يُخفى تقديرٌ سيّئ بإسقاطه من السجل (RULE-006).
    */
+  /** T-125: يُربط بعد الإرجاع لا قبله — وإلا دُوِّن المُستعادُ ثانيةً كلَّ إقلاع */
+  attachJournal(sink: DurableSink): void { this.sink = sink; }
+
+  /**
+   * بابُ الإرجاع الذرّيّ (T-125): يُثبت تقديراتٍ وخروقًا مشهودةً ولا يُقدِّر من عنده.
+   * ويرفض تقديرًا لنوعِ خطرٍ لم يُعلن في التهيئة ⇒ RECOVERY_RISK_KIND_UNDECLARED:
+   * نوعٌ يُمحى من التهيئة لا يُعاد إحياؤه بيوميّةٍ قديمة (RULE-005).
+   */
+  restore(
+    assessments: readonly RiskAssessment[], breaches: readonly BreachNote[],
+    sequence: number, by: EntityId,
+  ): void {
+    for (const assessment of assessments) {
+      if (!this.kinds.has(assessment.kindId)) throw new Error('RECOVERY_RISK_KIND_UNDECLARED');
+    }
+    this.assessments.splice(0, this.assessments.length, ...assessments.map((a) => ({ ...a })));
+    this.breaches.splice(0, this.breaches.length, ...breaches.map((b) => ({ ...b })));
+    this.sequence = Math.max(sequence, this.sequence);
+    this.deps.audit.append(by, 'partner_risk_restored', {
+      assessments: this.assessments.length, breaches: this.breaches.length,
+      sequence: this.sequence,
+    });
+  }
+
   assess(input: AssessInput, now = Date.now()): RiskResult {
     const refuse = (reason: string, extra: Record<string, unknown> = {}): RiskResult => {
       const entry = this.deps.audit.append(this.assessorId, 'partner_risk_refused', {
@@ -157,6 +183,7 @@ export class PartnerRisk {
       justification: input.justification.trim(),
     };
     this.assessments.push(assessment);
+    this.sink?.record('partner_assessment', { assessment, sequence: this.sequence });
     const entry = this.deps.audit.append(this.assessorId, 'partner_risk_assessed', {
       assessmentId: assessment.assessmentId, kindId: kind.id, counterparty: kind.counterparty,
       factors: assessment.factors, score, baseWeight: kind.riskWeight,
@@ -177,7 +204,9 @@ export class PartnerRisk {
       });
       return false;
     }
-    this.breaches.push({ counterparty, reason: reason.trim(), notedBy: by, at: now });
+    const breach: BreachNote = { counterparty, reason: reason.trim(), notedBy: by, at: now };
+    this.breaches.push(breach);
+    this.sink?.record('partner_breach', { breach });
     this.deps.audit.append(by, 'partner_breach_noted', {
       counterparty, reason: reason.trim(), at: now,
       breaches: this.breachCount(counterparty), penalty: this.deps.breachPenalty,
