@@ -1,0 +1,47 @@
+# قياسُ الحصر على مستوى النواة — المرحلة 39، T-16 (إكمال C-09)
+# التاريخ: 2026-08-23T14:54:27.289Z · العقدة: v20.20.1
+# هذا الملف خرجٌ خامٌ لـ`npm run probe:confinement`. لا يُحرَّر يدًا.
+
+## ١) السياسةُ المعلنة (config/confinement.yaml)
+الافتراض: deny · جذرُ الشاهد: /proc
+الشروطُ المُلزمة: non_root · no_effective_capabilities · empty_bounding_set · no_new_privileges · seccomp_filter · read_only_root · default_deny_egress
+
+## ٢) حكمُ الشاهد على العمليّة الحالية (بيئةُ التطوير لا بيئةُ الإنتاج)
+uid=2000 · CapEff=0000000000000000 · CapBnd=000001ffffffffff
+NoNewPrivs=false · Seccomp=0 · readOnlyRoot=false
+interfaces=lo,eth0 · defaultRoutes=1
+networkNamespace=net:[4026531840]
+confined=false · شروطٌ غيرُ مستوفاة=5
+  - empty_bounding_set: CapBnd=000001ffffffffff — مجموعةُ الحدّ غير فارغة — القدرةُ تُستعاد بملفٍ ذي قدرات أو setuid
+  - no_new_privileges: NoNewPrivs=0 — اكتسابُ صلاحياتٍ جديدة ممكن — طريقُ setuid مفتوح
+  - seccomp_filter: Seccomp=0 — لا مِصفاةَ نداءاتِ نظام — سطحُ النواة كاملٌ أمام العمليّة
+  - read_only_root: root=rw — جذرُ نظام الملفات قابلٌ للكتابة — تُبدَّل الشيفرةُ في زمن التشغيل
+  - default_deny_egress: مسارات افتراضية=1 واجهات=lo،eth0 — طريقُ خروجٍ قائم في النواة — فالمنعُ تطبيقيٌّ وحده وهو فجوةُ C-09
+
+## ٣) محاولةُ خروجٍ خامّة **خارج** مجالٍ محصور — بلا بوابة التطبيق
+# المتوقَّع: connected. ونجاحُها هو الدليلُ على أن منعَ الشيفرة وحده لا يكفي.
+OUTCOME=connected
+
+## ٤) المحاولةُ نفسها **داخل** مجالٍ شبكيٍّ خاصّ (unshare --net)
+# المتوقَّع: error CODE=ENETUNREACH — رفضٌ من جدولِ النواة لا من شيفرةِ الدولة.
+OUTCOME=error CODE=ENETUNREACH
+
+## ٥) حقائقُ الحصر داخل المجال نفسه — بالقارئ نفسه
+# المتوقَّع: interfaces=lo و defaultRoutes=0 ⇒ default_deny_egress مستوفًى.
+interfaces=lo
+defaultRoutes=0
+networkNamespace=net:[4026532156]
+
+## ٦) أدواتُ الحصر المتاحة في هذه البيئة
+docker: غير-موجود
+podman: غير-موجود
+iptables: غير-موجود
+nft: غير-موجود
+unshare: /usr/bin/unshare
+ip: /usr/sbin/ip
+capsh: /usr/sbin/capsh
+
+## الخلاصة (قياسٌ لا حكم)
+البوابةُ في الشيفرة تمنع ما تعلمه؛ ومجالُ النواة يمنع ما لا تعلمه. البندُ ٣
+يُثبت أن الأولى وحدها لا تحمل دعوى «صفر أثرٍ خارجيٍّ غير معلن»، والبندان ٤ و٥
+يُثبتان أن الثانية تحملها. وبنيةُ infra/ هي تنزيلُ ذلك على بيئةِ تشغيلٍ حقيقية.

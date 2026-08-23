@@ -13,12 +13,15 @@
     "check:size": "bash scripts/check_module_size.sh",
     "check:criteria": "bash scripts/check_criteria_status.sh",
     "check:paths": "bash scripts/check_absolute_paths.sh",
-    "verify": "npm run build && node --test dist/tests/ && node dist/scripts/verify_audit_chain.js && npm run check:size && npm run check:criteria && npm run check:paths",
+    "check:confinement": "npm run build && node dist/scripts/check_confinement.js",
+    "render:confinement": "npm run build && node dist/scripts/render_confinement.js",
+    "verify": "npm run build && node --test dist/tests/ && node dist/scripts/verify_audit_chain.js && npm run check:size && npm run check:criteria && npm run check:paths && npm run check:confinement",
     "bench": "tsc && node dist/scripts/bench_scale.js",
     "bench:tail": "npm run build && node dist/scripts/bench_scale_multi.js --runs 7",
     "bench:load": "tsc && node dist/scripts/bench_load.js",
     "bench:recovery": "npm run build && bash scripts/restore.sh --bench",
     "probe:compaction": "npm run build && node dist/scripts/compaction_probe.js 200",
+    "probe:confinement": "npm run build && node dist/scripts/confinement_probe.js",
     "clean": "rm -rf dist"
   },
   "devDependencies": {

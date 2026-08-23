@@ -21,6 +21,7 @@
  *      تتسرّب فجوةٌ من تشغيلة إلى تشغيلة أخرى في المستودع نفسه.
  */
 import { mkdtempSync, cpSync, rmSync } from 'node:fs';
+import { writeFakeProc, CONFINED } from '../security/proc_fixture';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
@@ -29,12 +30,24 @@ import {
   RunbookRunner, ContinuousSupervisor, FederatedOperation, WatchProbe, ScannerKind,
   CheckpointStore, resolveCheckpointPath, buildDeclaredProductionRunbooks,
   buildProductionScanners, buildWatchProbes, loadProduction, resolveProductionDeployDir,
+  confinementWitness, loadConfinement,
   GOVERNOR_EXECUTOR, GOVERNOR_PROPOSER, ROYAL_COURT,
   PRODUCTION_KNOWN_RUNBOOKS, PRODUCTION_OPERATORS,
 } from '../../src/index';
 
 /** المشغّل المعلن في `deploy/production/manifest.yaml` */
 export const OPERATOR = 'authority:royal_court';
+/**
+ * جذرُ شاهدٍ مُصطنعٍ محصور (T-16) — يُكتب مرةً واحدةً لكل تشغيلة اختبار.
+ * لا يُحذف مع `dispose` لأنه مشتركٌ بين مهاداتٍ كثيرة في العمليّة نفسها؛
+ * ومجلدات `os.tmpdir()` تُنظّف مع العمليّة لا مع المهاد.
+ */
+let confinedRoot: string | null = null;
+export function confinedWitnessRoot(): string {
+  if (confinedRoot === null) confinedRoot = writeFakeProc(CONFINED);
+  return confinedRoot;
+}
+
 /** المراقب المعلن في `config/production.yaml` */
 export const OBSERVER = 'authority:audit_bureau';
 
@@ -121,6 +134,15 @@ export function productionHarness(options: {
       // T-120: مساعدات التشغيل تُمرّر اليوميّة إن وُجدت في الدولة المُقامة؛ ودولةٌ
       // أُقيمت بلا مجلد ثبات يرفع ماسحُ الثبات حادثها بحق لا بخطأ اختبار.
       durable: state.journal,
+      // T-16: بيئةُ الاختبار **ليست** محصورةً في النواة (قياسٌ لا دعوى: انظر
+      // docs/audit/measurements/phase-39-T16.txt). فلو مُرّر الشاهدُ الحقيقي هنا
+      // لَرفع كلُّ اختبار قبولٍ حادثًا حرجًا صادقًا عن بيئته لا عن المقيس. فيُمرَّر
+      // شاهدٌ على جذرٍ مُصطنعٍ محصور: المهاد يُعلن البيئةَ التي يقيس فيها ولا
+      // يُخفّف شدّةَ حادثٍ ولا يحذف ماسحًا (RULE-007 + ثابت المهاد 1).
+      confinement: confinementWitness({
+        ...loadConfinement().policy,
+        witness_root: confinedWitnessRoot(),
+      }),
     },
     buildWatchProbes({
       audit: state.audit, regionMonitor: state.regionMonitor, scope: state.operationScope,

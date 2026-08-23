@@ -32,7 +32,10 @@ export type IncidentKind =
   | 'crown_passage_bypass'
   | 'region_action_without_passage'
   // المرحلة 39 (T-120): حالةٌ في الذاكرة وحدها في تشغيلٍ يُقال إنه دائم — وعدُ نجاةٍ لا حاملَ له
-  | 'state_not_durable';
+  | 'state_not_durable'
+  // المرحلة 39 (T-16): عمليّةٌ غيرُ محصورة في النواة — «صفر أثرٍ خارجيٍّ غير معلن»
+  // دعوى لا يحملها إلا حاجزٌ خارج الشيفرة، فمن خرج من البوابة لم يخرج من النواة
+  | 'process_not_confined';
 
 /** الحرّاس المعروفون: كل واحد ماسحٌ حقيقي في وحدة قائمة */
 export type WatchKind = 'regions' | 'audit_chain' | 'scope' | 'termination' | 'king';

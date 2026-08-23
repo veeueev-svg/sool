@@ -1,0 +1,65 @@
+# ⚠️ ملفٌّ مولَّد — لا يُحرَّر بيد.
+# مصدرُه الوحيد: config/external.yaml + config/confinement.yaml
+# مُولِّدُه: src/security/egress_manifest.ts عبر `npm run render:confinement`
+# حاجزُه: `npm run check:confinement` يُعيد التوليد ويقابل البايت — فتحريرٌ يدوي
+#         يوسّع الخروج يسقط عند بوابة الدفع لا بعد التشغيل (RULE-005 · RULE-007).
+#
+# السماحُ بالمعلن وحده. كلُّ قاعدةٍ أدناه لها نظيرٌ مطابقٌ في `config/external.yaml`
+# بمضيفه ومنفذه حرفيًّا، وكلُّ نظيرٍ هناك له قاعدةٌ هنا — والطرفان مقيسان.
+#
+# انحيازٌ معلن (RULE-008): مطابقةُ **أسماء** المضيفين ليست في `NetworkPolicy` القياسي
+# (فهو يعرف CIDR والوسوم لا أسماء النطاقات). فهذا المنشور بصيغة `CiliumNetworkPolicy`
+# ويلزمه مُشغِّلُ شبكةٍ يدعم `toFQDNs`. والإعلانُ في `external.yaml` بالأسماء لا
+# بالعناوين لأن العنوانَ يتبدّل والاسمَ هو ما تعاقدت عليه الدولة. من شغّل الدولة على
+# مُشغِّلٍ لا يدعم ذلك فعليه إبقاءُ منعِ الخروج الافتراضي وحدَه، ويبقى `external.yaml`
+# بلا نظائر — لا أن يوسّع هذا الملف بـ CIDR أوسع من المعلن.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: sool-allow-declared-counterparties
+  namespace: sool
+  labels:
+    app: sool-digital-state
+    sool.gap: "T-16"
+    sool.criterion: "C-09"
+spec:
+  endpointSelector:
+    matchLabels:
+      app: sool-digital-state
+  egress:
+  # المنافذُ البنيوية: بلا ترجمةِ أسماءٍ لا يُحلّ اسمُ نظيرٍ معلن، فيصير المنعُ
+  # عن غير قصدٍ منعًا عن كل شيء — وهذا يُخفي الخللَ لا يمنعه.
+  - toEndpoints:
+      - matchLabels:
+          k8s:io.kubernetes.pod.namespace: kube-system
+          k8s:k8s-app: kube-dns
+    toPorts:
+      - ports:
+          - port: "53"
+            protocol: UDP   # dns
+          - port: "53"
+            protocol: TCP   # dns-tcp
+        rules:
+          dns:
+            - matchPattern: "*"
+  # external:compute-provider — سعة حوسبة للنماذج المعتمدة
+  - toFQDNs:
+      - matchName: "api.compute.example"
+    toPorts:
+      - ports:
+          - port: "443"
+            protocol: TCP
+  # external:data-archive — حفظ نسخ الأرشيف الملكي خارج المستودع
+  - toFQDNs:
+      - matchName: "archive.data.example"
+    toPorts:
+      - ports:
+          - port: "443"
+            protocol: TCP
+  # external:model-registry — استيراد أوزان بأمر واعتماد (المراحل 16–18)
+  - toFQDNs:
+      - matchName: "weights.registry.example"
+    toPorts:
+      - ports:
+          - port: "443"
+            protocol: TCP

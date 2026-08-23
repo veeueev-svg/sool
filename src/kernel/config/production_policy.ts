@@ -27,7 +27,9 @@ export type ScannerKind =
   | 'retention'
   | 'passage'
   // المرحلة 39 (T-120): ماسحُ الثبات — لا تشغيل اتحاديٌ بحالةٍ لا تنجو من موت العمليّة
-  | 'durable_state';
+  | 'durable_state'
+  // المرحلة 39 (T-16): ماسحُ الحصر — يقرأ `/proc` في كل مسحة لا مرةً عند الإقلاع
+  | 'confinement';
 
 export interface ProductionConfig {
   policy: {
@@ -70,7 +72,7 @@ export interface ProductionConfig {
 export const PRODUCTION_KNOWN_SCANNERS: readonly ScannerKind[] = [
   'regions', 'audit_chain', 'scope', 'termination', 'king',
   'loads', 'digital_unit', 'factories', 'hospitals', 'retention', 'passage',
-  'durable_state',
+  'durable_state', 'confinement',
 ];
 
 /**
@@ -84,6 +86,10 @@ export const PRODUCTION_REQUIRED_SCANNERS: readonly ScannerKind[] = [
   // المرحلة 39 (T-120): الثباتُ مشترطٌ لا مرجوّ — تشغيلٌ دائمٌ بحالةٍ تموت مع العمليّة
   // ليس دائمًا؛ وحذفُ الماسح من التهيئة يُسقط الإقلاع برمزه المعلن.
   'durable_state',
+  // المرحلة 39 (T-16): الحصرُ مشترط لأن شرطَ القبول C-09 هو «صفر أثرٍ
+  // خارجيٍّ غير معلن»، ومنعٌ داخلَ العمليّة وحده يسقط بأول ثغرةٍ في الشيفرة
+  // نفسها. ومن لا يمسح الحصرَ لا يعلم أقائمٌ هو أم سقط بعد الإقلاع (RULE-006).
+  'confinement',
 ];
 
 /** الحوادث المعروفة في التشغيل الاتحادي */
@@ -91,6 +97,7 @@ export const PRODUCTION_KNOWN_INCIDENTS: readonly IncidentKind[] = [
   ...STAGING_KNOWN_INCIDENTS,
   'unit_ledger_mismatch', 'command_loss_over_limit', 'critical_service_unverified',
   'crown_passage_bypass', 'region_action_without_passage', 'state_not_durable',
+  'process_not_confined',
 ];
 
 /**
@@ -102,6 +109,9 @@ export const PRODUCTION_MUST_BE_CRITICAL: readonly IncidentKind[] = [
   'region_action_without_passage',
   // T-120: تصنيفُ انعدام الثبات «جسيمًا» يُبقي التشغيل مارًّا والحالةُ تموت مع العمليّة.
   'state_not_durable',
+  // T-16: تصنيفُ انعدام الحصر «جسيمًا» يُبقي الدولة تُعلن «صفر أثرٍ خارجي»
+  // والطريقُ مفتوحٌ في جدول النواة — وهو الوعدُ بلا حاملٍ الذي تمنعه RULE-007.
+  'process_not_confined',
 ];
 
 /** كتب التشغيل المعروفة في الطور الاتحادي */

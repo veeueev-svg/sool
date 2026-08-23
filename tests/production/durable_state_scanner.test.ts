@@ -32,6 +32,9 @@ function deps(durable: ProductionScannerDeps['durable']): ProductionScannerDeps 
     passage: { active: true, wasOpenAt: () => true },
     policy: POLICY,
     retentionAuthority: OBSERVER,
+    // T-16: الحصرُ يُثبَّت محصورًا هنا ليبقى المقيسُ الثباتَ وحده — ماسحُ الحصر
+    // يُقاس في tests/production/confinement_scanner.test.ts لا هنا.
+    confinement: { witnessRoot: '/proc(مُصطنع)', verify: () => ({ confined: true, failures: [] }) },
     durable,
   };
 }

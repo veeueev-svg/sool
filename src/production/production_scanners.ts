@@ -59,6 +59,24 @@ export interface DurableWitness {
   verify(): { readonly valid: boolean; readonly length: number; readonly reason: string | null };
 }
 
+/**
+ * شاهدُ الحصر (T-16) بواجهةٍ ضيّقة (ثابت 5): أقلُ ما يكفي للحكم بأن العمليّة
+ * محصورةٌ في النواة. تُوصَف هنا بنيويًّا لا باستيراد `src/security/confinement.ts`:
+ * الماسح لا يحتاج إلى قارئ `/proc` ولا يقدر على شيء منه — يسأل ويرفع.
+ */
+export interface ConfinementFailureLike {
+  readonly requirement: string;
+  readonly measured: string;
+}
+export interface ConfinementVerdictLike {
+  readonly confined: boolean;
+  readonly failures: readonly ConfinementFailureLike[];
+}
+export interface ConfinementWitnessLike {
+  readonly witnessRoot: string;
+  verify(): ConfinementVerdictLike;
+}
+
 export interface ProductionScannerDeps {
   readonly audit: AppendOnlyLog;
   readonly loads: LoadBook;
@@ -72,6 +90,8 @@ export interface ProductionScannerDeps {
   readonly retentionAuthority: EntityId;
   /** اليوميّة الدائمة إن وُجدت (T-120) — غيابها خرقٌ يُقاس لا تفصيلٌ يُطوَى */
   readonly durable: DurableWitness | null;
+  /** شاهدُ الحصر (T-16) — `null` معناه لا شاهد أصلًا، وهو أولى حالتي الخرق */
+  readonly confinement: ConfinementWitnessLike | null;
 }
 
 /** ماسح الأحمال: أمرٌ أُدرج ولم يُثبت مصيره بعد المدة المعلنة فقدٌ يُرفع (ثابت 1) */
@@ -221,6 +241,48 @@ export function durableStateProbe(deps: ProductionScannerDeps): WatchProbe {
   };
 }
 
+/**
+ * ماسحُ الحصر (T-16): يسأل الشاهدَ في كل مسحة لا مرةً عند الإقلاع، لأن الحصر
+ * حالةٌ تسقط ولا تُعلن سقوطَها: من أعاد تركيبَ الجذر للكتابة أو أوصل الحاوية
+ * بشبكةٍ لها بوابة لم يُعلَم حتى يُقرأ `/proc` مرةً ثانية.
+ * ولا يُصنّف الماسح شدّةً: الشدّة من `config/production.yaml` وحدها (ثابت 3).
+ */
+export function confinementProbe(deps: ProductionScannerDeps): WatchProbe {
+  let lastReported = '';
+  return (): readonly WatchFinding[] => {
+    if (deps.confinement === null) {
+      if (lastReported === 'absent') return []; // ثابت 4
+      lastReported = 'absent';
+      return [{
+        kind: 'process_not_confined' as IncidentKind,
+        detail: 'لا شاهدَ حصرٍ أصلًا — ومن لا يُثبت حصره فهو غير محصور',
+      }];
+    }
+    // عجزُ الشاهد عن القراءة ليس صمتًا بل خرقٌ يُرفع مثلَ الغياب: لا يصحّ
+    // أن يُخفي عجزُ القياس أنّ الحصرَ غير مُثبَت (RULE-007).
+    let verdict: ConfinementVerdictLike;
+    try {
+      verdict = deps.confinement.verify();
+    } catch (error) {
+      const signature = `unreadable|${(error as Error).message}`;
+      if (signature === lastReported) return []; // ثابت 4
+      lastReported = signature;
+      return [{
+        kind: 'process_not_confined' as IncidentKind,
+        detail: `شاهدُ الحصر غير مقروء: ${(error as Error).message}`,
+      }];
+    }
+    if (verdict.confined) { lastReported = ''; return []; }
+    const missing = verdict.failures.map((f) => `${f.requirement}=${f.measured}`).join(' · ');
+    if (missing === lastReported) return []; // ثابت 4
+    lastReported = missing;
+    return [{
+      kind: 'process_not_confined' as IncidentKind,
+      detail: `حصرٌ ناقص في ${deps.confinement.witnessRoot}: ${missing}`,
+    }];
+  };
+}
+
 /** يبني كل الماسحات المعلنة — ماسحٌ معلن بلا بانٍ يُرفض عند بناء المراقب */
 export function buildProductionScanners(
   deps: ProductionScannerDeps,
@@ -235,5 +297,6 @@ export function buildProductionScanners(
   probes.set('retention', retentionProbe(deps));
   probes.set('passage', passageProbe(deps));
   probes.set('durable_state', durableStateProbe(deps));
+  probes.set('confinement', confinementProbe(deps));
   return probes;
 }

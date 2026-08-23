@@ -34,6 +34,13 @@ export type {
   ExternalPayment, ExternalPaymentInput, PaymentResult,
 } from '../external/payment_controls';
 export type { EgressAllowance, EgressRequest, EgressReport } from '../external/network_egress';
+// T-16: شاهدُ الحصر ومولّدُ بُنى المنع الشبكي — القياس خارج الشيفرة لا داخلها
+export { readConfinementFacts, verifyConfinement, confinementWitness } from '../security/confinement';
+export type {
+  ConfinementFacts, ConfinementFailure, ConfinementVerdict, ConfinementWitness,
+} from '../security/confinement';
+export { renderEgressManifests, declaredEgressTargets } from '../security/egress_manifest';
+export type { EgressManifests } from '../security/egress_manifest';
 export { PartnerRisk, RISK_ASSESSOR } from '../external/partner_risk';
 export type {
   DeclaredContractKind, RiskAssessment, BreachNote, RiskResult, AssessInput,
@@ -289,8 +296,13 @@ export {
   retentionProbe, passageProbe,
   // المرحلة 39 (T-120): ماسحُ الثبات مُعلنٌ كبقيّته — ماسحٌ لا يُنادى من الخارج لا يُقاس
   durableStateProbe,
+  // المرحلة 39 (T-16): ماسحُ الحصر — يُنادى من الخارج ليُقاس وحده لا في الجملة
+  confinementProbe,
 } from '../production/production_scanners';
-export type { ProductionScannerDeps, DurableWitness } from '../production/production_scanners';
+export type {
+  ProductionScannerDeps, DurableWitness, ConfinementWitnessLike, ConfinementVerdictLike,
+  ConfinementFailureLike,
+} from '../production/production_scanners';
 export { ContinuousSupervisor, PRODUCTION_GUARD } from '../production/continuous_supervisor';
 export type {
   ContinuousSupervisorDeps, SupervisionReport, SupervisionGap,
@@ -325,3 +337,8 @@ export {
   PRODUCTION_OPERATORS,
 } from '../kernel/config';
 export type { ProductionConfig, ScannerKind } from '../kernel/config';
+// T-16: سياسةُ الحصر من التهيئة وحدها (RULE-005) — واحدةٌ لا اثنتان
+export { loadConfinement, CONFINEMENT_REQUIREMENTS } from '../kernel/config';
+export type {
+  ConfinementConfig, ConfinementRequirement, InfrastructurePort,
+} from '../kernel/config';

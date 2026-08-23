@@ -32,6 +32,8 @@ import {
   loadProductionManifest, resolveProductionDeployDir,
 } from '../production/production_manifest';
 import { FederatedOperation } from '../production/federated_operation';
+import { loadConfinement } from '../kernel/config/confinement';
+import { confinementWitness } from '../security/confinement';
 
 export function composeOperations(
   parts: SovereigntyParts & PopulationParts & EconomyParts & EnterpriseParts
@@ -81,6 +83,10 @@ export function composeOperations(
       // T-120: الثباتُ يُمرَّر شاهدًا لا يُفترض. غيابه (`null`) يُقاس خرقًا في كل
       // مسحة بدلًا من أن يمرّ بلا رقم: ما لا يُقاس لا يُسدّ (RULE-009).
       durable: journal,
+      // T-16: شاهدُ الحصر يُقام من السياسة لا من الشيفرة (RULE-005)، ولا يرمي إن كان
+      // الحصرُ ناقصًا: حكمُه يُرفع حادثًا حرجًا في أول مسحة لا يُسقط الإقلاع، فدولةٌ
+      // لا تُقلع لا ترفع حادثًا ولا تُوقف نفسها — والشاهدُ يقرأ `/proc` في كل مسحة.
+      confinement: confinementWitness(loadConfinement(configDir).policy),
     },
     buildWatchProbes({
       audit, regionMonitor, scope: operationScope, terminationRoll, permissions,

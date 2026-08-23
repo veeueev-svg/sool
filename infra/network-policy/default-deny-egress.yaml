@@ -1,0 +1,26 @@
+# ⚠️ ملفٌّ مولَّد — لا يُحرَّر بيد.
+# مصدرُه الوحيد: config/external.yaml + config/confinement.yaml
+# مُولِّدُه: src/security/egress_manifest.ts عبر `npm run render:confinement`
+# حاجزُه: `npm run check:confinement` يُعيد التوليد ويقابل البايت — فتحريرٌ يدوي
+#         يوسّع الخروج يسقط عند بوابة الدفع لا بعد التشغيل (RULE-005 · RULE-007).
+#
+# منعُ الخروج الافتراضي. يُطبَّق على الحمولة كلها بلا استثناء، ويسبق منشورَ السماح
+# في الترتيب المنطقي: من لم يُسمَّ في منشورٍ آخر لا يخرج. حذفُ هذا الملف لا يفتح
+# الخروجَ بحدّ ذاته، لكنه يُسقط `npm run check:confinement` — فالغيابُ يُقاس.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sool-default-deny-egress
+  namespace: sool
+  labels:
+    app: sool-digital-state
+    sool.gap: "T-16"
+    sool.criterion: "C-09"
+spec:
+  podSelector:
+    matchLabels:
+      app: sool-digital-state
+  policyTypes:
+    - Egress
+  # قائمةُ الخروج فارغةٌ بقصد: صفرُ قواعد = صفرُ خروج مسموح.
+  egress: []
