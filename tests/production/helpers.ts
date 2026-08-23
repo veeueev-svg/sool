@@ -96,7 +96,10 @@ export function productionHarness(options: {
   readonly federate?: boolean;
 } = {}): ProductionHarness {
   const now = options.now ?? Date.now();
-  const state = bootstrapState({ now });
+  // T-120: لا تشغيل اتحاديٌّ على حالةٍ تموت مع العمليّة. المهاد يُقيم يوميّةً دائمة في
+  // مجلد مؤقّت معزول، لأن ماسح الثبات صار مشترطًا وحادثه حرجٌ يوقف الدولة بحق.
+  const stateDir = mkdtempSync(join(tmpdir(), 'sool-production-state-'));
+  const state = bootstrapState({ now, persistenceDir: stateDir });
   const checkpointDir = mkdtempSync(join(tmpdir(), 'sool-production-'));
   const policy = {
     ...state.productionConfig.policy,
@@ -115,6 +118,9 @@ export function productionHarness(options: {
       audit: state.audit, loads: state.loadLedger, unit: state.unit, factories: state.factories,
       hospitals: state.hospitals, retention: state.retention, passage,
       policy, retentionAuthority: OBSERVER,
+      // T-120: مساعدات التشغيل تُمرّر اليوميّة إن وُجدت في الدولة المُقامة؛ ودولةٌ
+      // أُقيمت بلا مجلد ثبات يرفع ماسحُ الثبات حادثها بحق لا بخطأ اختبار.
+      durable: state.journal,
     },
     buildWatchProbes({
       audit: state.audit, regionMonitor: state.regionMonitor, scope: state.operationScope,
@@ -150,6 +156,9 @@ export function productionHarness(options: {
   const dispose = (at = Date.now()): void => {
     supervisor.stop(OPERATOR, 'انتهى القياس', at);
     rmSync(checkpointDir, { recursive: true, force: true });
+    // اليوميّة تُغلق ثم يُحذف مجلدها: واصفٌ مفتوح يُبقي العملية والملف معًا (ثابت 6).
+    state.journal?.close();
+    rmSync(stateDir, { recursive: true, force: true });
   };
   return {
     state, policy, passage, supervisor, ledger, runner, operation, books, checkpointDir, dispose,

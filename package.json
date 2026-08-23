@@ -18,6 +18,7 @@
     "bench:tail": "npm run build && node dist/scripts/bench_scale_multi.js --runs 7",
     "bench:load": "tsc && node dist/scripts/bench_load.js",
     "bench:recovery": "npm run build && bash scripts/restore.sh --bench",
+    "probe:compaction": "npm run build && node dist/scripts/compaction_probe.js 200",
     "clean": "rm -rf dist"
   },
   "devDependencies": {

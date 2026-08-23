@@ -41,6 +41,7 @@ export function composeOperations(
   const {
     audit, gateway, killSwitch, heartbeat, terminationRoll, permissions,
     unit, factories, hospitals, retention, regions, governors, regionMonitor, loadLedger,
+    journal,
   } = parts;
 
   // 1) التشغيل المحدود (المرحلة 36) — نطاق مُنفَّذ عند البوابة، ومراقب بمؤقّت حقيقي،
@@ -77,6 +78,9 @@ export function composeOperations(
     {
       audit, loads: loadLedger, unit, factories, hospitals, retention, passage,
       policy: productionConfig.policy, retentionAuthority: 'authority:audit_bureau',
+      // T-120: الثباتُ يُمرَّر شاهدًا لا يُفترض. غيابه (`null`) يُقاس خرقًا في كل
+      // مسحة بدلًا من أن يمرّ بلا رقم: ما لا يُقاس لا يُسدّ (RULE-009).
+      durable: journal,
     },
     buildWatchProbes({
       audit, regionMonitor, scope: operationScope, terminationRoll, permissions,

@@ -28,6 +28,8 @@ manifest:
     - hospitals
     - retention
     - passage
+    # T-120: يطابق scanners في config/production.yaml حرفًا بحرف — وإلّا سقط الإقلاع
+    - durable_state
   # الكتب المطلوب تنفيذها — لكل كتاب ملف خطوات في deploy/production/runbooks/
   runbooks:
     - federated-operation

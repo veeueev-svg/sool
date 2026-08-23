@@ -25,7 +25,9 @@ export type ScannerKind =
   | 'factories'
   | 'hospitals'
   | 'retention'
-  | 'passage';
+  | 'passage'
+  // المرحلة 39 (T-120): ماسحُ الثبات — لا تشغيل اتحاديٌ بحالةٍ لا تنجو من موت العمليّة
+  | 'durable_state';
 
 export interface ProductionConfig {
   policy: {
@@ -68,6 +70,7 @@ export interface ProductionConfig {
 export const PRODUCTION_KNOWN_SCANNERS: readonly ScannerKind[] = [
   'regions', 'audit_chain', 'scope', 'termination', 'king',
   'loads', 'digital_unit', 'factories', 'hospitals', 'retention', 'passage',
+  'durable_state',
 ];
 
 /**
@@ -78,13 +81,16 @@ export const PRODUCTION_KNOWN_SCANNERS: readonly ScannerKind[] = [
  */
 export const PRODUCTION_REQUIRED_SCANNERS: readonly ScannerKind[] = [
   'regions', 'passage', 'audit_chain', 'scope',
+  // المرحلة 39 (T-120): الثباتُ مشترطٌ لا مرجوّ — تشغيلٌ دائمٌ بحالةٍ تموت مع العمليّة
+  // ليس دائمًا؛ وحذفُ الماسح من التهيئة يُسقط الإقلاع برمزه المعلن.
+  'durable_state',
 ];
 
 /** الحوادث المعروفة في التشغيل الاتحادي */
 export const PRODUCTION_KNOWN_INCIDENTS: readonly IncidentKind[] = [
   ...STAGING_KNOWN_INCIDENTS,
   'unit_ledger_mismatch', 'command_loss_over_limit', 'critical_service_unverified',
-  'crown_passage_bypass', 'region_action_without_passage',
+  'crown_passage_bypass', 'region_action_without_passage', 'state_not_durable',
 ];
 
 /**
@@ -94,6 +100,8 @@ export const PRODUCTION_KNOWN_INCIDENTS: readonly IncidentKind[] = [
 export const PRODUCTION_MUST_BE_CRITICAL: readonly IncidentKind[] = [
   ...STAGING_MUST_BE_CRITICAL,
   'region_action_without_passage',
+  // T-120: تصنيفُ انعدام الثبات «جسيمًا» يُبقي التشغيل مارًّا والحالةُ تموت مع العمليّة.
+  'state_not_durable',
 ];
 
 /** كتب التشغيل المعروفة في الطور الاتحادي */

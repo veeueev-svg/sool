@@ -16,6 +16,9 @@
  *   3) **الدفعة ذرية**: كل فحص قبل الكتابة، فإما الدفعة كلها أو لا شيء.
  *   4) **نافذة المعدل حقيقة**: فوق السقف يرفض في اللحظة ولا يؤجل صامتا.
  *   5) **الإنهاء يجتث السجل**: يسقط كل السكان ويستدعي مسترد الحصة لكل هوية.
+ *   6) **عدّاد الشريحة مرآة لا مصدر** (المرحلة 39 — T-119): سقفُ الشريحة يُفحص بعدّادٍ تراكميّ
+ *      لا بمسحِ السكان كلِّهم لكلِّ شريحة (كان ذلك تسجيلًا تربيعيًّا). والعدّادُ يُبنى من السجل عند
+ *      الاستعادة، و`verifyShardIndex()` يعيد حسابه من السجل ويكشف أيَّ انحرافٍ بينهما.
  */
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
@@ -45,6 +48,8 @@ export interface PopulationSnapshot {
 export class PopulationRegistry {
   private readonly identities = new Map<string, PopulationIdentity>();
   private readonly spawned: { at: number; count: number }[] = [];
+  /** عدّاد شغلِ كلِّ شريحة — مرآةٌ تُصان مع كلِّ كتابةٍ وحذف، لا مصدرُ حقيقةٍ مستقلّ (T-119). */
+  private readonly shardCounts = new Map<number, number>();
 
   constructor(
     private readonly audit: AppendOnlyLog,
@@ -106,9 +111,10 @@ export class PopulationRegistry {
       planned.set(shardId, (planned.get(shardId) ?? 0) + 1);
     }
     for (const [shardId, incoming] of planned) {
-      let existing = 0;
-      for (const record of this.identities.values()) if (record.shardId === shardId) existing += 1;
-      if (existing + incoming > this.sharding.perShardMax) return deny('POPULATION_SHARD_FULL');
+      // T-119: عدّادٌ تراكميّ بدل مسحِ السكان لكلِّ شريحة — الفحصُ نفسُه بلا زمنٍ تربيعيّ.
+      if ((this.shardCounts.get(shardId) ?? 0) + incoming > this.sharding.perShardMax) {
+        return deny('POPULATION_SHARD_FULL');
+      }
     }
     if (!this.resources.reserveIdentities(this.resourceName, inputs.map((input) => input.agentId))) {
       return deny('POPULATION_RESOURCE_CAP_REACHED');
@@ -117,6 +123,7 @@ export class PopulationRegistry {
     for (const input of inputs) {
       const shardId = this.sharding.shardFor(input.agentId);
       this.identities.set(input.agentId, Object.freeze({ ...input, shardId, registeredAt: now }));
+      this.shardCounts.set(shardId, (this.shardCounts.get(shardId) ?? 0) + 1);
     }
     recent.push({ at: now, count: inputs.length });
     this.spawned.splice(0, this.spawned.length, ...recent);
@@ -140,7 +147,29 @@ export class PopulationRegistry {
     this.resources.releaseIdentity(this.resourceName, entity);
     this.releaseQuota(identity);
     this.identities.delete(entity);
+    const remaining = (this.shardCounts.get(identity.shardId) ?? 1) - 1;
+    if (remaining > 0) this.shardCounts.set(identity.shardId, remaining);
+    else this.shardCounts.delete(identity.shardId);
     return true;
+  }
+
+  /** شغلُ شريحةٍ بحسب المرآة — للقياس والمراقبة، لا يُستعمل بديلًا عن سقف الشريحة في السياسة. */
+  shardOccupancy(shardId: number): number { return this.shardCounts.get(shardId) ?? 0; }
+
+  /**
+   * يعيد حسابَ شغلِ الشرائح من السجل نفسه ويقارنه بالمرآة (T-119).
+   * مسحٌ كاملٌ مقصود: هذا فحصُ انحرافٍ دوريّ لا مسارُ تسجيل، ولا يُنادى داخل `registerBatch`.
+   */
+  verifyShardIndex(): { readonly ok: boolean; readonly drifts: readonly { readonly shardId: number; readonly counted: number; readonly mirrored: number }[] } {
+    const counted = new Map<number, number>();
+    for (const record of this.identities.values()) counted.set(record.shardId, (counted.get(record.shardId) ?? 0) + 1);
+    const drifts: { shardId: number; counted: number; mirrored: number }[] = [];
+    for (const shardId of new Set([...counted.keys(), ...this.shardCounts.keys()])) {
+      const left = counted.get(shardId) ?? 0;
+      const right = this.shardCounts.get(shardId) ?? 0;
+      if (left !== right) drifts.push({ shardId, counted: left, mirrored: right });
+    }
+    return { ok: drifts.length === 0, drifts };
   }
 
   exportAll(): PopulationSnapshot {
@@ -160,7 +189,11 @@ export class PopulationRegistry {
       throw new Error('RECOVERY_POPULATION_INVALID');
     }
     this.identities.clear();
-    for (const identity of snapshot.identities) this.identities.set(identity.agentId, Object.freeze({ ...identity }));
+    this.shardCounts.clear();
+    for (const identity of snapshot.identities) {
+      this.identities.set(identity.agentId, Object.freeze({ ...identity }));
+      this.shardCounts.set(identity.shardId, (this.shardCounts.get(identity.shardId) ?? 0) + 1);
+    }
     this.spawned.splice(0, this.spawned.length, ...snapshot.spawned.map((item) => ({ ...item })));
     this.audit.append(by, 'population_restored', { population: this.population });
     return true;

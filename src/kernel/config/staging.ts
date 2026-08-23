@@ -30,7 +30,9 @@ export type IncidentKind =
   | 'command_loss_over_limit'
   | 'critical_service_unverified'
   | 'crown_passage_bypass'
-  | 'region_action_without_passage';
+  | 'region_action_without_passage'
+  // المرحلة 39 (T-120): حالةٌ في الذاكرة وحدها في تشغيلٍ يُقال إنه دائم — وعدُ نجاةٍ لا حاملَ له
+  | 'state_not_durable';
 
 /** الحرّاس المعروفون: كل واحد ماسحٌ حقيقي في وحدة قائمة */
 export type WatchKind = 'regions' | 'audit_chain' | 'scope' | 'termination' | 'king';

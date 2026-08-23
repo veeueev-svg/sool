@@ -50,6 +50,14 @@ export interface PassageBook {
   readonly active: boolean;
   wasOpenAt(at: number): boolean;
 }
+/**
+ * شاهدُ الثبات (T-120): أقلُ ما يكفي للحكم بأن الحالة تنجو من موت العمليّة.
+ * `null` معناه لا وسيط أصلًا — وهو أولُ حالتي الخرق لا حالةً محايدة.
+ */
+export interface DurableWitness {
+  readonly file: string;
+  verify(): { readonly valid: boolean; readonly length: number; readonly reason: string | null };
+}
 
 export interface ProductionScannerDeps {
   readonly audit: AppendOnlyLog;
@@ -62,6 +70,8 @@ export interface ProductionScannerDeps {
   readonly policy: ProductionConfig['policy'];
   /** جهة المسح في وحدة الاحتفاظ — تُمرَّر ولا تُخترع داخل الماسح */
   readonly retentionAuthority: EntityId;
+  /** اليوميّة الدائمة إن وُجدت (T-120) — غيابها خرقٌ يُقاس لا تفصيلٌ يُطوَى */
+  readonly durable: DurableWitness | null;
 }
 
 /** ماسح الأحمال: أمرٌ أُدرج ولم يُثبت مصيره بعد المدة المعلنة فقدٌ يُرفع (ثابت 1) */
@@ -183,6 +193,34 @@ export function passageProbe(deps: ProductionScannerDeps): WatchProbe {
   };
 }
 
+/**
+ * ماسحُ الثبات (T-120): تشغيلٌ يُقال إنه مستمرٌ بحالةٍ تموت مع العمليّة وعدُ نجاةٍ
+ * لا حاملَ له. يرفع الحادث في حالتين: لا وسيط أصلًا، أو وسيطٌ سلسلته لا تُتحقّق —
+ * والثانية أسوأ لأنها تُوهم النجاة. الشدّة من التهيئة وحدها (ثابت 3).
+ */
+export function durableStateProbe(deps: ProductionScannerDeps): WatchProbe {
+  let lastReported = '';
+  return (): readonly WatchFinding[] => {
+    if (deps.durable === null) {
+      if (lastReported === 'absent') return []; // ثابت 4
+      lastReported = 'absent';
+      return [{
+        kind: 'state_not_durable' as IncidentKind,
+        detail: 'لا وسيط دائم للحالة — ما في الذاكرة يموت مع العمليّة',
+      }];
+    }
+    const state = deps.durable.verify();
+    if (state.valid) { lastReported = ''; return []; }
+    const signature = `broken|${state.reason ?? ''}|${state.length}`;
+    if (signature === lastReported) return []; // ثابت 4
+    lastReported = signature;
+    return [{
+      kind: 'state_not_durable' as IncidentKind,
+      detail: `يوميّة غير مُتحقّقة: ${deps.durable.file} (${state.reason ?? 'بلا سبب معلن'})`,
+    }];
+  };
+}
+
 /** يبني كل الماسحات المعلنة — ماسحٌ معلن بلا بانٍ يُرفض عند بناء المراقب */
 export function buildProductionScanners(
   deps: ProductionScannerDeps,
@@ -196,5 +234,6 @@ export function buildProductionScanners(
   probes.set('hospitals', hospitalsProbe(deps));
   probes.set('retention', retentionProbe(deps));
   probes.set('passage', passageProbe(deps));
+  probes.set('durable_state', durableStateProbe(deps));
   return probes;
 }

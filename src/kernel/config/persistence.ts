@@ -22,6 +22,9 @@ import { loadYamlFile } from './yaml';
 /** أصناف القيود المسموح تدوينها — قائمة مغلقة: صنف غير معلن لا يُدوَّن ولا يُقرأ */
 export const DURABLE_KINDS = [
   'audit_entry', 'memory_record', 'memory_share', 'knowledge_fact', 'archive_snapshot',
+  // T-121: علامةُ الضغط — أوّل قيد في يوميّةٍ مضغوطة، يشهد من أين جاءت وأين أُرشف
+  // أصلُها. ليس لوحدات الحالة أن تُدوّنه — الضاغط وحده يكتبه، والإرجاع يتجاوزه.
+  'journal_compacted',
 ] as const;
 export type DurableKind = (typeof DURABLE_KINDS)[number];
 

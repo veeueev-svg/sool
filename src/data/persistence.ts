@@ -72,8 +72,19 @@ export interface JournalVerification {
 
 const GENESIS = 'genesis';
 
+/**
+ * بصمةُ الأصل المعلنة — تُصدَّر ليبنيَ ضاغطُ اليوميّة (T-121) سلسلةً بالقاعدة نفسها،
+ * فلا تُحسب البصمة بقاعدتين ولا تُنسخ الصيغة نسخًا يفترق عن أصله بعد تعديل.
+ */
+export const JOURNAL_GENESIS = GENESIS;
+
 function hashRecord(base: Omit<DurableRecord, 'hash'>): string {
   return createHash('sha256').update(JSON.stringify(base), 'utf8').digest('hex');
+}
+
+/** تُصدَّر لدالّة الضغط وحدها: من يُعيد بناء السلسلة يجب أن يبصمها ببصمة قارئها */
+export function hashDurableRecord(base: Omit<DurableRecord, 'hash'>): string {
+  return hashRecord(base);
 }
 
 /** اليوميّة الدائمة — وسيطٌ يُضاف إليه فقط، يفتح مرةً ويُزامن لكل قيد */
@@ -146,6 +157,24 @@ export class StateJournal implements DurableSink {
         reason: violation.code ?? violation.message ?? 'PERSISTENCE_JOURNAL_TAMPERED',
       };
     }
+  }
+
+  /**
+   * إعادة القراءة من القرص بعد تغييرٍ خارجي مشروع (الضغط وحده — T-121).
+   * تُغلق الواصف المفتوح لأن الملف قد استُبدل تحته، ثم تُعيد ضبط التسلسل والبصمة
+   * الأخيرة من الملف الجديد. من دونها يكتب القيد التالي فوق سلسلةٍ لم تعد قائمة.
+   */
+  reload(): number {
+    this.close();
+    if (!existsSync(this.path)) {
+      this.seq = 0;
+      this.lastHash = GENESIS;
+      return 0;
+    }
+    const entries = this.readInternal(this.policy.verifyOnBoot);
+    this.seq = entries.length;
+    this.lastHash = entries.length > 0 ? entries[entries.length - 1]!.hash : GENESIS;
+    return this.seq;
   }
 
   /** إغلاق الواصف — الدولة القائمة لا تُغلقه، والاختبارات والمقاييس تُغلقه */

@@ -11,12 +11,12 @@
  *   2) الإقلاع الثاني دولةٌ جديدة بالكامل — لا مشاركة كائنٍ واحد بين الإقلاعين.
  *   3) التأكيد على الرموز المعلنة لا على النصوص العربية المشكولة.
  */
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bootstrapState } from '../../src/index';
+import { bootstrapState, compactJournal } from '../../src/index';
 import { SovereignViolation } from '../../src/kernel/types';
 
 const T0 = 1_700_000_000_000;
@@ -205,5 +205,45 @@ test('يوميّة محرَّفة توقف الإقلاع ولا تُبني دو
     const raw = readFileSync(sc.journalFile, 'utf8');
     writeFileSync(sc.journalFile, raw.replace('جوهر ينجو من إعادة التشغيل', 'جوهر مبدَّل بيدٍ خفيّة'), 'utf8');
     assert.equal(code(() => sc.boot(T0 + 1000)), 'PERSISTENCE_JOURNAL_TAMPERED');
+  } finally { sc.clean(); }
+});
+
+test('الدولة تُقلع من يوميّةٍ مضغوطة كما تُقلع من أصلها (T-121)', () => {
+  const sc = scene();
+  try {
+    const s1 = sc.boot();
+    const ids = seed(s1);
+    // سجلٌّ يُكتب ثم يُشطب: قيدان بالهويّة نفسها في اليوميّة، والأخير يعلو سابقه —
+    // وهذا بالضبط ما يُسقطه الضغط، فيُقاس المكسب على قيدٍ منسوخ حقيقي لا على ظنّ.
+    const doomed = s1.memory.write(OWNER, {
+      content: 'محتوى سيُشطب', provenance: { kind: 'tool_call', ref: 'durable:2' },
+      retentionClass: 'official',
+    }, T0 + 5);
+    assert.equal(doomed.ok, true);
+    if (!doomed.ok) throw new Error('SEED_DOOMED');
+    assert.equal(
+      s1.memory.tombstone(doomed.record.recordId, 'authority:audit_bureau', 'سبب معلن', T0 + 6),
+      true,
+    );
+    // مشاركةٌ مكررة لقارئٍ واحد: قيدٌ ثانٍ لا يضيف حقًّا، فيُسقطه الضغط أيضًا.
+    assert.equal(s1.memory.share(doomed.record.recordId, OWNER, 'agent:قارئ-1'), true);
+    s1.memory.share(doomed.record.recordId, OWNER, 'agent:قارئ-1');
+    const journal = s1.journal;
+    assert.notEqual(journal, null);
+    const before = journal!.read().length;
+    const report = compactJournal(journal!, T0 + 20);
+    assert.equal(report.before, before);
+    assert.equal(report.after < before, true);
+    assert.equal(existsSync(report.archive), true);
+    journal!.close();
+
+    const s2 = sc.boot(T0 + 1000);
+    assert.equal(s2.rehydrated?.restored, true);
+    // ما بعد الضغط هو نفسه ما قبله في الجوهر: السجل والذاكرة والمعرفة والمنتهون.
+    assert.equal(s2.memory.read(OWNER, ids.recordId)?.content, 'جوهر ينجو من إعادة التشغيل');
+    assert.equal(s2.knowledge.get(ids.factId)?.object, 'نعم');
+    assert.equal(s2.audit.verifyIntegrity().valid, true);
+    assert.equal(s2.terminationRoll.isTerminated('agent:منتهٍ-1'), true);
+    assert.equal(s2.journal?.verify().valid, true);
   } finally { sc.clean(); }
 });

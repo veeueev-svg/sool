@@ -34,6 +34,9 @@ function deps(patch: Partial<ProductionScannerDeps> = {}): ProductionScannerDeps
     passage: { active: true, wasOpenAt: () => true },
     policy: POLICY,
     retentionAuthority: OBSERVER,
+    // T-120: الافتراض «ثابتٌ صحيح» لتبقى الماسحات الأخرى مقيسةً وحدها؛ ومن يقيس
+    // الثبات يُبدّل هذا الحقل صراحةً.
+    durable: { file: '/tmp/sool-test/state.jsonl', verify: () => ({ valid: true, length: 1, reason: null }) },
     ...patch,
   };
 }

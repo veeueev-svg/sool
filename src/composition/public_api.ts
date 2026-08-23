@@ -87,6 +87,9 @@ export { AgentMemory } from '../data/agent_memory';
 export type { MemoryRecord, MemoryProvenance, MemoryWriteInput } from '../data/agent_memory';
 export { KnowledgeGraph, KNOWLEDGE_AUTHORITIES } from '../data/knowledge_graph';
 export type { Fact, FactStatus } from '../data/knowledge_graph';
+// المرحلة 39 (T-121): ضاغطُ اليوميّة مُعلنٌ لمن يقرّر الضغط — ولا يناديه مسارُ كتابةٍ تلقائيًا
+export { compactJournal } from '../data/journal_compaction';
+export type { CompactionReport } from '../data/journal_compaction';
 export { RoyalArchive } from '../data/royal_archive';
 export type { ArchiveSnapshot } from '../data/royal_archive';
 export { RetentionPolicy, DEFAULT_RETENTION_CLASSES, HOLD_AUTHORITIES } from '../data/retention';
@@ -284,8 +287,10 @@ export type {
 export {
   buildProductionScanners, loadsProbe, digitalUnitProbe, factoriesProbe, hospitalsProbe,
   retentionProbe, passageProbe,
+  // المرحلة 39 (T-120): ماسحُ الثبات مُعلنٌ كبقيّته — ماسحٌ لا يُنادى من الخارج لا يُقاس
+  durableStateProbe,
 } from '../production/production_scanners';
-export type { ProductionScannerDeps } from '../production/production_scanners';
+export type { ProductionScannerDeps, DurableWitness } from '../production/production_scanners';
 export { ContinuousSupervisor, PRODUCTION_GUARD } from '../production/continuous_supervisor';
 export type {
   ContinuousSupervisorDeps, SupervisionReport, SupervisionGap,
