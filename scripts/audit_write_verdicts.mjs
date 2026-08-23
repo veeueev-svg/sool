@@ -22,8 +22,10 @@
  *    المرحلة التي تُنفّذ التدقيق (وهو مزلق `docs/audit/README.md` الأول).
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = '/home/user/workspace/sool';
+// جذرُ المستودع يُشتقّ من موقع هذا الملف لا من مسارٍ مطلق مكتوب: البند T-118.
+const ROOT = fileURLToPath(new URL('..', import.meta.url)).replace(/\/$/, '');
 const DATE = process.env.AUDIT_DATE ?? new Date().toISOString().slice(0, 10);
 const AUDITOR = 'ديوان التاج للتدقيق (جهةٌ لم تكتب الشيفرة المقيسة)';
 const PROBE = 'docs/audit/measurements/all-audit_probe.txt';

@@ -12,7 +12,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { loadScale } from '../../src/kernel/config';
+import { loadScale, resolveConfigDir } from '../../src/kernel/config';
 import { bootstrapState } from '../../src/index';
 import { identity, scaleState, smallPopulation, T0 } from './helpers';
 import { PopulationRegistry } from '../../src/scale/population';
@@ -20,7 +20,8 @@ import { TerminationOrder } from '../../src/crown/termination_order';
 
 function copiedScale(change: (text: string) => string): string {
   const root = mkdtempSync('/tmp/sool-phase-31-'); const dir = join(root, 'config');
-  cpSync('/home/user/workspace/sool/config', dir, { recursive: true });
+  // مسار التهيئة يُحلّ صعودًا من موقع التنفيذ (resolveConfigDir) لا بمسار مطلق: البند T-118.
+  cpSync(resolveConfigDir(), dir, { recursive: true });
   const file = join(dir, 'scale.yaml'); writeFileSync(file, change(readFileSync(file, 'utf8'))); return dir;
 }
 function percentile(values: number[], p: number): number { return values[Math.min(values.length - 1, Math.ceil(values.length * p) - 1)]!; }

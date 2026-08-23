@@ -13,7 +13,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { loadResearch } from '../../src/kernel/config';
+import { loadResearch, resolveConfigDir } from '../../src/kernel/config';
 import {
   AGENT, AUDITOR, DAY, LESSON, RECOMMENDATION, RESEARCH, RESEARCH_CASE, RESEARCH_SOURCES,
   approveLesson, completeResearch, establishMirror, proposeLesson, researchState, startResearch,
@@ -42,7 +42,8 @@ function recommend(h: ReturnType<typeof ready>, recommendationId = RECOMMENDATIO
 function copiedConfig(change: (yaml: string) => string): string {
   const root = mkdtempSync('/tmp/sool-phase-30-');
   const configDir = join(root, 'config');
-  cpSync('/home/user/workspace/sool/config', configDir, { recursive: true });
+  // مسار التهيئة يُحلّ صعودًا من موقع التنفيذ (resolveConfigDir) لا بمسار مطلق: البند T-118.
+  cpSync(resolveConfigDir(), configDir, { recursive: true });
   const file = join(configDir, 'research.yaml');
   writeFileSync(file, change(readFileSync(file, 'utf8')));
   return configDir;
@@ -187,7 +188,7 @@ test('ترفض التهيئة نوع مصدر خارج المجموعة الآم
 });
 
 test('تعلن التهيئة الرفض الافتراضي وكل أنواع المصادر الآمنة الثلاثة', () => {
-  const config = loadResearch('/home/user/workspace/sool/config');
+  const config = loadResearch(resolveConfigDir());
   assert.equal(config.policy.default, 'deny');
   assert.deepEqual(config.allowed_source_types, [
     'public_literature', 'statistical_aggregate', 'historical_record',

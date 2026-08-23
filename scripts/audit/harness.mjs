@@ -20,9 +20,18 @@
  *    يُكتب صريحًا في ملف حكمه تحت `docs/audit/criteria/`.
  *
  * 4) **C-18 لا يُقاس بهذا المسبار** — التدقيق لا يشهد لاستقلاله بأداةٍ من عنده.
+ *
+ * 5) **لا مسار مطلق في المسبار.** جذرُ المستودع يُشتقّ من موقع الملف نفسه، فيعمل المسبار
+ *    في أي نسخةٍ وأي مسار؛ ومسارٌ مطلقٌ مكتوبٌ في أداةِ تدقيقٍ يجعلها غير قابلة للنقل
+ *    إلى جهةٍ ثانية — وهو نقضٌ عمليٌّ لاستقلال القياس (البند T-118).
  */
-const DIST = '/home/user/workspace/sool/dist/src/index.js';
-const m = await import(DIST);
+import { join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+// جذرُ المستودع يُحلّ صعودًا من موقع هذا الملف لا بمسارٍ مطلق: البند T-118.
+// المسبارُ يجب أن يعمل على أي جهةِ تدقيقٍ وفي أي مسار، وإلا فاستقلالُه دعوى (RULE-004).
+const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
+const DIST = join(REPO_ROOT, 'dist', 'src', 'index.js');
+const m = await import(pathToFileURL(DIST).href);
 const { bootstrapState } = m;
 
 const results = [];

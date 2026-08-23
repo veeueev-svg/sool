@@ -19,6 +19,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: npm
+      # بلا هذه الخطوة لا يوجد `tsc` على العارض، فتسقط أول خطوة وتُتخطّى كل الحواجز بعدها:
+      # وهو ما وقع في كل تشغيلات البوابة قبل إغلاق البند T-117 — حاجزٌ معلن لم يُشغَّل قطّ.
+      - name: تثبيت أدوات البناء من القفل (بلا تبعيات تشغيل)
+        run: npm ci
       - name: تحقق الأنواع والبناء
         run: npm run build
       - name: اختبارات القبول
@@ -29,5 +34,7 @@ jobs:
         run: bash scripts/check_module_size.sh
       - name: تطابق حالات معايير القبول مع أحكام التدقيق (T-116)
         run: bash scripts/check_criteria_status.sh
+      - name: منع المسارات المطلقة في الشفرة والاختبارات والأدوات (T-118)
+        run: bash scripts/check_absolute_paths.sh
       - name: مدقّق التوثيق (يفشل إذا تغيّر src بلا PROGRESS.md وتقرير اختبار)
         run: bash scripts/check_documentation.sh
