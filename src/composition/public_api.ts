@@ -164,7 +164,18 @@ export { LimitedAgent } from '../agents/first_agent';
 export type { AgentTask, AgentTaskOutcome, LimitedAgentDeps } from '../agents/first_agent';
 export { AgentImporter } from '../agents/import';
 export type { ImportAgentRequest, ImportAgentResult } from '../agents/import';
-export { SpawnPolicy, DEFAULT_SPAWN_LIMITS } from '../agents/spawn_policy';
+export { SpawnPolicy } from '../agents/spawn_policy';
+export type { ReservedBatch } from '../agents/spawn_policy';
+export { SpawnReservationLedger } from '../agents/spawn_reservations';
+export type {
+  SpawnReservation, ReservationOutcome, ReservationSettlement, ReservationLedgerLimits,
+} from '../agents/spawn_reservations';
+export { deriveLineage, derivePendingLineage, verifyLineageClaims } from '../agents/lineage';
+export type { LineageChain, LineageDrift, LineageFailureCode, ParentLookup } from '../agents/lineage';
+export { loadReproduction } from '../kernel/config/reproduction';
+export type {
+  ReproductionConfig, ReproductionLimits, ReproductionLoadPolicy,
+} from '../kernel/config/reproduction';
 export type { AgentBlueprint, SpawnLimits, SpawnRequestFacts } from '../agents/spawn_policy';
 export { AgentFactory } from '../agents/factory';
 export type { SpawnBatchRequest, SpawnBatchResult, AgentOrigin } from '../agents/factory';

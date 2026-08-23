@@ -31,3 +31,4 @@ export * from './config/production_policy';
 export * from './config/production';
 // المرحلة 39 (T-16): سياسةُ الحصر على مستوى النواة والحاوية — إكمالُ المعيار C-09
 export * from './config/confinement';
+export * from './config/reproduction';

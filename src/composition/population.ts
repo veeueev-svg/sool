@@ -27,7 +27,7 @@ import { OpenWeightsImporter } from '../models/open_weights_import';
 
 export function composePopulation(parts: SovereigntyParts) {
   const {
-    audit, quotas, king, killSwitch, resources, gateway, terminationRoll,
+    audit, quotas, king, killSwitch, resources, gateway, terminationRoll, reproductionConfig,
   } = parts;
 
   // 1) العزل والخروج الشبكي والأدوات (المرحلتان 11 و12) — بعد البوابة لأن الإذن يمرّ بها
@@ -56,7 +56,8 @@ export function composePopulation(parts: SovereigntyParts) {
 
   // 3) مصنع الوكلاء: سياسة التوالد ثم المصنع ثم الإيقاف الجماعي (المرحلة 19)
   //    الترتيب مقصود: لا مصنع بلا سياسة تحكمه، ولا إيقاف جماعي بلا تجميد يسبقه
-  const spawnPolicy = new SpawnPolicy({ audit, gateway });
+  //    والحدودُ من التهيئة وحدها لا من ثابتٍ في الشيفرة (RULE-005 — البند T-25)
+  const spawnPolicy = new SpawnPolicy({ audit, gateway, limits: reproductionConfig.limits });
   const factory = new AgentFactory({
     audit, gateway, killSwitch, policy: spawnPolicy, registry: agents, permissions,
   });

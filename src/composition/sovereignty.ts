@@ -10,7 +10,7 @@
  */
 import type { BootstrapOptions } from './state';
 import {
-  loadPersistence, loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadScale, loadRecovery, loadRoyalAuthority,
+  loadPersistence, loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadReproduction, loadScale, loadRecovery, loadRoyalAuthority,
 } from '../kernel/config';
 import { ResourceRegistry } from '../kernel/resource_registry';
 import { AppendOnlyLog } from '../audit/append_only_log';
@@ -56,6 +56,8 @@ export function composeSovereignty(
   const servicesConfig = loadServices(configDir);
   // تهيئة البحث النظري: لا تشغيل إن لم تكن المصادر والأنواع والحد الأخلاقي معلنة ومغلقة.
   const researchConfig = loadResearch(configDir);
+  // وتهيئة التوالد: لا تشغيل بحدود توالد غير معلنة ولا بسماحٍ افتراضي (المرحلة 39 — T-25)
+  const reproductionConfig = loadReproduction(configDir);
   const scaleConfig = loadScale(configDir);
   const recoveryConfig = loadRecovery(configDir);
   audit.append('authority:bootstrap', 'config_loaded', {
@@ -99,7 +101,7 @@ export function composeSovereignty(
 
   return {
     audit, config, quotas, regionsConfig, economyConfig, externalConfig, contractsConfig,
-    enterprisesConfig, servicesConfig, researchConfig, scaleConfig, recoveryConfig,
+    enterprisesConfig, servicesConfig, researchConfig, reproductionConfig, scaleConfig, recoveryConfig,
     persistenceConfig, journal,
     ca, registry, king, veto, killSwitch, heartbeat, monitor, terminationRoll, resources,
     gateway, guard,

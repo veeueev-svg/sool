@@ -22,6 +22,7 @@
     "bench:recovery": "npm run build && bash scripts/restore.sh --bench",
     "probe:compaction": "npm run build && node dist/scripts/compaction_probe.js 200",
     "probe:confinement": "npm run build && node dist/scripts/confinement_probe.js",
+    "probe:reproduction": "npm run build && node dist/scripts/reproduction_probe.js",
     "clean": "rm -rf dist"
   },
   "devDependencies": {

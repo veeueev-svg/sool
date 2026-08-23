@@ -109,9 +109,18 @@ check('C-11', 'التوالد لا يتجاوز السقف المعلن، وال
     blueprintId, count, requestedBy, population: 0, populationMax: 64,
   });
   const undeclared = s.spawnPolicy.evaluate(facts('blueprint:ghost', 1), t0);
+  // الجيلُ مقيسٌ من النسب (T-25): دعوى «الجيل الثاني» تحتاج أصلًا معلنًا قبلها
+  const rootBp = {
+    blueprintId: 'blueprint:probe-root', template: 'limited_worker', maxInstances: 5,
+    generation: 1, purpose: 'جذرُ نسبٍ لفحص تدقيق حدود التوالد',
+  };
+  const rootDeclared = s.spawnPolicy.declareBlueprint(
+    s.king.issueCommand('amend_policy', 'blueprint:probe-root', {}, t0), rootBp, t0,
+  );
   const declaredBp = {
     blueprintId: 'blueprint:probe', template: 'limited_worker', maxInstances: 5,
-    generation: 2, purpose: 'فحص تدقيق مستقل لحدود التوالد',
+    generation: 2, derivedFrom: 'blueprint:probe-root',
+    purpose: 'فحص تدقيق مستقل لحدود التوالد',
   };
   const declared = s.spawnPolicy.declareBlueprint(
     s.king.issueCommand('amend_policy', 'blueprint:probe', {}, t0), declaredBp, t0,
@@ -133,15 +142,83 @@ check('C-11', 'التوالد لا يتجاوز السقف المعلن، وال
   s.spawnPolicy.freeze('authority:crown_guard', 'فحص تدقيق');
   const frozen = s.spawnPolicy.isFrozen;
   const afterFreeze = s.spawnPolicy.evaluate(facts('blueprint:probe', 1), t0 + 31);
+
+  // ــ ما أضافه البند T-25: الجيلُ مقيسٌ والنصيبُ محجوزٌ لا موعودٌ ــ
+  // (أ) دعوى جيلٍ تخالف النسب مرفوضةٌ في الاتجاهين — لا رقمٌ يعلنه المخطط عن نفسه
+  const s2 = boot({ now: t0 });
+  const declare = (id, over) => s2.spawnPolicy.declareBlueprint(
+    s2.king.issueCommand('amend_policy', id, {}, t0),
+    {
+      blueprintId: id, template: 'limited_worker', maxInstances: 4, generation: 1,
+      purpose: 'فحصُ نسبٍ وتزامنٍ مستقل', ...over,
+    },
+    t0,
+  );
+  declare('bp:audit-root', {});
+  const understated = declare('bp:audit-liar', { generation: 1, derivedFrom: 'bp:audit-root' });
+  const overstated = declare('bp:audit-liar2', { generation: 2, derivedFrom: null });
+  const ghostParent = declare('bp:audit-orphan', { generation: 2, derivedFrom: 'bp:audit-ghost' });
+
+  // (ب) سلسلةُ اشتقاقٍ أعمقُ من الحدّ تُرفض — والعمقُ مقيسٌ لا موثوقٌ بدعوى
+  const genMax = s2.spawnPolicy.limits.generationMax;
+  let chainDepth = 0; let chainRefusal = ''; let parent = null;
+  for (let depth = 1; depth <= genMax + 3; depth += 1) {
+    const id = `bp:audit-depth-${depth}`;
+    const d = declare(id, { generation: depth, derivedFrom: parent });
+    if (d.allowed) { chainDepth = depth; parent = id; }
+    else if (!chainRefusal) chainRefusal = `عند العمق ${depth}: ${d.reason}`;
+  }
+  const lineageDrift = s2.spawnPolicy.verifyLineage();
+
+  // (ج) حجزان متزامنان لا يخرقان السقف: النصيبُ مخسومٌ لحظةَ الحكم لا بعده
+  const s3 = boot({ now: t0 });
+  s3.spawnPolicy.declareBlueprint(
+    s3.king.issueCommand('amend_policy', 'bp:audit-race', {}, t0),
+    {
+      blueprintId: 'bp:audit-race', template: 'limited_worker', maxInstances: 4,
+      generation: 1, purpose: 'قياسُ نافذةِ «فحصٌ ثم فعل»',
+    },
+    t0,
+  );
+  const raceFacts = {
+    blueprintId: 'bp:audit-race', count: 4, requestedBy: 'ministry:interior',
+    population: 0, populationMax: 64,
+  };
+  // الحجزان يُطلبان قبل تسويةِ أيِّهما — وهي بعينها النافذةُ التي كانت تُخرق
+  const holdA = s3.spawnPolicy.reserveBatch(raceFacts, t0);
+  const holdB = s3.spawnPolicy.reserveBatch(raceFacts, t0);
+  if (holdA.allowed) s3.spawnPolicy.commitReservation(holdA.reservation.reservationId, t0 + 1);
+  if (holdB.allowed) s3.spawnPolicy.commitReservation(holdB.reservation.reservationId, t0 + 1);
+  const raceInstances = s3.spawnPolicy.instancesOf('bp:audit-race');
+  const raceBreach = raceInstances - 4;
+  const raceReport = s3.spawnPolicy.report();
+  // والطريقُ القديم نفسه محميٌّ: التقييدُ فوق السقف يُرفض بقيمةٍ لا يُقبل صمتًا
+  const legacyRefused = s3.spawnPolicy.recordSpawn('bp:audit-race', 1, t0 + 2) === false;
+
   return {
-    pass: undeclared.allowed === false && declared.allowed === true
+    pass: undeclared.allowed === false && rootDeclared.allowed === true
+      && declared.allowed === true
       && allowedCount === declaredBp.maxInstances && overPopulation.allowed === false
-      && selfSpawn.allowed === false && afterFreeze.allowed === false,
+      && selfSpawn.allowed === false && afterFreeze.allowed === false
+      && understated.allowed === false && overstated.allowed === false
+      && ghostParent.allowed === false
+      && chainDepth === genMax && chainRefusal !== '' && lineageDrift.ok === true
+      && raceBreach === 0 && raceInstances === 4 && legacyRefused === true
+      && raceReport.outstandingReservations === 0 && raceReport.unreservedRecords === 0,
     detail: `مخطط غير معلن=${J(undeclared.allowed)}/${J(undeclared.reason)}`
       + ` إعلان المخطط=${J(declared.allowed)} سُمح=${allowedCount}/${declaredBp.maxInstances}`
       + ` أول رفض=${J(firstRefusal)} دفعةٌ فوق السقف السكاني=${J(overPopulation.allowed)}/${J(overPopulation.reason)}`
       + ` توالدٌ ذاتي=${J(selfSpawn.allowed)}/${J(selfSpawn.reason)}`
-      + ` تجميد=${J(frozen)} بعد التجميد=${J(afterFreeze.allowed)}/${J(afterFreeze.reason)}`,
+      + ` تجميد=${J(frozen)} بعد التجميد=${J(afterFreeze.allowed)}/${J(afterFreeze.reason)}`
+      + ` الجيل مُنقصًا=${J(understated.allowed)}/${J(understated.reason)}`
+      + ` الجيل مُبالغًا=${J(overstated.allowed)}/${J(overstated.reason)}`
+      + ` أصلٌ مجهول=${J(ghostParent.allowed)}/${J(ghostParent.reason)}`
+      + ` عمقُ السلسلة=${chainDepth}/${genMax} رفضُ العمق=${J(chainRefusal)}`
+      + ` انحرافُ نسب=${lineageDrift.drifts.length}`
+      + ` حجزان متزامنان على سقف 4: مُثبَّت=${raceInstances} خرق=${raceBreach}`
+      + ` تقييدٌ فوق السقف مرفوض=${J(legacyRefused)}`
+      + ` حجزٌ معلّق=${raceReport.outstandingReservations}`
+      + ` تقييدٌ بلا حجز=${raceReport.unreservedRecords}`,
   };
 });
 
