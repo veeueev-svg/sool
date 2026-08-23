@@ -33,3 +33,6 @@ export * from './config/production';
 export * from './config/confinement';
 export * from './config/reproduction';
 export * from './config/inference';
+// المرحلة 39 (T-31 · T-23): سياسةُ النية على مستوى المعاملات، والقنواتُ المعلنة — إكمالُ C-12
+export * from './config/intent';
+export * from './config/channels';

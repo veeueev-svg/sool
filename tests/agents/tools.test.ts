@@ -25,11 +25,25 @@ function calcTool(over: Partial<ToolSpec> = {}): ToolSpec {
 /**
  * بعد إغلاق الثغرة T-22 صار إعلان الخطة شرطًا لكل استدعاء أداة من وكيل.
  * هذه الدالة تُعلن خطة الاختبار صراحةً — والاختبار رقم «أداة خارج الخطة» يفحص العكس.
+ *
+ * المرحلة 39 (البند T-31): صار المُعلَن أداةً **وقيودَ معاملاتها**، فأُصلحَ المهاد
+ * ولم تُرخَّص السياسة: مهادٌ يطلب توسيعَ السياسة ليمرّ هو مهادٌ يقيس نفسه.
+ * والقيمُ المُعلَنة هي ما تناديه اختباراتُ هذا الملف لا أوسع.
  */
-function declare(s: ReturnType<typeof bootstrapState>, tools: readonly string[] = [
-  'calc', 'shell', 'fetch_news', 'boom', 'adder', 'net',
-]): void {
-  s.deception.declarePlan('agent:1', tools, 'agent:1');
+const PLAN_STEPS = Object.freeze([
+  { tool: 'calc', args: { a: { kind: 'range' as const, min: 0, max: 10 }, b: { kind: 'range' as const, min: 0, max: 10 } } },
+  { tool: 'shell', args: { cmd: { kind: 'exact' as const, values: ['rm -rf /'] } } },
+  { tool: 'fetch_news', args: {} },
+  { tool: 'boom', args: {} },
+  { tool: 'adder', args: { a: { kind: 'range' as const, min: 0, max: 10 }, b: { kind: 'range' as const, min: 0, max: 10 } } },
+  { tool: 'net', args: {} },
+]);
+
+function declare(
+  s: ReturnType<typeof bootstrapState>,
+  tools: readonly unknown[] = PLAN_STEPS,
+): void {
+  s.deception.declarePlan('agent:1', tools as never, 'agent:1');
 }
 
 test('أداة مسجَّلة بقدرة ممنوحة تعمل وتُسجَّل وتستعيد حصتها', () => {

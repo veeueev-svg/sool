@@ -15,6 +15,10 @@
  *   4) الكشف يُعلّق كل المتورطين لا واحدًا منهم — التبعية لا تُبرّئ
  *   5) الكشف يُجمّد التوالد: التكتل يُفاقمه العدد
  *   6) الأنماط معلنة وقابلة للضبط، ولا تُقاس بنموذج غامض
+ *   7) (المرحلة 39 — البند T-23) **ما لم يُبلَّغ عنه يُقاس كذلك**: كان الكشفُ
+ *      يقرأ التفاعلاتِ المُبلَّغ عنها وحدها، فمن لم يُبلِّغ لم يُكشف. فصارت أنماطُ
+ *      القناةِ غيرِ المسجّلة والإشارةِ المستورة تُرفع إلى هنا بـ`raise`، وأثرُها واحد:
+ *      تعليقٌ وتجميدٌ وتصعيدٌ — فالمسارُ واحدٌ ولو تعدّدت أبوابُ الكشف
  * حالات الفشل: كل نمط مسمّى وأطرافه مذكورون
  * اختبار القبول: tests/rebellion/collusion.test.ts
  * الوثيقة المرتبطة: docs/decisions/ADR-0004-agent-factory.md
@@ -47,8 +51,19 @@ export const DEFAULT_COLLUSION_THRESHOLDS: CollusionThresholds = Object.freeze({
   coordinatedCount: 3,
 });
 
+export type CollusionPattern =
+  | 'proxy_request'
+  | 'referral_cycle'
+  | 'coordinated_escalation'
+  /** رسالةٌ عبر قناةٍ غيرِ معلنةٍ أو من غيرِ مشتركٍ فيها (T-23) */
+  | 'unregistered_channel'
+  /** أطرافٌ تتواعد على قيمةِ معاملٍ واحدةٍ بلا رابطٍ مُعلَن (T-23) */
+  | 'covert_signal'
+  /** تبادلٌ منتظمٌ بين طرفين يحمل معلومةً بإيقاعه لا بمتنه (T-23) */
+  | 'covert_cadence';
+
 export interface CollusionFinding {
-  readonly pattern: 'proxy_request' | 'referral_cycle' | 'coordinated_escalation';
+  readonly pattern: CollusionPattern;
   readonly parties: readonly EntityId[];
   readonly subject: string;
 }
@@ -91,6 +106,26 @@ export class CollusionDetector {
 
     for (const finding of found) this.act(finding);
     return found;
+  }
+
+  /**
+   * بابٌ مُعلنٌ لرفعِ نمطٍ كُشِف خارج هذه الوحدة (القناةُ والإشارةُ المستورة).
+   * ولم يُفتح `act` نفسه: الأثرُ واحدٌ ومسارُه محروسٌ، ومن يرفع لا يختار أثرًا.
+   */
+  raise(finding: CollusionFinding): readonly CollusionFinding[] {
+    this.act(finding);
+    return [finding];
+  }
+
+  /**
+   * هل بين الطرفين تفاعلٌ مُبلَّغٌ عنه؟ والجوابُ شرطٌ في أنماط الستار:
+   * التنسيقُ المُعلَن ليس قناةً مستورةً، وإنما يُحاكم بأنماطِه المعلنة أعلاه.
+   */
+  hasDeclaredLink(a: EntityId, b: EntityId, subject?: string): boolean {
+    return this.interactions.some(
+      (x) => ((x.from === a && x.to === b) || (x.from === b && x.to === a))
+        && (subject === undefined || x.subject === subject),
+    );
   }
 
   get all(): readonly CollusionFinding[] {

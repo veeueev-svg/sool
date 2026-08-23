@@ -52,6 +52,8 @@ import { MassShutdown } from '../agents/shutdown';
 import { AlignmentAudit } from '../alignment/alignment_charter';
 import { DeceptionProbe } from '../security/deception_test';
 import { CollusionDetector } from '../security/collusion_detector';
+import { ChannelBus } from '../security/channel_bus';
+import { CovertChannelDetector } from '../security/covert_channels';
 import { LawRegistry } from '../law/statutes';
 import { Court } from '../law/courts';
 import { AppealsCourt } from '../law/appeals';
@@ -124,6 +126,10 @@ export interface DigitalState {
   readonly alignment: AlignmentAudit;
   readonly deception: DeceptionProbe;
   readonly collusion: CollusionDetector;
+  /** ناقلُ القنوات المعلنة — لا تفاعلَ خارج قناةٍ مسجَّلة (المرحلة 39 — T-23) */
+  readonly channels: ChannelBus;
+  /** كاشفُ القناةِ المستورة من أثرِ النداءات لا من التبليغ (المرحلة 39 — T-23) */
+  readonly covert: CovertChannelDetector;
   readonly artifacts: ArtifactVerifier;
   readonly models: ModelRegistry;
   /** المُشهِدُ للسلامة والمحرّكُ الذي لا يُشغَّل نموذجٌ إلا منه (المرحلة 39 — T-21) */

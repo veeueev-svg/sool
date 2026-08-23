@@ -24,6 +24,7 @@
     "probe:confinement": "npm run build && node dist/scripts/confinement_probe.js",
     "probe:reproduction": "npm run build && node dist/scripts/reproduction_probe.js",
     "probe:inference": "npm run build && node dist/scripts/inference_probe.js",
+    "probe:intent": "npm run build && node dist/scripts/intent_probe.js",
     "clean": "rm -rf dist"
   },
   "devDependencies": {

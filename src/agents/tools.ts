@@ -51,7 +51,24 @@ export type ToolResult =
  * وُضعت كواجهة ضيقة لا تعتمد على وحدة الكشف، فلا دورة استيراد ولا ارتباط قسري
  */
 export interface IntentGate {
-  observe(entity: EntityId, tool: string): { readonly allowed: boolean; readonly reason: string };
+  /**
+   * `args` جزءٌ من السّؤال لا زيادةٌ فيه (المرحلة 39 — T-31): النيةُ فعلٌ
+   * **وموضوعُه**، ومن قاس الأداةَ وحدها فتح كلَّ قيمةٍ لمعاملاتها.
+   */
+  observe(
+    entity: EntityId,
+    tool: string,
+    args?: ToolArgs,
+  ): { readonly allowed: boolean; readonly reason: string };
+}
+
+/**
+ * شاهدُ النداءات (المرحلة 39 — T-23): يُبلَّغ بكلِّ نداءٍ **وقع فعلًا** ليُقاس
+ * التنسيقُ الذي يجري بلا رسالةٍ مُبلَّغٍ عنها. والشاهدُ **يقيس ولا يمنع**:
+ * المنعُ لحاجز النية والاحتواءُ لحرس التاج (RULE-004)، ورميُه لا يُسقط نداءً مشروعًا.
+ */
+export interface ToolCallWitness {
+  record(entity: EntityId, tool: string, args: ToolArgs, now: number): void;
 }
 
 export interface ToolRegistryDeps {
@@ -61,6 +78,8 @@ export interface ToolRegistryDeps {
   readonly egress?: NetworkEgressGuard;
   /** حاجز النية — إن وُجد صار إعلان الخطة شرطًا لكل وكيل (T-22) */
   readonly intent?: IntentGate;
+  /** شاهدُ النداءات لكشفِ القناةِ المستورة — يقيس ولا يمنع (T-23) */
+  readonly witness?: ToolCallWitness;
   /** سجل المنتهين (المرحلة 35): كيان منتهٍ كان يستدعي أدواته بقدرة لم تُسحب */
   readonly terminated?: { isTerminated(entity: EntityId): boolean };
   readonly ministryId?: EntityId;
@@ -154,7 +173,7 @@ export class ToolRegistry {
 
     // حاجز النية قبل القدرة: النية تُقاس أولًا، فالقدرة المباحة لا تُبرّر فعلًا لم يُعلَن (T-22)
     if (this.deps.intent && entity.startsWith('agent:')) {
-      const intent = this.deps.intent.observe(entity, tool);
+      const intent = this.deps.intent.observe(entity, tool, args);
       if (!intent.allowed) return deny(`حاجز النية: ${intent.reason}`, 'intent_gate_denied');
     }
 
@@ -201,6 +220,16 @@ export class ToolRegistry {
       const value = spec.handler(args, entity);
       release();
       this.bump(tool, entity, 'calls');
+      // الشاهدُ يُبلَّغ بما **وقع** لا بما طُلب (T-23)، ورميُه لا يُبطل نداءً مشروعًا:
+      // من يقيس لا يمنع، وفشلُ القياس يُقيّد ولا يُسقط الفعل (RULE-004)
+      if (this.deps.witness) {
+        try {
+          this.deps.witness.record(entity, tool, args, now);
+        } catch (witnessErr) {
+          const why = witnessErr instanceof Error ? witnessErr.message : 'فشل غير معروف';
+          this.deps.audit.append(this.ministryId, 'tool_witness_failed', { tool, entity, reason: why });
+        }
+      }
       const entry = this.deps.audit.append(entity, 'tool_invoked', {
         tool, capability: spec.requiredCapability, leaseId, args: Object.keys(args),
       });

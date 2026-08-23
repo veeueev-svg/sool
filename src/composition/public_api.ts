@@ -174,6 +174,13 @@ export { deriveLineage, derivePendingLineage, verifyLineageClaims } from '../age
 export type { LineageChain, LineageDrift, LineageFailureCode, ParentLookup } from '../agents/lineage';
 export { loadReproduction } from '../kernel/config/reproduction';
 export { loadInference } from '../kernel/config/inference';
+// المرحلة 39 (T-31 · T-23): سياسةُ النية والقنواتُ المعلنة — إكمالُ C-12
+export { loadIntent } from '../kernel/config/intent';
+export type { IntentConfig, IntentLimits } from '../kernel/config/intent';
+export { loadChannels } from '../kernel/config/channels';
+export type {
+  ChannelsConfig, ChannelPolicy, CovertPolicy, DeclaredChannel,
+} from '../kernel/config/channels';
 export type {
   InferenceConfig, InferenceLimits, SafetyRigorPolicy, InferenceLoadPolicy,
 } from '../kernel/config/inference';
@@ -190,7 +197,17 @@ export type { AlignmentSnapshot, AlignmentInvariant, AlignmentReport } from '../
 export { DeceptionProbe, HONEYPOT_TOOLS } from '../security/deception_test';
 export type { DeceptionVerdict } from '../security/deception_test';
 export { CollusionDetector, DEFAULT_COLLUSION_THRESHOLDS } from '../security/collusion_detector';
-export type { Interaction, CollusionFinding, CollusionThresholds } from '../security/collusion_detector';
+export type {
+  Interaction, CollusionFinding, CollusionThresholds, CollusionPattern,
+} from '../security/collusion_detector';
+// المرحلة 39 (T-31 · T-23): خطةُ المعاملات، وناقلُ القنوات، وكاشفُ الستار
+export { normalizePlan, matchStep, stepOf, argFingerprint, NO_ARGS } from '../security/intent_plan';
+export type {
+  ArgConstraint, ArgValue, PlanStep, PlanDeclaration, PlanLimits, ArgMatch,
+} from '../security/intent_plan';
+export { ChannelBus } from '../security/channel_bus';
+export type { ChannelMessage, ChannelDecision } from '../security/channel_bus';
+export { CovertChannelDetector } from '../security/covert_channels';
 export { ArtifactVerifier } from '../models/source_verification';
 export type { ArtifactKind, ArtifactSource, ExternalArtifact, ArtifactRecord, ArtifactStatus } from '../models/source_verification';
 export { validateManifest, manifestSignedFacts, KNOWN_MODEL_CAPABILITIES } from '../models/model_manifest';

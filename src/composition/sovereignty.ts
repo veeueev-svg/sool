@@ -10,7 +10,7 @@
  */
 import type { BootstrapOptions } from './state';
 import {
-  loadPersistence, loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadReproduction, loadInference, loadScale, loadRecovery, loadRoyalAuthority,
+  loadPersistence, loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadReproduction, loadInference, loadIntent, loadChannels, loadScale, loadRecovery, loadRoyalAuthority,
 } from '../kernel/config';
 import { ResourceRegistry } from '../kernel/resource_registry';
 import { AppendOnlyLog } from '../audit/append_only_log';
@@ -60,6 +60,9 @@ export function composeSovereignty(
   const reproductionConfig = loadReproduction(configDir);
   // وتهيئة الاستدلال: لا تشغيلَ نموذجٍ بشروطٍ غير معلنة ولا بشرطٍ مُعطَّل (المرحلة 39 — T-21)
   const inferenceConfig = loadInference(configDir);
+  // وتهيئةُ النية والقنوات: لا حاجزَ معاملاتٍ بلا سياسة، ولا قناةَ بلا إعلان (المرحلة 39 — T-31 · T-23)
+  const intentConfig = loadIntent(configDir);
+  const channelsConfig = loadChannels(configDir);
   const scaleConfig = loadScale(configDir);
   const recoveryConfig = loadRecovery(configDir);
   audit.append('authority:bootstrap', 'config_loaded', {
@@ -103,7 +106,8 @@ export function composeSovereignty(
 
   return {
     audit, config, quotas, regionsConfig, economyConfig, externalConfig, contractsConfig,
-    enterprisesConfig, servicesConfig, researchConfig, reproductionConfig, inferenceConfig, scaleConfig, recoveryConfig,
+    enterprisesConfig, servicesConfig, researchConfig, reproductionConfig, inferenceConfig,
+    intentConfig, channelsConfig, scaleConfig, recoveryConfig,
     persistenceConfig, journal,
     ca, registry, king, veto, killSwitch, heartbeat, monitor, terminationRoll, resources,
     gateway, guard,

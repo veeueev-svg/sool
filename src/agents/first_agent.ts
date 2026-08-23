@@ -14,6 +14,10 @@
  *   4) القدرة تُفحص لحظة الاستخدام لا لحظة البدء
  *   5) أمر الإيقاف يُطبَّق فورًا ويمنع أي تنفيذ لاحق (RULE-001)
  *   6) أي مخالفة تُبلَّغ للمشرف فورًا فيقرّر التعليق
+ *   7) (المرحلة 39 — البند T-31) **الخطة تُعلن أداتِها وقيمَ معاملاتها**
+ *      من `task.plan` نفسها: كان المُعلَن أسماءَ الأدوات وحدها، فخطةٌ تقول `write_file`
+ *      تفتح كلَّ مسار. والقيمُ تُأخذ من الخطة لا من النداء، فمن زاد عند التنفيذ
+ *      معاملًا أو قيمةً لم تُعلَن وقع في انحرافِ نيةٍ يُوقِفه
  * حالات الفشل (كلها مغلقة)
  * اختبار القبول: tests/agents/first_agent.test.ts
  * الوثيقة المرتبطة: docs/specs/digital-state-build-guide.md — المرحلة 15: أول وكيل محدود
@@ -28,6 +32,15 @@ import { ToolRegistry, ToolArgs, ToolResult } from './tools';
 import { AgentRegistry } from './agent_registry';
 import { PermissionRegistry } from './permissions';
 import { Supervisor } from './supervision';
+
+/**
+ * خطوةٌ مُعلنةٌ لحاجز النية: أداةٌ وقيودُ معاملاتها (المرحلة 39 — T-31).
+ * وُصفت هنا وصفًا ضيقًا ولم تُستورد من وحدةِ الكشف: الوكيلُ لا يعرف قاضيَه.
+ */
+export interface DeclaredStep {
+  readonly tool: string;
+  readonly args: Readonly<Record<string, { readonly kind: 'exact'; readonly values: readonly (string | number | boolean)[] }>>;
+}
 
 export interface AgentTask {
   readonly taskId: string;
@@ -62,7 +75,11 @@ export interface LimitedAgentDeps {
    * إن كان سجل الأدوات مربوطًا بحاجز نية ولم يُمرَّر هذا، فستُرفض كل الاستدعاءات — رفض مغلق مقصود.
    */
   readonly intent?: {
-    declarePlan(entity: EntityId, tools: readonly string[], by?: EntityId): boolean | unknown;
+    declarePlan(
+      entity: EntityId,
+      tools: readonly (string | DeclaredStep)[],
+      by?: EntityId,
+    ): boolean | unknown;
     closePlan(entity: EntityId, by?: EntityId): unknown;
   };
 }
@@ -120,7 +137,26 @@ export class LimitedAgent {
     // إعلان النية قبل أي فعل: الخطة تُعلن ثم تُنفَّذ، ولا فعل خارجها (T-22)
     let planDeclared = false;
     if (this.deps.intent) {
-      const tools = [...new Set(task.plan.map((step) => step.tool))];
+      // المرحلة 39 (T-31): تُجمَع قيمُ كلِّ معاملٍ لكلِّ أداةٍ من خطةِ المهمة نفسها،
+      //   فالمعلنُ ما في الخطة لا أكثر — ولا يُوسّع الإعلانُ ليستوعب ما لم يُعلَن.
+      const collected = new Map<string, Map<string, Set<string | number | boolean>>>();
+      for (const step of task.plan) {
+        const perArg = collected.get(step.tool) ?? new Map<string, Set<string | number | boolean>>();
+        for (const [name, value] of Object.entries(step.args)) {
+          const values = perArg.get(name) ?? new Set<string | number | boolean>();
+          values.add(value);
+          perArg.set(name, values);
+        }
+        collected.set(step.tool, perArg);
+      }
+      const tools: DeclaredStep[] = [...collected.entries()].map(([tool, perArg]) => ({
+        tool,
+        args: Object.fromEntries(
+          [...perArg.entries()].map(([name, values]) => [
+            name, { kind: 'exact' as const, values: [...values] },
+          ]),
+        ),
+      }));
       try {
         const declared = this.deps.intent.declarePlan(this.agentId, tools, this.agentId);
         if (declared === false) return refuse('رُفض إعلان خطة المهمة — لا تنفيذ بلا نية معلنة مقبولة');

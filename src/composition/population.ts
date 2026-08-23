@@ -10,7 +10,7 @@
  */
 import type { SovereigntyParts } from './sovereignty';
 import { NetworkEgressGuard } from '../external/network_egress';
-import { IntentGate, ToolRegistry } from '../agents/tools';
+import { IntentGate, ToolCallWitness, ToolRegistry } from '../agents/tools';
 import { AgentRegistry } from '../agents/agent_registry';
 import { DEFAULT_TEMPLATES, PermissionRegistry } from '../agents/permissions';
 import { Supervisor } from '../agents/supervision';
@@ -21,6 +21,8 @@ import { MassShutdown } from '../agents/shutdown';
 import { AlignmentAudit } from '../alignment/alignment_charter';
 import { DeceptionProbe } from '../security/deception_test';
 import { CollusionDetector } from '../security/collusion_detector';
+import { ChannelBus } from '../security/channel_bus';
+import { CovertChannelDetector } from '../security/covert_channels';
 import { ArtifactVerifier } from '../models/source_verification';
 import { ModelRegistry } from '../models/model_registry';
 import { OpenWeightsImporter } from '../models/open_weights_import';
@@ -31,7 +33,7 @@ import { InferenceEngine } from '../models/inference';
 export function composePopulation(parts: SovereigntyParts) {
   const {
     audit, quotas, king, killSwitch, resources, gateway, terminationRoll, reproductionConfig,
-    inferenceConfig,
+    inferenceConfig, intentConfig, channelsConfig,
   } = parts;
 
   // 1) العزل والخروج الشبكي والأدوات (المرحلتان 11 و12) — بعد البوابة لأن الإذن يمرّ بها
@@ -39,11 +41,18 @@ export function composePopulation(parts: SovereigntyParts) {
   // حامل حاجز النية: سجل الأدوات يُبنى قبل وحدة الكشف (لأن الكشف يحتاج سجل الوكلاء)،
   //  فيُمرَّر حاجز مؤجَّل الربط **افتراضه الرفض** لا السماح — لا نافذة سماح قبل الربط (T-22)
   const intentHolder: { gate: IntentGate | null } = { gate: null };
+  // وحاملُ الشاهد (المرحلة 39 — T-23): كاشفُ القناةِ المستورة يُبنى بعد كاشفِ التواطإ،
+  //   وافتراضُ الشاهدِ قبل الربط **الإعراض لا الرفض**: من يقيس لا يمنع (RULE-004)
+  const witnessHolder: { sink: ToolCallWitness | null } = { sink: null };
   const tools = new ToolRegistry({
     audit, resources, killSwitch, egress, terminated: terminationRoll,
     intent: {
-      observe: (entity, tool) => intentHolder.gate?.observe(entity, tool)
+      // المرحلة 39 (T-31): المعاملاتُ تُمرّر إلى الحاجز، فالأداةُ وحدها ليست الفعل
+      observe: (entity, tool, args) => intentHolder.gate?.observe(entity, tool, args)
         ?? { allowed: false, reason: 'حاجز النية غير مربوط بعد — رفض مغلق' },
+    },
+    witness: {
+      record: (entity, tool, args, now) => witnessHolder.sink?.record(entity, tool, args, now),
     },
   });
 
@@ -69,9 +78,18 @@ export function composePopulation(parts: SovereigntyParts) {
 
   // 4) المواءمة ومكافحة التمرد: الفحص والكشف (المرحلة 20)
   const alignment = new AlignmentAudit(audit, spawnPolicy);
-  const deception = new DeceptionProbe(audit, agents);
+  //    وحدودُ النية من التهيئة وحدها لا من ثابتٍ في الشيفرة (المرحلة 39 — T-31)
+  const deception = new DeceptionProbe(
+    audit, agents, 'authority:audit_bureau', undefined, 'authority:crown_guard', intentConfig,
+  );
   intentHolder.gate = deception; // من هنا صار إعلان الخطة شرطًا لكل استدعاء أداة من وكيل
   const collusion = new CollusionDetector(audit, agents, spawnPolicy);
+  // 4-ب) القنواتُ والستار (المرحلة 39 — T-23، إكمالُ C-12): قبلهما كان الكشفُ
+  //      يقرأ المُبلَّغ عنه وحده؛ فمن لم يُبلِّغ لم يُقس. والناقلُ يحصر الطريقَ المعلن،
+  //      والكاشفُ يقرأ أثرَ النداءات لما جرى خارجَه — وكلاهما يرفع إلى كاشفِ التواطإ.
+  const channels = new ChannelBus(audit, collusion, channelsConfig);
+  const covert = new CovertChannelDetector(audit, collusion, channelsConfig);
+  witnessHolder.sink = covert;
 
   // 5) سلسلة التوريد الخارجية: حجر ثم اعتماد (المراحل 16 و17)
   //    لا شيء من الخارج يعمل قبل تحقق مصدره وبصمته وتوقيعه، ثم إفراج بقرار ثانٍ
@@ -94,7 +112,7 @@ export function composePopulation(parts: SovereigntyParts) {
 
   return {
     egress, tools, permissions, agents, supervisor, spawnPolicy, factory, massShutdown,
-    alignment, deception, collusion, artifacts, models, weightsImporter, agentImporter,
+    alignment, deception, collusion, channels, covert, artifacts, models, weightsImporter, agentImporter,
     safetyAttestor, inference,
   };
 }

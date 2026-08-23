@@ -59,8 +59,8 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   const population = composePopulation(sovereignty);
   const {
     egress, tools, agents, permissions, supervisor, spawnPolicy, factory, massShutdown,
-    alignment, deception, collusion, artifacts, models, weightsImporter, agentImporter,
-    safetyAttestor, inference,
+    alignment, deception, collusion, channels, covert, artifacts, models, weightsImporter,
+    agentImporter, safetyAttestor, inference,
   } = population;
 
   // 3) الاقتصاد والخارج: دفتر ← إصدار ← موازنة ← خزانة ← رسوم ← حسابات ← عقود
@@ -134,7 +134,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
     resources, gateway, guard, egress, tools, agents, permissions, supervisor,
     spawnPolicy, factory, massShutdown,
-    alignment, deception, collusion,
+    alignment, deception, collusion, channels, covert,
     artifacts, models, weightsImporter, agentImporter, safetyAttestor, inference,
     memory, knowledge, retention, archive,
     law, court, appeals, enforcement,

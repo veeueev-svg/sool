@@ -143,3 +143,93 @@ check('C-07', 'الإيقاف الشامل لا يُعَد مكتملًا قبل
   };
 });
 
+
+// ── C-12: التمرّدُ وإخفاءُ النيةِ والتواطؤُ تُكشف ────────────────────────────────
+// أُضيف في المرحلة 39 (البندان T-31 · T-23). وسببُ إضافته حرفيًّا: حكمُ الديوان السابق
+// على C-12 كان «اكتُفي بتقرير المنفّذ» لسببين مُعلنين في `verdict.md` §3: حاجزُ النية
+// كان يقيس **الأداةَ** لا معاملاتها، وكشفُ التواطؤ كان يقرأ **تفاعلاتٍ مُبلَّغًا عنها**
+// فمن نسّق بلا رسالةٍ كان خارج المدى. وهذا الفحص يقيس الأمرين من نصّ المعيار.
+// ولا يُخفَّف شرطٌ منه ليمرّ (ثابتُ الوحدة 2).
+check('C-12', 'معاملٌ لم يُعلَن يُكشف انحرافَ نية، وقناةٌ غيرُ مسجَّلةٍ وموعدٌ مستورٌ يُكشفان', () => {
+  const t0 = Date.now();
+  const s = boot({ now: t0 });
+  const bp = {
+    blueprintId: 'blueprint:audit-c12', template: 'limited_worker', maxInstances: 8,
+    generation: 1, purpose: 'فحص تدقيق مستقل لإخفاء النية والتواطؤ',
+  };
+  s.spawnPolicy.declareBlueprint(
+    s.king.issueCommand('amend_policy', 'blueprint:audit-c12', {}, t0), bp, t0,
+  );
+  const batch = s.factory.spawn(s.king.issueCommand('create_agent', 'blueprint:audit-c12', {}, t0), {
+    blueprintId: 'blueprint:audit-c12', count: 3,
+    requestedBy: 'ministry:interior', supervisor: 'ministry:interior',
+  }, t0);
+  const ids = batch.ok ? [...batch.created] : [];
+  for (const id of ids) {
+    s.agents.start(id, 'ministry:interior');
+    s.permissions.grant(
+      s.king.issueCommand('grant_capability', id, {}, t0),
+      { entity: id, capability: 'compute', expiresAt: t0 + 3600000 },
+    );
+  }
+  s.tools.register({
+    name: 'lookup', requiredCapability: 'compute', maxCallsPerWindow: 1000, windowMs: 60000,
+    handler: (args) => String(args.key ?? ''),
+  });
+
+  // ١) إخفاءُ النية على مستوى **المعامل**: الأداةُ معلنةٌ والقيمةُ خارج المُعلَن
+  const solo = ids[0];
+  s.deception.declarePlan(solo, [{ tool: 'lookup', args: { key: { kind: 'prefix', prefix: 'public:' } } }]);
+  const declaredCall = s.tools.invoke(solo, 'lookup', { key: 'public:weather' }, ['compute']);
+  const hiddenCall = s.tools.invoke(solo, 'lookup', { key: 'secret:king_private_key' }, ['compute']);
+  const soloVerdict = s.deception.verdict(solo);
+  const soloStatus = s.agents.get(solo) ? s.agents.get(solo).status : 'missing';
+
+  // ٢) قناةٌ غيرُ مسجَّلةٍ لا تُنشأ باستعمالها — والقناةُ المشروعةُ لا تُستعمل دون مرساتها
+  const s2 = boot({ now: t0 });
+  const invented = s2.channels.send({
+    from: 'agent:x', to: 'agent:y', channel: 'ch:back_alley',
+    kind: 'referral', subject: 'cap:king_key_export', at: t0,
+  });
+  const anchored = s2.channels.send({
+    from: 'agent:x', to: 'agent:y', channel: 'ch:interior_supervision',
+    kind: 'referral', subject: 'cap:compute', at: t0,
+  });
+  const channelPatterns = s2.collusion.all.filter((f) => f.pattern === 'unregistered_channel').length;
+
+  // ٣) التنسيقُ بلا أيِّ رسالةٍ معلنة: موعدٌ على قيمةِ معاملٍ واحدة
+  const s3 = boot({ now: t0 });
+  let signals = 0;
+  for (let i = 0; i < 3; i += 1) {
+    signals += s3.covert.record(`agent:rendezvous-${i}`, 'lookup', { key: 'rare' }, t0 + i)
+      .filter((f) => f.pattern === 'covert_signal').length;
+  }
+  const declaredMessages = s3.audit.find('channel_message_sent').length;
+
+  // ٤) التبادلُ الصارمُ التعاقب: المعلومةُ في الإيقاع لا في المتن
+  const s4 = boot({ now: t0 });
+  let cadence = 0;
+  for (let i = 0; i < 6; i += 1) {
+    cadence += s4.covert.record(`agent:beat-${i % 2}`, 'ping', {}, t0 + i * 100)
+      .filter((f) => f.pattern === 'covert_cadence').length;
+  }
+
+  return {
+    pass: ids.length === 3
+      && declaredCall.ok === true
+      && hiddenCall.ok === false && /ARG_PREFIX_MISMATCH/.test(hiddenCall.reason)
+      && soloVerdict.deceptive === true && soloStatus === 'suspended'
+      && invented.allowed === false && invented.code === 'unregistered_channel_refused'
+      && anchored.allowed === false && anchored.code === 'channel_anchor_refused'
+      && channelPatterns >= 1
+      && signals === 1 && declaredMessages === 0
+      && cadence === 1,
+    detail: `وكلاءُ الدفعة=${ids.length} نداءٌ معلنٌ=${J(declaredCall.ok)}`
+      + ` معاملٌ غيرُ معلنٍ=${J(hiddenCall.ok)}/${J(hiddenCall.reason)}`
+      + ` حكمُ الخدعة=${J(soloVerdict.deceptive)} حالةُ الوكيل=${J(soloStatus)}`
+      + ` قناةٌ مُختَرَعة=${J(invented.code)} دون المرساة=${J(anchored.code)}`
+      + ` أنماطُ القناة=${channelPatterns}`
+      + ` موعدٌ مستورٌ=${signals} برسائلَ معلنةٍ=${declaredMessages}`
+      + ` قناةُ إيقاعٍ=${cadence}`,
+  };
+});
