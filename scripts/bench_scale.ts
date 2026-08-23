@@ -6,10 +6,15 @@
  * اختبارات الوحدة: tests/scale/* | اختبار القبول: scale_lifecycle.test.ts
  * الوثيقة المرتبطة: docs/test-reports/phase-31.md
  * ثوابت هذه الوحدة: 1) مليون هوية فعلية في السجل؛ 2) عينات بوابة مستقلة؛ 3) الأرقام لا تخمن.
+ *
+ * المرحلة 39 (T-85): يقبل مسارَ تهيئةٍ اختياريًّا في `process.argv[2]` ليقاس السقفُ نفسه من
+ * تهيئةٍ أخرى **معلنة في خرج القياس**، فلا يُقاس سقفٌ ويُنسب إلى `config/scale.yaml`.
+ * وبلا وسيطٍ يبقى السلوك كما كان: تهيئةُ المستودع.
  */
 import { bootstrapState } from '../src/index';
 function percentile(values: number[], p: number): number { return values[Math.min(values.length - 1, Math.ceil(values.length * p) - 1)]!; }
-const state = bootstrapState();
+const configDirArg = process.argv[2];
+const state = configDirArg ? bootstrapState({ configDir: configDirArg }) : bootstrapState();
 const total = state.scaleConfig.policy.population_max;
 const batch = 62_500;
 const now = Date.now();
@@ -36,6 +41,7 @@ for (let i = 0; i < 1000; i += 1) {
 }
 timings.sort((a, b) => a - b);
 const memory = process.memoryUsage();
+console.log(`تهيئة القياس: ${configDirArg ?? 'config/ (تهيئة المستودع)'} · السقف المعلن فيها: ${total}`);
 console.log(`عدد الهويات المسجلة: ${state.population.population}`);
 console.log(`زمن اعتماد البوابة (مللي ثانية): وسيط=${percentile(timings, 0.5).toFixed(3)} p95=${percentile(timings, 0.95).toFixed(3)} p99=${percentile(timings, 0.99).toFixed(3)} أقصى=${timings.at(-1)!.toFixed(3)}`);
 console.log(`زمن التوزيع (مللي ثانية): ${distributionMs.toFixed(3)}؛ حتمي داخل التسجيل؛ الشرائح=${state.scaleConfig.policy.shard_count} والسقف/شريحة=${state.scaleConfig.policy.per_shard_max}`);

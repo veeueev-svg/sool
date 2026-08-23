@@ -15,6 +15,7 @@
     "check:paths": "bash scripts/check_absolute_paths.sh",
     "verify": "npm run build && node --test dist/tests/ && node dist/scripts/verify_audit_chain.js && npm run check:size && npm run check:criteria && npm run check:paths",
     "bench": "tsc && node dist/scripts/bench_scale.js",
+    "bench:tail": "npm run build && node dist/scripts/bench_scale_multi.js --runs 7",
     "bench:load": "tsc && node dist/scripts/bench_load.js",
     "bench:recovery": "npm run build && bash scripts/restore.sh --bench",
     "clean": "rm -rf dist"
