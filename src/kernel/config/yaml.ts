@@ -7,7 +7,8 @@
  * أُخرِج من `src/kernel/config.ts` في ورشة الهيكلة (الإصدار 0.24.0) بلا تغيير سلوك:
  * نفس النصّ ونفس رموز الرفض. والواجهة القديمة ما زالت تُصدّر كل ما هنا.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
+import { guardConfigFileBytes } from './declaration_budget';
 
 /**
  * محلّل YAML لمجموعة فرعية آمنة ومحدّدة: خرائط متداخلة، قوائم قيم، قوائم خرائط،
@@ -114,6 +115,13 @@ export function parseSimpleYaml(text: string): Record<string, unknown> {
   return (value ?? {}) as Record<string, unknown>;
 }
 
+/**
+ * يقرأ ملفَّ تهيئةٍ ويحلّله — **وبينهما حاجزُ البايتات** (البند T-130).
+ * ولِمَ قبل التحليل؟ لأنّ الملفَّ المنفوخَ لا يُردّ بعد أن يُصرف عليه محلّلٌ ويُبنى منه
+ * كائنٌ في الذاكرة، بل يُردّ وهو رقمٌ على القرص. وهذا الحاجزُ يقع على **كلِّ** قراءةِ
+ * ملفِّ تهيئةٍ في النواة (خمسةٌ وعشرون محمّلًا يمرّون من هنا) لا على مسار الإقلاع وحده.
+ */
 export function loadYamlFile(path: string): Record<string, unknown> {
+  guardConfigFileBytes(path, statSync(path).size);
   return parseSimpleYaml(readFileSync(path, 'utf8'));
 }

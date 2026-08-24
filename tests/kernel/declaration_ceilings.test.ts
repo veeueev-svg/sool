@@ -9,6 +9,9 @@
  *   2) السقفُ يسكن النواةَ لا الملفَّ المحكوم — فلا يُوسَّع بسطرٍ في تهيئة (RULE-005).
  *   3) الرفضُ برمزه لا بنصّه، ويحمل العددَين مقيسَين.
  *   4) تهيئةُ المستودع الفعليّة تمرّ — الحاجزُ حرسٌ لا شلَل.
+ *   ترتيبٌ مقيسٌ أُضيف في T-130: حاجزُ **بايتات الملف** في `loadYamlFile` يسبق حاجزَ العدد
+ *      في المحمّل. فحملٌ ضخمٌ يُردّ حجمًا لا عددًا — وهو أرخص، والاختباران أدناه يُعلنانه
+ *      صريحًا بدل أن يُبدَّل رمزُ الرفض في صمت.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -99,11 +102,26 @@ test('T-75: الفجوةُ مبرهنة — ألفُ نوعٍ صحيحِ الش�
       const grown = statSync(join(dir, 'enterprises.yaml')).size;
       const original = statSync(join(REAL_CONFIG, 'enterprises.yaml')).size;
       assert.ok(grown > original * 10, 'الإعلانُ المضخَّم أضعافُ الأصل');
-      // وثانيًا: الرفضُ بسقف العدد لا بأيِّ شرطٍ آخر من شروط الوحدة
+      // وثانيًا: الرفضُ يقع — وموضعُ وقوعه تغيّر في البند T-130 وهذا مقيسٌ لا مُخفى:
+      //   ألفُ نوعٍ يبلغ بالملف فوق 65536 بايتًا، وحاجزُ البايتات في `loadYamlFile` يسبق
+      //   حاجزَ العدد في المحمّل. فالحملُ الضخمُ يُردّ **أبكرَ** ممّا كان يُردّ، وهو أرخص.
       assert.equal(
         refusalCode(() => loadEnterprises(dir)),
-        'CONFIG_DECLARATION_OVER_CEILING',
+        'CONFIG_FILE_OVER_BYTE_CEILING',
       );
+    },
+  );
+  // وسقفُ العدد باقٍ حيث كان: حملٌ يفوق السقفَ عددًا ويبقى تحت سقفِ البايتات يُردّ به
+  withEnterprises(
+    (yaml) => yaml
+      .replace('materials:\n', `materials:\n${bulkMaterials(40)}`)
+      .replace('kinds:\n', `kinds:\n${bulkKinds(40)}`),
+    (dir) => {
+      assert.ok(
+        statSync(join(dir, 'enterprises.yaml')).size < 65_536,
+        'الحملُ المتوسّطُ تحت سقفِ البايتات، فالرفضُ رفضُ عددٍ لا رفضُ حجم',
+      );
+      assert.equal(refusalCode(() => loadEnterprises(dir)), 'CONFIG_DECLARATION_OVER_CEILING');
     },
   );
 });
@@ -230,8 +248,10 @@ test('T-75: السقفُ لا يُوسَّع من داخل الملف المحك
   withEnterprises(
     (yaml) => yaml
       .replace('policy:\n', 'policy:\n  max_kinds: 1000\n  max_materials: 1000\n')
-      .replace('materials:\n', `materials:\n${bulkMaterials(200)}`)
-      .replace('kinds:\n', `kinds:\n${bulkKinds(200)}`),
+      // الحملُ 40 لا 200: مئتان تبلغ فوق سقفِ بايتات الملف (T-130) فيسبق الرفضُ الحجميُّ
+      // الرفضَ العدديَّ، وهذا الاختبارُ مقصدُه RULE-005 لا ترتيبُ الحاجزَين.
+      .replace('materials:\n', `materials:\n${bulkMaterials(40)}`)
+      .replace('kinds:\n', `kinds:\n${bulkKinds(40)}`),
     (dir) => {
       assert.equal(refusalCode(() => loadEnterprises(dir)), 'CONFIG_DECLARATION_OVER_CEILING');
     },

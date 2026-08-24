@@ -10,6 +10,7 @@
  */
 import type { BootstrapOptions } from './state';
 import {
+  guardDeclarationBudget,
   loadPersistence, loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadReproduction, loadInference, loadIntent, loadChannels, loadScale, loadRecovery, loadRoyalAuthority,
 } from '../kernel/config';
 import { ResourceRegistry } from '../kernel/resource_registry';
@@ -30,6 +31,12 @@ export function composeSovereignty(
   configDir: string, now: number, options: BootstrapOptions,
 ) {
 
+  // -1) ميزانيّةُ الإعلان قبل كلِّ شيء (البند T-130): يُحصر المجلدُ ويُحرس **مجموعُه**
+  //     قبل أن يُحمَّل ملفٌ واحد. فما يمرّ قائمةً قائمةً بسقوف T-129 قد لا يمرّ مجموعًا،
+  //     ولا تُبنى دولةٌ نصفَ بناءٍ ثمّ يُقال «الإعلانُ أكبرُ من ميزانيّته». والقياسُ يُدوَّن
+  //     في السجل بعد إنشائه (السطرُ الوحيدُ الذي يسبق السجل هو الحصرُ لا الحكم).
+  const declarationCensus = guardDeclarationBudget(configDir);
+
   // 0) الوسيط الدائم قبل السجل — انحراف مُعلن عن قاعدة «السجل أولًا» وسببه ضرورة (RULE-008):
   //     السجل نفسه يُدوَّن في هذا الوسيط، فلا يمكن أن يتأخر عنه. والوسيط لا يكتب قيدًا في
   //     السجل ولا يقرأ منه، وغيابُ `persistenceDir` يعني غيابَه كليًّا: سلوكٌ سابق حرفًا بحرف.
@@ -41,6 +48,14 @@ export function composeSovereignty(
 
   // 1) السجل أولًا: لا خطوة تأسيس بلا تدقيق
   const audit = new AppendOnlyLog();
+  // أثرُ حرَسِ الميزانيّة يُدوَّن: حاجزٌ لا أثرَ له في الدفتر لا يُراجَع (RULE-009)
+  audit.append('authority:bootstrap', 'declaration_budget_measured', {
+    files: declarationCensus.files,
+    bytes: declarationCensus.bytes,
+    nodes: declarationCensus.nodes,
+    largest: declarationCensus.largestFile,
+    largest_bytes: declarationCensus.largestBytes,
+  });
   const config = loadRoyalAuthority(configDir);
   const quotas = loadQuotas(configDir);
   // تهيئة الأقاليم تُقرأ مع التهيئة السيادية: لا تشغيل بإعلان أقاليم مخالف (المرحلة 24)

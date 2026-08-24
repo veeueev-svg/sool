@@ -13,6 +13,8 @@ export * from './config/paths';
 export * from './config/yaml';
 // المرحلة 39 (T-75): سقوفُ العدد المعلن — تسكن النواةَ لا الملفَّ الذي تحكمه (RULE-005)
 export * from './config/declaration_limits';
+export * from './config/declaration_budget';
+export * from './config/declaration_census';
 export * from './config/royal_authority';
 export * from './config/quotas';
 export * from './config/regions';
