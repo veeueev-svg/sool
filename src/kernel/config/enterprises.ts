@@ -9,6 +9,7 @@
  */
 import { join } from 'node:path';
 import { SovereignViolation } from '../types';
+import { guardDeclaredCount } from './declaration_limits';
 import { loadExternal } from './external';
 import { resolveConfigDir } from './paths';
 import { loadQuotas } from './quotas';
@@ -45,6 +46,12 @@ export interface EnterprisesConfig {
  *     كل تأجير فلا تعمل المنشأة ولو صحّ كل ما قبله.
  * ويتحقق تقاطعيًّا مع `config/external.yaml` أن مصدر كل مادة خارجية **نظير معلن**،
  * فلا تدخل مادة على اسم مذكور بل على قناة قائمة (ADR-0011 قرار 1).
+ *
+ * وأُضيف في T-75 حرسُ **عددِ ما يُعلن** لا صحّتِه وحدها: كل شرطٍ فيما سبق يفحص العنصرَ
+ * الواحد، فتهيئةٌ بألفِ نوعٍ كلُّها صحيحةُ الشكل كانت **تمرّ بلا رفض** — والسقوفُ القائمة
+ * (`max_facilities_per_ministry` وغيرُها) تحدّ العددَ **القائم** لا العددَ **المعلن**.
+ * والسقوفُ في `declaration_limits.ts` لا هنا، لأنّ سقفًا يُعلن في الملف المحكوم يوسّعه
+ * من يحكمه (RULE-005).
  */
 export function loadEnterprises(configDir = resolveConfigDir()): EnterprisesConfig {
   const raw = loadYamlFile(join(configDir, 'enterprises.yaml')) as unknown as EnterprisesConfig;
@@ -122,12 +129,19 @@ export function loadEnterprises(configDir = resolveConfigDir()): EnterprisesConf
     }
   }
 
+  guardDeclaredCount(
+    'suspend_authorities', policy.suspend_authorities.length, 'جهاتُ تعليق المنشآت المعلنة',
+  );
+
   if (!raw.quality_checks || typeof raw.quality_checks !== 'object'
     || Object.keys(raw.quality_checks).length === 0) {
     throw new SovereignViolation(
       'لا فحوص جودة معلنة — لا مراقبة بلا مقياس معلن', 'CONFIG_ENTERPRISE_NO_CHECKS',
     );
   }
+  guardDeclaredCount(
+    'quality_checks', Object.keys(raw.quality_checks).length, 'فحوصُ الجودة المعلنة',
+  );
   let weightTotal = 0;
   for (const [name, weight] of Object.entries(raw.quality_checks)) {
     if (!Number.isSafeInteger(weight) || weight <= 0) {
@@ -149,6 +163,7 @@ export function loadEnterprises(configDir = resolveConfigDir()): EnterprisesConf
       'لا مواد معلنة — لا إنتاج بلا مادة معلنة', 'CONFIG_ENTERPRISE_NO_MATERIALS',
     );
   }
+  guardDeclaredCount('materials', raw.materials.length, 'الموادُّ المعلنة');
   const external = loadExternal(configDir);
   const counterparties = new Set(external.counterparties.map((cp) => cp.id));
   const materials = new Map<string, { source: string }>();
@@ -186,6 +201,7 @@ export function loadEnterprises(configDir = resolveConfigDir()): EnterprisesConf
       'لا أنواع منشآت معلنة — لا منشأة بلا إعلان', 'CONFIG_ENTERPRISE_NO_KINDS',
     );
   }
+  guardDeclaredCount('enterprise_kinds', raw.kinds.length, 'أنواعُ المنشآت المعلنة');
   const quotas = loadQuotas(configDir);
   const kindIds = new Set<string>();
   for (const kind of raw.kinds) {

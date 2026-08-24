@@ -1,5 +1,5 @@
 {
-  "version": "0.46.0",
+  "version": "0.47.0",
   "phase": 39,
   "completion_percent": 97.0,
   "phases_complete": [
@@ -46,8 +46,8 @@
     39
   ],
   "tests": {
-    "total": 1855,
-    "passing": 1855,
+    "total": 1867,
+    "passing": 1867,
     "command": "npm test"
   },
   "declared_by": "القيّم على المستودع",

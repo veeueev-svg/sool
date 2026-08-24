@@ -1,0 +1,112 @@
+===============================================================
+T-75 — سقوفُ العدد المعلن: الموادُّ وأنواعُ المنشآت
+الجلسة 47 · 2026-08-24T15:02:49Z · الخرجُ خامٌ لا مُنقّى
+===============================================================
+
+=== 1) دعوى البند كما هي في PROGRESS.md §2 (قبل الإغلاق) ===
+| T-75 | سقف معلن لعدد المواد وأنواع المنشآت في التهيئة | `src/kernel/config.ts`, `config/enterprises.yaml` | السقوف اليوم على العدد **القائم** لا على العدد **المعلن**: تهيئة بألف نوع تمرّ (نظير T-49 و T-39 و T-42) | وزارة الاقتصاد |
+
+=== 2) قياسُ الفجوة: إعلانٌ بألفِ نوعٍ يمرّ بلا رفض (قبل الحاجز) ===
+التهيئةُ القائمة: مواد=4 · أنواع=3 · فحوص=4 · جهاتُ تعليق=4
+إعلانٌ مضخَّم: مواد=1004 · أنواع=1003 — **حُمِّل بلا رفض** في 33.035065 ms
+حجمُ الملف: 533453 بايت (كان 6003)
+سقفُ المنشآت لوزارة=4 — يحدّ القائمَ لا المعلن: أنواعٌ معلنةٌ 1003 × وزاراتٌ عدّة
+ومن داخل الملف نفسه: max_facilities_per_ministry و max_concurrent_runs و min_quality_score كلُّها تُعلن هنا — فسقفٌ يُعلن في الملف المحكوم يُوسَّع بتعديل سطرٍ فيه
+
+=== 3) قياسٌ ثانٍ: كم محمّلًا في النواة يحرس عددَ ما يُعلن؟ (قبل الحاجز) ===
+-- عددُ المحمّلات في src/kernel/config/ --
+26
+-- قوائمُ يُشترط ألّا تكون فارغةً (حدٌّ أدنى) --
+src/kernel/config/channels.ts:2
+src/kernel/config/chaos.ts:1
+src/kernel/config/confinement.ts:1
+src/kernel/config/contracts.ts:3
+src/kernel/config/economy.ts:3
+src/kernel/config/enterprises.ts:9
+src/kernel/config/external.ts:3
+src/kernel/config/inference.ts:1
+src/kernel/config/persistence.ts:1
+src/kernel/config/production.ts:6
+src/kernel/config/quotas.ts:1
+src/kernel/config/regions.ts:1
+src/kernel/config/research.ts:3
+src/kernel/config/royal_authority.ts:1
+src/kernel/config/services.ts:6
+src/kernel/config/staging.ts:5
+src/kernel/config/termination.ts:1
+src/kernel/config/yaml.ts:1
+-- حدودٌ عليا على عددِ عناصرِ قائمةٍ معلنة (length > أو >=) --
+لا سطرَ واحدًا — صفرُ حاجزٍ على العدد المعلن في المستودع كلِّه قبل هذه الدفعة
+
+=== 4) بعد الحاجز: السقوفُ السياديّةُ ورمزُ الرفض ===
+5: * حالات الفشل: عددٌ معلنٌ فوق السقف ⇒ `CONFIG_DECLARATION_OVER_CEILING` (فشل مغلق)
+26:  materials: 64,
+28:  enterprise_kinds: 32,
+30:  quality_checks: 16,
+32:  suspend_authorities: 8,
+53:      `سقفُ إعلانٍ غيرُ صالحٍ في النواة: ${ceiling}`, 'CONFIG_DECLARATION_CEILING_INVALID',
+58:      `عددٌ غيرُ مقيسٍ في التهيئة: ${label}`, 'CONFIG_DECLARATION_COUNT_UNMEASURED',
+65:      'CONFIG_DECLARATION_OVER_CEILING',
+-- مواضعُ الحرس في محمّل المنشآت --
+12:import { guardDeclaredCount } from './declaration_limits';
+132:  guardDeclaredCount(
+142:  guardDeclaredCount(
+166:  guardDeclaredCount('materials', raw.materials.length, 'الموادُّ المعلنة');
+204:  guardDeclaredCount('enterprise_kinds', raw.kinds.length, 'أنواعُ المنشآت المعلنة');
+
+=== 5) الرفضُ مقيسٌ في نصّه ===
+الرمز: CONFIG_DECLARATION_OVER_CEILING
+النص: أنواعُ المنشآت المعلنة فوق السقف المعلن — بلغ: 1003/32. السقفُ على العدد المعلن يسكن النواةَ لا الملفَّ الذي يحكمه (RULE-005)
+تهيئةُ المستودع تمرّ: مواد=4 · أنواع=3 · فحوص=4 · جهاتُ تعليق=4
+
+=== 6) اختبارُ القبول: tests/kernel/declaration_ceilings.test.ts ===
+ok 1 - T-75: تهيئةُ المستودع الفعليّة تمرّ، وسقوفُها فوق ما تعلنه
+ok 2 - T-75: الفجوةُ مبرهنة — ألفُ نوعٍ صحيحِ الشكل كان يمرّ، والسقفُ وحده يردّه
+ok 3 - T-75: كلُّ سقفٍ يقع على حدّه — أنواعٌ ومواد
+ok 4 - T-75: المواد فوق سقفها تُرفض وحدها ولو صحّت الأنواع
+ok 5 - T-75: فحوصُ الجودة فوق سقفها تُرفض
+ok 6 - T-75: جهاتُ التعليق فوق سقفها تُرفض — والحمايةُ الرخيصةُ لها حدٌّ أيضًا
+ok 7 - T-75: نصُّ الرفض يحمل العددَين مقيسَين لا وصفًا عامًّا
+ok 8 - T-75: على الحدّ يُقبل وفوقه بواحدٍ يُرفض — حدٌّ يقع لا شعار
+ok 9 - T-75: عددٌ غيرُ مقيسٍ يُرفض برمزٍ آخر — لا يُقرأ الغائبُ صفرًا
+ok 10 - T-75: السقوفُ مجمَّدةٌ في النواة — لا تُوسَّع في زمن التشغيل
+ok 11 - T-75: كلُّ سقفٍ معلنٍ عددٌ صحيحٌ موجب — سقفٌ صفرٌ يُقعد الدولةَ عن الإقلاع
+ok 12 - T-75: السقفُ لا يُوسَّع من داخل الملف المحكوم — سطرٌ فيه لا أثرَ له
+# tests 12
+# pass 12
+# fail 0
+
+=== 7) السقّاطاتُ كلُّها: npm run verify ===
+# Subtest: مصدران مستقلان عن الدعوى: سلسلة التدقيق وحالة الدولة
+ok 1108 - مصدران مستقلان عن الدعوى: سلسلة التدقيق وحالة الدولة
+# Subtest: الكتب تُقرأ من المنفّذ لا من الدعوى: كتابٌ مُدّعى ولم يُنفَّذ خرقٌ
+ok 1861 - الكتب تُقرأ من المنفّذ لا من الدعوى: كتابٌ مُدّعى ولم يُنفَّذ خرقٌ
+# tests 1867
+# pass 1867
+# fail 0
+✓ لا وحدة تتجاوز سقفها — الاستثناءات المعلنة: 0
+✓ كل حالةٍ مطابقةٌ لحكم تدقيقها — مستوفى 12 · فجوة 7 · اكتُفي 2
+✓ لا مسار مطلق في الشفرة ولا في الاختبارات ولا في الأدوات
+  الدعوى: النسبة 97.0% · royal_approval=pending · المرحلة 40 في phases_complete: 0
+✓ لا دعوى إعلانٍ في version.json، وثمّ 9 صفًّا ليس ✅ و58 بندًا مفتوحًا — فالنسبةُ 97.0% صادقةٌ في وصف حالها
+✓ حاجزُ الإعلان: دعوى الإصدار مطابقةٌ لحال الدولة — والإعلانُ أثرٌ لا احتفال
+✓ جدولُ المجلدات: 25 صفًّا كلُّها مطابقةٌ للشجرة (ملفاتٍ وأسطرًا)
+  الدعوى: tests.total=1867 · tests.passing=1867
+  المُشغّل: tests=1867 · pass=1867 · fail=0
+✓ عددُ الاختبارات: 1867 مطابقٌ لخرجِ المُشغّل، ولا فشلَ فيه
+✓ فاحصُ الأرقام: كلُّ رقمٍ مفحوصٍ مولَّدٌ من مصدره — فما لا يُقاس آليًّا يتأخّر حتمًا
+✓ حاجزُ الحصر: لا انحراف — المنشورُ مولَّدٌ من الإعلان، والصورةُ متقشّفة.
+
+=== 8) الفروقُ المدفوعة ===
+ ARCHITECTURE.md                  |  4 ++--
+ src/kernel/config.ts             |  2 ++
+ src/kernel/config/enterprises.ts | 16 ++++++++++++++++
+ version.json                     |  6 +++---
+ 4 files changed, 23 insertions(+), 5 deletions(-)
+ M ARCHITECTURE.md
+ M src/kernel/config.ts
+ M src/kernel/config/enterprises.ts
+ M version.json
+?? docs/audit/measurements/T-075-declaration-ceilings.txt
+?? src/kernel/config/declaration_limits.ts
+?? tests/kernel/declaration_ceilings.test.ts
