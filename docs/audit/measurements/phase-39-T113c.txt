@@ -1,0 +1,95 @@
+قياسٌ خام — المرحلة 39 (جزء سادس عشر) · إنقاصُ دَينِ T-113 الثالث
+تاريخ القياس: 2026-08-24T11:02:57Z
+المُنفِّذ: القيّم على المستودع  ·  البيئة: node --test على dist/ بعد tsc
+
+────────────────────────────────────────────────────────────────────
+1) قبل التفكيك
+────────────────────────────────────────────────────────────────────
+$ wc -l src/load/load_drill.ts
+453 src/load/load_drill.ts
+
+$ grep load_drill config/module_limits.yaml
+  - {path: src/load/load_drill.ts, max_lines: 453, item: T-113}
+        ⇒ السقفُ الخاصُّ 453 والملفُ 453: على حدِّه بالضبط، فلا يقبل سطرًا.
+
+الاستثناءات المعلنة قبل: 2   (load_drill.ts 453 · factory_runtime.ts 422)
+أعلى دَينٍ معلن قبل: 453 (load_drill.ts)
+
+خطُّ الأساس قبل لمسِ سطرٍ واحد:
+$ npm test        ⇒ # pass 1824 · # fail 0
+$ md5sum dist/src/composition/public_api.d.ts
+cf8a45ae2d2b5ba04a2f37557e3d03f3
+
+────────────────────────────────────────────────────────────────────
+2) ما أُخرج — وحدُّ القسمة سلطةٌ لا حجم
+────────────────────────────────────────────────────────────────────
+الملفُ كان يجمع ثلاثةَ أمورٍ في مسارٍ واحد:
+  (أ) إعلانٌ لا يُنفَّذ منه سطر   — تسعةُ أشكال
+  (ب) قياسٌ **فعلٌ**              — يستأجر حصةً ويُدرج مهمّةً و**يكتب قيدَ تدقيق**
+  (ج) حكمٌ على المقيس **قراءةٌ**  — أرقامٌ تدخل ورموزُ خرقٍ تخرج، بلا سجلٍّ ولا حالة
+
+$ wc -l src/load/load_drill_types.ts src/load/load_breach.ts src/load/load_drill.ts
+109 src/load/load_drill_types.ts      (أ) إعلانٌ لا سلوك
+105 src/load/load_breach.ts           (ج) ستُّ دوالَّ نقيّة
+369 src/load/load_drill.ts            (ب) القياسُ وحدَه + واجهةُ التصدير
+
+$ md5sum src/load/load_drill_types.ts src/load/load_breach.ts src/load/load_drill.ts
+27630a728a1b8158d7c1c85faa110cef  src/load/load_drill_types.ts
+60504b4f64d2c06ee84baa1155545aab  src/load/load_breach.ts
+c6349bda39687e485938f05cb055b540  src/load/load_drill.ts
+
+الدوالُّ النقيّةُ الستُّ في load_breach.ts (ولا واحدةٌ منها تكتب قيدًا):
+  percentile · commandBreaches · burstBreaches · quotaBreaches ·
+  schedulerBreaches · ledgerBreaches
+
+ترتيبُ رموزِ الخرق **مصونٌ حرفيًّا** كما كان (وهو عقدٌ تقرؤه الاختبارات):
+  COMMAND_P99_OVER_THRESHOLD → COMMAND_MAX_OVER_THRESHOLD → COMMAND_FATE_MISSING
+  BURST_FATE_MISSING → BURST_PER_COMMAND_OVER_MAX
+  QUOTA_OVERRUN → QUOTA_PEAK_OVER_TOTAL → QUOTA_CAPACITY_MISMATCH →
+  QUOTA_LIMIT_NEVER_REACHED → QUOTA_NOT_RESTORED
+  SCHEDULER_TASK_FORGOTTEN → SCHEDULER_OVER_QUEUE_MAX → SCHEDULER_LIMIT_NEVER_REACHED →
+  SCHEDULER_REFUSAL_WITHOUT_CODE → SCHEDULER_NOT_DRAINED → SCHEDULER_TASK_UNACCOUNTED
+  LEDGER_UNSOUND → COMMAND_LOSS
+
+ما **لم** يُنقل، وبيانُه:
+  - بوّابةُ `admit` و`refuse` بقيتا في الصنف: الرفضُ **يكتب قيدًا** فهو فعلٌ لا قراءة.
+  - `NOOP_EXECUTOR` بقي في الصنف: هو افتراضُ تنفيذٍ لا شكلٌ ولا حكم.
+  - `run` بقي في الصنف: التصعيدُ إلى الملك فعلٌ يكتب قيدَين (`load_drill_breach`
+    و`escalated_to_king`) — ونقلُه إلى دالّةٍ «نقيّة» يكسر نقاءَها أو يُنقص قيدًا.
+
+────────────────────────────────────────────────────────────────────
+3) بعد التفكيك — الدليلُ عددٌ وبصمةٌ لا دعوى
+────────────────────────────────────────────────────────────────────
+$ npx tsc --noEmit          ⇒ لا خطأ
+$ npm test                  ⇒ # pass 1824 · # fail 0
+$ md5sum dist/src/composition/public_api.d.ts
+cf8a45ae2d2b5ba04a2f37557e3d03f3      ⇐ **نفسُها قبل وبعد** (السطحُ العام لم يتغيّر بايتًا)
+
+$ npm run check:size
+سقف الوحدة المعلن: 400 سطرًا
+✓ لا وحدة تتجاوز سقفها — الاستثناءات المعلنة: 1
+
+$ npm run verify
+# pass 1824 · # fail 0
+✓ لا وحدة تتجاوز سقفها — الاستثناءات المعلنة: 1
+✓ كل حالةٍ مطابقةٌ لحكم تدقيقها — مستوفى 12 · فجوة 7 · اكتُفي 2
+✓ لا مسار مطلق في الشفرة ولا في الاختبارات ولا في الأدوات
+✓ حاجزُ الحصر: لا انحراف — المنشورُ مولَّدٌ من الإعلان، والصورةُ متقشّفة.
+
+────────────────────────────────────────────────────────────────────
+4) جدولُ الفرق
+────────────────────────────────────────────────────────────────────
+| المقيس                        | قبل                              | بعد                              |
+| src/load/load_drill.ts        | 453                              | 369   (−84 · −18.5%)             |
+| وحداتٌ جديدة                  | —                                | 109 + 105                        |
+| استثناءاتُ الحجم              | 2                                | 1     (حُذف الصفُّ ولم يُرفع سقف) |
+| أكبرُ دَينٍ معلن               | 453 (load_drill.ts)              | 422 (factory_runtime.ts)         |
+| الاختبارات                    | 1824/1824                        | 1824/1824  ⇐ لا فرق، وهو الدليل  |
+| بصمةُ public_api.d.ts         | cf8a45ae2d2b5ba04a2f37557e3d03f3 | نفسُها                            |
+
+────────────────────────────────────────────────────────────────────
+5) ما بقيَ من دَينِ T-113 (البندُ لم يُغلق)
+────────────────────────────────────────────────────────────────────
+  - src/services/factory_runtime.ts — 422 سطرًا (استثناءٌ واحدٌ أخير)
+البندُ يُغلق بإنقاصِه وحدَه، ولا يُغلق بإعلانٍ ولا بمجلدٍ فارغ (RULE-001).
+والنسبةُ 97.00% والفجوات 7 ومسبارُ التدقيق 20/20 — بلا مساس (RULE-004).

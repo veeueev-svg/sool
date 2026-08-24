@@ -27,105 +27,33 @@
  *   4) **التمرين لا يترك أثرًا**: كل حصة استأجرها تُستعاد، وكل مهمة أدرجها تُصرَّف،
  *      ويُتحقَّق من العودة إلى خط الأساس — وإلا فهو خرق باسمه لا تنظيف صامت.
  *   5) **من يقيس لا ينفّذ**: المُشغّل من التهيئة وهو جهة تدقيق، والقناة تعتمد وتنفّذ (RULE-004).
+ *   6) **الإعلانُ والحكمُ خرجا، والقياسُ بقي** (الجلسة 42 · T-113): الأشكالُ في
+ *      `load_drill_types.ts`، وحصرُ الخرق في المقيس دوالَّ **نقيّةً** في `load_breach.ts`؛
+ *      وبقي هنا ما **يفعل**: يستأجر حصةً ويُدرج مهمّةً ويكتب قيدَ تدقيق. والسقّاطةُ تقتضي
+ *      أنّ سقفَ هذا الملف لا يُرفع بعد اليوم — والصفُّ محذوفٌ من `config/module_limits.yaml`.
  */
-import { EntityId, SignedRoyalCommand, StateMode } from '../kernel/types';
-import { AppendOnlyLog } from '../audit/append_only_log';
+import { EntityId, SignedRoyalCommand } from '../kernel/types';
 import { CommandChannel, CommandExecutor } from '../crown/command_channel';
-import { ResourceRegistry } from '../kernel/resource_registry';
 import { FairScheduler } from '../scale/scheduler';
-import { KillSwitch } from '../security/kill_switch';
-import { LoadConfig } from '../kernel/config';
-import { LoadFate, LoadLedger, LoadLedgerReport } from './load_ledger';
+import { LoadFate } from './load_ledger';
+import {
+  BurstPressureReport, CommandPressureInput, CommandPressureReport, LoadDrillDeps,
+  LoadDrillReport, LoadPolicy, PressureOutcome, QuotaPressureReport,
+  SchedulerPressureInput, SchedulerPressureReport,
+} from './load_drill_types';
+import {
+  burstBreaches, commandBreaches, ledgerBreaches, percentile, quotaBreaches, schedulerBreaches,
+} from './load_breach';
 
-export type LoadPolicy = LoadConfig['policy'];
-
-export interface CommandPressureReport {
-  readonly submitted: number;
-  readonly executed: number;
-  readonly denied: number;
-  readonly failed: number;
-  readonly p99Ms: number;
-  readonly maxMs: number;
-  readonly meanMs: number;
-  readonly breaches: readonly string[];
-}
-
-export interface BurstPressureReport {
-  readonly size: number;
-  readonly settled: number;
-  readonly durationMs: number;
-  readonly perCommandMs: number;
-  readonly breaches: readonly string[];
-}
-
-export interface QuotaPressureReport {
-  readonly resource: string;
-  readonly amount: number;
-  readonly attempts: number;
-  readonly granted: number;
-  readonly refused: number;
-  readonly peakAllocated: number;
-  readonly total: number;
-  readonly overrun: number;
-  readonly restored: boolean;
-  readonly breaches: readonly string[];
-}
-
-export interface SchedulerPressureReport {
-  readonly probe: number;
-  readonly accepted: number;
-  readonly refused: number;
-  readonly refusalCodes: readonly string[];
-  readonly queueMax: number;
-  readonly forgotten: number;
-  readonly drained: number;
-  readonly breaches: readonly string[];
-}
-
-export interface LoadDrillReport {
-  readonly commands: CommandPressureReport;
-  readonly burst: BurstPressureReport;
-  readonly quota: QuotaPressureReport;
-  readonly scheduler: SchedulerPressureReport;
-  readonly ledger: LoadLedgerReport;
-  readonly breaches: readonly string[];
-  readonly verdict: 'pass' | 'fail';
-}
-
-export type PressureOutcome<T> = { readonly ok: true; readonly report: T } | { readonly ok: false; readonly code: string };
-
-export interface LoadDrillDeps {
-  readonly audit: AppendOnlyLog;
-  readonly killSwitch: KillSwitch;
-  readonly resources: ResourceRegistry;
-  readonly ledger: LoadLedger;
-  readonly policy: LoadPolicy;
-  /** وضع الدولة كما تراه البوابة — التمرين يقرؤه ولا يغيّره */
-  readonly mode: () => StateMode;
-}
-
-export interface CommandPressureInput {
-  readonly by: EntityId;
-  readonly channel: CommandChannel;
-  readonly count: number;
-  /** مُصدر الأوامر: يُمرَّر من الخارج لأن التمرين لا يوقّع أمرًا ولا ينتحل الملك */
-  readonly issue: (index: number) => SignedRoyalCommand;
-  readonly executor?: CommandExecutor;
-  readonly now?: number;
-}
-
-export interface SchedulerPressureInput {
-  readonly by: EntityId;
-  readonly scheduler: FairScheduler;
-  readonly probe?: number;
-}
-
-/** نسبة مئوية من مصفوفة مقيسة — لا تقريب لأعلى للتجميل */
-function percentile(sorted: readonly number[], fraction: number): number {
-  if (sorted.length === 0) return 0;
-  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(fraction * sorted.length) - 1));
-  return sorted[index]!;
-}
+/**
+ * واجهةُ التصدير تبقى هنا كما كانت قبل التفكيك: من كان يستورد شكلًا من هذا المسار
+ * يستوردُه منه بعد التفكيك — فلا يُعدَّل مستوردٌ ولا اختبارٌ (سابقة `region_registry.ts`).
+ */
+export type {
+  BurstPressureReport, CommandPressureInput, CommandPressureReport, LoadDrillDeps,
+  LoadDrillReport, LoadPolicy, PressureOutcome, QuotaPressureReport,
+  SchedulerPressureInput, SchedulerPressureReport,
+} from './load_drill_types';
 
 const NOOP_EXECUTOR: CommandExecutor = () => undefined;
 
@@ -201,11 +129,8 @@ export class LoadDrill {
     const p99Ms = percentile(sorted, 0.99);
     const maxMs = sorted[sorted.length - 1] ?? 0;
     const meanMs = latencies.reduce((sum, value) => sum + value, 0) / (latencies.length || 1);
-    const breaches: string[] = [];
-    if (p99Ms > policy.channel_p99_ms) breaches.push('COMMAND_P99_OVER_THRESHOLD');
-    if (maxMs > policy.channel_max_ms) breaches.push('COMMAND_MAX_OVER_THRESHOLD');
     const settled = counted.executed + counted.denied + counted.failed;
-    if (settled !== input.count) breaches.push('COMMAND_FATE_MISSING');
+    const breaches = commandBreaches({ p99Ms, maxMs, settled, count: input.count }, policy);
 
     const report: CommandPressureReport = {
       submitted: input.count, executed: counted.executed, denied: counted.denied,
@@ -255,9 +180,7 @@ export class LoadDrill {
       this.deps.ledger.settle(outcome.commandId, outcome.status);
     }
     const perCommandMs = durationMs / input.count;
-    const breaches: string[] = [];
-    if (settled !== input.count) breaches.push('BURST_FATE_MISSING');
-    if (perCommandMs > policy.channel_max_ms) breaches.push('BURST_PER_COMMAND_OVER_MAX');
+    const breaches = burstBreaches({ settled, count: input.count, perCommandMs }, policy);
 
     const report: BurstPressureReport = { size: input.count, settled, durationMs, perCommandMs, breaches };
     this.deps.audit.append(input.by, 'load_burst_measured', {
@@ -305,12 +228,9 @@ export class LoadDrill {
     for (const entity of entities) this.deps.resources.releaseAllFor(entity);
     const restored = this.deps.resources.allocated(resource, now) === baseline;
 
-    const breaches: string[] = [];
-    if (overrun > policy.max_quota_overrun) breaches.push('QUOTA_OVERRUN');
-    if (peakAllocated > spec.total) breaches.push('QUOTA_PEAK_OVER_TOTAL');
-    if (granted !== capacity) breaches.push('QUOTA_CAPACITY_MISMATCH');
-    if (refused < 1) breaches.push('QUOTA_LIMIT_NEVER_REACHED');
-    if (!restored) breaches.push('QUOTA_NOT_RESTORED');
+    const breaches = quotaBreaches({
+      overrun, peakAllocated, total: spec.total, granted, capacity, refused, restored,
+    }, policy);
 
     const report: QuotaPressureReport = {
       resource, amount, attempts, granted, refused,
@@ -368,13 +288,10 @@ export class LoadDrill {
       if (scheduler.complete(task.taskId)) drained += 1;
     }
 
-    const breaches: string[] = [];
-    if (forgotten > 0) breaches.push('SCHEDULER_TASK_FORGOTTEN');
-    if (accepted.length > scheduler.queueMax) breaches.push('SCHEDULER_OVER_QUEUE_MAX');
-    if (refused < 1) breaches.push('SCHEDULER_LIMIT_NEVER_REACHED');
-    if (refused > 0 && refusalCodes.size === 0) breaches.push('SCHEDULER_REFUSAL_WITHOUT_CODE');
-    if (drained !== accepted.length) breaches.push('SCHEDULER_NOT_DRAINED');
-    if (accepted.length + refused !== probe) breaches.push('SCHEDULER_TASK_UNACCOUNTED');
+    const breaches = schedulerBreaches({
+      forgotten, accepted: accepted.length, queueMax: scheduler.queueMax, refused,
+      refusalCodeCount: refusalCodes.size, drained, probe,
+    });
 
     const report: SchedulerPressureReport = {
       probe, accepted: accepted.length, refused, refusalCodes: [...refusalCodes],
@@ -426,8 +343,7 @@ export class LoadDrill {
     const breaches = [
       ...commands.report.breaches, ...burst.report.breaches,
       ...quota.report.breaches, ...scheduler.report.breaches,
-      ...(ledger.sound ? [] : ['LEDGER_UNSOUND']),
-      ...(ledger.lost > policy.max_command_loss ? ['COMMAND_LOSS'] : []),
+      ...ledgerBreaches(ledger, policy),
     ];
     const verdict: 'pass' | 'fail' = breaches.length === 0 ? 'pass' : 'fail';
     const report: LoadDrillReport = {
