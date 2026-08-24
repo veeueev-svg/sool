@@ -10,6 +10,7 @@
 import { join } from 'node:path';
 import { SovereignViolation } from '../types';
 import { resolveConfigDir } from './paths';
+import { guardDeclaredCount } from './declaration_limits';
 import { loadYamlFile } from './yaml';
 
 /** تهيئة الأقاليم المعلنة (أُعلنت في المرحلة 2 وصارت مُلزمة في المرحلة 24) */
@@ -35,6 +36,7 @@ export function loadRegions(configDir = resolveConfigDir()): RegionsConfig {
   if (!Array.isArray(raw.regions) || raw.regions.length === 0) {
     throw new SovereignViolation('لا أقاليم معلنة — لا اتحاد بلا إعلان', 'CONFIG_NO_REGIONS');
   }
+  guardDeclaredCount('regions', raw.regions.length, 'أقاليمُ الاتحاد المعلنة');
   if (raw.collective_override_of_king !== 'forbidden') {
     throw new SovereignViolation(
       'نقض الأقاليم المجتمعة للملك ممنوع — السيادة غير قابلة للتجميع',

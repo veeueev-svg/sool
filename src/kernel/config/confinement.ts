@@ -21,6 +21,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { SovereignViolation } from '../types';
 import { resolveConfigDir } from './paths';
+import { guardDeclaredCount } from './declaration_limits';
 import { loadYamlFile } from './yaml';
 
 /** الشروطُ المعروفة — قائمة مغلقة: شرطٌ غير معلن لا يُقاس ولا يُشترط */
@@ -75,6 +76,7 @@ function readPorts(raw: unknown): readonly InfrastructurePort[] {
       'CONFIG_CONFINEMENT_PORT',
     );
   }
+  guardDeclaredCount('infrastructure_ports', raw.length, 'المنافذُ البنيويّةُ المعلنة');
   const ports: InfrastructurePort[] = [];
   for (const entry of raw as InfrastructurePort[]) {
     const port = Number(entry?.port);

@@ -28,6 +28,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { SovereignViolation } from '../types';
 import { resolveConfigDir } from './paths';
+import { guardDeclaredCount } from './declaration_limits';
 import { loadYamlFile } from './yaml';
 
 const LIMIT = 'CONFIG_CHANNEL_LIMIT';
@@ -159,10 +160,14 @@ function readChannel(raw: unknown, seen: Set<string>): DeclaredChannel {
   if (!Array.isArray(kinds) || kinds.length === 0) {
     throw new SovereignViolation(`قناةٌ بلا أنواعِ تفاعلٍ معلنة: ${id}`, SPEC);
   }
+  guardDeclaredCount('channel_kinds', kinds.length, `أنواعُ تفاعلِ القناة المعلنة: ${id}`);
   const participants = channel.participants;
   if (!Array.isArray(participants) || participants.length < 2) {
     throw new SovereignViolation(`قناةٌ بأقلَّ من مشتركين اثنين: ${id}`, SPEC);
   }
+  guardDeclaredCount(
+    'channel_participants', participants.length, `مشتركو القناة المعلنون: ${id}`,
+  );
   const purpose = String(channel.purpose ?? '');
   if (purpose.trim() === '') {
     throw new SovereignViolation(`قناةٌ بلا غرضٍ معلن: ${id}`, SPEC);
@@ -214,6 +219,7 @@ export function loadChannels(configDir = resolveConfigDir()): ChannelsConfig {
   if (!Array.isArray(declared) || declared.length === 0) {
     throw new SovereignViolation('لا قناةَ معلنةً واحدة — والقائمةُ الفارغةُ ليست سياسة', SPEC);
   }
+  guardDeclaredCount('channels', declared.length, 'القنواتُ المعلنة');
   const seen = new Set<string>();
   return Object.freeze({
     policy: readPolicy(doc.policy),

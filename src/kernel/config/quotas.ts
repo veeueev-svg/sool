@@ -10,6 +10,7 @@
 import { join } from 'node:path';
 import { SovereignViolation } from '../types';
 import { resolveConfigDir } from './paths';
+import { guardDeclaredCount } from './declaration_limits';
 import { loadYamlFile } from './yaml';
 
 /** تهيئة الحصص والموارد (المرحلة 5) */
@@ -24,6 +25,7 @@ export function loadQuotas(configDir = resolveConfigDir()): QuotasConfig {
   if (!raw.resources || Object.keys(raw.resources).length === 0) {
     throw new SovereignViolation('لا موارد معلنة — لا تشغيل بلا حصص', 'CONFIG_NO_RESOURCES');
   }
+  guardDeclaredCount('quota_resources', Object.keys(raw.resources).length, 'مواردُ الحصص المعلنة');
   for (const [name, spec] of Object.entries(raw.resources)) {
     if (typeof spec.total !== 'number' || typeof spec.per_agent_max !== 'number'
       || typeof spec.lease_seconds !== 'number') {

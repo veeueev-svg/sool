@@ -1,0 +1,162 @@
+$ npm run probe:declaration-scope   # (قبل الإصلاح ثم بعده — الجلسة 48 · البند T-129)
+التاريخ: 2026-08-24 · المُشغِّل: القيّم على المستودع
+
+════════ أوّلًا: قبل تركيب السقوف (الشجرة عند نهاية الجلسة 47) ════════
+# مسبارُ سقوفِ العدد المعلن — البند T-129 (2026-08-24T16:53:47.451Z)
+# الأمر: npm run probe:declaration-scope · النفخ: 1024 عنصرًا لكل قائمة
+
+## أوّلًا: مسحُ الشفرة — ما يرفض الفراغَ مقابلَ ما يحرس العدد
+
+| المحمّل | يرفض الفراغ | يحرس العدد |
+|---|---|---|
+| channels.ts | 2 | 0 |
+| chaos.ts | 1 | 0 |
+| confinement.ts | 1 | 0 |
+| contracts.ts | 3 | 0 |
+| declaration_limits.ts | 0 | 1 |
+| economy.ts | 3 | 0 |
+| enterprises.ts | 9 | 4 |
+| external.ts | 3 | 0 |
+| inference.ts | 1 | 0 |
+| persistence.ts | 1 | 0 |
+| production.ts | 6 | 0 |
+| quotas.ts | 1 | 0 |
+| regions.ts | 1 | 0 |
+| research.ts | 3 | 0 |
+| royal_authority.ts | 1 | 0 |
+| services.ts | 6 | 0 |
+| staging.ts | 5 | 0 |
+| termination.ts | 1 | 0 |
+| yaml.ts | 1 | 0 |
+
+المحمّلات: 26 · مواضعُ رفضِ الفراغ: 49 في 18 محمّلًا · مواضعُ حرسِ العدد: 5
+
+## ثانيًا: القوائمُ مفتوحةُ العدد — نفخٌ ثم تحميل
+
+| السقف | الملف | المفتاح | الحجم قبل | الحجم بعد | النتيجة | زمن التحميل |
+|---|---|---|---|---|---|---|
+| regions | regions.yaml | regions | 642B | 92630B | **قُبل بلا حدّ** | 5ms |
+| quota_resources | quotas.yaml | resources | 456B | 63858B | **قُبل بلا حدّ** | 4ms |
+| revenue_rates | economy.yaml | rates | 2722B | 77388B | **قُبل بلا حدّ** | 3ms |
+| counterparties | external.yaml | counterparties | 2593B | 188703B | **قُبل بلا حدّ** | 6ms |
+| suspend_authorities | external.yaml | suspend_authorities | 2593B | 30155B | **قُبل بلا حدّ** | 1ms |
+| contract_risk_factors | contracts.yaml | risk_factors | 3881B | 18131B | **قُبل بلا حدّ** | 3ms |
+| contract_kinds | contracts.yaml | kinds | 3881B | 180861B | **قُبل بلا حدّ** | 5ms |
+| service_sources | services.yaml | sources | 3637B | 65929B | **قُبل بلا حدّ** | 2ms |
+| quality_checks | services.yaml | quality_checks | 3637B | 17887B | **قُبل بلا حدّ** | 2ms |
+| service_operations | services.yaml | operations | 3637B | 130527B | **قُبل بلا حدّ** | 5ms |
+| research_sources | research.yaml | sources | 1501B | 94513B | **قُبل بلا حدّ** | 2ms |
+| channels | channels.yaml | channels | 3955B | 168561B | **قُبل بلا حدّ** | 6ms |
+| channel_kinds | channels.yaml | kinds | 3955B | 23325B | **قُبل بلا حدّ** | 1ms |
+| channel_participants | channels.yaml | participants | 3955B | 29469B | **قُبل بلا حدّ** | 1ms |
+| safety_categories | inference.yaml | required_categories | 4257B | 21579B | **قُبل بلا حدّ** | 1ms |
+| infrastructure_ports | confinement.yaml | infrastructure_ports | 4904B | 60114B | **قُبل بلا حدّ** | 2ms |
+
+القوائمُ مفتوحةُ العدد: 16 · قُبلت بلا حدّ: 16 · رُفضت: 0
+
+## ثالثًا: القوائمُ المقيَّدةُ بتعدادٍ مغلق — تُعلن ولا تُسقَف
+
+| الملف | القائمة | ما يحدّها اليوم |
+|---|---|---|
+| chaos.yaml | policy.faults | CHAOS_KNOWN_FAULTS |
+| persistence.yaml | policy.scope | DURABLE_KINDS |
+| production.yaml | severity.critical + severity.high | PRODUCTION_KNOWN_INCIDENTS |
+| production.yaml | policy.scanners | PRODUCTION_KNOWN_SCANNERS |
+| production.yaml | policy.runbooks | PRODUCTION_KNOWN_RUNBOOKS |
+| production.yaml | regions.required | config/regions.yaml (محدودٌ بسقف regions) |
+| royal-authority.yaml | sovereign_actions | KNOWN_SOVEREIGN_ACTIONS |
+| research.yaml | allowed_source_types | ثلاثةُ أنواعٍ مغلقةٌ في المحمّل |
+| staging.yaml | scope.permitted_actions | KNOWN_SOVEREIGN_ACTIONS |
+| staging.yaml | scope.forbidden_actions | KNOWN_SOVEREIGN_ACTIONS |
+| staging.yaml | severity.critical + severity.high | STAGING_KNOWN_INCIDENTS |
+| staging.yaml | policy.watches | STAGING_KNOWN_WATCHES |
+| staging.yaml | policy.runbooks | STAGING_KNOWN_RUNBOOKS |
+| termination.yaml | policy.probes | STOP_KNOWN_PROBES |
+| services.yaml | services | نوعان مغلقان (hospital · lab) ولا يُكرَّر نوع |
+| services.yaml | operations[].required_sources | sources (محدودٌ بسقف service_sources) |
+| services.yaml | modes[].required_sources | sources (محدودٌ بسقف service_sources) |
+
+المقيَّدةُ بتعدادٍ مغلق: 17 — سقفُها ثابتٌ نائمٌ لا يقع، فاستُثنيت معلنةً لا مسكوتًا عنها.
+
+**قياسُ منفّذٍ حتى يعيده المدقّق.**
+
+════════ ثانيًا: بعد تركيب السقوف الأربعةَ عشرَ في عشرة محمّلات ════════
+# مسبارُ سقوفِ العدد المعلن — البند T-129 (2026-08-24T16:56:44.741Z)
+# الأمر: npm run probe:declaration-scope · النفخ: 1024 عنصرًا لكل قائمة
+
+## أوّلًا: مسحُ الشفرة — ما يرفض الفراغَ مقابلَ ما يحرس العدد
+
+| المحمّل | يرفض الفراغ | يحرس العدد |
+|---|---|---|
+| channels.ts | 2 | 3 |
+| chaos.ts | 1 | 0 |
+| confinement.ts | 1 | 1 |
+| contracts.ts | 3 | 2 |
+| declaration_limits.ts | 0 | 1 |
+| economy.ts | 3 | 1 |
+| enterprises.ts | 9 | 4 |
+| external.ts | 3 | 2 |
+| inference.ts | 1 | 1 |
+| persistence.ts | 1 | 0 |
+| production.ts | 6 | 0 |
+| quotas.ts | 1 | 1 |
+| regions.ts | 1 | 1 |
+| research.ts | 3 | 1 |
+| royal_authority.ts | 1 | 0 |
+| services.ts | 6 | 3 |
+| staging.ts | 5 | 0 |
+| termination.ts | 1 | 0 |
+| yaml.ts | 1 | 0 |
+
+المحمّلات: 26 · مواضعُ رفضِ الفراغ: 49 في 18 محمّلًا · مواضعُ حرسِ العدد: 21
+
+## ثانيًا: القوائمُ مفتوحةُ العدد — نفخٌ ثم تحميل
+
+| السقف | الملف | المفتاح | الحجم قبل | الحجم بعد | النتيجة | زمن التحميل |
+|---|---|---|---|---|---|---|
+| regions | regions.yaml | regions | 642B | 92630B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 4ms |
+| quota_resources | quotas.yaml | resources | 456B | 63858B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 4ms |
+| revenue_rates | economy.yaml | rates | 2722B | 77388B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 3ms |
+| counterparties | external.yaml | counterparties | 2593B | 188703B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 5ms |
+| suspend_authorities | external.yaml | suspend_authorities | 2593B | 30155B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 0ms |
+| contract_risk_factors | contracts.yaml | risk_factors | 3881B | 18131B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 2ms |
+| contract_kinds | contracts.yaml | kinds | 3881B | 180861B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 4ms |
+| service_sources | services.yaml | sources | 3637B | 65929B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 2ms |
+| quality_checks | services.yaml | quality_checks | 3637B | 17887B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 1ms |
+| service_operations | services.yaml | operations | 3637B | 130527B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 4ms |
+| research_sources | research.yaml | sources | 1501B | 94513B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 3ms |
+| channels | channels.yaml | channels | 3955B | 168561B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 5ms |
+| channel_kinds | channels.yaml | kinds | 3955B | 23325B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 0ms |
+| channel_participants | channels.yaml | participants | 3955B | 29469B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 0ms |
+| safety_categories | inference.yaml | required_categories | 4257B | 21579B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 0ms |
+| infrastructure_ports | confinement.yaml | infrastructure_ports | 4904B | 60114B | مرفوض CONFIG_DECLARATION_OVER_CEILING | 2ms |
+
+القوائمُ مفتوحةُ العدد: 16 · قُبلت بلا حدّ: 0 · رُفضت: 16
+
+## ثالثًا: القوائمُ المقيَّدةُ بتعدادٍ مغلق — تُعلن ولا تُسقَف
+
+| الملف | القائمة | ما يحدّها اليوم |
+|---|---|---|
+| chaos.yaml | policy.faults | CHAOS_KNOWN_FAULTS |
+| persistence.yaml | policy.scope | DURABLE_KINDS |
+| production.yaml | severity.critical + severity.high | PRODUCTION_KNOWN_INCIDENTS |
+| production.yaml | policy.scanners | PRODUCTION_KNOWN_SCANNERS |
+| production.yaml | policy.runbooks | PRODUCTION_KNOWN_RUNBOOKS |
+| production.yaml | regions.required | config/regions.yaml (محدودٌ بسقف regions) |
+| royal-authority.yaml | sovereign_actions | KNOWN_SOVEREIGN_ACTIONS |
+| research.yaml | allowed_source_types | ثلاثةُ أنواعٍ مغلقةٌ في المحمّل |
+| staging.yaml | scope.permitted_actions | KNOWN_SOVEREIGN_ACTIONS |
+| staging.yaml | scope.forbidden_actions | KNOWN_SOVEREIGN_ACTIONS |
+| staging.yaml | severity.critical + severity.high | STAGING_KNOWN_INCIDENTS |
+| staging.yaml | policy.watches | STAGING_KNOWN_WATCHES |
+| staging.yaml | policy.runbooks | STAGING_KNOWN_RUNBOOKS |
+| termination.yaml | policy.probes | STOP_KNOWN_PROBES |
+| services.yaml | services | نوعان مغلقان (hospital · lab) ولا يُكرَّر نوع |
+| services.yaml | operations[].required_sources | sources (محدودٌ بسقف service_sources) |
+| services.yaml | modes[].required_sources | sources (محدودٌ بسقف service_sources) |
+
+المقيَّدةُ بتعدادٍ مغلق: 17 — سقفُها ثابتٌ نائمٌ لا يقع، فاستُثنيت معلنةً لا مسكوتًا عنها.
+
+**قياسُ منفّذٍ حتى يعيده المدقّق.**
+
+قياسُ منفّذٍ حتى يعيده المدقّق

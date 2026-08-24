@@ -10,6 +10,7 @@
 import { join } from 'node:path';
 import { SovereignViolation } from '../types';
 import { loadEconomy } from './economy';
+import { guardDeclaredCount } from './declaration_limits';
 import { resolveConfigDir } from './paths';
 import { loadYamlFile } from './yaml';
 
@@ -89,11 +90,15 @@ export function loadExternal(configDir = resolveConfigDir()): ExternalConfig {
       );
     }
   }
+  guardDeclaredCount(
+    'suspend_authorities', policy.suspend_authorities.length, 'جهاتُ تعليق القنوات الخارجيّة',
+  );
   if (!Array.isArray(raw.counterparties) || raw.counterparties.length === 0) {
     throw new SovereignViolation(
       'لا نظائر خارجية معلنة — لا حساب بلا إعلان', 'CONFIG_EXTERNAL_NO_COUNTERPARTIES',
     );
   }
+  guardDeclaredCount('counterparties', raw.counterparties.length, 'النظائرُ الخارجيّةُ المعلنة');
 
   const ids = new Set<string>();
   const hosts = new Set<string>();

@@ -41,7 +41,7 @@
 | `src/` (الجذر) | 1 | 205 | `index.ts` — جذر التركيب: ينادي طبقات `composition/` بترتيبها الملزم، ولا يبني ولا يحمل سياسة | القيّم |
 | `src/composition/` | 11 | 1626 | طبقات البناء بحدود الاعتماد: `sovereignty` ← `population` ← `economy` ← `enterprises` ← `scale` ← `institutions` ← `resilience` ← `operations`، و`state.ts` (عقد الحالة) و`public_api.ts` (سطح التصدير) و`alignment_snapshot.ts` | القيّم |
 | `src/kernel/` | 4 | 514 | الأنواع السيادية، سجل الموارد، حدود النواة | القيّم |
-| `src/kernel/config/` | 26 | 3944 | مُحمِّل لكل نطاق: `royal_authority`, `quotas`, `regions`, `economy`, `external`, `contracts`, `enterprises`, `services`, `research`, `scale`, `recovery`, `load`, `chaos`, `termination`, `staging`, `production` (+ `production_policy`), `persistence`, `confinement`, `reproduction`, **`inference`** (الجلسة 35) و`yaml` و`paths` | القيّم |
+| `src/kernel/config/` | 26 | 4021 | مُحمِّل لكل نطاق: `royal_authority`, `quotas`, `regions`, `economy`, `external`, `contracts`, `enterprises`, `services`, `research`, `scale`, `recovery`, `load`, `chaos`, `termination`, `staging`, `production` (+ `production_policy`), `persistence`, `confinement`, `reproduction`, **`inference`** (الجلسة 35) و`yaml` و`paths` | القيّم |
 | `src/audit/` | 3 | 384 | السلسلة غير القابلة للمحو ومخزنها | ديوان التدقيق |
 | `src/identity/` | 4 | 265 | جذر الثقة، سلطة الشهادات، سجل الهويات | حرس التاج |
 | `src/crown/` | 7 | 977 | البوابة، النقض، النبض، الحرس، قناة الأوامر | الديوان الملكي |

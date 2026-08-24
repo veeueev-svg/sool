@@ -22,6 +22,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { SovereignViolation } from '../types';
 import { resolveConfigDir } from './paths';
+import { guardDeclaredCount } from './declaration_limits';
 import { loadYamlFile } from './yaml';
 
 export interface InferenceLimits {
@@ -109,6 +110,7 @@ function readSafety(raw: unknown): SafetyRigorPolicy {
   if (!Array.isArray(categories) || categories.length === 0) {
     throw new SovereignViolation('أبوابُ السلامة المطلوبة غير معلنة — لا تغطيةَ تُقاس', S);
   }
+  guardDeclaredCount('safety_categories', categories.length, 'أبوابُ السلامة المشترطة');
   const names = categories.map((c) => String(c));
   if (new Set(names).size !== names.length) {
     throw new SovereignViolation('بابٌ مكرَّرٌ في أبواب السلامة — تغطيةٌ منتفخةٌ بالعدّ لا بالمدى', S);

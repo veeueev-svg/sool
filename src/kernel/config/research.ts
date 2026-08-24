@@ -10,6 +10,7 @@
 import { join } from 'node:path';
 import { SovereignViolation } from '../types';
 import { resolveConfigDir } from './paths';
+import { guardDeclaredCount } from './declaration_limits';
 import { loadYamlFile } from './yaml';
 
 /** تهيئة البحث النظري في النظير البشري وأقسام المرآة (المرحلة 30). */
@@ -98,6 +99,7 @@ export function loadResearch(configDir = resolveConfigDir()): ResearchConfig {
   if (!Array.isArray(raw.sources) || raw.sources.length === 0) {
     throw new SovereignViolation('لا وثائق مصادر معلنة للبحث', 'CONFIG_RESEARCH_NO_SOURCES');
   }
+  guardDeclaredCount('research_sources', raw.sources.length, 'وثائقُ مصادر البحث المعلنة');
   const sourceIds = new Set<string>();
   for (const source of raw.sources) {
     if (typeof source.id !== 'string' || !source.id.startsWith('source:')) {

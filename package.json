@@ -27,6 +27,7 @@
     "probe:governance-scope": "npm run build && node dist/scripts/governance_scope_probe.js",
     "probe:durability-scope": "npm run build && node dist/scripts/durability_scope_probe.js",
     "probe:journal-cost": "npm run build && node scripts/journal_cost_probe.mjs",
+    "probe:declaration-scope": "npm run build && node dist/scripts/declaration_scope_probe.js",
     "probe:confinement": "npm run build && node dist/scripts/confinement_probe.js",
     "probe:reproduction": "npm run build && node dist/scripts/reproduction_probe.js",
     "probe:inference": "npm run build && node dist/scripts/inference_probe.js",

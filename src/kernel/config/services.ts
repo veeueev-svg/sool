@@ -10,6 +10,7 @@
 import { join } from 'node:path';
 import { SovereignViolation } from '../types';
 import { resolveConfigDir } from './paths';
+import { guardDeclaredCount } from './declaration_limits';
 import { loadYamlFile } from './yaml';
 
 /** تهيئة المستشفيات والمختبرات البرمجية (المرحلة 29) — config/services.yaml */
@@ -74,6 +75,7 @@ export function loadServices(configDir = resolveConfigDir()): ServicesConfig {
   if (!Array.isArray(raw.sources) || raw.sources.length === 0) {
     throw new SovereignViolation('لا مصادر بيانات معلنة للخدمات', 'CONFIG_SERVICES_NO_SOURCES');
   }
+  guardDeclaredCount('service_sources', raw.sources.length, 'مصادرُ بيانات الخدمات المعلنة');
   const sources = new Set<string>();
   for (const source of raw.sources) {
     if (typeof source.id !== 'string' || !source.id.startsWith('source:')) {
@@ -91,6 +93,9 @@ export function loadServices(configDir = resolveConfigDir()): ServicesConfig {
     || Object.keys(raw.quality_checks).length === 0) {
     throw new SovereignViolation('لا فحوص جودة مختبر معلنة', 'CONFIG_SERVICES_NO_QUALITY_CHECKS');
   }
+  guardDeclaredCount(
+    'quality_checks', Object.keys(raw.quality_checks).length, 'فحوصُ جودة المختبر المعلنة',
+  );
   let qualityTotal = 0;
   for (const [check, weight] of Object.entries(raw.quality_checks)) {
     if (!Number.isSafeInteger(weight) || weight <= 0) {
@@ -161,6 +166,9 @@ export function loadServices(configDir = resolveConfigDir()): ServicesConfig {
     if (!Array.isArray(service.operations) || service.operations.length === 0) {
       throw new SovereignViolation(`خدمة بلا عمليات معلنة: ${service.id}`, 'CONFIG_SERVICES_NO_OPERATIONS');
     }
+    guardDeclaredCount(
+      'service_operations', service.operations.length, `عملياتُ الخدمة المعلنة: ${service.id}`,
+    );
     const operationIds = new Set<string>();
     for (const operation of service.operations) {
       if (typeof operation.id !== 'string' || !operation.id.startsWith('operation:')) {

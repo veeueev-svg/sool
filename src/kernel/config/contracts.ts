@@ -10,6 +10,7 @@
 import { join } from 'node:path';
 import { SovereignViolation } from '../types';
 import { loadExternal } from './external';
+import { guardDeclaredCount } from './declaration_limits';
 import { resolveConfigDir } from './paths';
 import { loadYamlFile } from './yaml';
 
@@ -114,6 +115,9 @@ export function loadContracts(configDir = resolveConfigDir()): ContractsConfig {
       'لا عوامل مخاطر معلنة — لا تقدير بلا مقياس معلن', 'CONFIG_CONTRACT_NO_RISK_FACTORS',
     );
   }
+  guardDeclaredCount(
+    'contract_risk_factors', Object.keys(raw.risk_factors).length, 'عواملُ مخاطر العقود المعلنة',
+  );
   for (const [name, weight] of Object.entries(raw.risk_factors)) {
     if (!Number.isSafeInteger(weight) || weight <= 0) {
       throw new SovereignViolation(
@@ -126,6 +130,7 @@ export function loadContracts(configDir = resolveConfigDir()): ContractsConfig {
       'لا أنواع عقود معلنة — لا عقد بلا إعلان', 'CONFIG_CONTRACT_NO_KINDS',
     );
   }
+  guardDeclaredCount('contract_kinds', raw.kinds.length, 'أنواعُ العقود المعلنة');
 
   const external = loadExternal(configDir);
   const caps = new Map<string, number>();

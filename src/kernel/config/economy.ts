@@ -10,6 +10,7 @@
 import { join } from 'node:path';
 import { SovereignViolation } from '../types';
 import { resolveConfigDir } from './paths';
+import { guardDeclaredCount } from './declaration_limits';
 import { loadYamlFile } from './yaml';
 
 /**
@@ -129,6 +130,7 @@ export function loadEconomy(configDir = resolveConfigDir()): EconomyConfig {
   if (!revenue || !Array.isArray(revenue.rates) || revenue.rates.length === 0) {
     throw new SovereignViolation('لا أوعية رسوم معلنة — لا رسم بلا نصّ', 'CONFIG_NO_RATES');
   }
+  guardDeclaredCount('revenue_rates', revenue.rates.length, 'أوعيةُ الرسوم المعلنة');
   if (revenue.retroactive !== 'forbidden') {
     throw new SovereignViolation(
       'الأثر الرجعي للرسوم ممنوع — نظير عدم رجعية القوانين', 'CONFIG_RETROACTIVE_ALLOWED',
