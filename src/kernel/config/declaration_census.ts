@@ -12,15 +12,19 @@
  *      المستند كلِّه، لا القوائمُ المسقوفةُ وحدها. فما فُتح بابُه لاحقًا يُحسب اليومَ.
  *   2) **الحصرُ لا يُحمّل الدولةَ**: يقرأ ويحلّل ولا يبني كائنًا سياديًّا ولا يكتب في سجل،
  *      فوقوعُه لا يترك أثرًا نصفيًّا — وهو أوّلُ ما يُنادى في تركيب السيادة قبل أيِّ محمّل.
- *   3) **الحدُّ المُعلن للحصر**: يقتصر على `*.yaml` مباشرةً في المجلد. فما يُخبّأ في مجلدٍ
- *      فرعيٍّ أو بلاحقةٍ أخرى **لا يُحصى**، وهذا انحرافٌ مُعلنٌ لا مسكوتٌ عنه: البندُ T-133.
- *   4) **مسارُ الحرَس واحدٌ لا اثنان**: من نادى محمّلًا مفردًا لا يمرّ بهذا الحصر — يمرّ
- *      بسقفِ بايتات ملفِّه في {@link ./yaml} وبسقفِ قوائمه، لا بسقفِ المجموع. وذاك مُعلنٌ في
- *      T-133 أيضًا: حرَسُ المجموع حرَسُ إقلاعٍ لا حرَسُ نداءٍ مفرد.
+ *   3) **مدى الحصر يُقرأ من ثابتٍ لا من حرفٍ في هذا الملف** (T-133): المشيُ في
+ *      {@link ./declaration_reach} يعدّ لواحقَ {@link DECLARATION_REACH.extensions} في المجلد
+ *      **وفي مجلداته الفرعيّة** حتى العمق المعلن. وكان الحصرُ يقتصر على `*.yaml` مباشرةً،
+ *      فقيس أنّ **240032 بايتًا** في مجلدٍ فرعيٍّ تمرّ بسقفِ المجموع بلا أن يراها.
+ *   4) **مسارانِ للحرَس لا مسارٌ واحد** (T-133): هذا الحصرُ يحرس **المجلدَ كلَّه قبل أوّلِ
+ *      تحميلٍ** فلا تُبنى دولةٌ نصفَ بناء؛ و{@link ./declaration_reach} يحرس **مجموعَ ما
+ *      حُمِّل فعلًا عند كلِّ قراءة** فلا يهرب من نادى محمّلًا مفردًا. والأوّلُ يرى ما لا
+ *      يُحمَّل، والثاني يرى ما يُحمَّل من خارج المجلد — فما يراه أحدُهما لا يراه الآخر.
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, statSync } from 'node:fs';
+import { relative } from 'node:path';
 import { guardDeclarationTotals } from './declaration_budget';
+import { countNodes, walkDeclarationFiles } from './declaration_reach';
 import { parseSimpleYaml } from './yaml';
 
 /** قياسُ مجلد التهيئة كما هو — أرقامٌ تُقرأ لا حكمٌ يُصدر */
@@ -38,46 +42,26 @@ export type DeclarationCensus = {
 };
 
 /**
- * مجموعُ العُقد المعلنة في مستندٍ مُحلَّل.
- * ليس قياسًا لحجمِ الذاكرة بل لعددِ ما أُعلن — وهو أحدُ محورَي ميزانيّة T-130.
- */
-export function countNodes(value: unknown): number {
-  if (Array.isArray(value)) {
-    let n = value.length;
-    for (const item of value) n += countNodes(item);
-    return n;
-  }
-  if (value !== null && typeof value === 'object') {
-    const entries = Object.values(value as Record<string, unknown>);
-    let n = entries.length;
-    for (const item of entries) n += countNodes(item);
-    return n;
-  }
-  return 0;
-}
-
-/**
  * يقيس مجلدَ التهيئة: ملفاتُه وبايتاتُه وأكبرُها وعُقدُه — قياسٌ بلا حكم.
  * والقراءةُ هنا مباشرةٌ لا عبر `loadYamlFile`: الحصرُ يريد **الحجمَ والنصَّ معًا** في مرورٍ
  * واحدٍ، وسقفُ بايتات الملفِّ الواحد يقع في `loadYamlFile` حين يُحمَّل الملفُّ فعلًا.
  */
 export function censusDeclaration(configDir: string): DeclarationCensus {
-  const names = readdirSync(configDir).filter((f) => f.endsWith('.yaml')).sort();
+  const paths = walkDeclarationFiles(configDir);
   let bytes = 0;
   let nodes = 0;
   let largestBytes = 0;
   let largestFile = '';
-  for (const name of names) {
-    const path = join(configDir, name);
+  for (const path of paths) {
     const size = statSync(path).size;
     bytes += size;
     if (size > largestBytes) {
       largestBytes = size;
-      largestFile = name;
+      largestFile = relative(configDir, path);
     }
     nodes += countNodes(parseSimpleYaml(readFileSync(path, 'utf8')));
   }
-  return { files: names.length, bytes, largestBytes, largestFile, nodes };
+  return { files: paths.length, bytes, largestBytes, largestFile, nodes };
 }
 
 /**

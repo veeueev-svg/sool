@@ -30,6 +30,7 @@
     "probe:journal-cost": "npm run build && node scripts/journal_cost_probe.mjs",
     "probe:declaration-scope": "npm run build && node dist/scripts/declaration_scope_probe.js",
     "probe:declaration-cost": "npm run build && node --expose-gc dist/scripts/declaration_cost_probe.js",
+    "probe:declaration-reach": "npm run build && node dist/scripts/declaration_reach_probe.js",
     "probe:closed-enums": "npm run build && node dist/scripts/closed_enum_probe.js",
     "probe:confinement": "npm run build && node dist/scripts/confinement_probe.js",
     "probe:reproduction": "npm run build && node dist/scripts/reproduction_probe.js",

@@ -10,7 +10,7 @@
  */
 import type { BootstrapOptions } from './state';
 import {
-  guardDeclarationBudget,
+  guardDeclarationBudget, DECLARATION_REACH,
   loadPersistence, loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadReproduction, loadInference, loadIntent, loadChannels, loadScale, loadRecovery, loadRoyalAuthority,
 } from '../kernel/config';
 import { ResourceRegistry } from '../kernel/resource_registry';
@@ -36,6 +36,9 @@ export function composeSovereignty(
   //     قبل أن يُحمَّل ملفٌ واحد. فما يمرّ قائمةً قائمةً بسقوف T-129 قد لا يمرّ مجموعًا،
   //     ولا تُبنى دولةٌ نصفَ بناءٍ ثمّ يُقال «الإعلانُ أكبرُ من ميزانيّته». والقياسُ يُدوَّن
   //     في السجل بعد إنشائه (السطرُ الوحيدُ الذي يسبق السجل هو الحصرُ لا الحكم).
+  //     ومنذ T-133 صار للحرَس مسارانِ لا مسارٌ واحد: هذا يحرس **المجلدَ وفرعيّاتِه** قبل أوّلِ
+  //     تحميل، و`loadYamlFile` يحرس **مجموعَ ما حُمِّل** عند كلِّ قراءةٍ — فلا يهرب من نادى
+  //     محمّلًا مفردًا بلا إقلاع.
   const declarationCensus = guardDeclarationBudget(configDir);
 
   // -1أ) والتعداداتُ المغلقةُ قبلها (البند T-131): ما استُثني من سقوف T-129 بحجّة أنّ
@@ -62,6 +65,9 @@ export function composeSovereignty(
     nodes: declarationCensus.nodes,
     largest: declarationCensus.largestFile,
     largest_bytes: declarationCensus.largestBytes,
+    // مدى الحصر يُدوَّن مع رقمِه (T-133): من قرأ عددًا بلا مداه لا يعرف ما لم يُعدّ
+    reach_extensions: DECLARATION_REACH.extensions.join(' '),
+    reach_max_depth: DECLARATION_REACH.max_depth,
   });
   // وأثرُ حرَسِ التعدادات كذلك: عددُ التعدادات المحروسة وعددُ المفاتيح التي تحدُّها
   audit.append('authority:bootstrap', 'closed_enums_guarded', {

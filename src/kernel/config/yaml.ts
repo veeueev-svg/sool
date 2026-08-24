@@ -8,7 +8,11 @@
  * نفس النصّ ونفس رموز الرفض. والواجهة القديمة ما زالت تُصدّر كل ما هنا.
  */
 import { readFileSync, statSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { guardConfigFileBytes } from './declaration_budget';
+import {
+  countNodes, guardDeclarationDirectoryBytes, noteLoadedDeclaration,
+} from './declaration_reach';
 
 /**
  * محلّل YAML لمجموعة فرعية آمنة ومحدّدة: خرائط متداخلة، قوائم قيم، قوائم خرائط،
@@ -121,7 +125,17 @@ export function parseSimpleYaml(text: string): Record<string, unknown> {
  * كائنٌ في الذاكرة، بل يُردّ وهو رقمٌ على القرص. وهذا الحاجزُ يقع على **كلِّ** قراءةِ
  * ملفِّ تهيئةٍ في النواة (خمسةٌ وعشرون محمّلًا يمرّون من هنا) لا على مسار الإقلاع وحده.
  */
+/**
+ * يقرأ ملفَّ تهيئةٍ واحدًا: يُحرس حجمُه **قبل** تحليله، ثمّ يُقيَّد في دفتر مجلدِه ويُحرس
+ * **مجموعُ** ما حُمِّل منه (T-133). فترتيبُ الحرَسَين مقصودٌ ومقيس: الحدُّ الأرخصُ والأخصُّ
+ * أوّلًا — ملفٌّ بحجم مئتَي كيلوبايتٍ يُردّ برمزِ ملفِّه لا برمزِ المجموع، ولا يُصرف عليه
+ * محلّلٌ ثمّ يُردّ. ومن قرأ ملفًّا واحدًا مرّ اليومَ بسقفِ المجموع كما يمرّ به الإقلاع.
+ */
 export function loadYamlFile(path: string): Record<string, unknown> {
-  guardConfigFileBytes(path, statSync(path).size);
-  return parseSimpleYaml(readFileSync(path, 'utf8'));
+  const bytes = statSync(path).size;
+  guardConfigFileBytes(path, bytes);
+  guardDeclarationDirectoryBytes(dirname(path));
+  const doc = parseSimpleYaml(readFileSync(path, 'utf8'));
+  noteLoadedDeclaration(path, bytes, countNodes(doc));
+  return doc;
 }
