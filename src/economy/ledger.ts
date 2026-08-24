@@ -84,6 +84,11 @@ export interface TrialBalance {
 
 export interface LedgerDeps {
   readonly audit: AppendOnlyLog;
+  /**
+   * سقفُ عددِ الحسابات المعلن في `config/economy.yaml` (T-49). مطلوبٌ لا اختياريٌ
+   * عن قصد: سقفٌ له قيمةٌ افتراضية في الكود هو سقفٌ مكتوبٌ في الكود لا مُعلن (RULE-005).
+   */
+  readonly maxAccounts: number;
   readonly actorId?: EntityId;
   /** وسيطُ الثبات (T-122) — اختياريٌّ في الإنشاء، ويُربط بعد الإرجاع لا قبله */
   readonly journal?: DurableSink;
@@ -139,6 +144,14 @@ export class Ledger {
     if (!accountId.includes(':')) return refuse('معرّف حساب غير صالح: يجب أن يكون <نوع>:<اسم>');
     if (this.accounts.has(accountId)) return refuse('حساب بهذا المعرّف مفتوح — لا يُفتح مرتين');
     if (name.trim().length < 3) return refuse('لا حساب بلا اسم معلن');
+    // T-49: السقفُ المالي لا يحرس العدد. والحسابُ لا يُغلق في هذا الدفتر،
+    // فكلُّ مفتوحٍ محسوبٌ أبدًا — ولذلك كان الحدّ على العدد شرطَ قابليةِ التدقيق.
+    if (this.accounts.size >= this.deps.maxAccounts) {
+      return refuse(
+        `سقف عدد الحسابات المعلن بلغ: ${this.accounts.size}/${this.deps.maxAccounts}`
+        + ' — لا يُفتح حسابٌ جديد حتّى يُرفع السقف إعلانًا لا في الكود',
+      );
+    }
 
     const account: Account = { accountId, kind, name: name.trim(), openedAt: now };
     this.accounts.set(accountId, account);
@@ -261,11 +274,15 @@ export class Ledger {
 
   report(): {
     accounts: number; entries: number; balanced: boolean; debits: number; closedThrough: number | null;
+    /** سقفُ عددِ الحسابات المعلن وما بقي منه (T-49) */
+    maxAccounts: number; accountHeadroom: number;
   } {
     const balance = this.trialBalance();
     return {
       accounts: balance.accounts, entries: balance.entries, balanced: balance.balanced,
       debits: balance.debits, closedThrough: this.closedThrough,
+      maxAccounts: this.deps.maxAccounts,
+      accountHeadroom: this.deps.maxAccounts - this.accounts.size,
     };
   }
 
@@ -336,6 +353,11 @@ export class Ledger {
    * والميزانُ يُفحص بعد الاستعادة: دفترٌ غير متوازن لا يُقلع عليه (ثابت 1 و 7).
    */
   restore(snapshot: LedgerSnapshot, by: EntityId): void {
+    // T-49: بابُ الإرجاع لا يمرّ من `openAccount`، فلو حرسنا بابًا وتركنا الأخر
+    // عاد الدفترُ من اليوميّة بأكثرَ ممّا يُقبل فتحُه — والفشل هنا مغلقٌ لا مرفوضٌ.
+    const merged = new Set<string>(this.accounts.keys());
+    for (const account of snapshot.accounts) merged.add(account.accountId);
+    if (merged.size > this.deps.maxAccounts) throw new Error('RECOVERY_LEDGER_ACCOUNT_CAP');
     for (const account of snapshot.accounts) {
       if (!this.accounts.has(account.accountId)) this.accounts.set(account.accountId, { ...account });
     }

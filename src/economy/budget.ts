@@ -62,6 +62,12 @@ export interface BudgetDeps {
   readonly gateway: CrownGateway;
   /** السقف الكلي المعلن في config/economy.yaml (ثابت 4) */
   readonly ceilingTotal: number;
+  /**
+   * سقفُ عددِ البنود المسجَّلة المعلن في config/economy.yaml (T-49).
+   * غيرُ السقف الكليّ: ذاك يحدّ المال، وهذا يحدّ الجدول — ومائةُ ألفِ بندٍ
+   * بريالٍ واحد تمرّ من الأوّل ولا تمرّ من الثاني.
+   */
+  readonly maxLines: number;
   /** هل يُسمح بالترحيل؟ معلن في التهيئة، وقيمته الملزمة: لا (ثابت 6) */
   readonly carryoverAllowed: boolean;
   readonly actorId?: EntityId;
@@ -105,6 +111,9 @@ export class Budget {
       if (line.spent > line.ceiling) throw new Error('RECOVERY_BUDGET_OVERSPENT');
     }
     if (ceilings > this.deps.ceilingTotal) throw new Error('RECOVERY_BUDGET_CEILING_TOTAL');
+    // T-49: والعددُ كالمبلغ — ما يُرفض إقرارًا لا يُقبل إرجاعًا، وإلّا صار بابُ
+    // الإقلاع ثغرةً يدخل منها ما حُرس عنه البابُ الأوّل.
+    if (lines.length > this.deps.maxLines) throw new Error('RECOVERY_BUDGET_LINE_CAP');
     this.lines.clear();
     for (const line of lines) this.lines.set(line.line, { ...line });
     this.deps.audit.append(by, 'budget_restored', {
@@ -129,6 +138,15 @@ export class Budget {
     if (!input.line.startsWith('budget:')) return refuse('معرّف البند يجب أن يبدأ بـ budget:');
     const existing = this.lines.get(input.line);
     if (existing && existing.lapsedAt === null) return refuse('بند بهذا المعرّف قائم');
+    // T-49: الساقطُ لا يُمحى من الجدول، فالعددُ ينمو ولا يرجع. وإعادةُ إقرارِ
+    // بندٍ ساقطٍ تستبدل صفًّا ولا تزيد عددًا، فلا تُحسب على السقف.
+    if (!existing && this.lines.size >= this.deps.maxLines) {
+      return refuse(
+        `سقف عدد بنود الموازنة المعلن بلغ: ${this.lines.size}/${this.deps.maxLines}`
+        + ' — لا يُقرّ بندٌ جديد حتّى يُرفع السقف إعلانًا لا في الكود',
+        { lines: this.lines.size, maxLines: this.deps.maxLines },
+      );
+    }
     if (!isValidAmount(input.ceiling)) return refuse('سقف غير سليم: عدد صحيح موجب');
     if (input.periodEnd <= input.periodStart) return refuse('فترة غير صالحة: النهاية قبل البداية');
     if (input.periodEnd <= now) return refuse('لا إقرار لبند فترته منقضية');
@@ -339,12 +357,15 @@ export class Budget {
   report(): {
     lines: number; active: number; ceilings: number; spent: number;
     ceilingTotal: number; headroom: number; carryoverAllowed: boolean;
+    /** سقفُ العدد المعلن وما بقي منه (T-49) — سقفٌ لا يُرى في التقرير يُفاجئ من يبلغه */
+    maxLines: number; lineHeadroom: number;
   } {
     return {
       lines: this.lines.size, active: this.active().length, ceilings: this.totalCeilings(),
       spent: this.totalSpent(), ceilingTotal: this.deps.ceilingTotal,
       headroom: this.deps.ceilingTotal - this.totalCeilings(),
       carryoverAllowed: this.deps.carryoverAllowed,
+      maxLines: this.deps.maxLines, lineHeadroom: this.deps.maxLines - this.lines.size,
     };
   }
 

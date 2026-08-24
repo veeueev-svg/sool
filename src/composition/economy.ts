@@ -33,7 +33,8 @@ export function composeEconomy(
   // 1) الاقتصاد والخزانة (المرحلة 25) — قبل خاتمة التأسيس عن قصد:
   //     فتح حسابات الدولة خطوة تأسيس تُسجَّل (account_opened)، وخاتمة التأسيس تبقى
   //     state_online وحدها. الترتيب مُلزم: دفتر ← حسابات ← إصدار ← موازنة ← خزانة ← رسوم.
-  const ledger = new Ledger({ audit });
+  // T-49: سقفُ عددِ الحسابات معلنٌ في التهيئة، ويُمرَّر هنا — فالدفترُ لا يعرف سقفَه من نفسه
+  const ledger = new Ledger({ audit, maxAccounts: economyConfig.ledger.max_accounts });
   ledger.openAccount(economyConfig.treasury.account, 'asset', 'خزانة الدولة العامة', now);
   ledger.openAccount(economyConfig.treasury.equity_account, 'equity', 'حقّ التاج في الإصدار', now);
   ledger.openAccount(economyConfig.treasury.revenue_account, 'revenue', 'إيرادات الرسوم', now);
@@ -50,6 +51,8 @@ export function composeEconomy(
   const budget = new Budget({
     audit, gateway,
     ceilingTotal: economyConfig.budget.ceiling_total,
+    // T-49: سقفُ المبلغ وسقفُ العدد معًا — أحدهما لا يُغني عن الآخر
+    maxLines: economyConfig.budget.max_lines,
     carryoverAllowed: economyConfig.budget.carryover !== 'forbidden',
   });
   const treasury = new Treasury({

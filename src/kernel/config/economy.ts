@@ -12,6 +12,12 @@ import { SovereignViolation } from '../types';
 import { resolveConfigDir } from './paths';
 import { loadYamlFile } from './yaml';
 
+/**
+ * حسابات التأسيس الثلاثة التي يفتحها التركيب: الخزانة وحقّ الإصدار وإيرادات الرسوم
+ * (`src/composition/economy.ts`). أقلُّ من هذا العدد سقفًا = إقلاعٌ مستحيل (T-49).
+ */
+export const SOVEREIGN_ACCOUNTS = 3;
+
 /** تهيئة الاقتصاد والخزانة (المرحلة 25) — كل رقم مالي معلن هنا لا في الكود */
 export interface EconomyConfig {
   unit: {
@@ -22,7 +28,13 @@ export interface EconomyConfig {
     account: string; equity_account: string; revenue_account: string;
     overdraft: string; single_disbursement_max: number;
   };
-  budget: { fiscal_period_days: number; carryover: string; ceiling_total: number };
+  /** سقفُ عددِ الحسابات المعلن (T-49) — لا سقفُ مبلغ بل سقفُ جدول */
+  ledger: { max_accounts: number };
+  budget: {
+    fiscal_period_days: number; carryover: string; ceiling_total: number;
+    /** سقفُ عددِ البنود المسجَّلة المعلن (T-49) */
+    max_lines: number;
+  };
   revenue: {
     retroactive: string;
     rates: { base: string; rate_per_mille: number; declared_at: string }[];
@@ -69,6 +81,26 @@ export function loadEconomy(configDir = resolveConfigDir()): EconomyConfig {
     throw new SovereignViolation('حدّ الصرف الواحد غير معلن', 'CONFIG_NO_DISBURSEMENT_MAX');
   }
 
+  // T-49: سقوفُ العدد المعلنة. السقفُ المالي يحدّ المال ولا يحدّ عددَ الصفوف،
+  // فدفترٌ بمليون حساب مجموعُه صفر يمرّ من كل السقوف المالية ولا يُدقّقه أحد.
+  const ledgerCaps = raw.ledger;
+  if (!ledgerCaps || !Number.isSafeInteger(ledgerCaps.max_accounts)
+    || ledgerCaps.max_accounts <= 0) {
+    throw new SovereignViolation(
+      'سقف عدد الحسابات غير معلن — دفتر بعدد حسابات غير محدود غير قابل للتدقيق',
+      'CONFIG_NO_MAX_ACCOUNTS',
+    );
+  }
+  // حسابات التأسيس ثلاثة تُفتح في التركيب: سقفٌ أقلّ منها يجعل الإقلاع مستحيلًا،
+  // وإعلانٌ يستحيل معه الإقلاع يُرفض عند الحمل لا عند أول حساب مرفوض.
+  if (ledgerCaps.max_accounts < SOVEREIGN_ACCOUNTS) {
+    throw new SovereignViolation(
+      `سقف عدد الحسابات (${ledgerCaps.max_accounts}) أقلّ من حسابات التأسيس `
+      + `الثلاثة (${SOVEREIGN_ACCOUNTS}) — إعلانٌ يستحيل معه الإقلاع`,
+      'CONFIG_MAX_ACCOUNTS_BELOW_FOUNDING',
+    );
+  }
+
   const budget = raw.budget;
   if (!budget || !Number.isSafeInteger(budget.ceiling_total) || budget.ceiling_total <= 0) {
     throw new SovereignViolation('السقف الكلي للموازنة غير معلن', 'CONFIG_NO_CEILING_TOTAL');
@@ -85,6 +117,12 @@ export function loadEconomy(configDir = resolveConfigDir()): EconomyConfig {
   }
   if (!Number.isSafeInteger(budget.fiscal_period_days) || budget.fiscal_period_days <= 0) {
     throw new SovereignViolation('مدة الفترة المالية غير معلنة', 'CONFIG_NO_FISCAL_PERIOD');
+  }
+  if (!Number.isSafeInteger(budget.max_lines) || budget.max_lines <= 0) {
+    throw new SovereignViolation(
+      'سقف عدد بنود الموازنة غير معلن — جدولٌ بلا حدّ عددٍ لا يُدقّق',
+      'CONFIG_NO_MAX_LINES',
+    );
   }
 
   const revenue = raw.revenue;

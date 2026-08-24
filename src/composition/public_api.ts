@@ -180,6 +180,9 @@ export type {
 } from '../agents/spawn_reservations';
 export { deriveLineage, derivePendingLineage, verifyLineageClaims } from '../agents/lineage';
 export type { LineageChain, LineageDrift, LineageFailureCode, ParentLookup } from '../agents/lineage';
+// T-49: سقوفُ العدد المعلنة — يُحمّل المحمّل في الاختبار كما يُحمّل في الإقلاع لا نسخةً منه
+export { loadEconomy, SOVEREIGN_ACCOUNTS } from '../kernel/config/economy';
+export type { EconomyConfig } from '../kernel/config/economy';
 export { loadReproduction } from '../kernel/config/reproduction';
 export { loadInference } from '../kernel/config/inference';
 // المرحلة 39 (T-31 · T-23): سياسةُ النية والقنواتُ المعلنة — إكمالُ C-12

@@ -219,7 +219,8 @@ test('**الإقرار مرفوض قبل ربط مصدر التحقق من ال�
   const { s, structural } = budgetState();
   // موازنة جديدة غير مربوطة: لا تُخمِّن وجود الجهة، بل ترفض وتُسجِّل السبب
   const unbound = new Budget({
-    audit: s.audit, gateway: s.gateway, ceilingTotal: 1_000_000, carryoverAllowed: false,
+    audit: s.audit, gateway: s.gateway, ceilingTotal: 1_000_000, maxLines: 8,
+    carryoverAllowed: false,
   });
   const r = unbound.declare(structural('budget:unbound'), {
     line: 'budget:unbound', owner: 'ministry:infrastructure', ceiling: 1_000,

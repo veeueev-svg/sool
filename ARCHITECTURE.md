@@ -39,9 +39,9 @@
 | المجلد | ملفات | أسطر | ماذا يسكنه | المالك |
 |---|---:|---:|---|---|
 | `src/` (الجذر) | 1 | 205 | `index.ts` — جذر التركيب: ينادي طبقات `composition/` بترتيبها الملزم، ولا يبني ولا يحمل سياسة | القيّم |
-| `src/composition/` | 11 | 1620 | طبقات البناء بحدود الاعتماد: `sovereignty` ← `population` ← `economy` ← `enterprises` ← `scale` ← `institutions` ← `resilience` ← `operations`، و`state.ts` (عقد الحالة) و`public_api.ts` (سطح التصدير) و`alignment_snapshot.ts` | القيّم |
+| `src/composition/` | 11 | 1626 | طبقات البناء بحدود الاعتماد: `sovereignty` ← `population` ← `economy` ← `enterprises` ← `scale` ← `institutions` ← `resilience` ← `operations`، و`state.ts` (عقد الحالة) و`public_api.ts` (سطح التصدير) و`alignment_snapshot.ts` | القيّم |
 | `src/kernel/` | 4 | 512 | الأنواع السيادية، سجل الموارد، حدود النواة | القيّم |
-| `src/kernel/config/` | 25 | 3822 | مُحمِّل لكل نطاق: `royal_authority`, `quotas`, `regions`, `economy`, `external`, `contracts`, `enterprises`, `services`, `research`, `scale`, `recovery`, `load`, `chaos`, `termination`, `staging`, `production` (+ `production_policy`), `persistence`, `confinement`, `reproduction`, **`inference`** (الجلسة 35) و`yaml` و`paths` | القيّم |
+| `src/kernel/config/` | 25 | 3860 | مُحمِّل لكل نطاق: `royal_authority`, `quotas`, `regions`, `economy`, `external`, `contracts`, `enterprises`, `services`, `research`, `scale`, `recovery`, `load`, `chaos`, `termination`, `staging`, `production` (+ `production_policy`), `persistence`, `confinement`, `reproduction`, **`inference`** (الجلسة 35) و`yaml` و`paths` | القيّم |
 | `src/audit/` | 3 | 384 | السلسلة غير القابلة للمحو ومخزنها | ديوان التدقيق |
 | `src/identity/` | 4 | 265 | جذر الثقة، سلطة الشهادات، سجل الهويات | حرس التاج |
 | `src/crown/` | 7 | 977 | البوابة، النقض، النبض، الحرس، قناة الأوامر | الديوان الملكي |
@@ -53,7 +53,7 @@
 | `src/law/` | 8 | 1400 | النصوص والمحاكم والأحكام | وزارة العدل |
 | `src/governance/` | 5 | 1122 | الوزارات والتعيينات ومجلس الوزراء | الديوان الملكي |
 | `src/federation/` | 6 | 1401 | سجل الأقاليم، الحكّام، فضّ التنازع | مجلس الأقاليم |
-| `src/economy/` | 5 | 1584 | الخزانة، الميزانية، الدفتر، الضريبة | وزارة المالية |
+| `src/economy/` | 5 | 1627 | الخزانة، الميزانية، الدفتر، الضريبة | وزارة المالية |
 | `src/services/` | 12 | 2798 | الشركات والمصانع والمستشفيات وسلاسل التوريد وأبحاث المرآة (والأشكالُ وحكمُ التفتيش وحدتان جارتان من الجلسة 43) | وزارة الخدمات |
 | `src/external/` | 8 | 1990 | الحسابات والعقود والدفع والإنهاء الخارجي | وزارة الخارجية |
 | `src/scale/` | 4 | 664 | سجل السكان الشاردي وحدود التوسّع | وزارة السكان |
