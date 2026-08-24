@@ -30,76 +30,32 @@
  *   إقفال دفعة مقفلة أو ملغاة ⇒ رفض
  * اختبار القبول: tests/services/enterprise_lifecycle.test.ts
  * الوثيقة المرتبطة: docs/decisions/ADR-0012-enterprises.md
+ * ثوابتُ التفكيك (الجلسة 43 · T-113 — وبه أُغلق البند):
+ *  11) **الإعلانُ والحكمُ خرجا، والفعلُ بقي**: الأشكالُ في `factory_types.ts`، وحكمُ
+ *      المفتّش على التقرير دوالَّ **نقيّةً** في `factory_inspection.ts`؛ وبقي هنا ما
+ *      **يفعل**: يستهلك مخزونًا ويستأجر حصةً ويكتب قيدَ تدقيق.
+ *  12) **وحدُّ القسمة هو الثابت الرابع نفسُه**: الملفُ كان يجمع مَن يُنتج ومَن يشهد على
+ *      المُنتَج في مسارٍ واحد — وهما اللتان يقول الثابت 4 إنّهما لا تكونان يدًا واحدة.
+ *      فصارت الشهادةُ في ملفٍ لا يستورد سجلَّ التدقيق أصلًا: من أراد أن يُلين حكمًا
+ *      ويكتب القيدَ به في نفَسٍ واحدٍ لم يجد الاثنَين في موضعٍ واحد.
+ *  13) **السقّاطة**: سقفُ هذا الملف لا يُرفع بعد اليوم — وصفُّه محذوفٌ من
+ *      `config/module_limits.yaml`، ولم يبقَ في الاستثناءات صفٌّ واحد.
  */
 import { EntityId } from '../kernel/types';
-import { AppendOnlyLog } from '../audit/append_only_log';
-import { ResourceRegistry } from '../kernel/resource_registry';
-import { CompanyRuntime, DeclaredFacilityKind, ECONOMY_MINISTRY } from './company_runtime';
-import { SupplyChain } from './supply_chain';
+import { DeclaredFacilityKind, ECONOMY_MINISTRY } from './company_runtime';
+import {
+  AUDIT_BUREAU, FactoryRuntimeDeps, InspectionReport, ProductionRequest, ProductionRun, RunResult,
+} from './factory_types';
+import { claimContradictions, declaredChecks, qualityScore } from './factory_inspection';
 
-/** ديوان المحاسبة: المفتّش المستقل — ولا يشغّل شيئًا (RULE-004) */
-export const AUDIT_BUREAU: EntityId = 'authority:audit_bureau';
-
-export type RunStatus = 'running' | 'accepted' | 'rejected' | 'aborted';
-
-export interface ProductionRun {
-  readonly runId: string;
-  readonly facilityId: string;
-  readonly kindId: string;
-  readonly startedAt: number;
-  readonly startedBy: EntityId;
-  /** عدد الدفعات المحسوب من المخزون لا المُدَّعى (ثابت 2) */
-  readonly batches: number;
-  readonly consumed: readonly { readonly material: string; readonly quantity: number }[];
-  readonly leaseId: string;
-  readonly resource: string;
-  readonly resourceAmount: number;
-  /** الفقد المسجَّل بالألف من المدخل — قيدُ النظام الذي تُقابَل به الدعوى (ثابت 6) */
-  readonly declaredWastePerMille: number;
-  readonly deadline: number;
-  status: RunStatus;
-  closedAt: number | null;
-  closedBy: EntityId | null;
-  qualityScore: number | null;
-  passedChecks: readonly string[] | null;
-  producedQuantity: number | null;
-  note: string | null;
-}
-
-export interface ProductionRequest {
-  readonly runId: string;
-  /** ما يُقدَّم فعلًا من كل مادة — يُقابَل بالمخزون لا يُصدَّق (ثابت 1) */
-  readonly inputs: Readonly<Record<string, number>>;
-  /** الفقد المُعلَن من المشغّل بالألف — يُقيَّد ليُقابَل به تقرير المفتّش (ثابت 6) */
-  readonly wastePerMille?: number;
-  readonly by?: EntityId;
-}
-
-export interface InspectionReport {
-  readonly inspector: EntityId;
-  /** الفحوص التي يدّعي المفتّش نجاحها — المعلنة وحدها تُحتسب (ثابت 5) */
-  readonly passed: readonly string[];
-  readonly note?: string;
-}
-
-export type RunResult =
-  | { readonly ok: true; readonly run: ProductionRun; readonly auditId: string }
-  | { readonly ok: false; readonly reason: string; readonly auditId: string };
-
-export interface FactoryRuntimeDeps {
-  readonly audit: AppendOnlyLog;
-  readonly companies: CompanyRuntime;
-  readonly supply: SupplyChain;
-  readonly resources: ResourceRegistry;
-  /** أوزان الفحوص المعلنة في config/enterprises.yaml — لا وزن يُحتسب من خارجها */
-  readonly qualityChecks: Readonly<Record<string, number>>;
-  readonly minQualityScore: number;
-  readonly wasteTolerancePerMille: number;
-  readonly maxConcurrentRuns: number;
-  readonly maxRunDurationHours: number;
-  readonly inspectorId?: EntityId;
-  readonly operatorId?: EntityId;
-}
+/**
+ * واجهةُ التصدير تبقى هنا كما كانت قبل التفكيك: من كان يستورد شكلًا أو هويّةً من هذا
+ * المسار يستوردُها منه بعد التفكيك — فلا يُعدَّل مستوردٌ ولا اختبار (سابقة `load_drill.ts`).
+ */
+export { AUDIT_BUREAU } from './factory_types';
+export type {
+  FactoryRuntimeDeps, InspectionReport, ProductionRequest, ProductionRun, RunResult, RunStatus,
+} from './factory_types';
 
 export class FactoryRuntime {
   private readonly runs = new Map<string, ProductionRun>();
@@ -276,32 +232,20 @@ export class FactoryRuntime {
     if (kind === null) {
       return this.refuse(runId, run.facilityId, 'complete', 'نوع المنشأة غير معلن (فشل مغلق)');
     }
-    const required = new Set(kind.requiredChecks);
-    const seen = new Set<string>();
-    for (const check of report.passed) {
-      if (typeof check !== 'string' || !required.has(check)) {
-        // ثابت 5: يُبطل التفتيش كلّه — فلا يُنتقى من تقرير فاسد ما يرفع الدرجة
-        return this.refuse(runId, run.facilityId, 'complete',
-          'فحص غير معلن في نوع المنشأة — يُبطل التفتيش كلّه (ثابت 5)', { check: String(check) });
-      }
-      if (seen.has(check)) {
-        return this.refuse(runId, run.facilityId, 'complete',
-          'فحص مكرَّر في التقرير — يُبطل التفتيش كلّه (ثابت 5)', { check });
-      }
-      seen.add(check);
+    // ثابت 5: الحكمُ على القائمة قراءةٌ — فهو دالّةٌ نقيّة، والرفضُ وحدَه يُكتب هنا
+    const checked = declaredChecks(report.passed, kind.requiredChecks);
+    if (!checked.ok) {
+      return this.refuse(runId, run.facilityId, 'complete', checked.why, checked.extra);
     }
-    // ثابت 6: ما يعرفه النظام بنفسه لا يُصدَّق فيه المفتّش إن خالف القيد
-    const contradictions: string[] = [];
-    if (seen.has('waste_within_tolerance')
-      && run.declaredWastePerMille > this.deps.wasteTolerancePerMille) {
-      contradictions.push('waste_within_tolerance');
-    }
-    // وحدّ المورد يُقابل بسجل التأجير لا بالإعلان: دفعةٌ عاشت بعد انتهاء حصتها
-    // عملت فترةً بلا حصة معلنة — فدعوى "داخل الحدّ" تخالف قيد النظام
-    if (seen.has('resource_within_limit')
-      && !this.deps.resources.activeLeases(now).some((l) => l.leaseId === run.leaseId)) {
-      contradictions.push('resource_within_limit');
-    }
+    const seen = checked.seen;
+    // ثابت 6: ما يعرفه النظام بنفسه لا يُصدَّق فيه المفتّش إن خالف القيد.
+    // والقيدُ يُقاس هنا (قراءةُ سجل التأجير) ثمّ يُحكَم عليه هناك (بلا سجلٍّ ولا وقت).
+    const contradictions = claimContradictions({
+      seen,
+      declaredWastePerMille: run.declaredWastePerMille,
+      wasteTolerancePerMille: this.deps.wasteTolerancePerMille,
+      leaseActive: this.deps.resources.activeLeases(now).some((l) => l.leaseId === run.leaseId),
+    });
     if (contradictions.length > 0) {
       this.deps.audit.append(report.inspector, 'quality_claim_contradicted', {
         runId, facilityId: run.facilityId, claims: contradictions,
@@ -313,8 +257,7 @@ export class FactoryRuntime {
         'دعوى في التقرير تخالف قيد النظام — تُرفض ويُسجَّل التناقض (ثابت 6)',
         { claims: contradictions });
     }
-    let score = 0;
-    for (const check of seen) score += this.deps.qualityChecks[check] ?? 0;
+    const score = qualityScore(seen, this.deps.qualityChecks);
 
     this.deps.resources.release(run.leaseId); // ثابت 9: في القبول والرفض معًا
     run.closedAt = now;
