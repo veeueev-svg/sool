@@ -44,6 +44,7 @@ import { RetentionPolicy } from '../data/retention';
 import { StateJournal, RehydrateReport } from '../data/persistence';
 import type { RehydrateStateReport } from '../data/rehydrate_state';
 import type { RehydrateFiscalReport } from '../data/rehydrate_fiscal';
+import type { RehydrateGovernanceReport } from '../data/rehydrate_governance';
 import { AgentRegistry } from '../agents/agent_registry';
 import { PermissionRegistry } from '../agents/permissions';
 import { Supervisor } from '../agents/supervision';
@@ -221,6 +222,8 @@ export interface DigitalState {
   readonly rehydratedState: RehydrateStateReport | null;
   /** T-125: تقريرُ إرجاعِ الماليّة والنافذة الخارجيّة — `null` حين لا يوميّة */
   readonly rehydratedFiscal: RehydrateFiscalReport | null;
+  /** T-126: تقريرُ إرجاعِ الحكومة (وزاراتٌ · مناصبُ · اقتراحاتٌ · أصحابُ مناصب) */
+  readonly rehydratedGovernance: RehydrateGovernanceReport | null;
   readonly mode: () => StateMode;
 }
 

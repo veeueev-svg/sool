@@ -18,62 +18,36 @@
  *   5) منصب واحد لصاحب واحد: التعيين في منصب مشغول مرفوض حتى يُعزل صاحبه بمساره
  *   6) العزل بنفس المسار المفصول — لا عزل إداري صامت
  *   7) لا منصب في وزارة غير قائمة، ولا شغل منصب بعد حلّ وزارته
+ *   8) **الحكومةُ تُدوَّن لحظةَ تغيُّرها** (T-126): منصبًا معلنًا واقتراحًا بأطواره وصاحبَ
+ *      منصبٍ **وأثرَه** — فاعتمادٌ ينجو الإطفاءَ بلا بصمةِ اعتمادِه لا يُنفَّذ («سلسلة
+ *      المشروعية ناقصة»)، فتدوينُ الحالةِ دون أثرِها يُبقي اعتمادًا ميتًا حاضرًا في السجل.
+ *   9) **العزلُ يُقيَّد ولا يُمحى**: خلوُّ المنصب يُدوَّن بعلامةٍ (`vacated`) لا بحذفِ قيدٍ،
+ *      فيوميّةٌ يُحذف منها لا تُقرأ ترتيبًا، وضغطُها يُغني أحدثَ صورةٍ للمنصب لا يُسقطها.
  * حالات الفشل (كلها مغلقة): تنفيذ بلا اعتماد ⇒ رفض؛ تنفيذ من المقترح أو المعتمد ⇒ رفض؛
- *   اعتماد بعد انقضاء المدة ⇒ إسقاط؛ منصب مشغول ⇒ رفض؛ تعارض مناصب ⇒ رفض
- * اختبار القبول: tests/governance/appointments.test.ts
- * الوثيقة المرتبطة: docs/decisions/ADR-0007-government-and-ministries.md
+ *   اعتماد بعد انقضاء المدة ⇒ إسقاط؛ منصب مشغول ⇒ رفض؛ تعارض مناصب ⇒ رفض؛
+ *   ولقطةُ إرجاعٍ تخرق حرَسًا ⇒ رمزٌ مغلق من `appointment_restore.ts`
+ * اختبار القبول: tests/governance/appointments.test.ts · tests/data/rehydrate_governance.test.ts
+ * الوثيقة المرتبطة: docs/decisions/ADR-0007-government-and-ministries.md ·
+ *   docs/decisions/ADR-0032-governance-durability.md
  */
 import { Decision, EntityId, SignedRoyalCommand } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
 import { MinistryRegistry, ROYAL_COURT } from './ministries';
+import type { DurableSink } from '../data/persistence';
+import { guardAppointmentSnapshot } from './appointment_restore';
+import {
+  APPOINTMENT_AUDITOR, APPOINTMENT_EXECUTOR, APPROVAL_TTL_MS,
+} from './appointment_types';
+import type {
+  AppointmentResult, AppointmentSnapshot, OfficeDefinition, OfficeHolder, Proposal, ProposalKind,
+  ProposalTrail,
+} from './appointment_types';
 
-/** الجهة المنفّذة للتعيين والعزل — لا تقترح ولا تعتمد (RULE-004) */
-export const APPOINTMENT_EXECUTOR: EntityId = 'authority:crown_guard';
-/** الجهة المدقّقة — تراجع السلاسل ولا تصنعها */
-export const APPOINTMENT_AUDITOR: EntityId = 'authority:audit_bureau';
-/** مدة صلاحية الاعتماد غير المنفَّذ: سبعة أيام معلنة لا مخفية */
-export const APPROVAL_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
-export interface OfficeDefinition {
-  readonly officeId: string;
-  readonly title: string;
-  readonly ministryId: EntityId;
-  /** مناصب لا تُجمع مع هذا المنصب في شخص واحد */
-  readonly conflictsWith: readonly string[];
-}
-
-export type ProposalKind = 'appointment' | 'dismissal';
-export type ProposalStatus = 'proposed' | 'approved' | 'executed' | 'expired' | 'refused';
-
-export interface Proposal {
-  readonly proposalId: string;
-  readonly kind: ProposalKind;
-  readonly officeId: string;
-  /** المرشَّح للتعيين، أو صاحب المنصب المطلوب عزله */
-  readonly subject: EntityId;
-  readonly reason: string;
-  readonly proposedBy: EntityId;
-  readonly proposedAt: number;
-  readonly status: ProposalStatus;
-  readonly approvedBy: EntityId | null;
-  readonly approvedAt: number | null;
-  readonly commandId: string | null;
-  readonly executedBy: EntityId | null;
-  readonly executedAt: number | null;
-}
-
-export interface OfficeHolder {
-  readonly officeId: string;
-  readonly holder: EntityId;
-  readonly since: number;
-  /** سلسلة المشروعية: بصمات سجلات الاقتراح والاعتماد والتنفيذ */
-  readonly chain: { readonly proposed: string; readonly approved: string; readonly executed: string };
-}
-
-export type AppointmentResult =
-  | { readonly ok: true; readonly proposal: Proposal; readonly auditId: string }
-  | { readonly ok: false; readonly reason: string; readonly auditId: string };
+// T-113/T-126: أُخرجت الأشكالُ والثوابتُ إلى `appointment_types.ts` لأنّ هذا الملفَ بلغ
+// 344 سطرًا وبابا التدوين والإرجاع يُخرجانه فوق سقف 400. وتُصدَّر ثانيةً من هنا فلا
+// يُكسر مستوردٌ باسم الهيكلة (ثابت 3 هناك).
+export * from './appointment_types';
 
 export interface AppointmentRegistryDeps {
   readonly audit: AppendOnlyLog;
@@ -87,12 +61,60 @@ export class AppointmentRegistry {
   private readonly proposals = new Map<string, Proposal>();
   private readonly holders = new Map<string, OfficeHolder>();
   /** بصمات سجلات كل اقتراح: لا شغل منصب بلا سلسلة كاملة */
-  private readonly trails = new Map<string, { proposed: string; approved?: string; executed?: string }>();
+  private readonly trails = new Map<string, ProposalTrail>();
   private readonly approvalTtlMs: number;
+  private sink: DurableSink | null = null;
 
   constructor(private readonly deps: AppointmentRegistryDeps) {
     this.approvalTtlMs = deps.approvalTtlMs ?? APPROVAL_TTL_MS;
     deps.ministries.bindOccupancyProbe((ministryId) => this.occupiedOffices(ministryId));
+  }
+
+  /** T-126: يُربط **بعد** الإرجاع لا قبله — وإلا دُوِّن المُستعادُ ثانيةً كلَّ إقلاع */
+  attachJournal(sink: DurableSink): void { this.sink = sink; }
+
+  /** بابُ تدوينٍ واحدٌ للاقتراح **وأثرِه** معًا (ثابت 8): حالةٌ بلا أثرٍ اعتمادٌ ميت */
+  private commitProposal(proposalId: string): void {
+    const proposal = this.proposals.get(proposalId);
+    const trail = this.trails.get(proposalId);
+    if (proposal === undefined || trail === undefined) return;
+    this.sink?.record('appointment_proposal', { proposal, trail: { ...trail } });
+  }
+
+  /** ثابت 9: خلوُّ المنصب علامةٌ تُقيَّد لا قيدٌ يُحذف */
+  private commitHolder(officeId: string): void {
+    const holder = this.holders.get(officeId);
+    this.sink?.record('office_holder', holder === undefined
+      ? { officeId, vacated: true }
+      : { officeId, vacated: false, holder });
+  }
+
+  /**
+   * بابُ الإرجاع الذرّيّ (T-126): يُثبت حكومةً مشهودةً ولا يُعلن منصبًا ولا يُعيّن أحدًا،
+   * ولا يُنادي `declareOffice` ولا `propose` ولا `execute` — نداؤها يطلب أمرًا ملكيًّا
+   * لم يُصدره أحدٌ في هذا الإقلاع، ويُقيّد في السجل الأبديّ تعيينًا ثانيًا لتعيينٍ واحد.
+   * والحرَسُ في `appointment_restore.ts`: يُفحص كلُّ شيءٍ ثم يُثبَّت كلُّ شيء.
+   */
+  restore(snapshot: AppointmentSnapshot, by: EntityId): void {
+    guardAppointmentSnapshot(snapshot, (ministryId) => this.deps.ministries.get(ministryId) !== undefined);
+    this.offices.clear();
+    this.proposals.clear();
+    this.holders.clear();
+    this.trails.clear();
+    for (const office of snapshot.offices) {
+      this.offices.set(office.officeId, { ...office, conflictsWith: [...office.conflictsWith] });
+    }
+    for (const { proposal, trail } of snapshot.proposals) {
+      this.proposals.set(proposal.proposalId, { ...proposal });
+      this.trails.set(proposal.proposalId, { ...trail });
+    }
+    for (const holder of snapshot.holders) {
+      this.holders.set(holder.officeId, { ...holder, chain: { ...holder.chain } });
+    }
+    this.deps.audit.append(by, 'appointments_restored', {
+      offices: this.offices.size, holders: this.holders.size,
+      proposals: this.proposals.size, source: 'journal',
+    });
   }
 
   /** إعلان منصب: بأمر ملكي، وفي وزارة قائمة */
@@ -123,6 +145,7 @@ export class AppointmentRegistry {
     const entry = this.deps.audit.append(ROYAL_COURT, 'office_declared', {
       officeId: def.officeId, ministryId: def.ministryId, conflictsWith: def.conflictsWith,
     });
+    this.sink?.record('office_definition', { office: this.offices.get(def.officeId) });
     return { ok: true, auditId: entry.hash };
   }
 
@@ -172,6 +195,7 @@ export class AppointmentRegistry {
     };
     this.proposals.set(proposal.proposalId, proposal);
     this.trails.set(proposal.proposalId, { proposed: entry.hash });
+    this.commitProposal(proposal.proposalId);
     return { ok: true, proposal, auditId: entry.hash };
   }
 
@@ -202,6 +226,7 @@ export class AppointmentRegistry {
     this.proposals.set(proposalId, approved);
     const trail = this.trails.get(proposalId);
     if (trail) trail.approved = entry.hash;
+    this.commitProposal(proposalId);
     return { ok: true, proposal: approved, auditId: entry.hash };
   }
 
@@ -228,6 +253,7 @@ export class AppointmentRegistry {
         proposalId, approvedAt, now, ttlMs: this.approvalTtlMs,
       });
       this.proposals.set(proposalId, { ...proposal, status: 'expired' });
+      this.commitProposal(proposalId);
       return { ok: false, reason: 'سقط الاعتماد بانقضاء مدته — يُعاد المسار من أوله', auditId: entry.hash };
     }
 
@@ -255,6 +281,8 @@ export class AppointmentRegistry {
       });
       const executed: Proposal = { ...proposal, status: 'executed', executedBy: executor, executedAt: now };
       this.proposals.set(proposalId, executed);
+      this.commitProposal(proposalId);
+      this.commitHolder(proposal.officeId);
       return { ok: true, proposal: executed, auditId: entry.hash };
     }
 
@@ -267,6 +295,8 @@ export class AppointmentRegistry {
     this.holders.delete(proposal.officeId);
     const executed: Proposal = { ...proposal, status: 'executed', executedBy: executor, executedAt: now };
     this.proposals.set(proposalId, executed);
+    this.commitProposal(proposalId);
+    this.commitHolder(proposal.officeId);
     return { ok: true, proposal: executed, auditId: entry.hash };
   }
 
@@ -291,6 +321,12 @@ export class AppointmentRegistry {
 
   proposal(proposalId: string): Proposal | undefined {
     return this.proposals.get(proposalId);
+  }
+
+  /** أثرُ الاقتراح للقراءة والتدقيق — نسخةٌ لا مرجعٌ يُعدَّل من خارج الوحدة */
+  trailOf(proposalId: string): ProposalTrail | undefined {
+    const trail = this.trails.get(proposalId);
+    return trail === undefined ? undefined : { ...trail };
   }
 
   /**

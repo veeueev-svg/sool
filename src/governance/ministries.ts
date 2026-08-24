@@ -15,14 +15,20 @@
  *   4) **لا حلّ لوزارة وفيها منصب مشغول**: يُعزل أهلها أولًا بمساره المعلن،
  *      وإن لم يوجد مصدر يتحقق من مناصبها فالحلّ مرفوض (فشل مغلق لا مفتوح)
  *   5) الحلّ لا يمحو الوزارة من السجل: يوقف اختصاصها ويبقي تاريخها
+ *   6) **الوزارةُ تُدوَّن لحظةَ تغيُّرها** (T-126): إنشاءً وتوسيعَ نطاقٍ وحلًّا. والفقدُ
+ *      قبل هذا البند كان يمحو **تاريخَ الحلّ** أيضًا، فتعود الوزارةُ المحلولةُ كأنّ
+ *      حلَّها لم يكن — وذاك نقضُ ثابت 5 بإعادة تشغيلٍ لا بأمرٍ ملكيّ.
  * حالات الفشل (كلها مغلقة): أمر غير معتمد ⇒ رفض؛ نطاق فارغ أو مزدحم ⇒ رفض؛
- *   حلّ وزارة غير قائمة ⇒ رفض؛ حلّ بلا مصدر تحقق من المناصب ⇒ رفض
+ *   حلّ وزارة غير قائمة ⇒ رفض؛ حلّ بلا مصدر تحقق من المناصب ⇒ رفض؛
+ *   لقطةُ إرجاعٍ مكرَّرةُ المعرّفات أو ناقصةُ النطاق ⇒ RECOVERY_MINISTRY_INVALID؛
+ *   نطاقٌ بمالكَين في لقطةِ إرجاع ⇒ RECOVERY_MINISTRY_MANDATE_CONFLICT
  * اختبار القبول: tests/governance/ministries.test.ts
  * الوثيقة المرتبطة: docs/decisions/ADR-0007-government-and-ministries.md
  */
 import { Decision, EntityId, SignedRoyalCommand } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
+import type { DurableSink } from '../data/persistence';
 
 /** الجهة التي تقترح البنية الحكومية — ولا تعتمدها ولا تنفّذها (RULE-004) */
 export const ROYAL_COURT: EntityId = 'authority:royal_court';
@@ -65,6 +71,7 @@ export class MinistryRegistry {
   private readonly actorId: EntityId;
   /** يبقى null حتى يُربط: والحلّ بلا ربط مرفوض (ثابت 4 — فشل مغلق) */
   private occupancy: OccupancyProbe | null = null;
+  private sink: DurableSink | null = null;
 
   constructor(private readonly deps: MinistryRegistryDeps) {
     this.actorId = deps.actorId ?? ROYAL_COURT;
@@ -77,6 +84,50 @@ export class MinistryRegistry {
    */
   bindOccupancyProbe(probe: OccupancyProbe): void {
     this.occupancy = probe;
+  }
+
+  /** T-126: يُربط **بعد** الإرجاع لا قبله — وإلا دُوِّن المُستعادُ ثانيةً كلَّ إقلاع */
+  attachJournal(sink: DurableSink): void { this.sink = sink; }
+
+  /**
+   * كلُّ تغييرٍ على وزارةٍ يمرّ من هنا: يُخزَّن ثم يُدوَّن (T-126).
+   * والبابُ واحدٌ عن قصد: بابٌ ثانٍ يُغري بتغييرٍ لا يُدوَّن — وذاك عينُ الفجوة.
+   */
+  private commit(ministry: Ministry): void {
+    this.ministries.set(ministry.ministryId, ministry);
+    this.sink?.record('ministry_state', { ministry });
+  }
+
+  /**
+   * بابُ الإرجاع الذرّيّ (T-126): يُثبت وزاراتٍ مشهودةً ولا يُنشئ وزارةً من عنده،
+   * ولا يُنادي `establish` — نداؤها يطلب أمرًا ملكيًّا لم يُصدره أحدٌ في هذا الإقلاع.
+   * والفحصُ كلُّه قبل التثبيت: لقطةٌ نصفُها صحيحٌ لا تُقبل نصفًا.
+   */
+  restore(ministries: readonly Ministry[], by: EntityId): void {
+    const ids = new Set<EntityId>();
+    const domains = new Set<string>();
+    for (const ministry of ministries) {
+      if (typeof ministry.ministryId !== 'string' || !ministry.ministryId.startsWith('ministry:')
+        || ids.has(ministry.ministryId) || !ministry.name
+        || !Array.isArray(ministry.mandate) || ministry.mandate.length === 0) {
+        throw new Error('RECOVERY_MINISTRY_INVALID');
+      }
+      ids.add(ministry.ministryId);
+      if (ministry.dissolvedAt !== null) continue;
+      for (const domain of ministry.mandate) {
+        if (domains.has(domain)) throw new Error('RECOVERY_MINISTRY_MANDATE_CONFLICT');
+        domains.add(domain);
+      }
+    }
+    this.ministries.clear();
+    for (const ministry of ministries) {
+      this.ministries.set(ministry.ministryId, { ...ministry, mandate: [...ministry.mandate] });
+    }
+    const report = this.report();
+    this.deps.audit.append(by, 'ministries_restored', {
+      total: report.total, active: report.active, dissolved: report.dissolved,
+      domains: report.domains, source: 'journal',
+    });
   }
 
   /** إنشاء وزارة بأمر ملكي معتمد */
@@ -120,7 +171,7 @@ export class MinistryRegistry {
       dissolvedAt: null,
       dissolveReason: null,
     };
-    this.ministries.set(ministry.ministryId, ministry);
+    this.commit(ministry);
     const entry = this.deps.audit.append(this.actorId, 'ministry_established', {
       ministryId: ministry.ministryId, mandate: ministry.mandate,
       proposedBy: input.proposedBy, commandId: ministry.commandId,
@@ -151,7 +202,7 @@ export class MinistryRegistry {
     if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
 
     const updated: Ministry = { ...current, mandate: [...mandate] };
-    this.ministries.set(ministryId, updated);
+    this.commit(updated);
     const entry = this.deps.audit.append(this.actorId, 'mandate_reassigned', {
       ministryId, from: current.mandate, to: updated.mandate, commandId: command.payload.commandId,
     });
@@ -182,7 +233,7 @@ export class MinistryRegistry {
     if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
 
     const dissolved: Ministry = { ...current, dissolvedAt: now, dissolveReason: reason.trim() };
-    this.ministries.set(ministryId, dissolved);
+    this.commit(dissolved);
     const entry = this.deps.audit.append(this.actorId, 'ministry_dissolved', {
       ministryId, reason: dissolved.dissolveReason, commandId: command.payload.commandId,
     });

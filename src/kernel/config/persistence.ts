@@ -38,6 +38,10 @@ export const DURABLE_KINDS = [
   'treasury_disbursement', 'treasury_state', 'budget_appropriation', 'tax_levy',
   'unit_supply', 'external_account', 'external_payment', 'partner_assessment',
   'partner_breach',
+  // T-126: بنيةُ الحكومة. أربعتُها **حالةٌ** يُغني أحدثُها عمّا قبله: الوزارةُ تُحلّ فتُحدَّث،
+  // والاقتراحُ يمرّ بأطوارٍ (مقترح ⇒ معتمد ⇒ منفَّذ) فآخرُ طورٍ يكفي، وصاحبُ المنصب يُعزل
+  // فيُقيَّد خلوُّ المنصب بعلامةٍ لا بمحوِ قيد. والمنصبُ نفسُه لا يُلغى بعد إعلانه.
+  'ministry_state', 'office_definition', 'appointment_proposal', 'office_holder',
 ] as const;
 export type DurableKind = (typeof DURABLE_KINDS)[number];
 

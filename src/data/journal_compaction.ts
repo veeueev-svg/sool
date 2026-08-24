@@ -100,6 +100,21 @@ export function durableIdentity(entry: DurableRecord): string | null {
       // وهي مُعرَّفةٌ بمعرّفٍ ثابت، فلا يُفقد تاريخُ دفعةٍ بإسقاطِ صورةٍ أقدمَ منها.
       return typeof (payload.payment as { paymentId?: unknown })?.paymentId === 'string'
         ? `payment:${(payload.payment as { paymentId: string }).paymentId}` : null;
+    // T-126: بنيةُ الحكومة. أربعتُها **حالةٌ** لا واقعة: الوزارةُ تُوسَّع ثم تُحلّ فتُحدَّث
+    // صورتُها، والمنصبُ يُعرَّف، والاقتراحُ يمرّ بأطوارٍ (مقترح ⇒ معتمد ⇒ منفَّذ/ساقط)
+    // فآخرُ طورٍ يُغني، وخلوُّ المنصب **علامةٌ تُقيَّد** لا قيدٌ يُحذف فأحدثُ صورةٍ تكفي.
+    // وتاريخُ كلِّ فعلٍ منها محفوظٌ في السجل الأبديِّ لا في اليوميّة، فلا يُفقد بإسقاطِ منسوخ.
+    case 'ministry_state':
+      return typeof (payload.ministry as { ministryId?: unknown })?.ministryId === 'string'
+        ? `ministry:${(payload.ministry as { ministryId: string }).ministryId}` : null;
+    case 'office_definition':
+      return typeof (payload.office as { officeId?: unknown })?.officeId === 'string'
+        ? `office:${(payload.office as { officeId: string }).officeId}` : null;
+    case 'appointment_proposal':
+      return typeof (payload.proposal as { proposalId?: unknown })?.proposalId === 'string'
+        ? `proposal:${(payload.proposal as { proposalId: string }).proposalId}` : null;
+    case 'office_holder':
+      return typeof payload.officeId === 'string' ? `holder:${payload.officeId}` : null;
     default:
       // قيد التدقيق وعلامات الضغط السابقة: لا هويّة ⇒ لا إسقاط (ثابت 2).
       // ومنها `treasury_disbursement` و`partner_assessment` و`partner_breach` عن قصد.

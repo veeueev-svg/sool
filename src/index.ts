@@ -25,6 +25,7 @@ import { AuditStore } from './audit/store';
 import { rehydrateFromJournal } from './data/persistence';
 import { rehydrateStateFromJournal } from './data/rehydrate_state';
 import { rehydrateFiscalFromJournal } from './data/rehydrate_fiscal';
+import { rehydrateGovernanceFromJournal } from './data/rehydrate_governance';
 import { resolveConfigDir } from './kernel/config';
 import { composeSovereignty } from './composition/sovereignty';
 import { composePopulation } from './composition/population';
@@ -147,6 +148,14 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
       treasury, budget, revenue, unit, accounts: externalAccounts, payments, risk: partnerRisk,
     }, 'ministry:data')
     : null;
+  // 8.8) إرجاعُ الحكومة: الوزاراتُ والمناصبُ والاقتراحاتُ وأصحابُ المناصب (المرحلة 39، T-126).
+  //      والقياسُ الذي أوجب البند في docs/audit/measurements/phase-39-T126.txt: **ثلاثةُ حرّاسٍ
+  //      تُفَكُّ بإطفاءة** — جُمع القضاءُ والادّعاءُ في شخصٍ واحدٍ بعد الإقلاع، وحُلّت وزارةٌ
+  //      ومنصبُها مشغولٌ في السجل الأبديّ، وسقط اعتمادٌ ملكيٌّ قائم. وتاريخُ الحلِّ يُمحى معها.
+  //      والوزاراتُ تُرجَع قبل التعيينات: حرَسُ لقطةِ المناصب يسأل عن وزارةِ كلِّ منصب.
+  const rehydratedGovernance = journal
+    ? rehydrateGovernanceFromJournal(journal.read(), { ministries, appointments }, 'ministry:data')
+    : null;
   if (journal) {
     ledger.attachJournal(journal);
     contracts.attachJournal(journal);
@@ -158,6 +167,8 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     externalAccounts.attachJournal(journal);
     payments.attachJournal(journal);
     partnerRisk.attachJournal(journal);
+    ministries.attachJournal(journal);
+    appointments.attachJournal(journal);
   }
 
   // 9) خاتمة التأسيس: سجلٌّ واحد لا يكتبه غير هذا الملف
@@ -188,6 +199,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     productionConfig, productionManifest, passage, continuousSupervisor, productionLedger,
     federatedOperation,
     persistenceConfig, journal, rehydrated, rehydratedState, rehydratedFiscal,
+    rehydratedGovernance,
     mode: () => gateway.mode,
   };
 }
