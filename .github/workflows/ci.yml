@@ -36,5 +36,7 @@ jobs:
         run: bash scripts/check_criteria_status.sh
       - name: منع المسارات المطلقة في الشفرة والاختبارات والأدوات (T-118)
         run: bash scripts/check_absolute_paths.sh
+      - name: حاجزُ الإعلان — يمنع دعوى 100% وثمّ فجوةٌ أو بندٌ مفتوح (T-127)
+        run: bash scripts/check_declaration.sh
       - name: مدقّق التوثيق (يفشل إذا تغيّر src بلا PROGRESS.md وتقرير اختبار)
         run: bash scripts/check_documentation.sh
