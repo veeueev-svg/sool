@@ -20,8 +20,12 @@ scope: "src/**/*.ts + tests/**/*.ts + scripts/**/*.ts"
 # account_types.ts وقراءةِ الحالِ والتقريرِ إلى account_view.ts. والدافعُ عملٌ لا تجميل:
 # البندُ T-125 يستلزم `attachJournal` و`restore` في الوحدة، ولا يُضاف سطرٌ إلى ملفٍ على حدِّه.
 # فالاستثناءات: 5 ← 4.
+# والمرحلة 39 (T-113 · الجلسة 40): صفُّ src/services/human_research.ts حُذف كذلك — كان **531**
+# (أعلى دَينٍ معلنٍ هنا) وصار **373** سطرًا بعد إخراج الأشكال إلى
+# src/services/research/research_types.ts وشروطِ مدخل البحث إلى
+# src/services/research/research_guards.ts. والنقلُ حرفيٌّ بلا إصلاح، والدليلُ خطُّ الأساس
+# نفسه أخضر: 1824/1824 قبله وبعده. فالاستثناءات: 4 ← 3.
 exceptions:
-  - {path: src/services/human_research.ts, max_lines: 531, item: T-113}
   - {path: src/federation/region_registry.ts, max_lines: 454, item: T-113}
   - {path: src/load/load_drill.ts, max_lines: 453, item: T-113}
   - {path: src/services/factory_runtime.ts, max_lines: 422, item: T-113}

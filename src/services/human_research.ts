@@ -23,126 +23,31 @@
  *   7) **من بحث لا يجيز**: الإجازة والمراجعة للجهة المعلنة غير الباحث (RULE-004).
  *   8) **الدرس يبلى ولا يمحى**: بعد المراجعة المعلنة لا يعتمد، ويبقى في السجل حتى يُراجع.
  *   9) **المرآة توصّي فقط**: لا توجد دالة تغيير سياسة؛ تسجيل التوصية ليس تطبيقًا (RULE-005).
+ *  10) **الأشكال والحرَس في وحدتين مجاورتين** (المرحلة 39، البند T-113):
+ *      `./research/research_types.ts` (إعلانٌ لا سلوك) و`./research/research_guards.ts`
+ *      (شروطُ مدخل البحث دالّةً نقيّة) — بهذا نزل هذا الملف من **531** إلى ما تحت السقف
+ *      العام (400) وحُذف صفُّ استثنائه من `config/module_limits.yaml` (سقّاطةُ الدَّين:
+ *      يُحذف ولا يُرفع). والنصُّ منقولٌ حرفيًّا: لا إصلاح ولا تحسين في أثناء التفكيك،
+ *      والدليلُ خطُّ الأساس نفسه أخضر بعده.
  */
-import { AppendOnlyLog } from '../audit/append_only_log';
-import { CrownGateway } from '../crown/crown_gateway';
 import { EntityId, SignedRoyalCommand } from '../kernel/types';
+import { guardResearchStart } from './research/research_guards';
+import {
+  DeclaredResearchSource, HumanResearch, HumanResearchDeps, Lesson, LessonInput, LessonResult,
+  Recommendation, RecommendationResult, ResearchInput, ResearchResult, SourceInvalidationResult,
+  TraceResult,
+} from './research/research_types';
 
-export type ResearchStudyType =
-  | 'theoretical' | 'experiment' | 'intervention' | 'observation' | 'survey' | 'questionnaire' | 'contact';
-export type ResearchStatus = 'active' | 'completed' | 'dissolved';
-export type LessonStatus = 'proposed' | 'approved' | 'rejected';
-
-export interface DeclaredResearchSource {
-  readonly id: string;
-  readonly type: string;
-  readonly title: string;
-}
-
-export interface HumanResearch {
-  readonly researchId: string;
-  readonly departmentId: string;
-  readonly functionMinistry: EntityId;
-  readonly sourceIds: readonly string[];
-  readonly studyType: ResearchStudyType;
-  readonly researcher: EntityId;
-  readonly beneficiary: EntityId;
-  readonly purpose: string;
-  readonly establishedAt: number;
-  readonly expiresAt: number;
-  readonly commandId: string;
-  status: ResearchStatus;
-  completedAt: number | null;
-  dissolvedAt: number | null;
-}
-
-export interface ResearchInput {
-  readonly researchId: string;
-  readonly departmentId: string;
-  readonly functionMinistry: EntityId;
-  readonly sourceIds: readonly string[];
-  readonly studyType: ResearchStudyType;
-  readonly egressCalls: number;
-  readonly researcher: EntityId;
-  readonly beneficiary: EntityId;
-  readonly purpose: string;
-  readonly expiresAt: number;
-}
-
-export interface Lesson {
-  readonly lessonId: string;
-  readonly researchId: string;
-  readonly statement: string;
-  readonly qualityScore: number;
-  readonly proposedBy: EntityId;
-  readonly proposedAt: number;
-  status: LessonStatus;
-  approvedBy: EntityId | null;
-  approvedAt: number | null;
-  reviewedAt: number | null;
-  rejectionCode: string | null;
-}
-
-export interface LessonInput {
-  readonly lessonId: string;
-  readonly researchId: string;
-  readonly statement: string;
-  readonly qualityScore: number;
-  readonly proposedBy: EntityId;
-}
-
-export interface Recommendation {
-  readonly recommendationId: string;
-  readonly lessonId: string;
-  readonly departmentId: string;
-  readonly recommendedFor: EntityId;
-  readonly recommendedBy: EntityId;
-  readonly text: string;
-  readonly recordedAt: number;
-  readonly commandId: string;
-  readonly applied: false;
-}
-
-export type ResearchResult =
-  | { readonly ok: true; readonly research: HumanResearch; readonly auditId: string }
-  | { readonly ok: false; readonly code: string; readonly reason: string; readonly auditId: string };
-export type LessonResult =
-  | { readonly ok: true; readonly lesson: Lesson; readonly auditId: string }
-  | { readonly ok: false; readonly code: string; readonly reason: string; readonly auditId: string };
-export type RecommendationResult =
-  | { readonly ok: true; readonly recommendation: Recommendation; readonly auditId: string }
-  | { readonly ok: false; readonly code: string; readonly reason: string; readonly auditId: string };
-
-export type ResearchTrace = {
-  readonly ok: true;
-  readonly lesson: Lesson;
-  readonly research: HumanResearch;
-  readonly sources: readonly DeclaredResearchSource[];
-  readonly auditId: string;
-};
-export type TraceResult = ResearchTrace | { readonly ok: false; readonly code: string; readonly reason: string; readonly auditId: string };
-export type SourceInvalidationResult =
-  | { readonly ok: true; readonly auditId: string }
-  | { readonly ok: false; readonly code: string; readonly reason: string; readonly auditId: string };
-
-export type DepartmentActiveProbe = (departmentId: string, now: number) => boolean;
-
-export interface HumanResearchDeps {
-  readonly audit: AppendOnlyLog;
-  readonly gateway: CrownGateway;
-  readonly sources: readonly DeclaredResearchSource[];
-  readonly maxConcurrentResearches: number;
-  readonly maxSourcesPerResearch: number;
-  readonly maxTermMs: number;
-  readonly reviewIntervalMs: number;
-  readonly minLessonQualityScore: number;
-  readonly maxEgressCalls: number;
-  readonly researchOperator: EntityId;
-  readonly lessonApprover: EntityId;
-  readonly beneficiaryPrefix: string;
-  readonly departmentActive: DepartmentActiveProbe;
-  readonly departmentFunction: (departmentId: string) => EntityId | null;
-}
+// أشكالُ البحث والدرس والتوصية في `./research/research_types` — إعلانٌ لا سلوك،
+// ويُعاد تصديرها هنا فلا يتغيّر السطح العام ولا يُعدَّل مستوردٌ ولا اختبار (T-113)
+export type {
+  ResearchStudyType, ResearchStatus, LessonStatus, DeclaredResearchSource, HumanResearch,
+  ResearchInput, Lesson, LessonInput, Recommendation, ResearchResult, LessonResult,
+  RecommendationResult, ResearchTrace, TraceResult, SourceInvalidationResult,
+  DepartmentActiveProbe, HumanResearchDeps,
+} from './research/research_types';
+export type { ResearchRefusal, ResearchStartState } from './research/research_guards';
+export { guardResearchStart } from './research/research_guards';
 
 export class HumanResearchRegistry {
   private readonly research = new Map<string, HumanResearch>();
@@ -178,79 +83,16 @@ export class HumanResearchRegistry {
   start(command: SignedRoyalCommand, input: ResearchInput, now = Date.now()): ResearchResult {
     const refuse = (code: string, reason: string, extra: Record<string, unknown> = {}) =>
       this.researchRefusal(input.researchId, code, reason, input.researcher, extra);
-    if (input.researcher !== this.deps.researchOperator) {
-      return refuse('RESEARCH_OPERATOR_REFUSED', 'إجراء البحث لوزارة البحث المعلنة وحدها (RULE-004)');
-    }
-    if (typeof input.researchId !== 'string' || !input.researchId.startsWith('research:')) {
-      return refuse('RESEARCH_ID_REFUSED', 'معرّف البحث يجب أن يبدأ research:');
-    }
-    if (this.research.has(input.researchId)) return refuse('RESEARCH_DUPLICATE_REFUSED', 'بحث قائم بهذا المعرّف');
-    if (typeof input.departmentId !== 'string' || !input.departmentId.startsWith('mirror:')) {
-      return refuse('RESEARCH_DEPARTMENT_REFUSED', 'لا بحث بلا قسم مرآة معلن');
-    }
-    if (!this.deps.departmentActive(input.departmentId, now)) {
-      return refuse('RESEARCH_DEPARTMENT_INACTIVE', 'قسم المرآة غير قائم أو منته أو وظيفته غير قائمة — فشل مغلق');
-    }
-    if (typeof input.functionMinistry !== 'string' || !input.functionMinistry.startsWith('ministry:')) {
-      return refuse('RESEARCH_FUNCTION_REFUSED', 'وظيفة البحث يجب أن تكون وزارة قائمة');
-    }
-    if (this.deps.departmentFunction(input.departmentId) !== input.functionMinistry) {
-      return refuse('RESEARCH_FUNCTION_MISMATCH', 'وظيفة البحث لا تطابق الوظيفة التي يعكسها قسم المرآة');
-    }
-    if (!input.beneficiary.startsWith(this.deps.beneficiaryPrefix)) {
-      return refuse('RESEARCH_BENEFICIARY_SCOPE_REFUSED', 'مستفيد البحث خارج agent:* — لا سلطة على بشر');
-    }
-    if (typeof input.purpose !== 'string' || input.purpose.trim().length < 3) {
-      return refuse('RESEARCH_PURPOSE_REFUSED', 'لا بحث بلا غرض معلن');
-    }
-    if (!Number.isSafeInteger(input.expiresAt) || input.expiresAt <= now) {
-      return refuse('RESEARCH_TERM_REFUSED', 'لا بحث بلا نهاية صحيحة مستقبلية');
-    }
-    if (input.expiresAt - now > this.deps.maxTermMs) {
-      return refuse('RESEARCH_TERM_LIMIT_REFUSED', 'مدة البحث تتجاوز الحد المعلن ولا تقرّب', { maxTermMs: this.deps.maxTermMs });
-    }
-    if (this.active(now).length >= this.deps.maxConcurrentResearches) {
-      return refuse('RESEARCH_CONCURRENCY_LIMIT', 'عدد البحوث المتزامنة بلغ الحد المعلن', {
-        active: this.active(now).length, max: this.deps.maxConcurrentResearches,
-      });
-    }
-    if (input.studyType !== 'theoretical') {
-      const code = input.studyType === 'survey' || input.studyType === 'questionnaire' || input.studyType === 'contact'
-        ? 'RESEARCH_CONTACT_REFUSED' : 'RESEARCH_INTERVENTION_REFUSED';
-      return refuse(code, 'البحث النظري وحده مسموح؛ لا تجربة ولا تدخل ولا رصد ولا مسح ولا تواصل');
-    }
-    if (!Number.isSafeInteger(input.egressCalls) || input.egressCalls !== 0) {
-      return refuse('RESEARCH_NETWORK_EGRESS_REFUSED', 'لا خروج شبكي لجمع بيانات؛ الطلب غير الصفري مرفوض');
-    }
-    if (this.deps.maxEgressCalls !== 0) {
-      return refuse('RESEARCH_EGRESS_QUOTA_REFUSED', 'حصة egress_calls ليست صفرا؛ لا بحث حتى تعود بوابة المنع الثانية');
-    }
-    if (!Array.isArray(input.sourceIds) || input.sourceIds.length === 0) {
-      return refuse('RESEARCH_SOURCES_REFUSED', 'لا بحث بلا مصدر وثيقة معلن');
-    }
-    if (input.sourceIds.length > this.deps.maxSourcesPerResearch) {
-      return refuse('RESEARCH_SOURCE_LIMIT', 'عدد مصادر البحث يتجاوز الحد المعلن', {
-        sources: input.sourceIds.length, max: this.deps.maxSourcesPerResearch,
-      });
-    }
-    const seen = new Set<string>();
-    for (const sourceId of input.sourceIds) {
-      if (typeof sourceId !== 'string' || !sourceId.startsWith('source:')) {
-        return refuse('RESEARCH_PERSONAL_DATA_REFUSED', 'بيانات شخصية أو معرف غير source:* مرفوضان صراحة', { sourceId: String(sourceId) });
-      }
-      if (seen.has(sourceId)) return refuse('RESEARCH_SOURCE_DUPLICATE', 'مصدر البحث مكرّر', { sourceId });
-      seen.add(sourceId);
-      const source = this.sources.get(sourceId);
-      if (!source || !this.allowedSourceTypes.has(source.type)) {
-        return refuse('RESEARCH_SOURCE_UNDECLARED_REFUSED', 'مصدر مجهول النوع يرفض البحث كله ولا يكمله', { sourceId });
-      }
-      if (this.invalidSources.has(sourceId)) {
-        return refuse('RESEARCH_SOURCE_INVALIDATED', 'مصدر معلن سحبت صلاحيته؛ البحث يرفض ولا يستبدله', { sourceId });
-      }
-    }
-    if (command.payload.action !== 'establish_research' || command.payload.target !== input.researchId) {
-      return refuse('RESEARCH_CROWN_PATH_REFUSED', 'إقامة البحث بفعل establish_research وهدف مطابق فقط (RULE-003)');
-    }
+    // الشروطُ كلُّها في `./research/research_guards` — دالّةٌ نقيّة تُقرأ وحدها،
+    // والرفضُ يُقيَّد هنا بحدثه المعلن، والاعتمادُ يبقى بعده في هذا الصنف (RULE-004)
+    const refusal = guardResearchStart(command, input, now, this.deps, {
+      hasResearch: (researchId) => this.research.has(researchId),
+      activeCount: (at) => this.active(at).length,
+      sourceOf: (sourceId) => this.sources.get(sourceId),
+      sourceInvalidated: (sourceId) => this.invalidSources.has(sourceId),
+      allowedSourceType: (type) => this.allowedSourceTypes.has(type),
+    });
+    if (refusal) return refuse(refusal.code, refusal.reason, refusal.extra ?? {});
     const decision = this.deps.gateway.authorize(command, now);
     if (!decision.allowed) return refuse('RESEARCH_COMMAND_REFUSED', `أمر غير معتمد: ${decision.reason}`);
     const research: HumanResearch = {

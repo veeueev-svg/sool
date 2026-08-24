@@ -1,0 +1,28 @@
+# القياس الخام — المرحلة 39 (الجزء الرابع عشر · الجلسة 40) — البند T-113
+# التاريخ: 2026-08-24T09:35:20Z (UTC) | الأداة: wc -l · npm test · npm run verify · tsc
+
+== 1) الحجم قبل التفكيك (من git HEAD) ==
+src/services/human_research.ts = 531
+
+== 2) الحجم بعد التفكيك ==
+  373 src/services/human_research.ts
+  146 src/services/research/research_types.ts
+  144 src/services/research/research_guards.ts
+  663 total
+
+== 3) بصمةُ السطح العام: dist/src/composition/public_api.d.ts قبل وبعد ==
+قبل : cf8a45ae2d2b5ba04a2f37557e3d03f3  dist/src/composition/public_api.d.ts
+بعد : cf8a45ae2d2b5ba04a2f37557e3d03f3  dist/src/composition/public_api.d.ts
+النتيجة: متطابقة بايتيًّا (md5) — لم يتغيّر السطح العام
+
+== 4) فحص حدود الحجم بعد حذف صفّ الاستثناء ==
+سقف الوحدة المعلن: 400 سطرًا
+✓ لا وحدة تتجاوز سقفها — الاستثناءات المعلنة: 3
+
+== 5) خط الأساس ==
+# tests 1824
+# pass 1824
+# fail 0
+# skipped 0
+# todo 0
+# duration_ms 64906.015083

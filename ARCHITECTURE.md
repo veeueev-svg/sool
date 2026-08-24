@@ -82,10 +82,13 @@
 - **الاستثناء دَينٌ لا إعفاء:** يُسجَّل بمسارٍ وسقفٍ خاصّ ورقم بندٍ في `PROGRESS.md` §2،
   و**سقّاطة**: السقف الخاص لا يُرفع، فالدَّين ينقص ولا يزيد. ومن أنزل ملفًا تحت السقف العام
   حذف صفَّه وأغلق بنده.
-- **الدَّين المعلن الآن:** ستة ملفات من زمن المراحل 22–33 (البند **T-113**) — وقد أُغلق
-  البند **T-112** في 0.25.0 فحُذف صفّ `src/index.ts` من ملف الحدود ولم يُرفع سقفه: `services/human_research.ts` (531)،
-  `federation/region_registry.ts` (454)، `load/load_drill.ts` (453)،
-  `services/factory_runtime.ts` (422)، `law/courts.ts` (404)، `external/account_registry.ts` (402).
+- **الدَّين المعلن الآن:** **ثلاثة** ملفات (البند **T-113**)، وكانت ستة من زمن المراحل 22–33:
+  `federation/region_registry.ts` (**454**) · `load/load_drill.ts` (**453**) ·
+  `services/factory_runtime.ts` (**422**).
+- **وما نزل منها فحُذف صفُّه بلا رفع سقف:** أُغلق **T-112** في 0.25.0 (`src/index.ts`
+  1144 ⇒ 148)، ثم `law/courts.ts` (404 ⇒ 357، الجلسة 28)، ثم
+  `external/account_registry.ts` (402 ⇒ 370، الجلسة 38)، ثم
+  `services/human_research.ts` (**531 ⇒ 373**، الجلسة 40 — إلى `src/services/research/`).
 
 ### كيف يُفكَّك ملفٌ متخم (السابقة المُنفَّذة)
 
@@ -139,7 +142,7 @@
 
 | المسار المقترح | ماذا يخرج إليه | البند |
 |---|---|---|
-| `src/services/research/` | تفكيك `human_research.ts` (531) | T-113 |
+| ~~`src/services/research/`~~ ✅ **أُنشئ (الجلسة 40)** | تفكيك `human_research.ts` (531 ⇒ **373**): `research_types.ts` (146) و`research_guards.ts` (144) و`README.md` | T-113 |
 | `src/law/courts/` | تفكيك `courts.ts` (404) | T-113 |
 
 ## قرارات مُوثَّقة
