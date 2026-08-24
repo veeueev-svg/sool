@@ -1,0 +1,32 @@
+# القياسُ الخام — المرحلة 39 · البند T-113 (الجلسة 41): إنقاصُ region_registry.ts
+# التاريخ: 2026-08-24T10:30:04Z
+# HEAD قبل العمل: 38be9f7 هيكلة(المرحلة 39): إنقاصُ دَينِ T-113 — human_research.ts من 531 إلى 373 سطرًا
+
+## 1) الأسطر قبل وبعد (wc -l)
+قبل: src/federation/region_registry.ts = 454 (سقفُه الخاصُّ المعلن: 454 — على حدِّه بالضبط)
+  282 src/federation/region_registry.ts
+   95 src/federation/region_types.ts
+  162 src/federation/regional_assembly.ts
+  539 total
+
+## 2) بصمةُ السطح العام (نفسُها قبل التفكيك وبعده)
+cf8a45ae2d2b5ba04a2f37557e3d03f3  dist/src/composition/public_api.d.ts
+قبل التفكيك (مقيسٌ في الجلسة 40 وأُعيد قياسُه اليوم قبل اللمس): cf8a45ae2d2b5ba04a2f37557e3d03f3
+
+## 3) بصماتُ الوحدات الجديدة
+d473ff8c82a6f396aa0dd39842abeda8  src/federation/region_types.ts
+20209856a26bc111df25847bb67d6bc9  src/federation/regional_assembly.ts
+5115443e975f3503c88761a664c6a83a  src/federation/region_registry.ts
+
+## 4) سقّاطةُ الحجم بعد حذف الصفّ
+
+سقف الوحدة المعلن: 400 سطرًا
+✓ لا وحدة تتجاوز سقفها — الاستثناءات المعلنة: 2
+
+## 5) الاستثناءاتُ الباقية (2)
+exceptions:
+  - {path: src/load/load_drill.ts, max_lines: 453, item: T-113}
+  - {path: src/services/factory_runtime.ts, max_lines: 422, item: T-113}
+
+## 6) خطُّ الأساس — لا فرق، وهو الدليل
+قبل: 1824 pass / 0 fail   بعد: 1824 pass / 0 fail

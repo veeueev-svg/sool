@@ -19,64 +19,39 @@
  *   6) **لا حلّ لإقليم وله حاكم جالس أو تفويض قائم**: يُسحب التفويض ويُعزل الحاكم أولًا،
  *      وإن لم يوجد مصدر يتحقق من الحاكم فالحلّ مرفوض (فشل مغلق لا مفتوح)
  *   7) **اجتماع الأقاليم لا ينقض الملك**: أقصى ما تستطيعه مجتمعةً التماسٌ لا أثر له
- *      إلا بأمر ملكي — ولو حضرت كلها بالإجماع (RULE-003)
+ *      إلا بأمر ملكي — ولو حضرت كلها بالإجماع (RULE-003) — ومحلُّه الآن
+ *      src/federation/regional_assembly.ts وهذا الملفُ يُعيد تصديرَه
+ *  10) **تفكيكُ الجلسة 41 (البند T-113)**: كان هذا الملفُ **454 سطرًا** فوق سقف 400،
+ *      فخرجت الأشكالُ والإعلاناتُ إلى region_types.ts، وخرج **اجتماعُ الأقاليم** إلى
+ *      regional_assembly.ts لأنه سلطةٌ أخرى: السجلُّ يقرّر بأمرٍ ملكي، والاجتماعُ لا
+ *      يقرّر شيئًا. والنقلُ **حرفيٌّ بلا إصلاح**، والواجهةُ باقيةٌ في هذا المسار
+ *      (إعادةُ تصديرٍ أدناه) فلم يُعدَّل مستوردٌ ولا اختبار، والدليلُ خطُّ الأساس نفسه
+ *      أخضر. وحُذف صفُّ استثنائه من config/module_limits.yaml بلا رفع سقف (سقّاطة)
  * حالات الفشل (كلها مغلقة): أمر غير معتمد ⇒ رفض؛ إقليم غير معلن ⇒ رفض؛
  *   نطاق محفوظ للتاج ⇒ رفض؛ نطاق مزدحم ⇒ رفض؛ حلّ بلا مصدر تحقق ⇒ رفض؛
  *   محاولة نقض جماعي ⇒ رفض مسجَّل باسم كل حاضر
  * اختبار القبول: tests/federation/federation_lifecycle.test.ts
  * الوثيقة المرتبطة: docs/decisions/ADR-0008-federation-and-governors.md
  */
-import { Decision, EntityId, SignedRoyalCommand, SovereignAction } from '../kernel/types';
-import { AppendOnlyLog } from '../audit/append_only_log';
-import { CrownGateway } from '../crown/crown_gateway';
-
-/** المجلس الذي يمثّل الأقاليم مجتمعةً — يلتمس ولا يقرّر (ثابت 7) */
-export const REGIONS_COUNCIL: EntityId = 'federation:regions';
+import { Decision, EntityId, SignedRoyalCommand } from '../kernel/types';
+import {
+  CROWN_RESERVED_DOMAINS, GovernorProbe, Region, RegionInput, RegionRegistryDeps, RegionResult,
+  REGIONS_COUNCIL,
+} from './region_types';
 
 /**
- * نطاقات محفوظة للتاج لا تُفوَّض لإقليم بحال.
- * سببها: تفويض أيٍّ منها يُنشئ مركز قرار مستقلًّا عن التاج — أي انقسام سيادة.
+ * إعادةُ تصديرٍ للواجهة: من كان يستورد من هذا المسار يجد ما كان يجده حرفًا —
+ * فالتفكيكُ لا يُكسر مستوردًا (ثابت 10). ومن أراد الأصلَ فوحدتُه مكتوبةٌ أعلاه.
  */
-export const CROWN_RESERVED_DOMAINS: readonly string[] = [
-  'sovereignty', 'audit', 'termination', 'identity', 'policy', 'justice',
-];
-
-export type Autonomy = 'limited' | 'delegated';
-
-export interface Region {
-  readonly regionId: EntityId;
-  readonly name: string;
-  /** limited: لا نطاق مفوَّض | delegated: يمارس نطاقات معلنة */
-  readonly autonomy: Autonomy;
-  readonly domains: readonly string[];
-  readonly establishedBy: EntityId;
-  readonly establishedAt: number;
-  readonly commandId: string;
-  readonly delegationCommandId: string | null;
-  readonly dissolvedAt: number | null;
-  readonly dissolveReason: string | null;
-}
-
-export interface RegionInput {
-  readonly regionId: EntityId;
-  readonly name: string;
-  readonly proposedBy: EntityId;
-}
-
-export type RegionResult =
-  | { readonly ok: true; readonly region: Region; readonly auditId: string }
-  | { readonly ok: false; readonly reason: string; readonly auditId: string };
-
-/** مصدر يتحقق من حاكم إقليم — يُربط من سجل الحكّام (فشل مغلق قبل الربط) */
-export type GovernorProbe = (regionId: EntityId) => EntityId | null;
-
-export interface RegionRegistryDeps {
-  readonly audit: AppendOnlyLog;
-  readonly gateway: CrownGateway;
-  /** معرّفات الأقاليم المعلنة في config/regions.yaml (ثابت 1) */
-  readonly declaredRegions: readonly string[];
-  readonly actorId?: EntityId;
-}
+export {
+  CROWN_RESERVED_DOMAINS, REGIONS_COUNCIL,
+} from './region_types';
+export type {
+  Autonomy, AssemblyResult, GovernorProbe, Petition, PetitionStatus, Region, RegionInput,
+  RegionRegistryDeps, RegionResult,
+} from './region_types';
+export { RegionalAssembly } from './regional_assembly';
+export type { RegionalAssemblyDeps } from './regional_assembly';
 
 export class RegionRegistry {
   private readonly regions = new Map<EntityId, Region>();
@@ -303,152 +278,5 @@ export class RegionRegistry {
       return { allowed: false, reason: 'هدف الأمر لا يطابق الإقليم', auditId: '' };
     }
     return this.deps.gateway.authorize(command, now);
-  }
-}
-
-/* ————————————————— اجتماع الأقاليم ————————————————— */
-
-export type PetitionStatus = 'pending' | 'accepted' | 'rejected';
-
-export interface Petition {
-  readonly petitionId: string;
-  readonly attendees: readonly EntityId[];
-  readonly subject: string;
-  readonly unanimous: boolean;
-  readonly raisedAt: number;
-  readonly status: PetitionStatus;
-  readonly answeredBy: EntityId | null;
-  readonly answeredAt: number | null;
-  readonly commandId: string | null;
-}
-
-export type AssemblyResult =
-  | { readonly ok: true; readonly petition: Petition; readonly auditId: string }
-  | { readonly ok: false; readonly reason: string; readonly auditId: string };
-
-export interface RegionalAssemblyDeps {
-  readonly audit: AppendOnlyLog;
-  readonly gateway: CrownGateway;
-  readonly regions: RegionRegistry;
-}
-
-/**
- * مجلس الأقاليم مجتمعةً: يلتمس ولا يقرّر (ثابت 7).
- * الفرق جوهري: الالتماس بلا أثر حتى يجيبه الملك بأمر معتمد؛
- * ومحاولة النقض مرفوضة بذاتها ولو حضرت كل الأقاليم بالإجماع.
- */
-export class RegionalAssembly {
-  private readonly petitions = new Map<string, Petition>();
-
-  constructor(private readonly deps: RegionalAssemblyDeps) {}
-
-  /** التماس جماعي: أقصى ما يستطيعه الاجتماع */
-  petition(
-    attendees: readonly EntityId[], input: { petitionId: string; subject: string }, now = Date.now(),
-  ): AssemblyResult {
-    const refuse = (reason: string): AssemblyResult => {
-      const entry = this.deps.audit.append(REGIONS_COUNCIL, 'assembly_refused', {
-        petitionId: input.petitionId, reason, attending: attendees.length,
-      });
-      return { ok: false, reason, auditId: entry.hash };
-    };
-    if (this.petitions.has(input.petitionId)) return refuse('معرّف التماس مستخدم');
-    if (input.subject.trim().length < 3) return refuse('لا التماس بلا موضوع معلن');
-    if (attendees.length < 2) return refuse('لا اجتماع بأقل من إقليمين');
-    if (new Set(attendees).size !== attendees.length) return refuse('حضور مكرَّر لا يُعتدّ به');
-    const absent = attendees.filter((a) => !this.deps.regions.isActive(a));
-    if (absent.length > 0) return refuse('حاضر ليس إقليمًا قائمًا');
-
-    const totalActive = this.deps.regions.active().length;
-    const petition: Petition = {
-      petitionId: input.petitionId,
-      attendees: [...attendees],
-      subject: input.subject.trim(),
-      unanimous: attendees.length === totalActive,
-      raisedAt: now,
-      status: 'pending',
-      answeredBy: null,
-      answeredAt: null,
-      commandId: null,
-    };
-    this.petitions.set(petition.petitionId, petition);
-    const entry = this.deps.audit.append(REGIONS_COUNCIL, 'assembly_petitioned', {
-      petitionId: petition.petitionId, subject: petition.subject,
-      attending: petition.attendees.length, totalActive, unanimous: petition.unanimous,
-      effect: 'لا أثر حتى أمر ملكي',
-    });
-    return { ok: true, petition, auditId: entry.hash };
-  }
-
-  /**
-   * محاولة نقض جماعي: مرفوضة دائمًا — ولو بالإجماع الكامل.
-   * تُمرَّر إلى بوابة التاج لتسجيلها باسم الاجتماع، ثم تُسجَّل هنا ثانيًا بالعدد والنسبة.
-   */
-  override(
-    attendees: readonly EntityId[], action: SovereignAction, now = Date.now(),
-  ): { readonly allowed: false; readonly reason: string; readonly auditId: string } {
-    const decision = this.deps.gateway.collectiveOverride(attendees, action);
-    const totalActive = this.deps.regions.active().length;
-    const entry = this.deps.audit.append(REGIONS_COUNCIL, 'assembly_override_refused', {
-      action, attending: attendees.length, totalActive,
-      unanimous: totalActive > 0 && attendees.length >= totalActive,
-      gatewayReason: decision.reason, at: now,
-    });
-    return { allowed: false, reason: decision.reason ?? 'اجتماع الأقاليم لا ينقض الملك', auditId: entry.hash };
-  }
-
-  /** جواب الملك على الالتماس: أمر معتمد موجَّه إلى مجلس الأقاليم */
-  answer(
-    command: SignedRoyalCommand, petitionId: string, verdict: 'accepted' | 'rejected',
-    now = Date.now(),
-  ): AssemblyResult {
-    const refuse = (reason: string): AssemblyResult => {
-      const entry = this.deps.audit.append(command.payload.issuedBy, 'assembly_refused', {
-        petitionId, reason, stage: 'answer',
-      });
-      return { ok: false, reason, auditId: entry.hash };
-    };
-    const petition = this.petitions.get(petitionId);
-    if (!petition) return refuse('التماس غير موجود');
-    if (petition.status !== 'pending') return refuse(`التماس محسوم سابقًا: ${petition.status}`);
-    if (command.payload.action !== 'amend_policy') {
-      return refuse('جواب الالتماس بفعل amend_policy وحده');
-    }
-    if (command.payload.target !== REGIONS_COUNCIL) {
-      return refuse('هدف الأمر لا يطابق مجلس الأقاليم');
-    }
-    if (petition.attendees.includes(command.payload.issuedBy)) {
-      return refuse('الملتمس لا يجيب التماسه (RULE-004)');
-    }
-    const decision = this.deps.gateway.authorize(command, now);
-    if (!decision.allowed) return refuse(`الأمر غير معتمد: ${decision.reason}`);
-
-    const answered: Petition = {
-      ...petition, status: verdict, answeredBy: command.payload.issuedBy,
-      answeredAt: now, commandId: command.payload.commandId,
-    };
-    this.petitions.set(petitionId, answered);
-    const entry = this.deps.audit.append(command.payload.issuedBy, 'petition_answered', {
-      petitionId, verdict, commandId: command.payload.commandId,
-    });
-    return { ok: true, petition: answered, auditId: entry.hash };
-  }
-
-  getPetition(petitionId: string): Petition | undefined {
-    return this.petitions.get(petitionId);
-  }
-
-  pending(): readonly Petition[] {
-    return [...this.petitions.values()].filter((p) => p.status === 'pending');
-  }
-
-  report(): { total: number; pending: number; accepted: number; rejected: number } {
-    const all = [...this.petitions.values()];
-    return {
-      total: all.length,
-      pending: all.filter((p) => p.status === 'pending').length,
-      accepted: all.filter((p) => p.status === 'accepted').length,
-      rejected: all.filter((p) => p.status === 'rejected').length,
-    };
   }
 }

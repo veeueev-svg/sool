@@ -82,13 +82,15 @@
 - **الاستثناء دَينٌ لا إعفاء:** يُسجَّل بمسارٍ وسقفٍ خاصّ ورقم بندٍ في `PROGRESS.md` §2،
   و**سقّاطة**: السقف الخاص لا يُرفع، فالدَّين ينقص ولا يزيد. ومن أنزل ملفًا تحت السقف العام
   حذف صفَّه وأغلق بنده.
-- **الدَّين المعلن الآن:** **ثلاثة** ملفات (البند **T-113**)، وكانت ستة من زمن المراحل 22–33:
-  `federation/region_registry.ts` (**454**) · `load/load_drill.ts` (**453**) ·
-  `services/factory_runtime.ts` (**422**).
+- **الدَّين المعلن الآن:** **ملفان** (البند **T-113**)، وكانت ستة من زمن المراحل 22–33:
+  `load/load_drill.ts` (**453**) · `services/factory_runtime.ts` (**422**).
 - **وما نزل منها فحُذف صفُّه بلا رفع سقف:** أُغلق **T-112** في 0.25.0 (`src/index.ts`
   1144 ⇒ 148)، ثم `law/courts.ts` (404 ⇒ 357، الجلسة 28)، ثم
   `external/account_registry.ts` (402 ⇒ 370، الجلسة 38)، ثم
-  `services/human_research.ts` (**531 ⇒ 373**، الجلسة 40 — إلى `src/services/research/`).
+  `services/human_research.ts` (**531 ⇒ 373**، الجلسة 40 — إلى `src/services/research/`)، ثم
+  `federation/region_registry.ts` (**454 ⇒ 282**، الجلسة 41 — إلى `region_types.ts`
+  و`regional_assembly.ts` جارَين في `src/federation/`؛ **العلّةُ كانت الجمعَ لا الطول**:
+  سلطةٌ تُقرّر وسلطةٌ لا تُقرّر في ملفٍ واحد).
 
 ### كيف يُفكَّك ملفٌ متخم (السابقة المُنفَّذة)
 
@@ -143,6 +145,7 @@
 | المسار المقترح | ماذا يخرج إليه | البند |
 |---|---|---|
 | ~~`src/services/research/`~~ ✅ **أُنشئ (الجلسة 40)** | تفكيك `human_research.ts` (531 ⇒ **373**): `research_types.ts` (146) و`research_guards.ts` (144) و`README.md` | T-113 |
+| ~~`src/federation/`~~ ✅ **قائمٌ من المرحلة 24** | تفكيك `region_registry.ts` (454 ⇒ **282**، الجلسة 41): `region_types.ts` (95) و`regional_assembly.ts` (162) — وحدتان جارتان، فلا مجلدَ جديدًا زينةً (RULE-001) | T-113 |
 | `src/law/courts/` | تفكيك `courts.ts` (404) | T-113 |
 
 ## قرارات مُوثَّقة

@@ -25,7 +25,12 @@ scope: "src/**/*.ts + tests/**/*.ts + scripts/**/*.ts"
 # src/services/research/research_types.ts وشروطِ مدخل البحث إلى
 # src/services/research/research_guards.ts. والنقلُ حرفيٌّ بلا إصلاح، والدليلُ خطُّ الأساس
 # نفسه أخضر: 1824/1824 قبله وبعده. فالاستثناءات: 4 ← 3.
+# والمرحلة 39 (T-113 · الجلسة 41): صفُّ src/federation/region_registry.ts حُذف كذلك — كان **454**
+# (أعلى دَينٍ معلنٍ بعد إنقاص human_research.ts) وصار **282** سطرًا بعد إخراج الأشكال
+# والإعلانات إلى src/federation/region_types.ts و**اجتماع الأقاليم** إلى
+# src/federation/regional_assembly.ts — وحدُّ القسمة سلطةٌ لا حجم: السجلُّ يقرّر بأمرٍ ملكي
+# والاجتماعُ لا يقرّر شيئًا. والنقلُ حرفيٌّ بلا إصلاح، والدليلُ خطُّ الأساس نفسه أخضر:
+# 1824/1824 قبله وبعده. فالاستثناءات: 3 ← 2.
 exceptions:
-  - {path: src/federation/region_registry.ts, max_lines: 454, item: T-113}
   - {path: src/load/load_drill.ts, max_lines: 453, item: T-113}
   - {path: src/services/factory_runtime.ts, max_lines: 422, item: T-113}
