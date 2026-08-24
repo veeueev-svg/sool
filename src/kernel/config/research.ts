@@ -16,6 +16,15 @@ import { loadYamlFile } from './yaml';
 /** تهيئة البحث النظري في النظير البشري وأقسام المرآة (المرحلة 30). */
 export type ResearchSourceType = 'public_literature' | 'statistical_aggregate' | 'historical_record';
 
+/**
+ * أنواعُ المصادر المسموحةُ — تعدادٌ مغلقٌ **مجمَّدٌ** ومُسجَّلٌ في `closed_enums.ts` (T-131).
+ * كان مكتوبًا مجموعةً داخلَ المحمّل، فلم يكن لأحدٍ أن يقرأ عددَه من خارجه ولا أن يحرسه:
+ * تعدادٌ لا اسمَ له لا يُسجَّل، وما لا يُسجَّل يُفتح في صمت.
+ */
+export const RESEARCH_KNOWN_SOURCE_TYPES: readonly ResearchSourceType[] = Object.freeze([
+  'public_literature', 'statistical_aggregate', 'historical_record',
+]);
+
 export interface ResearchConfig {
   policy: {
     default: string;
@@ -80,9 +89,7 @@ export function loadResearch(configDir = resolveConfigDir()): ResearchConfig {
   if (policy.research_operator === policy.lesson_approver) {
     throw new SovereignViolation('الباحث لا يجيز درسه (RULE-004)', 'CONFIG_RESEARCH_ROLES_MERGED');
   }
-  const allowed = new Set<ResearchSourceType>([
-    'public_literature', 'statistical_aggregate', 'historical_record',
-  ]);
+  const allowed = new Set<ResearchSourceType>(RESEARCH_KNOWN_SOURCE_TYPES);
   if (!Array.isArray(raw.allowed_source_types) || raw.allowed_source_types.length === 0) {
     throw new SovereignViolation('لا أنواع مصادر بحث معلنة', 'CONFIG_RESEARCH_NO_SOURCE_TYPES');
   }

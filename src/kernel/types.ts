@@ -36,12 +36,12 @@ export type SovereignAction =
  * **زينةً**: البوابة تقرأ ثابتًا في الكود، فلو أُعلن في اليامل فعلٌ مجهول لمرّ صامتًا،
  * ولو حُذف منه فعلٌ لبقي مقبولًا. صارت التهيئة هي المصدر، وهذه القائمة هي المقياس.
  */
-export const KNOWN_SOVEREIGN_ACTIONS: readonly SovereignAction[] = [
+export const KNOWN_SOVEREIGN_ACTIONS: readonly SovereignAction[] = Object.freeze([
   'create_agent', 'grant_capability', 'appoint_official', 'amend_policy',
   'approve_phase', 'terminate_agent', 'declare_emergency', 'open_external_account',
   'import_artifact', 'train_model', 'archive_restore', 'judicial_review',
   'establish_facility', 'establish_service', 'establish_research',
-];
+]);
 
 /** حالة الدولة التشغيلية */
 export type StateMode =

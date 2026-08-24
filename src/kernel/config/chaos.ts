@@ -37,7 +37,9 @@ export interface ChaosConfig {
 }
 
 /** القطوع المعروفة للنظام. ما ليس منها لا يُحقَن: القطع المجهول لا يُقاس أثره. */
-export const CHAOS_KNOWN_FAULTS: readonly ChaosFault[] = ['network', 'identity', 'power', 'disk'];
+export const CHAOS_KNOWN_FAULTS: readonly ChaosFault[] = Object.freeze(
+  ['network', 'identity', 'power', 'disk'],
+);
 
 /**
  * القطوع التي لا تُعدّ المرحلة 34 مقبولة بغيرها — نصّ شرط القبول في ROADMAP.md:

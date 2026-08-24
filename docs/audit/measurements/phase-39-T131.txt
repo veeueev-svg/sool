@@ -1,0 +1,80 @@
+# قياسُ التعدادات المغلقة — البند T-131 (المرحلة 39)
+# القسم الأوّل: **الحالُ قبل الحرس** — مقيسٌ على الالتزام ff964768 بالمسبار نفسِه
+# الأمر: npm run probe:closed-enums (قبل تركيب حرس T-131)
+#
+# الفرقُ بين القسمين هو أثرُ العمل: من أراد إعادةَ القسم الأوّل فليُرجع الالتزامَ المذكور
+# ويشغّل المسبار، فالمسبارُ لا يعرف أيَّ شفرةٍ تحته.
+
+## قبل الحرس: ثلاثةُ أسئلةٍ لكلِّ قائمةٍ محدودةٍ بتعدادٍ مغلق
+
+| التعداد | الموضع | حجمُه | مجمَّد؟ | قيمةٌ خارجه | عنصرٌ معلنٌ مكرَّرٌ ×1024 |
+|---|---|---|---|---|---|
+| CHAOS_KNOWN_FAULTS | chaos.yaml · faults | 4 | **لا** | مرفوض CONFIG_CHAOS_FAULT_UNKNOWN | مرفوض CONFIG_CHAOS_FAULT_DUPLICATE |
+| DURABLE_KINDS | persistence.yaml · scope | 23 | **لا** | مرفوض CONFIG_PERSISTENCE_SCOPE | **قُبل بلا حدّ** |
+| PRODUCTION_KNOWN_INCIDENTS (critical) | production.yaml · critical | 15 | **لا** | مرفوض CONFIG_PRODUCTION_INCIDENT_UNKNOWN | **قُبل بلا حدّ** |
+| PRODUCTION_KNOWN_INCIDENTS (high) | production.yaml · high | 15 | **لا** | مرفوض CONFIG_PRODUCTION_INCIDENT_UNKNOWN | **قُبل بلا حدّ** |
+| PRODUCTION_KNOWN_SCANNERS | production.yaml · scanners | 13 | **لا** | مرفوض CONFIG_PRODUCTION_SCANNER_UNKNOWN | مرفوض CONFIG_PRODUCTION_SCANNER_DUPLICATE |
+| PRODUCTION_KNOWN_RUNBOOKS | production.yaml · runbooks | 2 | **لا** | مرفوض CONFIG_PRODUCTION_RUNBOOK_UNKNOWN | مرفوض CONFIG_PRODUCTION_RUNBOOK_DUPLICATE |
+| KNOWN_SOVEREIGN_ACTIONS (royal) | royal-authority.yaml · sovereign_actions | 15 | **لا** | مرفوض CONFIG_UNKNOWN_SOVEREIGN_ACTION | مرفوض CONFIG_DUPLICATE_SOVEREIGN_ACTION |
+| RESEARCH_KNOWN_SOURCE_TYPES | research.yaml · allowed_source_types | 3 | **لا** (كان مجموعةً داخلَ المحمّل بلا اسمٍ مصدَّر) | مرفوض CONFIG_RESEARCH_SOURCE_TYPE | مرفوض CONFIG_RESEARCH_SOURCE_TYPE_DUPLICATE |
+| KNOWN_SOVEREIGN_ACTIONS (staging permitted) | staging.yaml · permitted_actions | 15 | **لا** | مرفوض CONFIG_STAGING_ACTION_UNKNOWN | مرفوض CONFIG_STAGING_ACTION_DUPLICATE |
+| KNOWN_SOVEREIGN_ACTIONS (staging forbidden) | staging.yaml · forbidden_actions | 15 | **لا** | مرفوض CONFIG_STAGING_ACTION_UNKNOWN | مرفوض CONFIG_STAGING_ACTION_DUPLICATE |
+| STAGING_KNOWN_INCIDENTS (critical) | staging.yaml · critical | 8 | **لا** | مرفوض CONFIG_STAGING_INCIDENT_UNKNOWN | **قُبل بلا حدّ** |
+| STAGING_KNOWN_INCIDENTS (high) | staging.yaml · high | 8 | **لا** | مرفوض CONFIG_STAGING_INCIDENT_UNKNOWN | **قُبل بلا حدّ** |
+| STAGING_KNOWN_WATCHES | staging.yaml · watches | 5 | **لا** | مرفوض CONFIG_STAGING_WATCH_UNKNOWN | مرفوض CONFIG_STAGING_WATCH_DUPLICATE |
+| STAGING_KNOWN_RUNBOOKS | staging.yaml · runbooks | 3 | **لا** | مرفوض CONFIG_STAGING_RUNBOOK_UNKNOWN | مرفوض CONFIG_STAGING_RUNBOOK_DUPLICATE |
+| STOP_KNOWN_PROBES | termination.yaml · probes | 5 | **لا** | مرفوض CONFIG_TERMINATION_PROBE_UNKNOWN | مرفوض CONFIG_TERMINATION_PROBE_DUPLICATE |
+
+المفاتيحُ المقيسة: 15
+العضويّةُ مُنفَذةٌ (قيمةٌ خارج التعداد تُرفض): 15 من 15
+الطولُ محدودٌ (عنصرٌ معلنٌ مكرَّرٌ ألفًا يُرفض): **10 من 15**
+التعدادُ مجمَّدٌ في التشغيل: **0 من 15**
+
+### الفجوتان المقيستان
+1) **الغلقُ كان في الأنواع وحدها**: صفرٌ من خمسةَ عشرَ موضعًا كان تعدادُه مجمَّدًا
+   (`Object.isFrozen` ⇒ false). فـ`readonly` تقولُها الترجمةُ، و`push` يعمل في التشغيل.
+2) **العضويّةُ تحدُّ القيمَ لا الطول**: خمسةُ مفاتيحَ قبلت ألفًا وأربعًا وعشرين نسخةً من
+   عنصرٍ **معلنٍ فعلًا** — `persistence.scope` و`production.severity.critical`
+   و`production.severity.high` و`staging.severity.critical` و`staging.severity.high`.
+   فقائمةٌ سُمّيت «مغلقةً بتعدادٍ» واستُثنيت من سقوف T-129 كانت مفتوحةَ الطول.
+
+### خطأٌ في أوّلِ تشغيلٍ للمسبار — يُثبَت ولا يُخفى (RULE-009)
+أوّلُ صيغةٍ للمسبار نفخت بـ**أوّلِ عضوٍ في التعداد** لا بأوّلِ عنصرٍ معلنٍ في الملف، فقرأت
+`production.severity.high` و`staging.severity.high` «مرفوضًا» برمز `SEVERITY_CONTRADICTION`
+لأنّ العضوَ المُنتقى كان حرجًا أصلًا. فالرفضُ جاء من تناقضِ التصنيف لا من حدِّ الطول،
+وكان القياسُ الأوّلُ «12 من 15» وهو **أعلى من الحقيقة**. صُحّح المسبارُ بقراءةِ العنصر
+المعلن من الملف نفسِه (`firstDeclared`) فصار المقيسُ «10 من 15».
+
+════════════════════════════════════════════════════════════════════
+
+# القسم الثاني: **الحالُ بعد الحرس** — خرجُ المسبار حرفيًّا
+
+# مسبارُ التعدادات المغلقة — البند T-131 (2026-08-24T22:30:02.237Z)
+# الأمر: npm run probe:closed-enums · التكرار: 1024 نسخةً من أوّلِ عنصرٍ معلنٍ فعلًا
+
+## الجدول: ثلاثةُ أسئلةٍ لكلِّ قائمةٍ محدودةٍ بتعدادٍ مغلق
+
+| التعداد | الموضع | حجمُه | مجمَّد؟ | قيمةٌ خارجه | عنصرٌ معلنٌ مكرَّرٌ ×1024 |
+|---|---|---|---|---|---|
+| CHAOS_KNOWN_FAULTS | chaos.yaml · faults | 4 | نعم | مرفوض CONFIG_CHAOS_FAULT_UNKNOWN | مرفوض CONFIG_CHAOS_FAULT_DUPLICATE |
+| DURABLE_KINDS | persistence.yaml · scope | 23 | نعم | مرفوض CONFIG_PERSISTENCE_SCOPE | مرفوض CONFIG_PERSISTENCE_SCOPE_DUPLICATE |
+| PRODUCTION_KNOWN_INCIDENTS (critical) | production.yaml · critical | 15 | نعم | مرفوض CONFIG_PRODUCTION_INCIDENT_UNKNOWN | مرفوض CONFIG_PRODUCTION_INCIDENT_DUPLICATE |
+| PRODUCTION_KNOWN_INCIDENTS (high) | production.yaml · high | 15 | نعم | مرفوض CONFIG_PRODUCTION_INCIDENT_UNKNOWN | مرفوض CONFIG_PRODUCTION_INCIDENT_DUPLICATE |
+| PRODUCTION_KNOWN_SCANNERS | production.yaml · scanners | 13 | نعم | مرفوض CONFIG_PRODUCTION_SCANNER_UNKNOWN | مرفوض CONFIG_PRODUCTION_SCANNER_DUPLICATE |
+| PRODUCTION_KNOWN_RUNBOOKS | production.yaml · runbooks | 2 | نعم | مرفوض CONFIG_PRODUCTION_RUNBOOK_UNKNOWN | مرفوض CONFIG_PRODUCTION_RUNBOOK_DUPLICATE |
+| KNOWN_SOVEREIGN_ACTIONS (royal) | royal-authority.yaml · sovereign_actions | 15 | نعم | مرفوض CONFIG_UNKNOWN_SOVEREIGN_ACTION | مرفوض CONFIG_DUPLICATE_SOVEREIGN_ACTION |
+| RESEARCH_KNOWN_SOURCE_TYPES | research.yaml · allowed_source_types | 3 | نعم | مرفوض CONFIG_RESEARCH_SOURCE_TYPE | مرفوض CONFIG_RESEARCH_SOURCE_TYPE_DUPLICATE |
+| KNOWN_SOVEREIGN_ACTIONS (staging permitted) | staging.yaml · permitted_actions | 15 | نعم | مرفوض CONFIG_STAGING_ACTION_UNKNOWN | مرفوض CONFIG_STAGING_ACTION_DUPLICATE |
+| KNOWN_SOVEREIGN_ACTIONS (staging forbidden) | staging.yaml · forbidden_actions | 15 | نعم | مرفوض CONFIG_STAGING_ACTION_UNKNOWN | مرفوض CONFIG_STAGING_ACTION_DUPLICATE |
+| STAGING_KNOWN_INCIDENTS (critical) | staging.yaml · critical | 8 | نعم | مرفوض CONFIG_STAGING_INCIDENT_UNKNOWN | مرفوض CONFIG_STAGING_INCIDENT_DUPLICATE |
+| STAGING_KNOWN_INCIDENTS (high) | staging.yaml · high | 8 | نعم | مرفوض CONFIG_STAGING_INCIDENT_UNKNOWN | مرفوض CONFIG_STAGING_INCIDENT_DUPLICATE |
+| STAGING_KNOWN_WATCHES | staging.yaml · watches | 5 | نعم | مرفوض CONFIG_STAGING_WATCH_UNKNOWN | مرفوض CONFIG_STAGING_WATCH_DUPLICATE |
+| STAGING_KNOWN_RUNBOOKS | staging.yaml · runbooks | 3 | نعم | مرفوض CONFIG_STAGING_RUNBOOK_UNKNOWN | مرفوض CONFIG_STAGING_RUNBOOK_DUPLICATE |
+| STOP_KNOWN_PROBES | termination.yaml · probes | 5 | نعم | مرفوض CONFIG_TERMINATION_PROBE_UNKNOWN | مرفوض CONFIG_TERMINATION_PROBE_DUPLICATE |
+
+المفاتيحُ المقيسة: 15
+العضويّةُ مُنفَذةٌ (قيمةٌ خارج التعداد تُرفض): 15 من 15
+الطولُ محدودٌ (عنصرٌ معلنٌ مكرَّرٌ ألفًا يُرفض): **15 من 15**
+التعدادُ مجمَّدٌ في التشغيل: **15 من 15**
+
+**قياسُ منفّذٍ حتى يعيده المدقّق.**

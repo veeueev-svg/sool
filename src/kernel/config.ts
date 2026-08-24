@@ -14,6 +14,8 @@ export * from './config/yaml';
 // المرحلة 39 (T-75): سقوفُ العدد المعلن — تسكن النواةَ لا الملفَّ الذي تحكمه (RULE-005)
 export * from './config/declaration_limits';
 export * from './config/declaration_budget';
+// T-131: سجلُّ التعدادات المغلقة وحرسُها — يُقرأ من الإقلاع ومن الاختبارات
+export * from './config/closed_enums';
 export * from './config/declaration_census';
 export * from './config/royal_authority';
 export * from './config/quotas';

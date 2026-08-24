@@ -188,6 +188,16 @@ export function loadProduction(configDir = resolveConfigDir()): ProductionConfig
       );
     }
   }
+  // T-131: تكرارُ حادثٍ في قائمته الواحدة. العضويّةُ تحدُّ القيمَ لا الطولَ، والمقيسُ قبل
+  // هذا الحرس: ألفٌ وأربعٌ وعشرون نسخةً من حادثٍ معلنٍ تُقبل في `critical` وفي `high`.
+  for (const list of [severity.critical, high]) {
+    if (new Set(list).size !== list.length) {
+      throw new SovereignViolation(
+        'حادث معلن مرتين في تصنيفٍ واحد — عدٌّ مضلِّلٌ وطولٌ بلا سقف',
+        'CONFIG_PRODUCTION_INCIDENT_DUPLICATE',
+      );
+    }
+  }
   for (const kind of severity.critical) {
     if (high.includes(kind)) {
       throw new SovereignViolation(

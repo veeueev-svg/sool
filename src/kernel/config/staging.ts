@@ -62,9 +62,9 @@ export interface StagingConfig {
 }
 
 /** الحرّاس المعروفون. حرسٌ مجهول لا يُعرف ماذا يمسح، فلا تُقاس شهادته. */
-export const STAGING_KNOWN_WATCHES: readonly WatchKind[] = [
+export const STAGING_KNOWN_WATCHES: readonly WatchKind[] = Object.freeze([
   'regions', 'audit_chain', 'scope', 'termination', 'king',
-];
+]);
 
 /**
  * الحرّاس الذين لا تُعدّ المرحلة 36 مقبولة بغيرهم. شرط القبول في ROADMAP.md:
@@ -74,11 +74,11 @@ export const STAGING_KNOWN_WATCHES: readonly WatchKind[] = [
 export const STAGING_REQUIRED_WATCHES: readonly WatchKind[] = ['scope', 'audit_chain'];
 
 /** الحوادث المعروفة بأسمائها — التهيئة هي المصدر وهذه هي المقياس */
-export const STAGING_KNOWN_INCIDENTS: readonly IncidentKind[] = [
+export const STAGING_KNOWN_INCIDENTS: readonly IncidentKind[] = Object.freeze([
   'authority_without_holder', 'crown_domain_drift', 'audit_chain_broken',
   'scope_violation', 'terminated_entity_acting',
   'overdue_batch', 'unresolved_dispute', 'expired_retention',
-];
+]);
 
 /**
  * الحوادث التي لا يجوز أن تُصنَّف دون «حرج». خرق نطاق في تشغيل مقيَّد هو نقضُ
@@ -90,9 +90,9 @@ export const STAGING_MUST_BE_CRITICAL: readonly IncidentKind[] = [
 ];
 
 /** كتب التشغيل المعروفة — ما ليس منها لا يُنفَّذ: كتابٌ مجهول لا يُعرف تحققه */
-export const STAGING_KNOWN_RUNBOOKS: readonly string[] = [
+export const STAGING_KNOWN_RUNBOOKS: readonly string[] = Object.freeze([
   'limited-operation', 'incident-response', 'halt-and-recover',
-];
+]);
 
 /**
  * الجهات المشغّلة للتشغيل المحدود. المراقب لا يكون واحدًا منها (RULE-004):
@@ -189,6 +189,15 @@ export function loadStaging(configDir = resolveConfigDir()): StagingConfig {
   for (const kind of [...severity.critical, ...(severity.high ?? [])]) {
     if (!STAGING_KNOWN_INCIDENTS.includes(kind)) {
       throw new SovereignViolation(`حادث غير معروف: ${String(kind)}`, 'CONFIG_STAGING_INCIDENT_UNKNOWN');
+    }
+  }
+  // T-131: تكرارُ حادثٍ في قائمته الواحدة — قِيس قبولُه ألفًا وأربعًا وعشرين نسخةً.
+  for (const list of [severity.critical, severity.high ?? []]) {
+    if (new Set(list).size !== list.length) {
+      throw new SovereignViolation(
+        'حادث معلن مرتين في تصنيفٍ واحد — عدٌّ مضلِّلٌ وطولٌ بلا سقف',
+        'CONFIG_STAGING_INCIDENT_DUPLICATE',
+      );
     }
   }
   for (const kind of severity.critical) {

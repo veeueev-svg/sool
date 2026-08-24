@@ -39,7 +39,9 @@ export interface TerminationConfig {
 }
 
 /** المسالك المعروفة. ما ليس منها لا يُجرَّب: مسلكٌ مجهول لا تُعرف دلالة رفضه. */
-export const STOP_KNOWN_PROBES: readonly StopProbeKind[] = ['tool', 'lease', 'capability', 'schedule', 'spawn'];
+export const STOP_KNOWN_PROBES: readonly StopProbeKind[] = Object.freeze(
+  ['tool', 'lease', 'capability', 'schedule', 'spawn'],
+);
 
 /**
  * المسالك التي لا تُعدّ المرحلة 35 مقبولة بغيرها. شرط القبول في ROADMAP.md:

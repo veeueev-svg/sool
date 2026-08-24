@@ -22,7 +22,7 @@ import { resolveConfigDir } from './paths';
 import { loadYamlFile } from './yaml';
 
 /** أصناف القيود المسموح تدوينها — قائمة مغلقة: صنف غير معلن لا يُدوَّن ولا يُقرأ */
-export const DURABLE_KINDS = [
+export const DURABLE_KINDS = Object.freeze([
   'audit_entry', 'memory_record', 'memory_share', 'knowledge_fact', 'archive_snapshot',
   // T-121: علامةُ الضغط — أوّل قيد في يوميّةٍ مضغوطة، يشهد من أين جاءت وأين أُرشف
   // أصلُها. ليس لوحدات الحالة أن تُدوّنه — الضاغط وحده يكتبه، والإرجاع يتجاوزه.
@@ -42,7 +42,7 @@ export const DURABLE_KINDS = [
   // والاقتراحُ يمرّ بأطوارٍ (مقترح ⇒ معتمد ⇒ منفَّذ) فآخرُ طورٍ يكفي، وصاحبُ المنصب يُعزل
   // فيُقيَّد خلوُّ المنصب بعلامةٍ لا بمحوِ قيد. والمنصبُ نفسُه لا يُلغى بعد إعلانه.
   'ministry_state', 'office_definition', 'appointment_proposal', 'office_holder',
-] as const;
+] as const);
 export type DurableKind = (typeof DURABLE_KINDS)[number];
 
 /** عتبةُ مناداةِ الضغط (T-123) — رأيٌ يُحسَب، والقرارُ لمن يُقيّده في السجل */
@@ -116,6 +116,14 @@ export function loadPersistence(configDir = resolveConfigDir()): PersistenceConf
     if (!(DURABLE_KINDS as readonly string[]).includes(kind)) {
       throw new SovereignViolation(`صنف تدوين غير معروف: ${kind}`, 'CONFIG_PERSISTENCE_SCOPE');
     }
+  }
+  // T-131: العضويّةُ تحدُّ **القيمَ** لا **العدد**. المقيسُ قبل هذا الحرس: ألفٌ وأربعٌ
+  // وعشرون نسخةً من `audit_entry` تُقبل، فقائمةٌ سُمّيت «مغلقةً بتعدادٍ» كانت مفتوحةَ الطول.
+  if (new Set(scope).size !== scope.length) {
+    throw new SovereignViolation(
+      'صنف تدوين معلن مرتين — تكرارٌ يُطيل قائمةً بلا سقفٍ ولا يُدوّن صنفًا جديدًا',
+      'CONFIG_PERSISTENCE_SCOPE_DUPLICATE',
+    );
   }
   validateCompaction(raw);
   validateArchives(raw);

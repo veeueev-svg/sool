@@ -69,11 +69,11 @@ export interface ProductionConfig {
 }
 
 /** الماسحات المعروفة — ماسحٌ مجهول لا يُعرف ما يمسح فلا تُقاس شهادته */
-export const PRODUCTION_KNOWN_SCANNERS: readonly ScannerKind[] = [
+export const PRODUCTION_KNOWN_SCANNERS: readonly ScannerKind[] = Object.freeze([
   'regions', 'audit_chain', 'scope', 'termination', 'king',
   'loads', 'digital_unit', 'factories', 'hospitals', 'retention', 'passage',
   'durable_state', 'confinement',
-];
+]);
 
 /**
  * الماسحات التي لا يُعدّ التشغيل الاتحادي مقبولًا بغيرها. شرط القبول نصًّا:
@@ -93,12 +93,12 @@ export const PRODUCTION_REQUIRED_SCANNERS: readonly ScannerKind[] = [
 ];
 
 /** الحوادث المعروفة في التشغيل الاتحادي */
-export const PRODUCTION_KNOWN_INCIDENTS: readonly IncidentKind[] = [
+export const PRODUCTION_KNOWN_INCIDENTS: readonly IncidentKind[] = Object.freeze([
   ...STAGING_KNOWN_INCIDENTS,
   'unit_ledger_mismatch', 'command_loss_over_limit', 'critical_service_unverified',
   'crown_passage_bypass', 'region_action_without_passage', 'state_not_durable',
   'process_not_confined',
-];
+]);
 
 /**
  * ما لا يجوز تصنيفه دون «حرج». يُضاف إلى قائمة المرحلة 36 فعلٌ إقليمي نفُذ بلا إذن
@@ -115,9 +115,9 @@ export const PRODUCTION_MUST_BE_CRITICAL: readonly IncidentKind[] = [
 ];
 
 /** كتب التشغيل المعروفة في الطور الاتحادي */
-export const PRODUCTION_KNOWN_RUNBOOKS: readonly string[] = [
+export const PRODUCTION_KNOWN_RUNBOOKS: readonly string[] = Object.freeze([
   'federated-operation', 'king-absence',
-];
+]);
 
 /** الجهات المشغّلة للتشغيل الاتحادي — المراقب ليس منها (RULE-004) */
 export const PRODUCTION_OPERATORS: readonly string[] = STAGING_OPERATORS;

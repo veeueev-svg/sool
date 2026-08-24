@@ -26,6 +26,7 @@ import { CrownGateway, DEFAULT_POLICY } from '../crown/crown_gateway';
 import { CrownGuard } from '../crown/guardians';
 import { TerminationRoll } from '../kernel/termination_roll';
 import { StateJournal } from '../data/persistence';
+import { closedEnumUseCount, guardClosedEnums } from '../kernel/config/closed_enums';
 
 export function composeSovereignty(
   configDir: string, now: number, options: BootstrapOptions,
@@ -36,6 +37,12 @@ export function composeSovereignty(
   //     ولا تُبنى دولةٌ نصفَ بناءٍ ثمّ يُقال «الإعلانُ أكبرُ من ميزانيّته». والقياسُ يُدوَّن
   //     في السجل بعد إنشائه (السطرُ الوحيدُ الذي يسبق السجل هو الحصرُ لا الحكم).
   const declarationCensus = guardDeclarationBudget(configDir);
+
+  // -1أ) والتعداداتُ المغلقةُ قبلها (البند T-131): ما استُثني من سقوف T-129 بحجّة أنّ
+  //      «تعدادًا مغلقًا يحدُّه» لا يُصدَّق إلّا مقيسًا — فيُسأل كلُّ تعدادٍ قبل أوّلِ تحميل:
+  //      أفارغٌ هو؟ أمجمَّدٌ في التشغيل؟ أتغيّر عددُ أعضائه عمّا أُثبت؟ ولا يقرأ ملفًّا،
+  //      فسبقُه لحصر المجلد لا يعني أنه يحكم عليه.
+  const closedEnums = guardClosedEnums();
 
   // 0) الوسيط الدائم قبل السجل — انحراف مُعلن عن قاعدة «السجل أولًا» وسببه ضرورة (RULE-008):
   //     السجل نفسه يُدوَّن في هذا الوسيط، فلا يمكن أن يتأخر عنه. والوسيط لا يكتب قيدًا في
@@ -55,6 +62,11 @@ export function composeSovereignty(
     nodes: declarationCensus.nodes,
     largest: declarationCensus.largestFile,
     largest_bytes: declarationCensus.largestBytes,
+  });
+  // وأثرُ حرَسِ التعدادات كذلك: عددُ التعدادات المحروسة وعددُ المفاتيح التي تحدُّها
+  audit.append('authority:bootstrap', 'closed_enums_guarded', {
+    enums: closedEnums,
+    keys_bounded: closedEnumUseCount(),
   });
   const config = loadRoyalAuthority(configDir);
   const quotas = loadQuotas(configDir);
