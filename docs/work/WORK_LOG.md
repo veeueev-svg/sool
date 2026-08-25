@@ -15,6 +15,7 @@
 
 | المعرّف | العنوان | المالك | المراجع | النطاق | النتيجة | الدمج | التقرير | تاريخ الإغلاق | ما بقي |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| W-2026-001 | تأسيسُ ضبط العمل: طريقٌ إلزاميٌّ واحدٌ وبوابةٌ تمنع تكرارَ العمل | المساعد الآلي — Perplexity Computer | القيّم على المستودع | `docs/work/` · `docs/PHASE_PROCEDURE.md` · `docs/test-reports/W-2026-001-work-control.md` · `scripts/check_work.mjs` · `scripts/work.mjs` · `tests/governance/work_control.test.ts` · `.github/workflows/ci.yml` · `GOVERNING_RULE.md` · `README.md` · `CONTRIBUTING.md` · `ROADMAP.md` · `PROGRESS.md` · `CHANGELOG.md` · `package.json` · `version.json` | MERGED | 5164e7d | [تقرير](docs/test-reports/W-2026-001-work-control.md) | 2026-08-25 | خللٌ قائمٌ قبل هذا البند ظهر في بوابة CI: تمرينُ الضغط (المرحلة 33) يسقط على المعالج المشترك بعتبةِ زمنِ جدارٍ مطلقة — سُجّل بندًا `W-2026-004` ولم يُلمس من هنا لأنّه خارجُ نطاقه |
 
 <!--
 مثالُ صفٍّ صحيح (لا يُقرأ لأنّه داخل تعليق، وهو للنسخ لا للعدّ):
