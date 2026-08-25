@@ -13,6 +13,7 @@ import { guardConfigFileBytes } from './declaration_budget';
 import {
   countNodes, guardDeclarationDirectoryBytes, noteLoadedDeclaration,
 } from './declaration_reach';
+import { memoizeDeclaration, memoizedDeclaration } from './declaration_memo';
 import { noteBootWork } from './declaration_work';
 
 /**
@@ -128,14 +129,22 @@ export function parseSimpleYaml(text: string): Record<string, unknown> {
  * محلّلٌ ثمّ يُردّ. ومن قرأ ملفًّا واحدًا مرّ اليومَ بسقفِ المجموع كما يمرّ به الإقلاع.
  */
 export function loadYamlFile(path: string): Record<string, unknown> {
-  const bytes = statSync(path).size;
+  const stat = statSync(path, { bigint: true });
+  const bytes = Number(stat.size);
   guardConfigFileBytes(path, bytes);
   guardDeclarationDirectoryBytes(dirname(path));
+  const memo = memoizedDeclaration(path, bytes, stat.mtimeNs);
+  if (memo) {
+    noteBootWork('memo_hits');
+    noteLoadedDeclaration(path, bytes, memo.nodes);
+    return memo.doc;
+  }
   const doc = parseSimpleYaml(readFileSync(path, 'utf8'));
   const nodes = countNodes(doc);
   noteBootWork('file_reads');
   noteBootWork('bytes_read', bytes);
   noteBootWork('node_visits', nodes);
+  memoizeDeclaration(path, bytes, stat.mtimeNs, doc, nodes);
   noteLoadedDeclaration(path, bytes, nodes);
   return doc;
 }

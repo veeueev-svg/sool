@@ -25,6 +25,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { relative } from 'node:path';
 import { guardDeclarationTotals } from './declaration_budget';
 import { countNodes, walkDeclarationFiles } from './declaration_reach';
+import { memoizeDeclaration, memoizedDeclaration } from './declaration_memo';
 import { noteBootWork } from './declaration_work';
 import { parseSimpleYaml } from './yaml';
 
@@ -54,17 +55,29 @@ export function censusDeclaration(configDir: string): DeclarationCensus {
   let largestBytes = 0;
   let largestFile = '';
   for (const path of paths) {
-    const size = statSync(path).size;
+    const stat = statSync(path, { bigint: true });
+    const size = Number(stat.size);
     bytes += size;
     if (size > largestBytes) {
       largestBytes = size;
       largestFile = relative(configDir, path);
     }
-    const fileNodes = countNodes(parseSimpleYaml(readFileSync(path, 'utf8')));
+    // ذاكرةُ الإقلاع (T-139): الحصرُ يقرأ ويُحلّل مرّةً، ثمّ يجد المحمِّلُ نصَّه محفوظًا —
+    // فالملفُّ الواحدُ لا يُقرأ من القرص ستًّا وعشرين مرّةً في إقلاعٍ واحد. والبصمةُ حجمٌ
+    // وزمنُ تعديلٍ بالنانو ثانية، فمن عدّل ملفًّا بين قراءتَين قُرئ ملفُّه من جديد.
+    const memo = memoizedDeclaration(path, size, stat.mtimeNs);
+    if (memo) {
+      noteBootWork('memo_hits');
+      nodes += memo.nodes;
+      continue;
+    }
+    const doc = parseSimpleYaml(readFileSync(path, 'utf8'));
+    const fileNodes = countNodes(doc);
     nodes += fileNodes;
     noteBootWork('file_reads');
     noteBootWork('bytes_read', size);
     noteBootWork('node_visits', fileNodes);
+    memoizeDeclaration(path, size, stat.mtimeNs, doc, fileNodes);
   }
   return { files: paths.length, bytes, largestBytes, largestFile, nodes };
 }

@@ -17,6 +17,7 @@ export * from './config/declaration_budget';
 // T-131: سجلُّ التعدادات المغلقة وحرسُها — يُقرأ من الإقلاع ومن الاختبارات
 export * from './config/closed_enums';
 export * from './config/declaration_reach';
+export * from './config/declaration_memo';
 export * from './config/declaration_work';
 export * from './config/declaration_census';
 export * from './config/royal_authority';

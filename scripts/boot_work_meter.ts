@@ -65,14 +65,16 @@ for (const axis of axes) {
 }
 say('');
 
-// 2) تكرارُ القراءة — عددٌ يُقرأ ولا يُحرس اليومَ (T-139)
+// 2) تكرارُ القراءة بعد ذاكرةِ الإقلاع (T-139) — عددٌ يُقرأ لا يُستنتج
 const census = censusDeclaration(configDir);
 const distinct = loadedDeclaration(configDir).files;
-const loaderReads = work.file_reads - census.files;
-say(`- الحصرُ قرأ ${census.files} ملفًا مرّةً واحدةً، والمحمّلاتُ قرأت ${loaderReads} قراءةً `
-  + `وفي دفتر مجلدِ التهيئة **${distinct}** ملفًا مميّزًا فقط — فالملفُّ الواحدُ يُقرأ من القرص `
-  + 'مرّاتٍ (وأكثرُها `config/quotas.yaml`: ستٌّ وعشرون قراءةً في إقلاعٍ واحد، مقيسةً في '
-  + 'docs/audit/measurements/phase-39-T134.txt). عددٌ يُقاس ولا يُحرس اليومَ: البندُ T-139');
+say(`- ذاكرةُ الإقلاع: ${work.file_reads} قراءةً من القرص مقابلَ ${work.memo_hits} استرجاعًا `
+  + `محفوظًا — والحصرُ وحدَه ${census.files} ملفًا، ودفترُ مجلدِ التهيئة ${distinct} ملفًا `
+  + 'مميّزًا. وكان الإقلاعُ قبل T-139 يقرأ 109 قراءةً (منها `config/quotas.yaml` ستٌّ '
+  + 'وعشرون مرّةً) — القياسان في docs/audit/measurements/phase-39-T139.txt');
+say(`- مشيُ المجلدات: ${work.dir_walks} مشيةً و${work.dir_entries} مدخلًا في إقلاعٍ واحد — `
+  + 'حرَسُ بايتات المجلد (T-133) يمشي المجلدَ عند **كلِّ** نداءٍ ولو استُرجع النصُّ من '
+  + 'الذاكرة بلا قراءة. هذا أكبرُ عملٍ باقٍ، ومفتوحٌ بندًا: T-140');
 
 // 3) الزمنُ تاريخًا لا عقدًا
 const calib = median([calibrationMs(), calibrationMs(), calibrationMs()]);
