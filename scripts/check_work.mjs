@@ -1,0 +1,277 @@
+#!/usr/bin/env node
+/**
+ * scripts/check_work.mjs — بوابةُ ضبط العمل (RULE-010 … RULE-017)
+ * المالك: القيّم على المستودع | المرحلة: 40
+ * المدخلات: docs/work/WORK_QUEUE.json · docs/work/WORK_LOG.md · docs/work/orders/*.md
+ *   وفَرقُ المراجعة (git diff) أو المتغيّر WORK_CHANGED_FILES
+ * المخرجات: 0 إذا كان العملُ محجوزًا ومملوكًا بلا تداخل | 1 مع بيان المخالفة
+ * الصلاحيات (RULE-004): تقرأ ولا تُصلح. لا تُعدّل سجلًّا ولا تُرقّي حالة — الإصلاحُ فعلُ جهة.
+ * حالات الفشل المُغطّاة: سجلٌّ غيرُ مقروء · معرّفٌ مكرّر · حالةٌ خارج المعجم · حقلٌ ناقص ·
+ *   مالكٌ يراجع نفسَه · نطاقٌ خارج المستودع · نطاقان متداخلان · بندُ PROGRESS محجوزٌ مرّتين ·
+ *   عقدٌ مفقود أو ناقصُ الأقسام · معرّفٌ في السجلَّين · صفُّ سجلٍّ ناقص · تغييرٌ بلا حجز ·
+ *   تغييرٌ بلا أثرٍ في السجل · تبعيةٌ غيرُ مغلقة · تاريخٌ مقلوب
+ * اختبار القبول: tests/governance/work_control.test.ts — `npm test`
+ * الوثيقة المرتبطة: docs/work/WORK_CONTROL.md · GOVERNING_RULE.md §RULE-010..017
+ *
+ * ثوابت هذا الملف:
+ *
+ * 1) **المعجمُ مغلقٌ في الشفرة، ومُطابَقٌ في البيان**: قائمةُ الحالات معلنةٌ هنا قانونًا،
+ *    ويجب أن يطابقها `statuses` في WORK_QUEUE.json حرفًا بحرف — فلا يُخترع حالٌ في البيان،
+ *    ولا يتأخّر البيانُ عن القانون.
+ *
+ * 2) **الحجزُ يُفتح مرّةً ويُغلق مرّة**: البندُ الحيُّ في WORK_QUEUE.json وحده، والمغلقُ في
+ *    WORK_LOG.md وحده. وجودُه في الاثنين مخالفة، وغيابُه من الاثنين مع تغييرٍ في نطاقه مخالفة.
+ *
+ * 3) **لا يُقاس النِّيّةُ بل الفَرق**: بابُ منع التكرار الأخير يقرأ `git diff` ويسأل عن كل
+ *    مسارٍ محكوم: مَن حجزه؟ فما لا مالكَ له يُرفض قبل الدمج لا بعده.
+ *
+ * 4) **فشلٌ مغلق**: كلُّ ما لا يُقرأ يُرفض (لا يُفترض صحيحًا). وغيابُ `.git` يُسقط بابَ الفَرق
+ *    وحده — وهو انحرافٌ معلن يُستخدم في الاختبار، ولا يُسقط الأبوابَ الأخرى.
+ */
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { join, dirname, posix } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const ROOT = process.env.SOOL_WORK_ROOT ?? dirname(HERE);
+const QUEUE = 'docs/work/WORK_QUEUE.json';
+const LOG = 'docs/work/WORK_LOG.md';
+const ORDERS = 'docs/work/orders';
+const TEMPLATE = 'docs/work/orders/TEMPLATE.md';
+
+/** المعجمُ المغلق: حالاتُ البند الحيّ (الثابت 1) */
+const STATUSES = ['PROPOSED', 'CLAIMED', 'IN_PROGRESS', 'BLOCKED', 'REVIEW', 'VERIFIED'];
+/** الحالاتُ التي تحجز النطاق فتمنع غيرَها منه */
+const LOCKING = ['CLAIMED', 'IN_PROGRESS', 'BLOCKED', 'REVIEW', 'VERIFIED'];
+/** نتائجُ الإغلاق في السجل التاريخي */
+const RESULTS = ['MERGED', 'CANCELLED'];
+/** المساراتُ المحكومة: تغييرُها يستلزم حجزًا (الثابت 3) */
+const GOVERNED = ['src/', 'tests/', 'scripts/', 'config/', 'docs/', '.github/'];
+/** ملفاتُ الجذر المحكومة */
+const GOVERNED_FILES = [
+  'package.json', 'tsconfig.json', 'version.json', 'GOVERNING_RULE.md',
+  'ROADMAP.md', 'PROGRESS.md', 'ARCHITECTURE.md', 'CHANGELOG.md',
+  'COMPLETION_CRITERIA.md', 'CONTRIBUTING.md', 'README.md', 'OWNERSHIP.md',
+];
+/** ملفاتُ الحكم نفسها: يُسمح بتغييرها في التزامة الإغلاق بلا نطاقٍ يشملها */
+const SELF = [QUEUE, LOG];
+const REQUIRED = ['id', 'title', 'owner', 'reviewer', 'area', 'phase', 'status', 'scope', 'acceptance', 'evidence', 'next_step', 'created_at', 'updated_at'];
+const SECTIONS = ['## 1) المسألة', '## 2) النطاق المحجوز', '## 3) خارج النطاق', '## 4) معيار القبول', '## 5) الدليل', '## 6) الأثر في الوثائق', '## 7) الخطوة التالية'];
+const ID_RE = /^W-\d{4}-\d{3}$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const errors = [];
+const notes = [];
+/** يُعلَنان قبل أوّل نداءٍ لـreport() لأنّ الفشلَ المغلقَ قد يقع قبل قراءة السجلَّين */
+let items = [];
+const logIds = new Map();
+const fail = (m) => errors.push(m);
+const abs = (p) => join(ROOT, p);
+const read = (p) => readFileSync(abs(p), 'utf8');
+
+// ── 1) السجلُّ الحيُّ مقروءٌ ومعجمُه مطابق ─────────────────────────────────────
+for (const p of [QUEUE, LOG, TEMPLATE]) {
+  if (!existsSync(abs(p))) fail(`ملفٌّ واجبٌ غيرُ موجود: ${p} — ولا يُحكم عملٌ بسجلٍّ غائب`);
+}
+if (errors.length > 0) { report(); }
+
+let queue;
+try {
+  queue = JSON.parse(read(QUEUE));
+} catch (e) {
+  fail(`${QUEUE} غيرُ مقروءٍ كـJSON: ${e.message} — فشلٌ مغلق (الثابت 4)`);
+  report();
+}
+if (queue.schema_version !== 1) fail(`${QUEUE}: schema_version=${queue.schema_version} غيرُ مدعوم — البوابةُ تعرف 1 وحدَها`);
+if (JSON.stringify(queue.statuses) !== JSON.stringify(STATUSES)) {
+  fail(`${QUEUE}: حقلُ statuses يخالف المعجمَ المغلقَ في البوابة — المعجم: ${STATUSES.join(' · ')}`);
+}
+items = Array.isArray(queue.work_items) ? queue.work_items : [];
+if (!Array.isArray(queue.work_items)) fail(`${QUEUE}: work_items ليست قائمة`);
+
+// ── 2) كلُّ بندٍ: معرّفٌ ونصابُ حقولٍ وحالٌ من المعجم ────────────────────────
+const seen = new Map();
+for (const it of items) {
+  const id = String(it.id ?? '(بلا معرّف)');
+  if (!ID_RE.test(id)) fail(`معرّفٌ لا يوافق الصيغة W-YYYY-NNN: «${id}»`);
+  if (seen.has(id)) fail(`معرّفٌ مكرّرٌ في ${QUEUE}: ${id} — والمعرّفُ لا يُعاد استعماله أبدًا`);
+  seen.set(id, it);
+  for (const f of REQUIRED) {
+    const v = it[f];
+    const empty = v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
+    if (empty) fail(`${id}: حقلٌ واجبٌ ناقصٌ أو فارغ: ${f}`);
+  }
+  if (it.status !== undefined && !STATUSES.includes(it.status)) {
+    fail(RESULTS.includes(it.status)
+      ? `${id}: الحالُ ${it.status} لا موضعَ له في ${QUEUE} — انقل البندَ إلى ${LOG} في التزامة الإغلاق نفسِها (الثابت 2)`
+      : `${id}: حالٌ خارج المعجم المغلق: «${it.status}»`);
+  }
+  if (it.owner && it.reviewer && String(it.owner).trim() === String(it.reviewer).trim()) {
+    fail(`${id}: المالكُ والمراجعُ جهةٌ واحدة (${it.owner}) — والفصلُ شرطٌ لا تجميل (RULE-004)`);
+  }
+  if (it.status === 'BLOCKED' && !it.blocked_reason) fail(`${id}: حالُه BLOCKED بلا blocked_reason — والعائقُ الذي لا يُسمّى لا يُرفع`);
+  if ((it.status === 'REVIEW' || it.status === 'VERIFIED') && !it.verification) {
+    fail(`${id}: حالُه ${it.status} بلا verification — ولا مراجعةَ على دعوى بلا دليلِ تشغيل`);
+  }
+  for (const d of ['created_at', 'updated_at']) {
+    if (it[d] !== undefined && !DATE_RE.test(String(it[d]))) fail(`${id}: ${d}=«${it[d]}» ليس تاريخًا YYYY-MM-DD`);
+  }
+  if (DATE_RE.test(String(it.created_at)) && DATE_RE.test(String(it.updated_at)) && String(it.updated_at) < String(it.created_at)) {
+    fail(`${id}: updated_at (${it.updated_at}) قبل created_at (${it.created_at}) — تاريخٌ مقلوب`);
+  }
+  for (const s of it.scope ?? []) {
+    const p = String(s);
+    if (p.startsWith('/') || p.includes('..')) fail(`${id}: نطاقٌ غيرُ مسموح «${p}» — المساراتُ نسبيّةٌ داخل المستودع (RULE-006)`);
+    if (p === '' || p === '.' || p === '*' || p === '**' || p === '**/*' || p === '/') {
+      fail(`${id}: نطاقٌ يستولي على المستودع كلِّه «${p}» — الحجزُ يُسمّى ولا يُعمّم`);
+    }
+  }
+}
+
+// ── 3) العقدُ الورقيُّ لكل بندٍ حيّ ─────────────────────────────────────────────
+const tpl = existsSync(abs(TEMPLATE)) ? read(TEMPLATE) : '';
+for (const s of SECTIONS) if (tpl && !tpl.includes(s)) fail(`${TEMPLATE}: قسمٌ واجبٌ ناقص «${s}»`);
+for (const it of items) {
+  const path = `${ORDERS}/${it.id}.md`;
+  if (!existsSync(abs(path))) { fail(`${it.id}: لا عقدَ له في ${path} — والبندُ بلا عقدٍ دعوى`); continue; }
+  const body = read(path);
+  const head = body.split('\n').find((l) => l.startsWith('# ')) ?? '';
+  if (!head.includes(it.id)) fail(`${path}: العنوانُ الأوّل لا يذكر ${it.id}`);
+  if (it.title && !head.includes(String(it.title))) fail(`${path}: عنوانُ العقد يخالف عنوانَ البند في ${QUEUE}`);
+  for (const s of SECTIONS) if (!body.includes(s)) fail(`${path}: قسمٌ واجبٌ ناقص «${s}»`);
+  for (const s of it.scope ?? []) if (!body.includes(String(s))) fail(`${path}: النطاقُ «${s}» محجوزٌ في ${QUEUE} ولا يُذكر في العقد`);
+}
+for (const f of existsSync(abs(ORDERS)) ? readdirSync(abs(ORDERS)) : []) {
+  if (!f.endsWith('.md') || f === 'TEMPLATE.md') continue;
+  const id = f.slice(0, -3);
+  if (!ID_RE.test(id)) fail(`${ORDERS}/${f}: اسمُ الملف ليس معرّفًا W-YYYY-NNN`);
+}
+
+// ── 4) لا نطاقان متداخلان، ولا بندُ PROGRESS محجوزٌ مرّتين ────────────────────
+const active = items.filter((it) => LOCKING.includes(it.status));
+const covers = (claim, path) => path === claim || path.startsWith(claim.endsWith('/') ? claim : `${claim}/`);
+const clash = (a, b) => a === b || covers(a, b) || covers(b, a);
+for (let i = 0; i < active.length; i += 1) {
+  for (let j = i + 1; j < active.length; j += 1) {
+    for (const a of active[i].scope ?? []) {
+      for (const b of active[j].scope ?? []) {
+        if (clash(String(a), String(b))) {
+          fail(`تداخلُ نطاقٍ بين بندَين حيَّين: ${active[i].id} («${a}» · ${active[i].owner}) و${active[j].id} («${b}» · ${active[j].owner}) — جهتان تعملان في موضعٍ واحد (RULE-012)`);
+        }
+      }
+    }
+  }
+}
+const claimed = new Map();
+for (const it of active) {
+  for (const t of it.progress_items ?? []) {
+    const key = String(t);
+    if (key === 'لا ينطبق') continue;
+    if (claimed.has(key)) fail(`بندُ PROGRESS «${key}» محجوزٌ مرّتين: ${claimed.get(key)} و${it.id} — وهذا عينُ التكرار الذي تمنعه البوابة (RULE-013)`);
+    else claimed.set(key, it.id);
+  }
+}
+
+// ── 5) السجلُّ التاريخيّ: صفوفٌ تامّةٌ ومعرّفاتٌ لا تتكرّر ولا تُقيم في السجلَّين ──
+const logText = read(LOG);
+/** ما بين <!-- و--> شرحٌ للقارئ لا صفوفٌ تُعدّ: تُقفل قراءتُه صراحةً */
+let inComment = false;
+for (const line of logText.split('\n')) {
+  const t = line.trim();
+  if (inComment) { if (t.includes('-->')) inComment = false; continue; }
+  if (t.startsWith('<!--')) { if (!t.includes('-->')) inComment = true; continue; }
+  if (!t.startsWith('|')) continue;
+  const cells = t.split('|').slice(1, -1).map((c) => c.trim());
+  if (!ID_RE.test(cells[0] ?? '')) continue;
+  if (cells.length !== 10) { fail(`${LOG}: صفُّ ${cells[0]} فيه ${cells.length} خليةً والعقدُ 10 خلايا`); continue; }
+  const [id, title, owner, reviewer, scope, result, merge, report_, closed, rest] = cells;
+  if (logIds.has(id)) fail(`${LOG}: معرّفٌ مكرّر ${id} — سطرُ الإغلاق يُكتب مرّةً واحدة`);
+  logIds.set(id, { id, title, owner, reviewer, scope, result, merge, report_, closed, rest });
+  if (!RESULTS.includes(result)) fail(`${LOG}: ${id} نتيجتُه «${result}» خارج المعجم (${RESULTS.join(' · ')})`);
+  for (const [name, v] of [['العنوان', title], ['المالك', owner], ['المراجع', reviewer], ['النطاق', scope], ['ما بقي', rest]]) {
+    if (!v || v === '—') fail(`${LOG}: ${id} خليةُ «${name}» فارغة — والسجلُّ الذي لا يُقرأ لا يمنع تكرارًا`);
+  }
+  if (!DATE_RE.test(closed)) fail(`${LOG}: ${id} تاريخُ الإغلاق «${closed}» ليس YYYY-MM-DD`);
+  if (result === 'MERGED') {
+    if (!merge || merge === '—') fail(`${LOG}: ${id} مدموجٌ بلا مرجعِ دمج — ولا يُقبل إغلاقٌ بلا أثرٍ في التاريخ (RULE-014)`);
+    const rp = (report_.match(/\(([^)]+)\)/)?.[1] ?? report_).trim();
+    if (!rp || rp === '—') fail(`${LOG}: ${id} مدموجٌ بلا تقريرِ اختبار (RULE-008)`);
+    else if (!existsSync(abs(rp))) fail(`${LOG}: ${id} يشير إلى تقريرٍ غيرِ موجود: ${rp}`);
+  }
+  if (seen.has(id)) fail(`${id} مقيمٌ في ${QUEUE} و${LOG} معًا — والحجزُ يُغلق بالنقل لا بالنسخ (الثابت 2)`);
+}
+
+// ── 6) التبعياتُ معروفةٌ ولا يُراجَع بندٌ فوق تبعيةٍ مفتوحة ───────────────────
+for (const it of items) {
+  for (const d of it.dependencies ?? []) {
+    const dep = String(d);
+    if (dep === 'لا شيء') continue;
+    if (!seen.has(dep) && !logIds.has(dep)) { fail(`${it.id}: تبعيةٌ إلى معرّفٍ لا وجودَ له: ${dep}`); continue; }
+    const closedOk = logIds.get(dep)?.result === 'MERGED';
+    if (!closedOk && (it.status === 'REVIEW' || it.status === 'VERIFIED')) {
+      fail(`${it.id}: حالُه ${it.status} وتبعيتُه ${dep} لم تُدمج بعد — ولا يُراجَع بناءٌ على أساسٍ لم يُثبَّت`);
+    }
+  }
+}
+
+// ── 7) بابُ الفَرق: كلُّ مسارٍ محكومٍ تغيّر له مالكٌ حاجزٌ (الثابت 3) ──────────
+const changed = readChanged();
+if (changed === null) {
+  notes.push('ℹ بابُ الفَرق مُسقَط: لا تاريخَ git يُقارَن به (انحرافٌ معلن — الثابت 4)');
+} else if (changed.length === 0) {
+  notes.push('ℹ بابُ الفَرق: لا مساراتَ في الفَرق');
+} else {
+  const governedChanges = changed.filter(isGoverned);
+  const selfOnly = governedChanges.filter((p) => !SELF.includes(p) && p !== TEMPLATE && !p.startsWith(`${ORDERS}/`));
+  const logTouched = changed.includes(LOG);
+  const queueTouched = changed.includes(QUEUE);
+  const orderTouched = changed.some((p) => p.startsWith(`${ORDERS}/`));
+  const claims = [
+    ...active.flatMap((it) => (it.scope ?? []).map((s) => ({ id: it.id, owner: it.owner, scope: String(s) }))),
+    ...(logTouched ? [...logIds.values()].flatMap((r) => r.scope.split('·').map((s) => ({ id: r.id, owner: r.owner, scope: s.trim().replace(/^`|`$/g, '') }))) : []),
+  ].filter((c) => c.scope !== '');
+  for (const p of selfOnly) {
+    if (!claims.some((c) => covers(c.scope, p))) {
+      fail(`تغييرٌ بلا حجز: «${p}» تغيّر ولا بندَ حيًّا يحجزه — افتح بندًا في ${QUEUE} قبل العمل (RULE-011)`);
+    }
+  }
+  if (selfOnly.length > 0 && !queueTouched && !logTouched) {
+    fail(`تغييرٌ محكومٌ بلا أثرٍ في السجل: لا ${QUEUE} ولا ${LOG} تغيّرا — والسجلُّ يُحدَّث مع كل عملٍ لا بعده (RULE-015)`);
+  }
+  if (selfOnly.length > 0 && !orderTouched && !logTouched) {
+    fail(`تغييرٌ محكومٌ بلا أثرٍ في عقده: لا عقدَ في ${ORDERS}/ تغيّر ولا سطرَ إغلاقٍ كُتب (RULE-015)`);
+  }
+}
+
+report();
+
+// ── الأدوات ──────────────────────────────────────────────────────────────────
+function isGoverned(p) {
+  return GOVERNED.some((g) => p.startsWith(g)) || GOVERNED_FILES.includes(p);
+}
+
+function readChanged() {
+  const env = process.env.WORK_CHANGED_FILES;
+  if (env !== undefined) {
+    return env.split(/[\n,]/).map((s) => s.trim()).filter((s) => s !== '').map((s) => posix.normalize(s));
+  }
+  if (!existsSync(abs('.git'))) return null;
+  const base = process.env.WORK_DIFF_BASE ?? 'HEAD^';
+  const r = spawnSync('git', ['diff', '--name-only', base, 'HEAD'], { cwd: ROOT, encoding: 'utf8' });
+  if (r.status !== 0) return null;
+  return r.stdout.split('\n').map((s) => s.trim()).filter((s) => s !== '');
+}
+
+function report() {
+  const live = items.filter((it) => LOCKING.includes(it.status)).length;
+  console.log(`بوابةُ ضبط العمل: ${items.length} بندًا في السجل الحيّ (منها ${live} حاجزٌ للنطاق) · ${logIds.size} بندًا مغلقًا`);
+  for (const n of notes) console.log(`  ${n}`);
+  if (errors.length === 0) {
+    console.log('✓ كلُّ عملٍ محجوزٌ ومملوكٌ ومراجَعٌ بلا تداخل — RULE-010..017 مستوفاة');
+    process.exit(0);
+  }
+  for (const e of errors) console.log(`✗ ${e}`);
+  console.log(`✗ بوابةُ ضبط العمل ترفض: ${errors.length} مخالفة — الطريقُ في docs/work/WORK_CONTROL.md`);
+  process.exit(1);
+}

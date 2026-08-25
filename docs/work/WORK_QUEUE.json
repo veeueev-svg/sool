@@ -1,0 +1,106 @@
+{
+  "$comment": "السجلُّ الحيُّ الوحيد: مَن يعمل الآن في ماذا. يُقرأ آليًّا بـ scripts/check_work.mjs. سلطتُه docs/work/WORK_CONTROL.md. البندُ المغلق يُنقل إلى docs/work/WORK_LOG.md ولا يبقى هنا.",
+  "schema_version": 1,
+  "authority": "docs/work/WORK_CONTROL.md",
+  "gate": "scripts/check_work.mjs",
+  "history": "docs/work/WORK_LOG.md",
+  "id_pattern": "W-YYYY-NNN",
+  "updated_at": "2026-08-25",
+  "statuses": ["PROPOSED", "CLAIMED", "IN_PROGRESS", "BLOCKED", "REVIEW", "VERIFIED"],
+  "scope_locking_statuses": ["CLAIMED", "IN_PROGRESS", "BLOCKED", "REVIEW", "VERIFIED"],
+  "work_items": [
+    {
+      "id": "W-2026-001",
+      "title": "تأسيسُ ضبط العمل: طريقٌ إلزاميٌّ واحدٌ وبوابةٌ تمنع تكرارَ العمل",
+      "owner": "المساعد الآلي · Perplexity Computer",
+      "reviewer": "القيّم على المستودع",
+      "area": "الحكم والتوثيق",
+      "phase": 40,
+      "status": "VERIFIED",
+      "progress_items": ["لا ينطبق"],
+      "dependencies": ["لا شيء"],
+      "scope": [
+        "docs/work/",
+        "docs/PHASE_PROCEDURE.md",
+        "docs/test-reports/W-2026-001-work-control.md",
+        "scripts/check_work.mjs",
+        "scripts/work.mjs",
+        "tests/governance/work_control.test.ts",
+        ".github/workflows/ci.yml",
+        "GOVERNING_RULE.md",
+        "README.md",
+        "CONTRIBUTING.md",
+        "ROADMAP.md",
+        "PROGRESS.md",
+        "CHANGELOG.md",
+        "package.json",
+        "version.json"
+      ],
+      "excluded": [
+        "src/",
+        "config/",
+        "أيُّ بندٍ من بنود PROGRESS.md §2 — هذا البندُ يبني الطريقَ ولا يسلكه عن غيره"
+      ],
+      "acceptance": [
+        "ميثاقٌ واحدٌ في docs/work/WORK_CONTROL.md يجيب: مَن يعمل الآن في ماذا، وكيف يُحجز، وكيف يُغلق",
+        "سجلٌّ حيٌّ يُقرأ آليًّا (WORK_QUEUE.json) وسجلٌّ تاريخيٌّ يُذيَّل (WORK_LOG.md) وعقدٌ لكل بند",
+        "بوابةٌ ترفض: نطاقَين متداخلَين · بندَ PROGRESS محجوزًا مرّتين · مسارًا محكومًا تغيّر بلا حجز",
+        "البوابةُ داخلةٌ في npm run verify وفي بوابة CI فلا تُنسى",
+        "اختبارٌ يُسقط البوابةَ على كلِّ حالةٍ سلبيّةٍ معلنة، وخطُّ الأساس أخضرُ كما كان"
+      ],
+      "evidence": [
+        "npm test: 2005/2005 أخضر (كان 1976 قبل إضافة اختبار البوابة — +29 اختبارًا)",
+        "npm run check:work: يمرّ على السجلّ كما هو ويرفض الحالات السلبيّة المصنوعة",
+        "docs/test-reports/W-2026-001-work-control.md"
+      ],
+      "verification": "شُغّل npm test كاملًا (2005/2005) وnpm run check:work على السجلّ الحقيقيّ وعلى 29 حالةً مصنوعةً في tests/governance/work_control.test.ts (منها 25 حالةَ سقوطٍ متوقَّع) — 2026-08-25",
+      "next_step": "دمجُ البند بعد الإقرار، ثمّ نقلُ سطره إلى docs/work/WORK_LOG.md في التزامة الدمج نفسِها",
+      "created_at": "2026-08-25",
+      "updated_at": "2026-08-25"
+    },
+    {
+      "id": "W-2026-002",
+      "title": "ثلاثةُ ملفاتِ تهيئةٍ تُحصى في السقف ولا يقرؤها محمّل (T-137)",
+      "owner": "غير مستلَم",
+      "reviewer": "القيّم على المستودع",
+      "area": "النواة والتهيئة",
+      "phase": 40,
+      "status": "PROPOSED",
+      "progress_items": ["T-137"],
+      "dependencies": ["لا شيء"],
+      "scope": ["src/kernel/config/", "config/module_limits.yaml", "config/policies.yaml", "config/roles.yaml"],
+      "excluded": ["src/composition/sovereignty.ts — محجوزٌ لبند T-138 (W-2026-003) فلا يُلمس من هنا"],
+      "acceptance": [
+        "أحدُ الخيارَين معلنًا: قارئٌ في الدولة لكلِّ ملفِّ تهيئةٍ محسوبٍ في السقف، أو إخراجُه إلى موضعٍ يُعلن أنّه إعلانُ أدواتٍ لا إعلانُ دولة",
+        "الميزانيّةُ المقيسة بعد التغيير مكتوبةٌ بالبايت مقابل 6476B المقيسة في الجلسة 51",
+        "خطُّ الأساس أخضرُ بالعدد نفسه أو أكثر"
+      ],
+      "evidence": ["يُملأ عند الاستلام: خرج npm test · تقريرُ اختبارٍ في docs/test-reports/"],
+      "next_step": "جهةٌ تستلمه فتنقله إلى CLAIMED وتكتب اسمها في owner وتملأ عقده",
+      "created_at": "2026-08-25",
+      "updated_at": "2026-08-25"
+    },
+    {
+      "id": "W-2026-003",
+      "title": "deploy/ يُحرس عند القراءة ولا يُحصى قبل البناء (T-138)",
+      "owner": "غير مستلَم",
+      "reviewer": "القيّم على المستودع",
+      "area": "التركيب والنشر",
+      "phase": 40,
+      "status": "PROPOSED",
+      "progress_items": ["T-138"],
+      "dependencies": ["لا شيء"],
+      "scope": ["src/composition/sovereignty.ts", "deploy/"],
+      "excluded": ["src/kernel/config/ — محجوزٌ لبند T-137 (W-2026-002)"],
+      "acceptance": [
+        "حصرٌ معلنٌ لمجلدات النشر في مسار التركيب قبل البناء، أو إعلانٌ أنّها ليست إعلانَ دولةٍ فلا تُحرس بميزانيّتها",
+        "اختبارٌ يُسقط النفخَ في إعلان النشر قبل بناء الدولة لا عند أوّل قراءة",
+        "خطُّ الأساس أخضرُ بالعدد نفسه أو أكثر"
+      ],
+      "evidence": ["يُملأ عند الاستلام: خرج npm test · تقريرُ اختبارٍ في docs/test-reports/"],
+      "next_step": "جهةٌ تستلمه فتنقله إلى CLAIMED وتكتب اسمها في owner وتملأ عقده",
+      "created_at": "2026-08-25",
+      "updated_at": "2026-08-25"
+    }
+  ]
+}

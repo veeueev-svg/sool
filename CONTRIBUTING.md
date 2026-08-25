@@ -8,18 +8,26 @@
 ## القاعدة صفر
 لا يُدمج عمل بلا: اختبار ناجح + تقرير اختبار + تحديث `PROGRESS.md` + تحديث حالة المرحلة في `ROADMAP.md`.
 
+## القاعدة قبل الصفر — الحجز قبل اللمس
+لا تُلمس شفرةٌ ولا وثيقةٌ محكومةٌ قبل أن يكون لك **بندُ عملٍ حيٌّ يحجز نطاقَك** في
+[`docs/work/WORK_QUEUE.json`](docs/work/WORK_QUEUE.json). والطريقُ الإلزاميّ كاملًا في
+[`docs/work/WORK_CONTROL.md`](docs/work/WORK_CONTROL.md). **والعملُ بلا حجزٍ مردودٌ ولو كان صحيحًا** —
+بوابةُ `npm run check:work` ترفضه آليًّا (RULE-010…RULE-017).
+
 ## الخطوات
 1. `npm install`
-2. اختر أول بند مفتوح في `PROGRESS.md` ضمن مجالك في `OWNERSHIP.md`.
-3. فرع: `phase-<رقم>/<الوحدة>`.
-4. اكتب رأس الملف كاملًا: المدخلات، المخرجات، المالك، التبعيات، الصلاحيات، السجلات، حالات الفشل، الاختبارات.
-5. اكتب الاختبار قبل التنفيذ.
-6. `npm test` و `npm run verify` — يجب أن ينجحا كليًّا (و`verify` يشمل فحص حدود الوحدة:
+2. اقرأ [`docs/work/ROADMAP_EXECUTION.md`](docs/work/ROADMAP_EXECUTION.md)، وشاهِد الحجزَ القائم بـ`npm run work:list`، ثم اختر بندًا غيرَ محجوزٍ ضمن مجالك في `OWNERSHIP.md`.
+3. احجزه قبل أوّل سطر: `npm run work:new -- --title … --owner … --reviewer … --area … --scope … --progress T-###`، ثم املأ أقسامَ العقد السبعة في `docs/work/orders/`. **والمراجعُ جهةٌ غيرُ المالك حتمًا** (RULE-004).
+4. فرع: `phase-<رقم>/<الوحدة>`.
+5. اكتب رأس الملف كاملًا: المدخلات، المخرجات، المالك، التبعيات، الصلاحيات، السجلات، حالات الفشل، الاختبارات.
+6. اكتب الاختبار قبل التنفيذ.
+7. `npm test` و `npm run verify` — يجب أن ينجحا كليًّا (و`verify` يشمل فحص حدود الوحدة:
    لا ملف فوق **400** سطر، والحدود معلنة في `config/module_limits.yaml` — انظر
    `ARCHITECTURE.md` §«حدود الحجم»).
-7. اكتب `docs/test-reports/<المرحلة>.md`.
-8. حدّث `PROGRESS.md` و `ROADMAP.md` و `CHANGELOG.md`.
-9. اطلب اعتماد بوابة التاج وسجّله في `docs/royal-orders/`.
+8. اكتب `docs/test-reports/<المرحلة>.md`.
+9. حدّث `PROGRESS.md` و `ROADMAP.md` و `CHANGELOG.md`.
+10. اطلب اعتماد بوابة التاج وسجّله في `docs/royal-orders/`.
+11. **أغلق بندَك**: احذفه من `docs/work/WORK_QUEUE.json` واكتب سطرَه العشريَّ الخلايا في `docs/work/WORK_LOG.md` **في التزامة الدمج نفسِها** — فالنطاقُ لا يُفَكُّ حجزُه إلا لحظةَ دخوله التاريخ.
 
 ## رسالة الـ Commit (إلزامية)
 ```
@@ -30,6 +38,7 @@
 التالي: ...
 الاختبارات: npm test → 37 pass / 0 fail
 التوثيق: PROGRESS.md, docs/test-reports/<ملف>
+Work: W-YYYY-NNN
 ```
 
 ## معايير الكود

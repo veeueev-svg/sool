@@ -42,3 +42,6 @@ jobs:
         run: bash scripts/check_generated_numbers.sh
       - name: مدقّق التوثيق (يفشل إذا تغيّر src بلا PROGRESS.md وتقرير اختبار)
         run: bash scripts/check_documentation.sh
+
+      - name: بوابةُ ضبط العمل — يفشل إذا تغيّر مسارٌ محكومٌ بلا بندِ عملٍ يحجزه (RULE-010..017)
+        run: npm run check:work

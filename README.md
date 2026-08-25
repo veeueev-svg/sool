@@ -5,6 +5,12 @@
 > إنشاء ملف ليس إنجازًا؛ الإنجاز هو: تشغيل + اختبار + توثيق + اعتماد + مراقبة.
 > التفاصيل الكاملة والقواعد المشتقّة في [`GOVERNING_RULE.md`](GOVERNING_RULE.md). مخالفتها تُلغي العمل.
 
+> ## 🔒 الطريق الإلزاميّ للعمل — لا يُلمس ملفٌ قبل قراءته
+> **لا عملَ في مسارٍ محكومٍ بلا بندِ عملٍ حيٍّ باسم جهةٍ واحدةٍ يحجز نطاقَه.**
+> مَن يعمل الآن في ماذا؟ الجوابُ في [`docs/work/WORK_QUEUE.json`](docs/work/WORK_QUEUE.json) وحده (`npm run work:list`).
+> الطريقُ والقواعدُ وما يُفعل عند التزاحم: [`docs/work/WORK_CONTROL.md`](docs/work/WORK_CONTROL.md)
+> — وبوابةُ `npm run check:work` ترفض العملَ المدوّر والتداخلَ قبل الدمج لا بعده.
+
 ---
 
 ## ما هذا المستودع
@@ -30,7 +36,10 @@
 3. اقرأ [`ROADMAP.md`](ROADMAP.md) — 40 مرحلة من 0% إلى 100% بنِسَب وشروط قبول.
 4. اقرأ [`OWNERSHIP.md`](OWNERSHIP.md) — من يعمل على ماذا، ومن يعتمد ماذا.
 5. اقرأ [`ARCHITECTURE.md`](ARCHITECTURE.md) و[`docs/DIRECTIVES.md`](docs/DIRECTIVES.md).
-6. خُذ أول بند «مفتوح» في `PROGRESS.md`، نفّذه، اختبره، ثم **وثّق قبل الدفع**.
+6. اقرأ [`docs/work/WORK_CONTROL.md`](docs/work/WORK_CONTROL.md) — **الطريق الإلزاميّ الواحد**، و[`docs/work/ROADMAP_EXECUTION.md`](docs/work/ROADMAP_EXECUTION.md) — ماذا يُعمل وبأيّ ترتيب.
+7. شاهِد الحجزَ القائم: `npm run work:list`. ولا تلمس مسارًا محجوزًا لغيرك (`WORK_CONTROL.md` §6).
+8. احجز قبل أن تعمل: `npm run work:new -- --title … --owner … --reviewer … --area … --scope …`، ثم املأ عقدَ بندك في `docs/work/orders/`.
+9. نفّذ، اختبر، **وثّق قبل الدفع**، ثم أغلق بندك بنقل سطره إلى [`docs/work/WORK_LOG.md`](docs/work/WORK_LOG.md) في التزامة الدمج نفسِها.
 
 ## ترتيب الاعتماد المعماري (لا يُعكس)
 
