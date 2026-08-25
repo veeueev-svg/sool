@@ -41,7 +41,8 @@ import { SovereignViolation } from '../types';
 import { noteBootWork } from './declaration_work';
 import { CONFIG_DECLARATION_BUDGET } from './declaration_budget';
 import {
-  forgetDirectoryMeasureIfFileChanged, memoizeDirectoryMeasure, storedDirectoryMeasure,
+  directoryMeasureNames, forgetDirectoryMeasureIfFileChanged, memoizeDirectoryMeasure,
+  resetDirectoryMeasures, storedDirectoryMeasure,
 } from './declaration_dir_memo';
 
 /**
@@ -242,4 +243,42 @@ export function guardDeclarationDirectoryBytes(
   guardDirectoryTotal(dir, bytes, paths.length);
   memoizeDirectoryMeasure(dir, { bytes, files: paths.length, stamps, sizes });
   return bytes;
+}
+
+/**
+ * **إعادةُ تحقّقٍ واحدةٌ من كلِّ مجلدٍ حُفظ قياسُه — في خاتمة الإقلاع قبلَ إعلانِ الدولة**
+ * (البند T-141). وهي جوابُ الحدِّ الذي أعلنته T-140: نفخُ ملفٍّ **في مكانه لا يقرؤه أحدٌ في
+ * هذا الإقلاع** لا يُحرّك زمنَ مجلدٍ ولا يراه قارئ، فكان يمرّ إلى ما بعد الإقلاع.
+ *
+ * ولم يُختر الجوابُ الأغلى: قيس أنّ إعادةَ إحصاءِ أحجامِ الملفات في **كلِّ** إعادةِ استخدامٍ
+ * (81 مرّةً) تُعيد **3.17ms** إلى إقلاعٍ وسيطُه 7.62ms — أي **+42%** وإبطالُ أكثرِ ما كسبته
+ * T-140 — فاختِيرت إعادةٌ **واحدةٌ** ثمنُها المقيسُ **0.138ms** (1.8%)، وثمنُها معدودٌ في
+ * محور `dir_walks` لا مخفيًّا: من دفع عملًا عدَّه.
+ *
+ * وهي تُنسي القياسَ ثمّ تُنادي الحرَسَ نفسَه — فالسقفُ يقع برمزِه، ولا يُعاد حكمٌ من ذاكرة.
+ * والقياسُ المحفوظُ يُحدَّث بما قيس الآن، فما قُرئ بعد الخاتمة يُقرأ على قياسٍ طازج.
+ * @returns عددُ المجلدات المُعاد قياسُها وملفاتُها ومجموعُها — يُدوَّن في السجل (RULE-009)
+ */
+export function reverifyDeclarationDirectories(): {
+  dirs: number; files: number; bytes: number;
+} {
+  const dirs = directoryMeasureNames();
+  let bytes = 0;
+  let files = 0;
+  for (const dir of dirs) {
+    resetDirectoryMeasures(dir);
+    try {
+      bytes += guardDeclarationDirectoryBytes(dir);
+    } catch (error) {
+      // سقفُ المجلد يمرّ برمزِه كما هو (RULE-007: لا يُبتلع ولا يُبدَّل رمزُه)
+      if (error instanceof SovereignViolation) throw error;
+      throw new SovereignViolation(
+        `مجلدُ إعلانٍ قيس في هذا الإقلاع ثمّ لم يُقرأ في خاتمته — ${dir}: ${String(error)}. `
+        + 'دولةٌ اتّكأت على قياسِ مجلدٍ صار لا يُقرأ لا تُعلن (T-141)',
+        'CONFIG_DECLARATION_DIR_UNREADABLE_AT_BOOT_END',
+      );
+    }
+    files += storedDirectoryMeasure(dir)?.files ?? 0;
+  }
+  return { dirs: dirs.length, files, bytes };
 }

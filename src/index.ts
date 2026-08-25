@@ -26,7 +26,7 @@ import { rehydrateFromJournal } from './data/persistence';
 import { rehydrateStateFromJournal } from './data/rehydrate_state';
 import { rehydrateFiscalFromJournal } from './data/rehydrate_fiscal';
 import { rehydrateGovernanceFromJournal } from './data/rehydrate_governance';
-import { bootWork, resolveConfigDir } from './kernel/config';
+import { bootWork, resolveConfigDir, reverifyDeclarationDirectories } from './kernel/config';
 import { composeSovereignty } from './composition/sovereignty';
 import { composePopulation } from './composition/population';
 import { composeEconomy } from './composition/economy';
@@ -174,6 +174,15 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
   // 8.9) عملُ الإقلاع يُدوَّن قبل الخاتمة (البند T-134): الزمنُ لا يُحرس بالساعة بل بعدِّ
   //      العمل، وهذا القيدُ هو أثرُه في الدفتر — والحرَسُ نفسُه في بوابةِ التكامل لا هنا،
   //      لأنّ دولةً تُرفض في مُشغِّل مستخدمٍ بسبب قراءةٍ زائدةٍ أسوأُ من دفعةٍ تُردّ في البوابة.
+  // 8.85) وقبل العدِّ: **إعادةُ تحقّقٍ واحدةٌ من كلِّ مجلدِ إعلانٍ حُفظ قياسُه** (البند T-141).
+  //       فبصمةُ T-140 لا ترى نفخَ ملفٍّ **في مكانه لا يقرؤه أحدٌ في هذا الإقلاع**: لا زمنَ
+  //       مجلدٍ يتغيّر ولا قارئَ يرى الحجم. والجوابُ الأغلى — إحصاءُ الأحجامِ في كلِّ إعادةِ
+  //       استخدامٍ — قيس فكان **+3.17ms** على إقلاعٍ وسيطُه 7.62ms (+42%)، فاختِيرت إعادةٌ
+  //       **واحدةٌ** ثمنُها المقيسُ 0.138ms (1.8%). وموضعُها **قبل** العدِّ لا بعده: ثمنُها
+  //       يُعَدُّ في محور `dir_walks` فيراه حرَسُ العمل، ولا يُعلَن دولةٌ على قياسٍ لم يُراجَع.
+  const reverifiedDirs = reverifyDeclarationDirectories();
+  audit.append('authority:bootstrap', 'declaration_dirs_reverified', { ...reverifiedDirs });
+
   const work = bootWork();
   audit.append('authority:bootstrap', 'boot_work_measured', { ...work });
 
