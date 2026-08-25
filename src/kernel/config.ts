@@ -18,6 +18,7 @@ export * from './config/declaration_budget';
 export * from './config/closed_enums';
 export * from './config/declaration_reach';
 export * from './config/declaration_memo';
+export * from './config/declaration_dir_memo';
 export * from './config/declaration_work';
 export * from './config/declaration_census';
 export * from './config/royal_authority';

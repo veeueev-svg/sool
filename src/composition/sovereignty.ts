@@ -10,7 +10,7 @@
  */
 import type { BootstrapOptions } from './state';
 import {
-  guardDeclarationBudget, DECLARATION_REACH, resetBootWork, resetDeclarationMemo,
+  guardDeclarationBudget, DECLARATION_REACH, resetBootWork, resetDeclarationMemo, resetDirectoryMeasures,
   loadPersistence, loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadReproduction, loadInference, loadIntent, loadChannels, loadScale, loadRecovery, loadRoyalAuthority,
 } from '../kernel/config';
 import { ResourceRegistry } from '../kernel/resource_registry';
@@ -45,6 +45,9 @@ export function composeSovereignty(
   // -1ج) وذاكرةُ قراءةِ الإعلان تُنسى معه (البند T-139): كلُّ إقلاعٍ يقرأ إعلانَه من القرص
   //      من جديد، فلا تُبنى دولةٌ على نصٍّ قرأته دولةٌ قبلها — والذاكرةُ ذاكرةُ إقلاعٍ لا عمليّة.
   resetDeclarationMemo();
+  // -1د) وبصمةُ قياسِ المجلد تُنسى معهما (البند T-140): كلُّ إقلاعٍ يقيس مجلدَ إعلانِه بنفسه
+  //      مرّةً، ثمّ يُعاد استخدامُ القياسِ ببصمةٍ تُفحَص — فيبقى عدُّ العمل ثابتًا بين إقلاعَين.
+  resetDirectoryMeasures();
   const declarationCensus = guardDeclarationBudget(configDir);
 
   // -1أ) والتعداداتُ المغلقةُ قبلها (البند T-131): ما استُثني من سقوف T-129 بحجّة أنّ

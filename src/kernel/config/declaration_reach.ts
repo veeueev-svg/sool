@@ -27,6 +27,11 @@
  *      يُقاس بمشيٍ وإحصاءِ أحجامٍ — بلا قراءةِ نصٍّ ولا تحليل — فيقع عند **كلِّ** قراءةٍ رخيصًا؛
  *      وأمّا العُقدُ فلا تُعرف إلّا بعد تحليلٍ، فتُحرس على ما حُمِّل فعلًا (الدفتر) وعلى المجلد
  *      كلِّه في الإقلاع (الحصر). فلكلِّ محورٍ موضعُ حرَسٍ يناسب كلفتَه، ولا يُدَّعى أكثر.
+ *   7) **قياسُ المجلد يُحفظ ببصمةٍ ولا يُصدَّق بلا فحصٍ** (T-140): مجموعُ بايتات المجلد
+ *      يُقاس مرّةً في الإقلاع، ويُعاد استخدامُه **فقط** إذا طابق زمنُ تعديلِ كلِّ مجلدٍ مُشِيَ
+ *      فيه، ولم يختلف حجمُ ملفٍّ يُقرأ عمّا قيس. و**السقفُ يقع في الحالتَين برمزِه**: من أعاد
+ *      استخدامَ قياسٍ لم يُعِد استخدامَ حكمٍ.
+ *
  *   5) **العمقُ محدودٌ والوصلاتُ لا تُتَّبع**: مجلدٌ يشير إلى نفسه لا يُدخل الحصرَ في دَورٍ
  *      لا نهاية له، ومن أعمقَ من {@link DECLARATION_REACH.max_depth} رُدّ برمزٍ لا بصمت.
  */
@@ -35,6 +40,9 @@ import { dirname, join } from 'node:path';
 import { SovereignViolation } from '../types';
 import { noteBootWork } from './declaration_work';
 import { CONFIG_DECLARATION_BUDGET } from './declaration_budget';
+import {
+  forgetDirectoryMeasureIfFileChanged, memoizeDirectoryMeasure, storedDirectoryMeasure,
+} from './declaration_dir_memo';
 
 /**
  * مدى الحصر المعلن — **ثابتٌ يُقرأ في الشفرة**، وهو جوابُ T-133 عن «الحدُّ في وثيقةٍ لا في
@@ -80,8 +88,13 @@ export function isDeclarationFile(name: string): boolean {
  * تمرُّ بسقفِ المجموع بلا أن يراها.
  * @param dir مجلدُ الإعلان
  * @param depth العمقُ الحاليُّ — لا يُمرَّر من خارج الوحدة إلّا في اختبارٍ يقصده
+ * @param stamps دفترٌ يُملأ — إن مُرِّر — بزمنِ تعديلِ **كلِّ** مجلدٍ مُشِيَ فيه (T-140)
  */
-export function walkDeclarationFiles(dir: string, depth = 0): string[] {
+export function walkDeclarationFiles(
+  dir: string,
+  depth = 0,
+  stamps?: Map<string, bigint>,
+): string[] {
   if (depth > DECLARATION_REACH.max_depth) {
     throw new SovereignViolation(
       `مجلدُ إعلانٍ أعمقُ من المدى المعلن: ${dir} — العمقُ ${depth}/${DECLARATION_REACH.max_depth}`,
@@ -92,10 +105,11 @@ export function walkDeclarationFiles(dir: string, depth = 0): string[] {
   const entries = readdirSync(dir, { withFileTypes: true });
   noteBootWork('dir_walks');
   noteBootWork('dir_entries', entries.length);
+  if (stamps) stamps.set(dir, statSync(dir, { bigint: true }).mtimeNs);
   for (const entry of entries) {
     if (entry.isSymbolicLink()) continue;
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) found.push(...walkDeclarationFiles(path, depth + 1));
+    if (entry.isDirectory()) found.push(...walkDeclarationFiles(path, depth + 1, stamps));
     else if (entry.isFile() && isDeclarationFile(entry.name)) found.push(path);
   }
   return found.sort();
@@ -162,23 +176,70 @@ export function noteLoadedDeclaration(path: string, bytes: number, nodes: number
 }
 
 /**
- * يحرس **مجموعَ بايتات مجلدِ الإعلان** عند كلِّ قراءةٍ منه — بمشيٍ وإحصاءِ أحجامٍ بلا تحليل.
- * وهو الجوابُ الأتمُّ عن شكوى T-133: من نادى محمّلًا مفردًا كان يقرأ من مجلدٍ مجموعُه فوق
- * السقفِ ولا يُردّ، فصار الإعلانُ الواحدُ **لا يُقبل في طريقٍ ويُرفض في طريق**.
- * @param dir مجلدُ الملفِّ المقروء
- * @returns مجموعُ البايتات المقيسُ — يُقرأ ولا يُستنتج
+ * أبصماتُ المجلدات كما هي الآن كما هي في القياس المحفوظ؟ — زمنُ تعديلِ **كلِّ** مجلدٍ مُشِيَ
+ * فيه يُقرأ من القرص (نداءٌ واحدٌ لكلِّ مجلدٍ، لا مشيٌ ولا قراءةُ نصّ). ومجلدٌ اختفى أو
+ * تغيّر زمنُه ⇒ القياسُ لا يُعاد استخدامُه.
  */
-export function guardDeclarationDirectoryBytes(dir: string): number {
-  const paths = walkDeclarationFiles(dir);
-  let bytes = 0;
-  for (const path of paths) bytes += statSync(path).size;
+function directoryStampsFresh(stamps: ReadonlyMap<string, bigint>): boolean {
+  for (const [walked, stamp] of stamps) {
+    let now: bigint;
+    try {
+      now = statSync(walked, { bigint: true }).mtimeNs;
+    } catch {
+      return false;
+    }
+    if (now !== stamp) return false;
+  }
+  return true;
+}
+
+/** سقفُ بايتات المجلد — يقع على القياس المحفوظ كما يقع على المقيسِ الآن (T-140) */
+function guardDirectoryTotal(dir: string, bytes: number, files: number): number {
   if (bytes > CONFIG_DECLARATION_BUDGET.total_bytes) {
     throw new SovereignViolation(
       `مجموعُ بايتات مجلدِ الإعلان فوق السقف المعلن — ${dir} بلغ: ${bytes}/`
-      + `${CONFIG_DECLARATION_BUDGET.total_bytes} في ${paths.length} ملفًا. `
+      + `${CONFIG_DECLARATION_BUDGET.total_bytes} في ${files} ملفًا. `
       + 'يقع هذا الحرَسُ عند كلِّ قراءةٍ لا في الإقلاع وحدَه (T-133)',
       'CONFIG_DECLARATION_DIR_BYTES_OVER_CEILING',
     );
   }
+  return bytes;
+}
+
+/**
+ * يحرس **مجموعَ بايتات مجلدِ الإعلان** عند كلِّ قراءةٍ منه — بمشيٍ وإحصاءِ أحجامٍ بلا تحليل.
+ * وهو الجوابُ الأتمُّ عن شكوى T-133: من نادى محمّلًا مفردًا كان يقرأ من مجلدٍ مجموعُه فوق
+ * السقفِ ولا يُردّ، فصار الإعلانُ الواحدُ **لا يُقبل في طريقٍ ويُرفض في طريق**.
+ *
+ * وجوابُ T-140: قيس أنّ هذا الحرَسَ كان يمشي المجلدَ **87 مرّةً في إقلاعٍ واحد** — 82 منها
+ * بلا قراءةِ ملفٍّ واحدٍ بعد ذاكرةِ القراءة (T-139) — فصار القياسُ يُحفظ ببصمةٍ: زمنُ تعديلِ
+ * كلِّ مجلدٍ مُشِيَ فيه، وأحجامُ كلِّ مساراته. **والسقفُ يقع في الحالتَين برمزِه نفسِه**:
+ * الذاكرةُ توفّر مشيًا ولا توفّر حكمًا.
+ * @param dir مجلدُ الملفِّ المقروء
+ * @param observed الملفُّ الذي يُقرأ الآن وحجمُه — به تُكشف كتابةٌ فوق ملفٍّ قائمٍ لا
+ *   يُحرِّك زمنَ المجلد، فيُنسى القياسُ ويُمشى المجلدُ من جديد
+ * @returns مجموعُ البايتات المقيسُ — يُقرأ ولا يُستنتج
+ */
+export function guardDeclarationDirectoryBytes(
+  dir: string,
+  observed?: { readonly path: string; readonly bytes: number },
+): number {
+  if (observed) forgetDirectoryMeasureIfFileChanged(dir, observed.path, observed.bytes);
+  const stored = storedDirectoryMeasure(dir);
+  if (stored && directoryStampsFresh(stored.stamps)) {
+    noteBootWork('dir_reuses');
+    return guardDirectoryTotal(dir, stored.bytes, stored.files);
+  }
+  const stamps = new Map<string, bigint>();
+  const paths = walkDeclarationFiles(dir, 0, stamps);
+  const sizes = new Map<string, number>();
+  let bytes = 0;
+  for (const path of paths) {
+    const size = statSync(path).size;
+    sizes.set(path, size);
+    bytes += size;
+  }
+  guardDirectoryTotal(dir, bytes, paths.length);
+  memoizeDirectoryMeasure(dir, { bytes, files: paths.length, stamps, sizes });
   return bytes;
 }

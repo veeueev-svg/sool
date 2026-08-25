@@ -132,7 +132,7 @@ export function loadYamlFile(path: string): Record<string, unknown> {
   const stat = statSync(path, { bigint: true });
   const bytes = Number(stat.size);
   guardConfigFileBytes(path, bytes);
-  guardDeclarationDirectoryBytes(dirname(path));
+  guardDeclarationDirectoryBytes(dirname(path), { path, bytes });
   const memo = memoizedDeclaration(path, bytes, stat.mtimeNs);
   if (memo) {
     noteBootWork('memo_hits');

@@ -25,7 +25,8 @@
  */
 import { bootstrapState } from '../src/index';
 import {
-  BOOT_WORK_CEILINGS, BootWork, bootWork, censusDeclaration, loadedDeclaration, resolveConfigDir,
+  BOOT_WORK_CEILINGS, BootWork, bootWork, censusDeclaration, directoryMeasureCount,
+  loadedDeclaration, resolveConfigDir,
 } from '../src/kernel/config';
 
 const configDir = resolveConfigDir();
@@ -72,9 +73,13 @@ say(`- ذاكرةُ الإقلاع: ${work.file_reads} قراءةً من الق�
   + `محفوظًا — والحصرُ وحدَه ${census.files} ملفًا، ودفترُ مجلدِ التهيئة ${distinct} ملفًا `
   + 'مميّزًا. وكان الإقلاعُ قبل T-139 يقرأ 109 قراءةً (منها `config/quotas.yaml` ستٌّ '
   + 'وعشرون مرّةً) — القياسان في docs/audit/measurements/phase-39-T139.txt');
-say(`- مشيُ المجلدات: ${work.dir_walks} مشيةً و${work.dir_entries} مدخلًا في إقلاعٍ واحد — `
-  + 'حرَسُ بايتات المجلد (T-133) يمشي المجلدَ عند **كلِّ** نداءٍ ولو استُرجع النصُّ من '
-  + 'الذاكرة بلا قراءة. هذا أكبرُ عملٍ باقٍ، ومفتوحٌ بندًا: T-140');
+say(`- مشيُ المجلدات: ${work.dir_walks} مشيةً و${work.dir_entries} مدخلًا مقابلَ `
+  + `${work.dir_reuses} إعادةَ استخدامٍ لقياسٍ محفوظٍ (T-140) — و${directoryMeasureCount()} `
+  + 'مجلداتٍ مميّزةٍ قِيست في هذا الإقلاع. وكان الحرَسُ قبل T-140 يمشي 87 مشيةً و2084 مدخلًا، '
+  + '82 منها بلا قراءةِ ملفٍّ واحد — القياسان في docs/audit/measurements/phase-39-T140.txt');
+say(`- ما بقي من العمل: الحصرُ يقرأ ${census.files} ملفًا ويُحمَّل منها `
+  + `${distinct} فعلًا — فرقٌ مفتوحٌ بندًا: T-137. وإعادةُ استخدامِ قياسِ المجلد لا تكشف `
+  + 'نفخَ ملفٍّ **في مكانه لا يقرؤه أحدٌ** في هذا الإقلاع — انحرافٌ معلنٌ ومفتوحٌ بندًا: T-141');
 
 // 3) الزمنُ تاريخًا لا عقدًا
 const calib = median([calibrationMs(), calibrationMs(), calibrationMs()]);
