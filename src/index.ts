@@ -26,7 +26,7 @@ import { rehydrateFromJournal } from './data/persistence';
 import { rehydrateStateFromJournal } from './data/rehydrate_state';
 import { rehydrateFiscalFromJournal } from './data/rehydrate_fiscal';
 import { rehydrateGovernanceFromJournal } from './data/rehydrate_governance';
-import { resolveConfigDir } from './kernel/config';
+import { bootWork, resolveConfigDir } from './kernel/config';
 import { composeSovereignty } from './composition/sovereignty';
 import { composePopulation } from './composition/population';
 import { composeEconomy } from './composition/economy';
@@ -170,6 +170,12 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     ministries.attachJournal(journal);
     appointments.attachJournal(journal);
   }
+
+  // 8.9) عملُ الإقلاع يُدوَّن قبل الخاتمة (البند T-134): الزمنُ لا يُحرس بالساعة بل بعدِّ
+  //      العمل، وهذا القيدُ هو أثرُه في الدفتر — والحرَسُ نفسُه في بوابةِ التكامل لا هنا،
+  //      لأنّ دولةً تُرفض في مُشغِّل مستخدمٍ بسبب قراءةٍ زائدةٍ أسوأُ من دفعةٍ تُردّ في البوابة.
+  const work = bootWork();
+  audit.append('authority:bootstrap', 'boot_work_measured', { ...work });
 
   // 9) خاتمة التأسيس: سجلٌّ واحد لا يكتبه غير هذا الملف
   audit.append('authority:bootstrap', 'state_online', { phase: 37, mode: 'normal' });

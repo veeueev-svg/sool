@@ -13,6 +13,7 @@ import { guardConfigFileBytes } from './declaration_budget';
 import {
   countNodes, guardDeclarationDirectoryBytes, noteLoadedDeclaration,
 } from './declaration_reach';
+import { noteBootWork } from './declaration_work';
 
 /**
  * محلّل YAML لمجموعة فرعية آمنة ومحدّدة: خرائط متداخلة، قوائم قيم، قوائم خرائط،
@@ -113,18 +114,13 @@ function parseNode(lines: YamlLine[], start: number, indent: number): [unknown, 
 }
 
 export function parseSimpleYaml(text: string): Record<string, unknown> {
+  noteBootWork('parse_calls');
   const lines = toLines(text);
   if (lines.length === 0) return {};
   const [value] = parseNode(lines, 0, lines[0]!.indent);
   return (value ?? {}) as Record<string, unknown>;
 }
 
-/**
- * يقرأ ملفَّ تهيئةٍ ويحلّله — **وبينهما حاجزُ البايتات** (البند T-130).
- * ولِمَ قبل التحليل؟ لأنّ الملفَّ المنفوخَ لا يُردّ بعد أن يُصرف عليه محلّلٌ ويُبنى منه
- * كائنٌ في الذاكرة، بل يُردّ وهو رقمٌ على القرص. وهذا الحاجزُ يقع على **كلِّ** قراءةِ
- * ملفِّ تهيئةٍ في النواة (خمسةٌ وعشرون محمّلًا يمرّون من هنا) لا على مسار الإقلاع وحده.
- */
 /**
  * يقرأ ملفَّ تهيئةٍ واحدًا: يُحرس حجمُه **قبل** تحليله، ثمّ يُقيَّد في دفتر مجلدِه ويُحرس
  * **مجموعُ** ما حُمِّل منه (T-133). فترتيبُ الحرَسَين مقصودٌ ومقيس: الحدُّ الأرخصُ والأخصُّ
@@ -136,6 +132,10 @@ export function loadYamlFile(path: string): Record<string, unknown> {
   guardConfigFileBytes(path, bytes);
   guardDeclarationDirectoryBytes(dirname(path));
   const doc = parseSimpleYaml(readFileSync(path, 'utf8'));
-  noteLoadedDeclaration(path, bytes, countNodes(doc));
+  const nodes = countNodes(doc);
+  noteBootWork('file_reads');
+  noteBootWork('bytes_read', bytes);
+  noteBootWork('node_visits', nodes);
+  noteLoadedDeclaration(path, bytes, nodes);
   return doc;
 }

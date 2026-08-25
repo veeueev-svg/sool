@@ -33,6 +33,7 @@
 import { readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { SovereignViolation } from '../types';
+import { noteBootWork } from './declaration_work';
 import { CONFIG_DECLARATION_BUDGET } from './declaration_budget';
 
 /**
@@ -88,7 +89,10 @@ export function walkDeclarationFiles(dir: string, depth = 0): string[] {
     );
   }
   const found: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  noteBootWork('dir_walks');
+  noteBootWork('dir_entries', entries.length);
+  for (const entry of entries) {
     if (entry.isSymbolicLink()) continue;
     const path = join(dir, entry.name);
     if (entry.isDirectory()) found.push(...walkDeclarationFiles(path, depth + 1));

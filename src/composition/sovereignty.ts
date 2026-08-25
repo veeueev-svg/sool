@@ -10,7 +10,7 @@
  */
 import type { BootstrapOptions } from './state';
 import {
-  guardDeclarationBudget, DECLARATION_REACH,
+  guardDeclarationBudget, DECLARATION_REACH, resetBootWork,
   loadPersistence, loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadReproduction, loadInference, loadIntent, loadChannels, loadScale, loadRecovery, loadRoyalAuthority,
 } from '../kernel/config';
 import { ResourceRegistry } from '../kernel/resource_registry';
@@ -39,6 +39,9 @@ export function composeSovereignty(
   //     ومنذ T-133 صار للحرَس مسارانِ لا مسارٌ واحد: هذا يحرس **المجلدَ وفرعيّاتِه** قبل أوّلِ
   //     تحميل، و`loadYamlFile` يحرس **مجموعَ ما حُمِّل** عند كلِّ قراءةٍ — فلا يهرب من نادى
   //     محمّلًا مفردًا بلا إقلاع.
+  // -1ب) وعدّادُ عملِ الإقلاع يُصفَّر **قبل** الحصر (البند T-134): وحدةُ القياس إقلاعٌ واحد،
+  //      فإقلاعان في عمليّةٍ واحدةٍ لا يتراكمان، والحصرُ نفسُه من العملِ المعدود.
+  resetBootWork();
   const declarationCensus = guardDeclarationBudget(configDir);
 
   // -1أ) والتعداداتُ المغلقةُ قبلها (البند T-131): ما استُثني من سقوف T-129 بحجّة أنّ

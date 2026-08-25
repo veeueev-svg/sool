@@ -25,6 +25,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { relative } from 'node:path';
 import { guardDeclarationTotals } from './declaration_budget';
 import { countNodes, walkDeclarationFiles } from './declaration_reach';
+import { noteBootWork } from './declaration_work';
 import { parseSimpleYaml } from './yaml';
 
 /** قياسُ مجلد التهيئة كما هو — أرقامٌ تُقرأ لا حكمٌ يُصدر */
@@ -59,7 +60,11 @@ export function censusDeclaration(configDir: string): DeclarationCensus {
       largestBytes = size;
       largestFile = relative(configDir, path);
     }
-    nodes += countNodes(parseSimpleYaml(readFileSync(path, 'utf8')));
+    const fileNodes = countNodes(parseSimpleYaml(readFileSync(path, 'utf8')));
+    nodes += fileNodes;
+    noteBootWork('file_reads');
+    noteBootWork('bytes_read', size);
+    noteBootWork('node_visits', fileNodes);
   }
   return { files: paths.length, bytes, largestBytes, largestFile, nodes };
 }
