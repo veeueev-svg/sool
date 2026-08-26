@@ -8,8 +8,18 @@ policy:
   window_seconds: 60
   max_command_loss: 0
   max_quota_overrun: 0
+  # عتبتا الزمن أدناه **تُعاير على عتاد المُشغِّل** ولا تُرفع (W-2026-004 · ADR-0041):
+  # تُقاس وحدةُ معايرةٍ حسابيّةٌ على آلة التشغيل وتُقسم على الأساس المعلن، فتُضرب العتبةُ في
+  # النسبة. والنسبةُ لا تنزل عن 1 (فلا تُشدَّد عتبةٌ على آلةٍ سريعة)، ولا تعلو على
+  # channel_calibration_max_scale (فلا يُعطَّل الحكمُ على آلةٍ بطيئةٍ بلا إعلان: يُعلن الخرقُ
+  # CALIBRATION_OVER_MAX_SCALE). ولم يُرفع رقمٌ من الرقمَين هنا: 8 و60 كما أُعلنا في المرحلة 33.
   channel_p99_ms: 8
   channel_max_ms: 60
+  # الأساسُ المرجع: وسيطُ ثلاثِ قياساتٍ لوحدة المعايرة = 12.16ms على آلةِ الجلسة 58
+  # (Intel Xeon @ 2.90GHz · 2 vCPU · node v20.20.1)، وعليها كان p99 المقيس 2.10–2.57ms.
+  channel_calibration_baseline_ms: 12
+  # أقصى إرخاءٍ مسموح: آلةٌ أبطأُ من المرجع ثمانيةَ أضعافٍ لا يُحكم عليها بل يُعلن بطؤها.
+  channel_calibration_max_scale: 8
   scheduler_queue_probe: 160
   resource_name: "compute_units"
   quota_probe_amount: 10

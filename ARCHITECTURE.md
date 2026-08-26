@@ -39,9 +39,9 @@
 | المجلد | ملفات | أسطر | ماذا يسكنه | المالك |
 |---|---:|---:|---|---|
 | `src/` (الجذر) | 1 | 220 | `index.ts` — جذر التركيب: ينادي طبقات `composition/` بترتيبها الملزم، ولا يبني ولا يحمل سياسة | القيّم |
-| `src/composition/` | 11 | 1668 | طبقات البناء بحدود الاعتماد: `sovereignty` ← `population` ← `economy` ← `enterprises` ← `scale` ← `institutions` ← `resilience` ← `operations`، و`state.ts` (عقد الحالة) و`public_api.ts` (سطح التصدير) و`alignment_snapshot.ts` | القيّم |
+| `src/composition/` | 11 | 1673 | طبقات البناء بحدود الاعتماد: `sovereignty` ← `population` ← `economy` ← `enterprises` ← `scale` ← `institutions` ← `resilience` ← `operations`، و`state.ts` (عقد الحالة) و`public_api.ts` (سطح التصدير) و`alignment_snapshot.ts` | القيّم |
 | `src/kernel/` | 4 | 522 | الأنواع السيادية، سجل الموارد، حدود النواة | القيّم |
-| `src/kernel/config/` | 33 | 5119 | مُحمِّل لكل نطاق: `royal_authority`, `quotas`, `regions`, `economy`, `external`, `contracts`, `enterprises`, `services`, `research`, `scale`, `recovery`, `load`, `chaos`, `termination`, `staging`, `production` (+ `production_policy`), `persistence`, `confinement`, `reproduction`, **`inference`** (الجلسة 35) و`yaml` و`paths`، و**ميزانيّةُ الإعلان**: `declaration_limits` (سقفُ كلِّ قائمة) و`declaration_budget` + `declaration_census` (سقفُ المجموع وبايتاتِ الملف — T-130) و**`closed_enums`** (سجلُّ التعدادات المغلقة وحرسُها — T-131) و**`declaration_reach`** (مدى الحصر ودفترُ ما حُمِّل وحرَسُ المجلد عند كلِّ قراءة — T-133) و**`declaration_work`** (عدّادُ عملِ الإقلاع وسقوفُه المجمَّدة — T-134) و**`declaration_memo`** (ذاكرةُ قراءةٍ واحدةٍ لكلِّ مسارٍ في الإقلاع — T-139) و**`declaration_dir_memo`** (بصمةُ قياسِ المجلد: مشيةٌ واحدةٌ لكلِّ مجلدٍ في الإقلاع — T-140، وتُعلن ما حفظته لتُعاد مراجعتُه في خاتمة الإقلاع — T-141) | القيّم |
+| `src/kernel/config/` | 33 | 5132 | مُحمِّل لكل نطاق: `royal_authority`, `quotas`, `regions`, `economy`, `external`, `contracts`, `enterprises`, `services`, `research`, `scale`, `recovery`, `load`, `chaos`, `termination`, `staging`, `production` (+ `production_policy`), `persistence`, `confinement`, `reproduction`, **`inference`** (الجلسة 35) و`yaml` و`paths`، و**ميزانيّةُ الإعلان**: `declaration_limits` (سقفُ كلِّ قائمة) و`declaration_budget` + `declaration_census` (سقفُ المجموع وبايتاتِ الملف — T-130) و**`closed_enums`** (سجلُّ التعدادات المغلقة وحرسُها — T-131) و**`declaration_reach`** (مدى الحصر ودفترُ ما حُمِّل وحرَسُ المجلد عند كلِّ قراءة — T-133) و**`declaration_work`** (عدّادُ عملِ الإقلاع وسقوفُه المجمَّدة — T-134) و**`declaration_memo`** (ذاكرةُ قراءةٍ واحدةٍ لكلِّ مسارٍ في الإقلاع — T-139) و**`declaration_dir_memo`** (بصمةُ قياسِ المجلد: مشيةٌ واحدةٌ لكلِّ مجلدٍ في الإقلاع — T-140، وتُعلن ما حفظته لتُعاد مراجعتُه في خاتمة الإقلاع — T-141) | القيّم |
 | `src/audit/` | 3 | 384 | السلسلة غير القابلة للمحو ومخزنها | ديوان التدقيق |
 | `src/identity/` | 4 | 265 | جذر الثقة، سلطة الشهادات، سجل الهويات | حرس التاج |
 | `src/crown/` | 7 | 977 | البوابة، النقض، النبض، الحرس، قناة الأوامر | الديوان الملكي |
@@ -58,7 +58,7 @@
 | `src/external/` | 8 | 1990 | الحسابات والعقود والدفع والإنهاء الخارجي | وزارة الخارجية |
 | `src/scale/` | 4 | 664 | سجل السكان الشاردي وحدود التوسّع | وزارة السكان |
 | `src/recovery/` | 4 | 299 | اللقطات والاستعادة والاستمرارية | القيّم |
-| `src/load/` | 4 | 787 | تمرين الضغط ودفتر الأحمال (والأشكالُ وحصرُ الخرق وحدتان جارتان من الجلسة 42) | ديوان التدقيق |
+| `src/load/` | 5 | 925 | تمرين الضغط ودفتر الأحمال (والأشكالُ وحصرُ الخرق وحدتان جارتان من الجلسة 42، و`load_calibration.ts` معايرةُ عتباتِ الزمن على عتادِ المُشغّل من الجلسة 58 — W-2026-004) | ديوان التدقيق |
 | `src/chaos/` | 4 | 614 | حقن القطوع وحكم التوقف الآمن | ديوان التدقيق |
 | `src/termination/` | 3 | 534 | مسالك الإنهاء والشاهد المستقل ودفتر الحكم | حرس التاج |
 | `src/staging/` | 8 | 1315 | التشغيل المحدود: نطاق، نافذة، حرّاس، كتب | المشغّل |

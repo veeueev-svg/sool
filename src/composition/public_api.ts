@@ -260,6 +260,11 @@ export type {
   LoadDrillReport, LoadPolicy, CommandPressureReport, BurstPressureReport,
   QuotaPressureReport, SchedulerPressureReport, PressureOutcome,
 } from '../load/load_drill';
+export {
+  CALIBRATION_ITERATIONS, effectiveThresholds, latencyScale,
+  measureCalibrationMedianMs, measureCalibrationMs,
+} from '../load/load_calibration';
+export type { CalibrationReading } from '../load/load_calibration';
 export { loadLoad, LOAD_FORBIDDEN_DRILL_AUTHORITIES } from '../kernel/config';
 export type { LoadConfig } from '../kernel/config';
 export { matchEffects } from '../chaos/effect_matcher';

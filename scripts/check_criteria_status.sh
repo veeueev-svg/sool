@@ -25,7 +25,10 @@
 #    بلا اسمٍ لا تُطالَب.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+# جذرُ الفحص. الافتراضُ جذرُ المستودع، ويُبدَّل بـ`SOOL_CHECK_ROOT` ليُختبر الفاحصُ على
+# **جذرٍ منسوخٍ** لا على ملفّات المستودع الحقيقيّة (W-2026-004): إذ يشغّل node ملفّاتِ
+# الاختبار بالتوازي، فتحريفُ ملفٍّ حقيقيٍّ في اختبارٍ يُقرأ حكمًا في آخر.
+cd "${SOOL_CHECK_ROOT:-$(dirname "$0")/..}"
 CRITERIA_FILE="COMPLETION_CRITERIA.md"
 CRITERIA_DIR="docs/audit/criteria"
 fail=0

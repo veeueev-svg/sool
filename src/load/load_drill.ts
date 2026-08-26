@@ -8,7 +8,7 @@
  *            مفتاح الإيقاف (المرحلة 9)، دفتر الحمل (هذه المرحلة)
  * الصلاحيات: القياس والتصعيد فقط. التمرين لا يعتمد أمرًا ولا يمنح حصة ولا يرفع سقفًا
  *            (RULE-004 و RULE-005): كل ما يفعله يمرّ من الطريق المعلن نفسه.
- * السجلات: load_drill_started / load_drill_refused / load_commands_measured /
+ * السجلات: load_calibration_measured / load_drill_started / load_drill_refused / load_commands_measured /
  *           load_burst_measured / load_quota_measured / load_scheduler_measured /
  *           load_drill_breach / load_drill_report / escalated_to_king
  * حالات الفشل (كلها مغلقة):
@@ -41,6 +41,7 @@ import {
   LoadDrillReport, LoadPolicy, PressureOutcome, QuotaPressureReport,
   SchedulerPressureInput, SchedulerPressureReport,
 } from './load_drill_types';
+import { CalibrationReading, effectiveThresholds, latencyScale, measureCalibrationMedianMs } from './load_calibration';
 import {
   burstBreaches, commandBreaches, ledgerBreaches, percentile, quotaBreaches, schedulerBreaches,
 } from './load_breach';
@@ -64,6 +65,25 @@ export class LoadDrill {
       p99Ms: deps.policy.channel_p99_ms, maxMs: deps.policy.channel_max_ms,
       maxLoss: deps.policy.max_command_loss, maxOverrun: deps.policy.max_quota_overrun,
     });
+  }
+
+  private reading: CalibrationReading | null = null;
+
+  /** معايرةُ الآلة: تُقاس مرّةً واحدةً وتُدوَّن بأرقامها قبل أي حكمٍ زمني (W-2026-004) */
+  private calibration(by: EntityId): CalibrationReading {
+    if (this.reading) return this.reading;
+    const p = this.deps.policy;
+    const measure = this.deps.calibrationMs ?? measureCalibrationMedianMs;
+    const reading = latencyScale(measure(), p.channel_calibration_baseline_ms, p.channel_calibration_max_scale);
+    this.reading = reading;
+    const effective = effectiveThresholds(p, reading.scale);
+    this.deps.audit.append(by, 'load_calibration_measured', {
+      measuredMs: Number(reading.measuredMs.toFixed(3)), baselineMs: reading.baselineMs,
+      rawScale: Number(reading.rawScale.toFixed(3)), scale: Number(reading.scale.toFixed(3)),
+      maxScale: reading.maxScale, effectiveP99Ms: effective.p99Ms, effectiveMaxMs: effective.maxMs,
+      breaches: reading.breaches,
+    });
+    return reading;
   }
 
   /** بوابة كل طور: الجهة ثم وضع الدولة. الرفض مسجَّل باسم سببه. */
@@ -130,7 +150,9 @@ export class LoadDrill {
     const maxMs = sorted[sorted.length - 1] ?? 0;
     const meanMs = latencies.reduce((sum, value) => sum + value, 0) / (latencies.length || 1);
     const settled = counted.executed + counted.denied + counted.failed;
-    const breaches = commandBreaches({ p99Ms, maxMs, settled, count: input.count }, policy);
+    const breaches = commandBreaches(
+      { p99Ms, maxMs, settled, count: input.count }, policy, this.calibration(input.by).scale,
+    );
 
     const report: CommandPressureReport = {
       submitted: input.count, executed: counted.executed, denied: counted.denied,
@@ -180,7 +202,9 @@ export class LoadDrill {
       this.deps.ledger.settle(outcome.commandId, outcome.status);
     }
     const perCommandMs = durationMs / input.count;
-    const breaches = burstBreaches({ settled, count: input.count, perCommandMs }, policy);
+    const breaches = burstBreaches(
+      { settled, count: input.count, perCommandMs }, policy, this.calibration(input.by).scale,
+    );
 
     const report: BurstPressureReport = { size: input.count, settled, durationMs, perCommandMs, breaches };
     this.deps.audit.append(input.by, 'load_burst_measured', {
@@ -340,13 +364,16 @@ export class LoadDrill {
       commandId: record.commandId, status: record.status,
     })));
 
+    // ترتيبُ الرموز عقدٌ: المعايرةُ تُذيَّل آخرًا كي لا يتغيّر ما تقرؤه الاختباراتُ القائمة
+    const calibration = this.calibration(input.by);
     const breaches = [
       ...commands.report.breaches, ...burst.report.breaches,
       ...quota.report.breaches, ...scheduler.report.breaches,
-      ...ledgerBreaches(ledger, policy),
+      ...ledgerBreaches(ledger, policy), ...calibration.breaches,
     ];
     const verdict: 'pass' | 'fail' = breaches.length === 0 ? 'pass' : 'fail';
     const report: LoadDrillReport = {
+      calibration,
       commands: commands.report, burst: burst.report, quota: quota.report,
       scheduler: scheduler.report, ledger, breaches, verdict,
     };

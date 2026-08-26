@@ -20,6 +20,9 @@
  *   1) **ترتيبُ الرموز عقدٌ لا تفصيل**: من أعاد ترتيبَ الدفعات غيّر ما تقرؤه الاختبارات.
  *   2) **لا نجاح جزئي**: الدالّةُ تُرجع كلَّ ما وقع، ولا تختار أهمَّه (RULE-008).
  *   3) **العتبةُ تُقرأ ولا تُغيَّر**: السياسةُ مدخلٌ للقراءة — ومن خفّف عتبةً هنا جمّل حكمًا.
+ *   4) **المعايرةُ تُمرَّر ولا تُحسب هنا** (W-2026-004): النسبةُ `scale` مدخلٌ رقميٌّ مقيسٌ
+ *      خارجًا (`load_calibration.ts`)، وافتراضُها 1 — أي العتبةَ المعلنةَ كما هي. فلا تقرأ هذه
+ *      الدوالُ ساعةً ولا تقيس آلةً، ويبقى الحكمُ مُختبرًا بأرقامٍ مصنوعة.
  */
 import { LoadLedgerReport } from './load_ledger';
 import { LoadPolicy } from './load_drill_types';
@@ -35,10 +38,12 @@ export function percentile(sorted: readonly number[], fraction: number): number 
 export function commandBreaches(
   measured: { readonly p99Ms: number; readonly maxMs: number; readonly settled: number; readonly count: number },
   policy: LoadPolicy,
+  scale = 1,
 ): string[] {
   const breaches: string[] = [];
-  if (measured.p99Ms > policy.channel_p99_ms) breaches.push('COMMAND_P99_OVER_THRESHOLD');
-  if (measured.maxMs > policy.channel_max_ms) breaches.push('COMMAND_MAX_OVER_THRESHOLD');
+  const factor = Number.isFinite(scale) && scale >= 1 ? scale : 1;
+  if (measured.p99Ms > policy.channel_p99_ms * factor) breaches.push('COMMAND_P99_OVER_THRESHOLD');
+  if (measured.maxMs > policy.channel_max_ms * factor) breaches.push('COMMAND_MAX_OVER_THRESHOLD');
   if (measured.settled !== measured.count) breaches.push('COMMAND_FATE_MISSING');
   return breaches;
 }
@@ -47,10 +52,12 @@ export function commandBreaches(
 export function burstBreaches(
   measured: { readonly settled: number; readonly count: number; readonly perCommandMs: number },
   policy: LoadPolicy,
+  scale = 1,
 ): string[] {
   const breaches: string[] = [];
+  const factor = Number.isFinite(scale) && scale >= 1 ? scale : 1;
   if (measured.settled !== measured.count) breaches.push('BURST_FATE_MISSING');
-  if (measured.perCommandMs > policy.channel_max_ms) breaches.push('BURST_PER_COMMAND_OVER_MAX');
+  if (measured.perCommandMs > policy.channel_max_ms * factor) breaches.push('BURST_PER_COMMAND_OVER_MAX');
   return breaches;
 }
 

@@ -28,46 +28,42 @@
  *    بـ`SOOL_DECL_ROOT` اختُبر القبولُ في **نسخةٍ في tmpdir** لا في المستودع — فبوابةٌ لا
  *    يُعرف لها بابٌ يُفتح جدارٌ، والجدارُ يُعطَّل أوّلَ ضيقٍ ثم يُحتفل بلا حَكَم.
  *
- * 5) **الحالاتُ الجديدةُ لا تلمس ملفًّا حقيقيًّا**: الثمانيةُ الأُوَل تعبث بملفّات المستودع
- *    (وذاك دَينٌ معلنٌ في `W-2026-004`: ثلاثةُ ملفّاتِ اختبارٍ تتسابق على `version.json`
- *    و`COMPLETION_CRITERIA.md` مع تشغيلٍ متوازٍ). فما أُضيف هنا يعمل على **جذرٍ منسوخ**،
- *    ولا يزيد سطحَ التسابق حرفًا.
+ * 5) **لا حالةَ سلبيّةً تلمس ملفًّا حقيقيًّا (W-2026-004)**: كانت الثمانيةُ الأُوَل تعبث
+ *    بملفّات المستودع نفسِها (`version.json` · `COMPLETION_CRITERIA.md` · `ROADMAP.md` ·
+ *    `docs/royal-orders/`)، وnode يشغّل ملفّاتِ الاختبار بالتوازي — فتقرأ إحداها ما حرّفته
+ *    أخرى فتسقط بوابةُ CI بالاحتمال. فنُقلت كلُّها إلى **جذرٍ منسوخٍ في tmpdir**، ولم يبقَ
+ *    على المستودع الحقيقيّ إلّا **المسارُ الموجَبُ القارئُ وحدَه** (لا يكتب حرفًا).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, unlinkSync, mkdtempSync, mkdirSync, rmSync, copyFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, mkdirSync, rmSync, copyFileSync, readdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // جذرُ المستودع هو مكانُ تشغيل `npm test` (كما في tests/governance/criteria_status.test.ts)
 const ROOT = process.cwd();
 const SCRIPT = 'scripts/check_declaration.sh';
-const VERSION = join(ROOT, 'version.json');
-const CRITERIA = join(ROOT, 'COMPLETION_CRITERIA.md');
-const ROADMAP = join(ROOT, 'ROADMAP.md');
-const ORDER = join(ROOT, 'docs/royal-orders/2026-01-01-000-اختبار-حاجز.md');
+const VERSION = 'version.json';
+const CRITERIA = 'COMPLETION_CRITERIA.md';
+const ROADMAP = 'ROADMAP.md';
+const ORDER = 'docs/royal-orders/2026-01-01-000-اختبار-حاجز.md';
 
 function runCheck(): { code: number; out: string } {
   const r = spawnSync('bash', [SCRIPT], { cwd: ROOT, encoding: 'utf8' });
   return { code: r.status ?? -1, out: `${r.stdout}${r.stderr}` };
 }
 
-/** يعبث بملفٍّ مؤقّتًا ويُرجع الأصل دائمًا */
+/**
+ * يعبث بملفٍّ **في الجذر المنسوخ** لا في المستودع (W-2026-004).
+ * لا `finally` يستعيد أصلًا هنا: فالمعبوثُ نسخةٌ في tmpdir تُحذف بتمامها في `withRoot`.
+ */
 function withTampered(
   file: string,
   mutate: (text: string) => string,
   assertOn: (r: { code: number; out: string }) => void,
 ): void {
-  const original = readFileSync(file, 'utf8');
-  try {
-    const next = mutate(original);
-    assert.notEqual(next, original, `العبثُ لم يغيّر شيئًا في ${file} — فالتأكيدُ لا يقيس شيئًا`);
-    writeFileSync(file, next);
-    assertOn(runCheck());
-  } finally {
-    writeFileSync(file, original);
-  }
+  withRoot((root) => editIn(root, file, mutate), assertOn);
 }
 
 test('T-127: الحاجز يمرّ على المستودع كما هو، ويعلن الدعوى والحال معًا', () => {
@@ -101,39 +97,39 @@ test('T-127: إدخالُ المرحلة 40 في phases_complete يُسقط ال
   });
 });
 
-test('T-127: أمرٌ ملكيٌّ موقَّعٌ لا يكفي وحدَه ما بقيت فجوة', () => {
+/** يكتب أمرًا ملكيًّا تجريبيًّا **في الجذر المنسوخ** — ولا ملفَّ يُخلق في المستودع */
+function writeTestOrder(root: string, subject: string, auditId: string): void {
   writeFileSync(
-    ORDER,
-    ['الرقم: 000', 'التاريخ: 2026-01-01', 'المُصدِر: الملك', 'الموضوع: اختبارُ الحاجز',
+    join(root, ORDER),
+    ['الرقم: 000', 'التاريخ: 2026-01-01', 'المُصدِر: الملك', `الموضوع: ${subject}`,
       'النص: لا أثرَ لهذا الملفِّ خارج الاختبار', 'الأثر على المراحل: لا شيء',
-      'معرّف السجل في سلسلة التدقيق (auditId): audit-اختبار-000', ''].join('\n'),
+      `معرّف السجل في سلسلة التدقيق (auditId): ${auditId}`, ''].join('\n'),
   );
-  try {
-    withTampered(VERSION, (t) => t.replace(/"completion_percent": *[0-9.]+/, '"completion_percent": 100'), (r) => {
+}
+
+test('T-127: أمرٌ ملكيٌّ موقَّعٌ لا يكفي وحدَه ما بقيت فجوة', () => {
+  withRoot(
+    (root) => {
+      writeTestOrder(root, 'اختبارُ الحاجز', 'audit-اختبار-000');
+      editIn(root, VERSION, (t) => t.replace(/"completion_percent": *[0-9.]+/, '"completion_percent": 100'));
+    },
+    (r) => {
       assert.equal(r.code, 1, r.out);
       // الأمرُ موجودٌ ومقيَّد، ومع ذلك يسقط: لأنّ الفجواتَ والبنودَ باقية
       assert.doesNotMatch(r.out, /بلا أمرٍ ملكيٍّ موقَّعٍ مقيَّد/);
       assert.match(r.out, /فجوة واحدة مفتوحة = لا إعلان/);
-    });
-  } finally {
-    unlinkSync(ORDER);
-  }
+    },
+  );
 });
 
 test('T-127: أمرٌ ملكيٌّ بلا auditId لا يُعتدُّ به — الفارغُ ليس استيفاءً', () => {
-  writeFileSync(
-    ORDER,
-    ['الرقم: 000', 'التاريخ: 2026-01-01', 'المُصدِر: الملك', 'الموضوع: أمرٌ بلا قيد',
-      'النص: لم يُقيَّد في السلسلة', 'الأثر على المراحل: لا شيء',
-      'معرّف السجل في سلسلة التدقيق (auditId):', ''].join('\n'),
+  withRoot(
+    (root) => writeTestOrder(root, 'أمرٌ بلا قيد', ''),
+    (r) => {
+      assert.equal(r.code, 1, r.out);
+      assert.match(r.out, /أمرٌ ملكيٌّ بلا auditId/);
+    },
   );
-  try {
-    const r = runCheck();
-    assert.equal(r.code, 1, r.out);
-    assert.match(r.out, /أمرٌ ملكيٌّ بلا auditId/);
-  } finally {
-    unlinkSync(ORDER);
-  }
 });
 
 test('T-127: حصيلةُ COMPLETION_CRITERIA.md المتأخّرةُ عن صفوفه تُسقط البوابة', () => {

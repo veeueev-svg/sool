@@ -24,6 +24,7 @@ import { FairScheduler } from '../scale/scheduler';
 import { KillSwitch } from '../security/kill_switch';
 import { LoadConfig } from '../kernel/config';
 import { LoadLedger, LoadLedgerReport } from './load_ledger';
+import { CalibrationReading } from './load_calibration';
 
 export type LoadPolicy = LoadConfig['policy'];
 
@@ -71,6 +72,8 @@ export interface SchedulerPressureReport {
 }
 
 export interface LoadDrillReport {
+  /** معايرةُ الآلة التي عليها حُكِم الزمن — تُدوّن فلا يُقرأ حكمٌ بلا مقياسِه (W-2026-004) */
+  readonly calibration: CalibrationReading;
   readonly commands: CommandPressureReport;
   readonly burst: BurstPressureReport;
   readonly quota: QuotaPressureReport;
@@ -90,6 +93,11 @@ export interface LoadDrillDeps {
   readonly policy: LoadPolicy;
   /** وضع الدولة كما تراه البوابة — التمرين يقرؤه ولا يغيّره */
   readonly mode: () => StateMode;
+  /**
+   * قياسُ وحدة المعايرة على آلة التشغيل (W-2026-004). يُحقن في الاختبار برقمٍ مصنوعٍ
+   * ليُحكم على الحساب لا على الآلة؛ وإن غاب قُيست الوحدةُ فعلًا بـ`measureCalibrationMedianMs`.
+   */
+  readonly calibrationMs?: () => number;
 }
 
 export interface CommandPressureInput {

@@ -37,14 +37,37 @@ import {
   mkdirSync,
   rmSync,
   mkdtempSync,
+  cpSync,
 } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const ROOT = process.cwd();
 const SCRIPT = 'scripts/check_generated_numbers.sh';
-const ARCH = join(ROOT, 'ARCHITECTURE.md');
-const VERSION = join(ROOT, 'version.json');
+const ARCH = 'ARCHITECTURE.md';
+const VERSION = 'version.json';
+
+/**
+ * ينسخ ما يقرأه الفاحص (جدولُ المجلدات والرقمُ المُعلن وشجرةُ `src/`) إلى جذرٍ في
+ * tmpdir يُمرَّر بـ`SOOL_CHECK_ROOT`، فلا تُحرّف حالةٌ سلبيّةٌ ملفًّا حقيقيًّا ولا تُنشئ مجلدًا
+ * في `src/` الحقيقيّ (W-2026-004: node يشغّل ملفّاتِ الاختبار بالتوازي، فما حرّفته واحدةٌ
+ * تقرأه أخرى حكمًا).
+ */
+function withRoot(
+  mutate: (root: string) => void,
+  assertOn: (r: { code: number; out: string }, root: string) => void,
+): void {
+  const root = mkdtempSync(join(tmpdir(), 'sool-num-'));
+  try {
+    cpSync(join(ROOT, ARCH), join(root, ARCH));
+    cpSync(join(ROOT, VERSION), join(root, VERSION));
+    cpSync(join(ROOT, 'src'), join(root, 'src'), { recursive: true });
+    mutate(root);
+    assertOn(runCheck(undefined, root), root);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
 
 /** حصيلةُ مُشغّلٍ مصنوعة: تُطابق ما يقوله version.json إلا حيث يُقصد الخلاف */
 function tallyFile(tests: number, pass: number, fail: number, body?: string): string {
@@ -54,37 +77,37 @@ function tallyFile(tests: number, pass: number, fail: number, body?: string): st
   return path;
 }
 
-function declaredTests(): number {
-  const v = JSON.parse(readFileSync(VERSION, 'utf8')) as { tests: { total: number } };
+function declaredTests(root: string = ROOT): number {
+  const v = JSON.parse(readFileSync(join(root, VERSION), 'utf8')) as { tests: { total: number } };
   return v.tests.total;
 }
 
-function runCheck(tally?: string): { code: number; out: string } {
-  const n = declaredTests();
+function runCheck(tally?: string, root?: string): { code: number; out: string } {
+  const n = declaredTests(root ?? ROOT);
   const path = tally ?? tallyFile(n, n, 0);
   const r = spawnSync('bash', [SCRIPT], {
     cwd: ROOT,
     encoding: 'utf8',
-    env: { ...process.env, SOOL_TESTS_TALLY: path },
+    env: root === undefined
+      ? { ...process.env, SOOL_TESTS_TALLY: path }
+      : { ...process.env, SOOL_TESTS_TALLY: path, SOOL_CHECK_ROOT: root },
   });
   return { code: r.status ?? -1, out: `${r.stdout}${r.stderr}` };
 }
 
-/** يعبث بملفٍّ مؤقّتًا ويُرجع الأصل دائمًا */
+/** يعبث بملفٍّ **في الجذر المنسوخ** لا في المستودع، ويشترط أن يكون العبثُ غيّر شيئًا */
 function withTampered(
   file: string,
   mutate: (text: string) => string,
   assertOn: (r: { code: number; out: string }) => void,
 ): void {
-  const original = readFileSync(file, 'utf8');
-  try {
-    const next = mutate(original);
-    assert.notEqual(next, original, `العبثُ لم يغيّر شيئًا في ${file} — فالتأكيدُ لا يقيس شيئًا`);
-    writeFileSync(file, next);
-    assertOn(runCheck());
-  } finally {
-    writeFileSync(file, original);
-  }
+  withRoot((root) => {
+    const p = join(root, file);
+    const before = readFileSync(p, 'utf8');
+    const next = mutate(before);
+    assert.notEqual(next, before, `العبثُ لم يغيّر شيئًا في ${file} — فالتأكيدُ لا يقيس شيئًا`);
+    writeFileSync(p, next);
+  }, (r) => assertOn(r));
 }
 
 // ------------------------------------------------------------------ المسار الموجَب
@@ -136,18 +159,20 @@ test('T-128: صفٌّ لمجلدٍ غير موجود يُسقط الفحص — �
 });
 
 test('T-128: مجلدٌ فيه شفرةٌ ولا صفَّ يغطّيه يُسقط الفحص — فما لا يُذكر لا يُراجَع', () => {
-  const dir = join(ROOT, 'src', 'unlisted_probe');
-  try {
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, 'probe.ts'), 'export const probe = 1;\n');
-    const r = runCheck();
-    assert.equal(r.code, 1, `مجلدٌ غيرُ مذكورٍ مرّ:\n${r.out}`);
-    // يُنسب المجلدُ الذي لا صفَّ له إلى أقربِ صفٍّ يغطّيه، فيتأخّر مجموعُ ذاك الصفّ — ويُسمّى المُتّهم
-    assert.match(r.out, /unlisted_probe/);
-    assert.match(r.out, /لا صفَّ لها/);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+  withRoot(
+    (root) => {
+      // المجلدُ يُنشأ في شجرةِ الجذر المنسوخ، ولا يُلمس `src/` الحقيقيّ (W-2026-004)
+      const dir = join(root, 'src', 'unlisted_probe');
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, 'probe.ts'), 'export const probe = 1;\n');
+    },
+    (r) => {
+      assert.equal(r.code, 1, `مجلدٌ غيرُ مذكورٍ مرّ:\n${r.out}`);
+      // يُنسب المجلدُ الذي لا صفَّ له إلى أقربِ صفٍّ يغطّيه، فيتأخّر مجموعُ ذاك الصفّ — ويُسمّى المُتّهم
+      assert.match(r.out, /unlisted_probe/);
+      assert.match(r.out, /لا صفَّ لها/);
+    },
+  );
 });
 
 test('T-128: إن تغيّرت صيغةُ الجدول فلا يمرّ الفحصُ أعمى، بل يسقط', () => {
@@ -192,10 +217,18 @@ test('T-128: حصيلةٌ غيرُ مقروءةٍ تُسقط الفحص — وا
 // ------------------------------------------------- ما لا يفعله الفاحص، ويُقاس أنه لا يفعله
 
 test('T-128: الفاحصُ يقرأ ولا يُصلح — لا يعدّل ARCHITECTURE.md ولا version.json', () => {
-  const archBefore = readFileSync(ARCH, 'utf8');
-  const versionBefore = readFileSync(VERSION, 'utf8');
-  const n = declaredTests();
-  runCheck(tallyFile(n + 11, n + 11, 0)); // يسقط، ولا يُصحّح الرقمَ إلى ما قِيس
-  assert.equal(readFileSync(ARCH, 'utf8'), archBefore, 'الفاحصُ عدّل الجدول — والإصلاحُ فعلُ جهةٍ لا أداة');
-  assert.equal(readFileSync(VERSION, 'utf8'), versionBefore, 'الفاحصُ عدّل version.json');
+  const root = mkdtempSync(join(tmpdir(), 'sool-num-ro-'));
+  try {
+    cpSync(join(ROOT, ARCH), join(root, ARCH));
+    cpSync(join(ROOT, VERSION), join(root, VERSION));
+    cpSync(join(ROOT, 'src'), join(root, 'src'), { recursive: true });
+    const archBefore = readFileSync(join(root, ARCH), 'utf8');
+    const versionBefore = readFileSync(join(root, VERSION), 'utf8');
+    const n = declaredTests(root);
+    runCheck(tallyFile(n + 11, n + 11, 0), root); // يسقط، ولا يُصحّح الرقمَ إلى ما قِيس
+    assert.equal(readFileSync(join(root, ARCH), 'utf8'), archBefore, 'الفاحصُ عدّل الجدول — والإصلاحُ فعلُ جهةٍ لا أداة');
+    assert.equal(readFileSync(join(root, VERSION), 'utf8'), versionBefore, 'الفاحصُ عدّل version.json');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

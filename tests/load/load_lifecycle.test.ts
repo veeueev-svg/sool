@@ -18,7 +18,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  bootstrapState, CommandChannel, FairScheduler, LoadDrill, LoadLedger,
+  bootstrapState, CommandChannel, effectiveThresholds, FairScheduler, LoadDrill, LoadLedger,
 } from '../../src/index';
 
 function fullState() {
@@ -83,9 +83,14 @@ test('قبول المرحلة 33: الحمل الأقصى المعلن يمرّ 
     assert.equal(r.scheduler.accepted + r.scheduler.refused, r.scheduler.probe);
 
     // 5) العتبات الزمنية المعلنة محترمة والحكم واحد لا مجزّأ
-    assert.equal(r.commands.p99Ms <= h.policy.channel_p99_ms, true,
-      `p99 المقيس ${r.commands.p99Ms} تجاوز العتبة ${h.policy.channel_p99_ms}`);
-    assert.equal(r.commands.maxMs <= h.policy.channel_max_ms, true);
+    // العتبةُ هي المعلنةُ مضروبةً في نسبةِ معايرةِ الآلة (W-2026-004 · ADR-0041): لم يُرفع رقمٌ
+    // في config/load.yaml، وإنما يُحكم على الآلة بقدرِ سرعتها المقيسة، وفوق السقفِ يُعلن خرقٌ.
+    const effective = effectiveThresholds(h.policy, r.calibration.scale);
+    assert.equal(r.calibration.scale >= 1, true, 'المعايرةُ تُرخي ولا تُشدَّد');
+    assert.equal(r.commands.p99Ms <= effective.p99Ms, true,
+      `p99 المقيس ${r.commands.p99Ms} تجاوز العتبة الفعّالة ${effective.p99Ms}`
+      + ` (المعلنة ${h.policy.channel_p99_ms} × نسبة المعايرة ${r.calibration.scale})`);
+    assert.equal(r.commands.maxMs <= effective.maxMs, true);
     assert.deepEqual(r.breaches, []);
     assert.equal(r.verdict, 'pass');
 

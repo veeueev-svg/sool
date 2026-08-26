@@ -25,6 +25,10 @@ const BASE: Overrides = {
   max_quota_overrun: 0,
   channel_p99_ms: 8,
   channel_max_ms: 60,
+  // مفتاحا المعايرة معلنان في المهاد كما في config/load.yaml (W-2026-004 · ADR-0041):
+  // العتبةُ تُعاير على عتاد المُشغّل، والمعايرةُ لا تُفترض صامتةً بل تُقرأ من التهيئة أو يُرفض الإقلاع.
+  channel_calibration_baseline_ms: 12,
+  channel_calibration_max_scale: 8,
   scheduler_queue_probe: 160,
   resource_name: '"compute_units"',
   quota_probe_amount: 10,
@@ -77,6 +81,22 @@ test('نافذة قياس صفرية مرفوضة', () => refusal({ window_secon
 test('فقد أوامر مُرخَّص مرفوض — الفقد لا يُساوَم عليه', () => refusal({ max_command_loss: 1 }, 'CONFIG_LOAD_LOSS_TOLERATED'));
 
 test('تجاوز حصة مُرخَّص مرفوض', () => refusal({ max_quota_overrun: 1 }, 'CONFIG_LOAD_OVERRUN_TOLERATED'));
+
+test('أساسُ معايرةٍ صفريٌ مرفوض — القسمةُ على صفرٍ ليست معايرة', () => refusal(
+  { channel_calibration_baseline_ms: 0 }, 'CONFIG_LOAD_POLICY_VALUE',
+));
+
+test('أساسُ معايرةٍ سالبٌ مرفوض', () => refusal(
+  { channel_calibration_baseline_ms: -12 }, 'CONFIG_LOAD_POLICY_VALUE',
+));
+
+test('سقفُ إرخاءٍ صفريٌ مرفوض', () => refusal(
+  { channel_calibration_max_scale: 0 }, 'CONFIG_LOAD_POLICY_VALUE',
+));
+
+test('سقفُ إرخاءٍ مفتوحٌ مرفوض — المعايرةُ لا تعطّل الحكم', () => refusal(
+  { channel_calibration_max_scale: 65 }, 'CONFIG_LOAD_CALIBRATION_SCALE_UNBOUNDED',
+));
 
 test('دفعة أكبر من الحمل المستمر مرفوضة', () => refusal({ burst_commands: 600 }, 'CONFIG_LOAD_BURST_OVER_SUSTAINED'));
 

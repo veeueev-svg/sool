@@ -30,6 +30,10 @@ export interface LoadConfig {
     max_quota_overrun: number;
     channel_p99_ms: number;
     channel_max_ms: number;
+    /** وحدةُ المعايرة المعلنة للآلة المرجع بالميلي ثانية (W-2026-004 · ADR-0041) */
+    channel_calibration_baseline_ms: number;
+    /** أقصى إرخاءٍ للعتبة على آلةٍ أبطأَ — وفوقه يُعلن الخرق لا يُبتلع */
+    channel_calibration_max_scale: number;
     scheduler_queue_probe: number;
     resource_name: string;
     quota_probe_amount: number;
@@ -55,6 +59,8 @@ export function loadLoad(configDir = resolveConfigDir()): LoadConfig {
     ['window_seconds', policy.window_seconds],
     ['channel_p99_ms', policy.channel_p99_ms],
     ['channel_max_ms', policy.channel_max_ms],
+    ['channel_calibration_baseline_ms', policy.channel_calibration_baseline_ms],
+    ['channel_calibration_max_scale', policy.channel_calibration_max_scale],
     ['scheduler_queue_probe', policy.scheduler_queue_probe],
     ['quota_probe_amount', policy.quota_probe_amount],
   ] as const) {
@@ -82,6 +88,13 @@ export function loadLoad(configDir = resolveConfigDir()): LoadConfig {
   }
   if (policy.channel_p99_ms > policy.channel_max_ms) {
     throw new SovereignViolation('عتبة p99 تتجاوز الحد الأقصى للقناة', 'CONFIG_LOAD_LATENCY_THRESHOLD_ORDER');
+  }
+  // المعايرةُ تُرخي العتبةَ ولا تُلغي الحكم: نسبةٌ تبلغ 64 ضعفًا تجعل العتبةَ زينةً (W-2026-004)
+  if (policy.channel_calibration_max_scale > 64) {
+    throw new SovereignViolation(
+      'أقصى إرخاءٍ للعتبة يعطّل الحكم — والمعايرةُ إرخاءٌ محدودٌ لا رفعُ سقف',
+      'CONFIG_LOAD_CALIBRATION_SCALE_UNBOUNDED',
+    );
   }
   if (policy.escalate_on_breach !== true) {
     throw new SovereignViolation(
