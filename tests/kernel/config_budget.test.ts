@@ -69,7 +69,11 @@ test('الميزانيّةُ ثلاثةُ سقوفٍ صالحةٍ ومجمَّد
 
 test('الإعلانُ القائمُ اليوم يمرّ بالميزانيّة، والقياسُ يُقرأ بأرقامه', () => {
   const census = guardDeclarationBudget(REAL_CONFIG);
-  assert.equal(census.files, 25);
+  // 24 لا 25 بعد البند T-137: `module_limits.yaml` إعلانُ أدواتٍ لا إعلانُ دولة فنُقل
+  // إلى `scripts/limits/` — والعددُ يُقرأ من المجلد لا يُحفظ في الذاكرة.
+  assert.equal(census.files, 24);
+  // وكلُّ ملفٍّ محصورٍ يُسمّى، فيُسأل عن قارئه في الإقلاع (T-137)
+  assert.equal(census.names.length, census.files);
   assert.ok(census.bytes > 0 && census.nodes > 0);
   assert.ok(census.largestBytes > 0 && census.largestFile.endsWith('.yaml'));
   // مدًى مُعلن: القياسُ اليومَ 73479B و804 عُقدٍ (phase-39-T130.txt). والتثبيتُ هنا مدًى

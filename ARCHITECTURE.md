@@ -40,8 +40,8 @@
 |---|---:|---:|---|---|
 | `src/` (الجذر) | 1 | 220 | `index.ts` — جذر التركيب: ينادي طبقات `composition/` بترتيبها الملزم، ولا يبني ولا يحمل سياسة | القيّم |
 | `src/composition/` | 11 | 1673 | طبقات البناء بحدود الاعتماد: `sovereignty` ← `population` ← `economy` ← `enterprises` ← `scale` ← `institutions` ← `resilience` ← `operations`، و`state.ts` (عقد الحالة) و`public_api.ts` (سطح التصدير) و`alignment_snapshot.ts` | القيّم |
-| `src/kernel/` | 4 | 522 | الأنواع السيادية، سجل الموارد، حدود النواة | القيّم |
-| `src/kernel/config/` | 33 | 5132 | مُحمِّل لكل نطاق: `royal_authority`, `quotas`, `regions`, `economy`, `external`, `contracts`, `enterprises`, `services`, `research`, `scale`, `recovery`, `load`, `chaos`, `termination`, `staging`, `production` (+ `production_policy`), `persistence`, `confinement`, `reproduction`, **`inference`** (الجلسة 35) و`yaml` و`paths`، و**ميزانيّةُ الإعلان**: `declaration_limits` (سقفُ كلِّ قائمة) و`declaration_budget` + `declaration_census` (سقفُ المجموع وبايتاتِ الملف — T-130) و**`closed_enums`** (سجلُّ التعدادات المغلقة وحرسُها — T-131) و**`declaration_reach`** (مدى الحصر ودفترُ ما حُمِّل وحرَسُ المجلد عند كلِّ قراءة — T-133) و**`declaration_work`** (عدّادُ عملِ الإقلاع وسقوفُه المجمَّدة — T-134) و**`declaration_memo`** (ذاكرةُ قراءةٍ واحدةٍ لكلِّ مسارٍ في الإقلاع — T-139) و**`declaration_dir_memo`** (بصمةُ قياسِ المجلد: مشيةٌ واحدةٌ لكلِّ مجلدٍ في الإقلاع — T-140، وتُعلن ما حفظته لتُعاد مراجعتُه في خاتمة الإقلاع — T-141) | القيّم |
+| `src/kernel/` | 4 | 526 | الأنواع السيادية، سجل الموارد، حدود النواة | القيّم |
+| `src/kernel/config/` | 36 | 5658 | مُحمِّل لكل نطاق: `royal_authority`, `quotas`, `regions`, `economy`, `external`, `contracts`, `enterprises`, `services`, `research`, `scale`, `recovery`, `load`, `chaos`, `termination`, `staging`, `production` (+ `production_policy`), `persistence`, `confinement`, `reproduction`, **`inference`** (الجلسة 35) و`yaml` و`paths`، و**ميزانيّةُ الإعلان**: `declaration_limits` (سقفُ كلِّ قائمة) و`declaration_budget` + `declaration_census` (سقفُ المجموع وبايتاتِ الملف — T-130) و**`closed_enums`** (سجلُّ التعدادات المغلقة وحرسُها — T-131) و**`declaration_reach`** (مدى الحصر ودفترُ ما حُمِّل وحرَسُ المجلد عند كلِّ قراءة — T-133) و**`declaration_work`** (عدّادُ عملِ الإقلاع وسقوفُه المجمَّدة — T-134) و**`declaration_memo`** (ذاكرةُ قراءةٍ واحدةٍ لكلِّ مسارٍ في الإقلاع — T-139) و**`declaration_dir_memo`** (بصمةُ قياسِ المجلد: مشيةٌ واحدةٌ لكلِّ مجلدٍ في الإقلاع — T-140، وتُعلن ما حفظته لتُعاد مراجعتُه في خاتمة الإقلاع — T-141) و**`policies`** و**`roles`** (السياساتُ الحاكمةُ وفصلُ الصلاحيات: إعلانانِ كانا لا يقرؤهما أحدٌ فصارا يُقرآن ويُنفَذان — T-137) و**`declaration_readers`** (سجلُّ قارئٍ لكلِّ ملفِّ إعلانٍ وحرَسُه في الإقلاع — T-137) | القيّم |
 | `src/audit/` | 3 | 384 | السلسلة غير القابلة للمحو ومخزنها | ديوان التدقيق |
 | `src/identity/` | 4 | 265 | جذر الثقة، سلطة الشهادات، سجل الهويات | حرس التاج |
 | `src/crown/` | 7 | 977 | البوابة، النقض، النبض، الحرس، قناة الأوامر | الديوان الملكي |
@@ -127,7 +127,7 @@
 في وقتٍ واحد، ويخفي حدوده عن المراجع.
 
 - **السقف:** 400 سطر للملف الواحد في `src/` و`tests/` و`scripts/`، معلنٌ في
-  [`config/module_limits.yaml`](config/module_limits.yaml) لا في الشفرة.
+  [`scripts/limits/module_limits.yaml`](scripts/limits/module_limits.yaml) لا في الشفرة.
 - **الإنفاذ:** `npm run check:size` (وهو خطوةٌ في `npm run verify` وفي بوابة CI). أربع حالات
   فشلٍ مقيسة: تجاوزٌ بلا إعلان، ونموّ دَينٍ معلن، واستثناءٌ لم يعد له مبرّر، وملف حدودٍ ناقص.
 - **الاستثناء دَينٌ لا إعفاء:** يُسجَّل بمسارٍ وسقفٍ خاصّ ورقم بندٍ في `PROGRESS.md` §2،

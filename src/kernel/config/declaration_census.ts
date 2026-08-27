@@ -20,10 +20,17 @@
  *      تحميلٍ** فلا تُبنى دولةٌ نصفَ بناء؛ و{@link ./declaration_reach} يحرس **مجموعَ ما
  *      حُمِّل فعلًا عند كلِّ قراءة** فلا يهرب من نادى محمّلًا مفردًا. والأوّلُ يرى ما لا
  *      يُحمَّل، والثاني يرى ما يُحمَّل من خارج المجلد — فما يراه أحدُهما لا يراه الآخر.
+ *
+ *   5) **يُحصى ثمّ يُسأل: لمن هذا الملف؟** (T-137): كان الحصرُ يعدُّ ما لا يقرؤه أحدٌ ويسكت —
+ *      فمرَّت ثلاثةُ ملفّاتٍ (6476B) تُضيِّق السقفَ بلا مقابلٍ في السلوك. فصار الحصرُ يُسمّي
+ *      ملفّاتِه ({@link DeclarationCensus.names}) ويُمرِّرها إلى {@link ./declaration_readers}:
+ *      ملفٌّ بلا قارئٍ مسجَّلٍ يُسقط الإقلاعَ. والحصرُ ما زال **لا يبني دولةً** (الثابت 2)؛
+ *      وقارئا السياساتِ والأدوارِ يُناديان هنا لأنّهما يعلوان الأبوابَ كلَّها فلا نطاقَ يملكهما.
  */
 import { readFileSync, statSync } from 'node:fs';
 import { relative } from 'node:path';
 import { guardDeclarationTotals } from './declaration_budget';
+import { guardDeclarationReaders } from './declaration_readers';
 import { countNodes, walkDeclarationFiles } from './declaration_reach';
 import { memoizeDeclaration, memoizedDeclaration } from './declaration_memo';
 import { noteBootWork } from './declaration_work';
@@ -41,6 +48,8 @@ export type DeclarationCensus = {
   readonly largestFile: string;
   /** مجموعُ العُقد المعلنة: كلُّ مفتاحٍ في خريطةٍ وكلُّ عنصرٍ في قائمة */
   readonly nodes: number;
+  /** أسماءُ الملفّات المحصورةِ نسبةً إلى المجلد — تُقرأ فيُسأل كلُّ ملفٍّ عن قارئه (الثابت 5) */
+  readonly names: readonly string[];
 };
 
 /**
@@ -50,6 +59,7 @@ export type DeclarationCensus = {
  */
 export function censusDeclaration(configDir: string): DeclarationCensus {
   const paths = walkDeclarationFiles(configDir);
+  const names: string[] = [];
   let bytes = 0;
   let nodes = 0;
   let largestBytes = 0;
@@ -58,6 +68,7 @@ export function censusDeclaration(configDir: string): DeclarationCensus {
     const stat = statSync(path, { bigint: true });
     const size = Number(stat.size);
     bytes += size;
+    names.push(relative(configDir, path));
     if (size > largestBytes) {
       largestBytes = size;
       largestFile = relative(configDir, path);
@@ -79,7 +90,7 @@ export function censusDeclaration(configDir: string): DeclarationCensus {
     noteBootWork('node_visits', fileNodes);
     memoizeDeclaration(path, size, stat.mtimeNs, doc, fileNodes);
   }
-  return { files: paths.length, bytes, largestBytes, largestFile, nodes };
+  return { files: paths.length, bytes, largestBytes, largestFile, nodes, names };
 }
 
 /**
@@ -91,5 +102,8 @@ export function censusDeclaration(configDir: string): DeclarationCensus {
 export function guardDeclarationBudget(configDir: string): DeclarationCensus {
   const census = censusDeclaration(configDir);
   guardDeclarationTotals(census.bytes, census.nodes);
+  // T-137: ما يُحصى يُقرأ. والترتيبُ مقصود — يُحرس المجموعُ أوّلًا (رفضٌ أرخصُ وأخصّ)
+  // ثمّ يُسأل كلُّ ملفٍّ عن قارئه ويُنادى قارئا السياساتِ والأدوار.
+  guardDeclarationReaders(configDir, census.names);
   return census;
 }

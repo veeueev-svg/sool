@@ -38,6 +38,8 @@ import {
   STAGING_KNOWN_WATCHES,
 } from './staging';
 import { STOP_KNOWN_PROBES } from './termination';
+import { POLICIES_KNOWN_KEYS } from './policies';
+import { ROLES_KNOWN_NAMES } from './roles';
 
 /** موضعُ استعمالٍ لتعدادٍ مغلق: مفتاحٌ في ملفِّ تهيئةٍ قيمُه محدودةٌ بأعضاء التعداد */
 export interface ClosedEnumUse {
@@ -56,6 +58,8 @@ export interface ClosedEnumBinding {
 
 /**
  * التعداداتُ المغلقةُ الأحدَ عشرَ التي تحدُّ قيمَ خمسةَ عشرَ مفتاحًا في التهيئة.
+ * وتعداداتُ **أسماءِ المفاتيح** جدولٌ ثانٍ ({@link CLOSED_MAP_KEY_ENUMS} — T-137) لأنّها
+ * تُحرس بالتمام لا بالطول؛ وفاحصُ التعدادات يرى الجدولَينِ معًا — فلا تعدادَ يفلت.
  * والسبعةَ عشرَ في T-129 هي هذه ثلاثةَ عشرَ صفًّا وأربعةٌ لا يحدُّها تعدادٌ بل سقفٌ
  * أو شرطٌ آخر: `regions.required` و`operations[].required_sources`
  * و`modes[].required_sources` (محدودةٌ بسقوفِ `regions` و`service_sources`)
@@ -139,6 +143,86 @@ export const CLOSED_ENUMS: readonly ClosedEnumBinding[] = Object.freeze([
     uses: [{ file: 'termination.yaml', key: 'policy.probes' }],
   },
 ]);
+
+/**
+ * موضعُ استعمالٍ لتعدادٍ يحدُّ **أسماءَ مفاتيحِ خريطةٍ** لا قيمَ قائمة (T-137).
+ * والفرقُ ليس لفظيًّا بل في ما يُحرس: قيمُ القائمة تُحرس بالعضويّةِ **والطول**، وأسماءُ المفاتيح
+ * تُحرس بالعضويّةِ **والتمام** (لا مجهولٌ ولا ناقص) — فتكرارُ المفتاح ممتنعٌ أصلًا في
+ * الخريطة، وحالاتُ الرفض غيرُ حالاتِ القوائم. فلو أُدخِلا في {@link CLOSED_ENUMS} لادَّعَيا عقدًا
+ * لا يُنفَذ عليهما — ودعوى حرسٍ لا يُنفَذ أسوأُ من غيابِه.
+ */
+export interface ClosedMapKeyUse {
+  readonly file: string;
+  /** الخريطةُ التي تُحدُّ أسماءُ مفاتيحِها */
+  readonly map: string;
+  /** المحمّلُ الذي يُنفِذ الغلقَ — يُراجَع بالقراءة لا بالثقة */
+  readonly reader: string;
+}
+
+/** تعدادٌ مغلقٌ لأسماءِ مفاتيحٍ: اسمُه ومرجعُه وعددُ أعضائه المُثبَت ومواضعُه */
+export interface ClosedMapKeyBinding {
+  readonly name: string;
+  readonly values: readonly string[];
+  readonly members: number;
+  readonly uses: readonly ClosedMapKeyUse[];
+}
+
+/**
+ * التعدادانِ المغلقانِ لأسماءِ المفاتيح (T-137): سياساتُ الدولةِ وأدوارُها.
+ * وسُجِّلا هنا ولم يُدخَلا جدولَ القوائم — فالحاجزُ يُوسَّع ليرى ما لم يكن يراه،
+ * ولا يُتهرَّب منه بتسميةٍ تُخفي التعدادَ عن فاحصِه.
+ */
+export const CLOSED_MAP_KEY_ENUMS: readonly ClosedMapKeyBinding[] = Object.freeze([
+  {
+    name: 'POLICIES_KNOWN_KEYS',
+    values: POLICIES_KNOWN_KEYS,
+    members: 8,
+    uses: [{ file: 'policies.yaml', map: 'policies', reader: 'loadPolicies' }],
+  },
+  {
+    name: 'ROLES_KNOWN_NAMES',
+    values: ROLES_KNOWN_NAMES,
+    members: 6,
+    uses: [{ file: 'roles.yaml', map: 'roles', reader: 'loadRoles' }],
+  },
+]);
+
+/**
+ * حرسُ تعداداتِ أسماءِ المفاتيح — الأسئلةُ الثلاثةُ نفسُها: فارغٌ؟ غيرُ مجمَّد؟ عددٌ انحرف؟
+ * @param table جدولُ التعدادات — يُمرَّر لتُجرَّب حالاتُ الفشل بجدولٍ مصنوع (الثابت 3)
+ * @returns عددَ التعدادات التي مرّت
+ * @throws {SovereignViolation} `CONFIG_CLOSED_ENUM_EMPTY` · `CONFIG_CLOSED_ENUM_NOT_FROZEN`
+ *   · `CONFIG_CLOSED_ENUM_CENSUS_DRIFT`
+ */
+export function guardClosedMapKeyEnums(
+  table: readonly ClosedMapKeyBinding[] = CLOSED_MAP_KEY_ENUMS,
+): number {
+  for (const binding of table) {
+    if (binding.values.length === 0) {
+      throw new SovereignViolation(
+        `تعدادٌ مغلقٌ فارغ: ${binding.name} — حرسٌ يرفض كلَّ شيءٍ تعطيلٌ لا حماية`,
+        'CONFIG_CLOSED_ENUM_EMPTY',
+      );
+    }
+    if (!Object.isFrozen(binding.values)) {
+      throw new SovereignViolation(
+        `تعدادٌ مغلقٌ غيرُ مجمَّدٍ في التشغيل: ${binding.name} — `
+        + 'الغلقُ في الأنواع وحدها لا يمنع إضافةَ عضوٍ وقتَ التشغيل',
+        'CONFIG_CLOSED_ENUM_NOT_FROZEN',
+      );
+    }
+    if (binding.values.length !== binding.members) {
+      throw new SovereignViolation(
+        `تعدادٌ مغلقٌ تغيّر عددُ أعضائه: ${binding.name} — `
+        + `المُثبَت ${binding.members} والمعلن ${binding.values.length}. `
+        + `وهو يحدُّ أسماءَ مفاتيحِ ${binding.uses.length} خريطةٍ في التهيئة، `
+        + 'فإن كان الفتحُ مقصودًا فأثبِت العددَ الجديد في src/kernel/config/closed_enums.ts',
+        'CONFIG_CLOSED_ENUM_CENSUS_DRIFT',
+      );
+    }
+  }
+  return table.length;
+}
 
 /** عددُ المفاتيح التي تحدُّها هذه التعدادات — يُقاس من الجدول لا يُكتب رقمًا */
 export function closedEnumUseCount(table: readonly ClosedEnumBinding[] = CLOSED_ENUMS): number {

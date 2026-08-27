@@ -30,7 +30,7 @@ jobs:
         run: npm test
       - name: التحقق من سلامة سجل التدقيق
         run: node dist/scripts/verify_audit_chain.js
-      - name: حدود حجم الوحدة (يفشل إذا تجاوز ملفٌ سقفه المعلن في config/module_limits.yaml)
+      - name: حدود حجم الوحدة (يفشل إذا تجاوز ملفٌ سقفه المعلن في scripts/limits/module_limits.yaml)
         run: bash scripts/check_module_size.sh
       - name: تطابق حالات معايير القبول مع أحكام التدقيق (T-116)
         run: bash scripts/check_criteria_status.sh
@@ -38,6 +38,8 @@ jobs:
         run: bash scripts/check_absolute_paths.sh
       - name: حاجزُ الإعلان — يمنع دعوى 100% وثمّ فجوةٌ أو بندٌ مفتوح (T-127)
         run: bash scripts/check_declaration.sh
+      - name: حاجزُ قُرّاءِ الإعلان — لا ملفَّ تهيئةٍ بلا قارئٍ مسجَّل ولا قارئَ بلا ملف (T-137)
+        run: bash scripts/check_config_readers.sh
       - name: فاحصُ الأرقام المنقولة — جدولُ المجلدات وعددُ الاختبارات يُولَّدان من مصدرهما (T-128)
         run: bash scripts/check_generated_numbers.sh
       - name: مدقّق التوثيق (يفشل إذا تغيّر src بلا PROGRESS.md وتقرير اختبار)

@@ -30,7 +30,7 @@
  *   6) **الإعلانُ والحكمُ خرجا، والقياسُ بقي** (الجلسة 42 · T-113): الأشكالُ في
  *      `load_drill_types.ts`، وحصرُ الخرق في المقيس دوالَّ **نقيّةً** في `load_breach.ts`؛
  *      وبقي هنا ما **يفعل**: يستأجر حصةً ويُدرج مهمّةً ويكتب قيدَ تدقيق. والسقّاطةُ تقتضي
- *      أنّ سقفَ هذا الملف لا يُرفع بعد اليوم — والصفُّ محذوفٌ من `config/module_limits.yaml`.
+ *      أنّ سقفَ هذا الملف لا يُرفع بعد اليوم — والصفُّ محذوفٌ من `scripts/limits/module_limits.yaml`.
  */
 import { EntityId, SignedRoyalCommand } from '../kernel/types';
 import { CommandChannel, CommandExecutor } from '../crown/command_channel';

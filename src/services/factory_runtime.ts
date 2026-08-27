@@ -39,7 +39,7 @@
  *      فصارت الشهادةُ في ملفٍ لا يستورد سجلَّ التدقيق أصلًا: من أراد أن يُلين حكمًا
  *      ويكتب القيدَ به في نفَسٍ واحدٍ لم يجد الاثنَين في موضعٍ واحد.
  *  13) **السقّاطة**: سقفُ هذا الملف لا يُرفع بعد اليوم — وصفُّه محذوفٌ من
- *      `config/module_limits.yaml`، ولم يبقَ في الاستثناءات صفٌّ واحد.
+ *      `scripts/limits/module_limits.yaml`، ولم يبقَ في الاستثناءات صفٌّ واحد.
  */
 import { EntityId } from '../kernel/types';
 import { DeclaredFacilityKind, ECONOMY_MINISTRY } from './company_runtime';

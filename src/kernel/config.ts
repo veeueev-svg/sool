@@ -21,6 +21,10 @@ export * from './config/declaration_memo';
 export * from './config/declaration_dir_memo';
 export * from './config/declaration_work';
 export * from './config/declaration_census';
+// T-137: سجلُّ قُرّاءِ الإعلان ومحمّلا السياساتِ والأدوار — إعلانٌ يُقرأ لا يُوصف
+export * from './config/declaration_readers';
+export * from './config/policies';
+export * from './config/roles';
 export * from './config/royal_authority';
 export * from './config/quotas';
 export * from './config/regions';

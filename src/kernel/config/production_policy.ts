@@ -5,7 +5,7 @@
  * حالات الفشل: لا شيء هنا — هذه هي المقاييس التي يُقاس عليها في `production.ts`
  *
  * فُصلت عن المُحمِّل في ورشة الهيكلة (0.24.0) لأن الملف تجاوز سقف 400 سطر
- * المعلن في `config/module_limits.yaml`. المفردات هنا والإنفاذ هناك.
+ * المعلن في `scripts/limits/module_limits.yaml`. المفردات هنا والإنفاذ هناك.
  */
 import { IncidentKind, STAGING_KNOWN_INCIDENTS, STAGING_MUST_BE_CRITICAL, STAGING_OPERATORS, WatchKind } from './staging';
 

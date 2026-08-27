@@ -5,7 +5,7 @@
   "gate": "scripts/check_work.mjs",
   "history": "docs/work/WORK_LOG.md",
   "id_pattern": "W-YYYY-NNN",
-  "updated_at": "2026-08-26",
+  "updated_at": "2026-08-27",
   "statuses": [
     "PROPOSED",
     "CLAIMED",
@@ -25,11 +25,11 @@
     {
       "id": "W-2026-002",
       "title": "ثلاثةُ ملفاتِ تهيئةٍ تُحصى في السقف ولا يقرؤها محمّل (T-137)",
-      "owner": "غير مستلَم",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 59)",
       "reviewer": "القيّم على المستودع",
       "area": "النواة والتهيئة",
       "phase": 40,
-      "status": "PROPOSED",
+      "status": "REVIEW",
       "progress_items": [
         "T-137"
       ],
@@ -40,22 +40,68 @@
         "src/kernel/config/",
         "config/module_limits.yaml",
         "config/policies.yaml",
-        "config/roles.yaml"
+        "config/roles.yaml",
+        "scripts/limits/module_limits.yaml",
+        "scripts/check_module_size.sh",
+        "scripts/check_config_readers.sh",
+        "src/federation/region_registry.ts",
+        "src/law/courts.ts",
+        "src/law/case_report.ts",
+        "src/load/load_drill.ts",
+        "src/external/account_view.ts",
+        "src/services/human_research.ts",
+        "src/services/factory_runtime.ts",
+        "src/services/research/README.md",
+        "src/services/research/research_types.ts",
+        "tests/kernel/config_policies.test.ts",
+        "tests/kernel/config_roles.test.ts",
+        "tests/kernel/declaration_readers.test.ts",
+        "tests/governance/config_readers_gate.test.ts",
+        "package.json",
+        ".github/workflows/ci.yml",
+        "ARCHITECTURE.md",
+        "CONTRIBUTING.md",
+        "PROGRESS.md",
+        "CHANGELOG.md",
+        "version.json",
+        "docs/decisions/ADR-0042-declaration-readers.md",
+        "docs/test-reports/W-2026-002-declaration-readers.md",
+        "src/kernel/config.ts",
+        "tests/kernel/config_budget.test.ts",
+        "scripts/boot_work_meter.ts",
+        "docs/work/orders/W-2026-002.md"
       ],
       "excluded": [
-        "src/composition/sovereignty.ts — محجوزٌ لبند T-138 (W-2026-003) فلا يُلمس من هنا"
+        "src/composition/sovereignty.ts وdeploy/ — محجوزةٌ لبند T-138 (W-2026-003) فلا تُلمس من هنا. وأثرُ ذلك مُعلن: ربطُ بوابةِ التاج بإعلانِ config/policies.yaml يقع في جذرِ التركيب، فبقي على مالكِ W-2026-003 — وسدَّ هذا البندُ فراغَه بحاجزِ انحرافٍ لا بربطٍ صامت (انظر §4).",
+        "src/crown/crown_gateway.ts — سياسةُ البوابة تُمرَّر إليها من جذرِ التركيب لا تُقرأ من داخلها (RULE-005)، فلا يُعدَّل من هنا ولا يُحجز.",
+        "ROADMAP.md وCOMPLETION_CRITERIA.md — هذا بندُ دَينٍ في المرحلة 40 لا بندُ معيارٍ، ولا يرفع نسبةً ولا يقلب ⚠️ إلى ✅.",
+        "بقيّةُ ملفّات config/ التي يقرؤها محمّل: لا يُغيَّر إعلانُها."
       ],
       "acceptance": [
-        "أحدُ الخيارَين معلنًا: قارئٌ في الدولة لكلِّ ملفِّ تهيئةٍ محسوبٍ في السقف، أو إخراجُه إلى موضعٍ يُعلن أنّه إعلانُ أدواتٍ لا إعلانُ دولة",
+        "أحدُ الخيارَين معلنًا لكلِّ ملفٍّ من الثلاثة: قارئٌ في الدولة لكلِّ ملفِّ تهيئةٍ محسوبٍ في السقف، أو إخراجُه إلى موضعٍ يُعلن أنّه إعلانُ أدواتٍ لا إعلانُ دولة",
         "الميزانيّةُ المقيسة بعد التغيير مكتوبةٌ بالبايت مقابل 6476B المقيسة في الجلسة 51",
-        "خطُّ الأساس أخضرُ بالعدد نفسه أو أكثر"
+        "بوابةُ الحجم تتبع الملفَّ المنقول: scripts/check_module_size.sh يقرأ سقفَه من موضعه الجديد ولا يصير أعمى",
+        "حاجزٌ يمنع رجوعَ العلّة: فحصٌ في npm run verify وفي CI يرفض ملفَّ إعلانٍ بلا قارئٍ مسجَّل — فما لا حاجزَ له ليس قاعدةً بل نصيحة",
+        "خطُّ الأساس أخضرُ بالعدد نفسه أو أكثر (المقيسُ قبل العمل: 2027/2027)"
       ],
       "evidence": [
-        "يُملأ عند الاستلام: خرج npm test · تقريرُ اختبارٍ في docs/test-reports/"
+        "مقيسٌ قبل العمل في الجلسة 59: npm test ⇒ # tests 2027 · # pass 2027 · # fail 0",
+        "مقيسٌ قبل العمل في الجلسة 59: مسحُ مجلد config كلِّه (25 ملفًّا) مقابل كلِّ إشارةٍ في src/ — policies.yaml وroles.yaml لا يقرؤهما أيُّ ملفٍّ في src/ ألبتّة، وmodule_limits.yaml لا يقرؤه إلّا scripts/check_module_size.sh بأداةٍ لا بمحمّل؛ والمجموعُ 6476B يدخل ميزانيّةَ الإعلان",
+        "بعد العمل: npm test ⇒ # tests 2068 · # pass 2068 · # fail 0 · # skipped 0 (EXIT=0) — زيادةٌ 41 اختبارًا كلُّها أبوابُ رفضٍ مقيسةٌ برمزها",
+        "بعد العمل: ملفّاتُ config 25 ⇒ 24 · بايتاتُ حصرِ الإعلان 76749 ⇒ 69168 (−7581B) · ملفّاتٌ بلا قارئ 3 (6476B) ⇒ صفر",
+        "بعد العمل: npm run check:readers ⇒ «✓ 24 ملفَّ إعلانٍ و24 قارئًا مسجَّلًا يتقابلان حرفًا» في الاتّجاهَين",
+        "بعد العمل: npm run check:closed-enums ⇒ 13 تعدادًا مُسجَّلًا ومجمَّدًا (كان 11) بعد توسيع الحاجز بجدولٍ ثانٍ CLOSED_MAP_KEY_ENUMS وحرَسِه — ولم يُخفَ تعدادٌ عن فاحصِه بتسمية",
+        "بعد العمل: البواباتُ الاثنتا عشرةَ في verify خضراءُ كلُّها — build · tests · verify_audit_chain · check:size · check:criteria · check:paths · check:declaration · check:readers · check:numbers · check:closed-enums · check:boot-work · check:confinement · check:work",
+        "سقطت بوابتان في الطريق وصُحّح مصدرُهما لا مخرَجُهما: check:closed-enums (تعدادان غيرُ مُسجَّلَين) و check:numbers (صفُّ src/kernel/config/ في ARCHITECTURE.md: 36|5560 مكتوبًا و36|5658 مقيسًا)",
+        "انحرافٌ يُعلن: عملُ الإقلاع مختلطُ الاتّجاه — file_reads 27⇒26 و bytes_read 76749⇒72438 نزولًا، و dir_walks 6⇒11 و dir_entries 59⇒90 صعودًا؛ فلم تُشدَّد سقوفٌ ولم يُقَل «خفّ الإقلاع». وكلُّ عدّادٍ تحت سقفه (check:boot-work أخضر)",
+        "دَينٌ مُسمًّى لم يُنفَّذ: الوصلُ الكاملُ لـpolicies.yaml بـCrownGateway موضعُه src/composition/sovereignty.ts المحجوزُ لـW-2026-003 (RULE-012) فلم يُلمس؛ والقائمُ مقامَه اختبارُ منعِ تحريفٍ يقرأ DEFAULT_POLICY قراءةً ويطابقه بـloadPolicies() — وهو أضعفُ ولا يُقدَّم بديلًا",
+        "دَينٌ مُسمًّى: guardClosedMapKeyEnums يُنادى من declaration_readers.ts لا من جذر التركيب لعين السبب — دَينُ موضعٍ لا دَينُ إنفاذ، مكتوبٌ في رأس الوحدة",
+        "التقرير: docs/test-reports/W-2026-002-declaration-readers.md · القرار: docs/decisions/ADR-0042-declaration-readers.md · الإصدار: 0.57.0 (والنسبةُ 97.0% لم تُرفع)"
       ],
-      "next_step": "جهةٌ تستلمه فتنقله إلى CLAIMED وتكتب اسمها في owner وتملأ عقده",
+      "verification": "شُغِّل في الجلسة 59 على Intel Xeon @2.90GHz · 2 vCPU · Node v20.20.1 يوم 2026-08-27: npm run build (بلا خطأ) ثمّ node --test --test-reporter=tap dist/tests/ ⇒ # tests 2068 · # pass 2068 · # fail 0 · # skipped 0 · EXIT=0 (الخرجُ الخامُ محفوظٌ في جلسة العمل باسم full4.tap)؛ ثمّ البواباتُ واحدةً واحدةً: verify_audit_chain · check:size · check:criteria · check:paths · check:declaration · check:readers (24↔24) · check:numbers (25 صفًّا مطابقًا · tests=2068) · check:closed-enums (13 تعدادًا) · check:boot-work · check:confinement · check:work — كلُّها الرمزَ 0. وسقطت في الطريق check:closed-enums وcheck:numbers فصُحّح مصدرُهما لا مخرَجُهما. وبقي على المراجع: التحقّقُ من خضرةِ تشغيلِ CI على الالتزام المدفوع، فبوابةُ المستودع هي الشاهدُ الذي لا يملكه المنفِّذ.",
+      "next_step": "العملُ منتهٍ من جهة المنفِّذ وحالُه REVIEW: يُراجعه القيّم على المستودع ولا يُغلقه منفِّذُه (RULE-004). وأسئلةُ المراجعة الأربعةُ مكتوبةٌ في §7 من التقرير: أفي DECLARATION_READERS صفٌّ يسمّي محمّلًا لا يُنادى؟ أنُقل module_limits.yaml لأنّه إعلانُ أدواتٍ حقًّا أم هروبًا من الميزانيّة؟ أوُسِّع فاحصُ التعدادات أم أُخفي التعدادان عنه؟ أبقيت السقوفُ كما هي بسببٍ مكتوبٍ أم بسهو؟ فإن قُبل نُقل البندُ إلى docs/work/WORK_LOG.md بسطرِ إغلاقه، وإن رُدَّ فالقرارُ للمراجع لا للمنفّذ. والدَّينُ المسمّى (الوصلُ في sovereignty.ts) موضعُه W-2026-003.",
       "created_at": "2026-08-25",
-      "updated_at": "2026-08-25"
+      "updated_at": "2026-08-27"
     },
     {
       "id": "W-2026-003",
@@ -97,7 +143,7 @@
       "reviewer": "القيّم على المستودع",
       "area": "الضغط والقياس",
       "phase": 33,
-      "status": "IN_PROGRESS",
+      "status": "BLOCKED",
       "progress_items": [
         "لا ينطبق"
       ],
@@ -105,29 +151,14 @@
         "W-2026-001"
       ],
       "scope": [
-        "config/load.yaml",
-        "src/load/",
-        "src/kernel/config/load.ts",
-        "src/composition/public_api.ts",
-        "tests/load/",
-        "tests/governance/criteria_status.test.ts",
-        "tests/governance/generated_numbers.test.ts",
-        "tests/governance/declaration_gate.test.ts",
-        "scripts/check_criteria_status.sh",
-        "scripts/check_generated_numbers.sh",
-        ".github/workflows/ci.yml",
-        "ARCHITECTURE.md",
-        "version.json",
-        "PROGRESS.md",
-        "CHANGELOG.md",
-        "ROADMAP.md",
         "docs/test-reports/W-2026-004-load-thresholds.md",
-        "docs/decisions/ADR-0041-load-threshold-calibration.md"
+        "docs/work/orders/W-2026-004.md"
       ],
       "excluded": [
         "scripts/check_work.mjs وميثاقُ docs/work/WORK_CONTROL.md — ليس هذا بندَ حكمٍ بل بندُ قياس",
         "بقيّةُ ملفات config/ التي لا تخصّ الضغط",
-        "COMPLETION_CRITERIA.md — هذا البندُ يمنع الاختباراتَ من الكتابة فيه ولا يعدّل ما فيه"
+        "COMPLETION_CRITERIA.md — هذا البندُ يمنع الاختباراتَ من الكتابة فيه ولا يعدّل ما فيه",
+        "كلُّ مسارِ شفرةٍ وتوثيقٍ كان محجوزًا له حتّى الجلسة 58 (config/load.yaml · src/load/ · src/kernel/config/load.ts · src/composition/public_api.ts · tests/load/ · ثلاثةُ اختباراتِ tests/governance/ · scripts/check_criteria_status.sh · scripts/check_generated_numbers.sh · .github/workflows/ci.yml · ARCHITECTURE.md · version.json · PROGRESS.md · CHANGELOG.md · ROADMAP.md · docs/decisions/ADR-0041-load-threshold-calibration.md) — أُفرج عنه في الجلسة 59 لأنّ عملَه تمّ ودُفع، والباقي عدٌّ لا تعديل. ومن أراد تعديلَه فليحجزه ببندٍ جديد."
       ],
       "acceptance": [
         "سببُ السقوط مقيسٌ ومكتوب: أيُّ خرقٍ (breach) وقع، وبأيّ زمنٍ مقيسٍ مقابل channel_p99_ms=8 وchannel_max_ms=60",
@@ -144,11 +175,13 @@
         "الجلسة 58 — القرارُ المعلن (الخيار أ): معايرةٌ نسبيّةٌ في src/load/load_calibration.ts بأساسٍ معلنٍ channel_calibration_baseline_ms=12 وسقفِ إرخاءٍ channel_calibration_max_scale=8، وفوقَه خرقٌ معلنٌ CALIBRATION_OVER_MAX_SCALE لا مرورٌ صامت",
         "الجلسة 58 — خطُّ الأساس: npm test ⇒ # tests 2027 · # pass 2027 · # fail 0 (كان 2016/2016 قبل البند: +11)",
         "الجلسة 58 — التشغيلةُ الأولى بعد الدفع مقيسةٌ خضراء: run 32963388882 (الالتزامة 90f4b0f) conclusion=success، وخطواتُها الأربعَ عشرةَ كلُّها success ومنها الخطوة 14 «بوابةُ ضبط العمل» — أي أنّ الحاجزَ شُغِّل ولم يُتخطَّ",
-      "يبقى: خضرةُ عشرِ تشغيلاتٍ متتاليةٍ في CI مع تشغيلِ الخطوة 14 فعلًا — المقيسُ حتّى الآن 1 من 10 · تقريرٌ في docs/test-reports/W-2026-004-load-thresholds.md"
+        "الجلسة 59 — المقيسُ من واجهة GitHub: run 64 (25f8c95) success وrun 63 (90f4b0f) success، وقبلَهما runs 62·61·60·59 failure — فالمتتالياتُ الخضراءُ 2 من 10.",
+        "يبقى: ثمانِ تشغيلاتٍ خضراءَ متتاليةٍ أخرى بأرقامها في docs/test-reports/W-2026-004-load-thresholds.md"
       ],
-      "next_step": "دُفع في الجلسة 58 (90f4b0f) والتشغيلةُ الأولى خضراءُ بخطواتِها الأربعَ عشرة — يبقى إحصاءُ تسعِ تشغيلاتٍ خضراءَ متتاليةٍ أخرى بأرقامها في التقرير، ثمّ يُنقل البندُ إلى docs/work/WORK_LOG.md بسطرِ إغلاقه",
+      "next_step": "لا عملَ شفرةٍ باقيًا. تُحصى التشغيلاتُ الخضراءُ المتتاليةُ بأرقامها في التقرير حتّى تبلغ عشرًا (المقيسُ 2)، ثمّ يُنقل البندُ إلى docs/work/WORK_LOG.md بسطرِ إغلاقه. وحتّى ذلك حالُه BLOCKED بعائقٍ مسمّى لا IN_PROGRESS بعملٍ لا يجري.",
       "created_at": "2026-08-25",
-      "updated_at": "2026-08-26"
+      "updated_at": "2026-08-27",
+      "blocked_reason": "العائقُ زمنٌ لا شفرة: القبولُ يشترط خضرةَ عشرِ تشغيلاتٍ متتاليةٍ في CI مع تشغيلِ الخطوة 14 فعلًا، والمقيسُ حتّى 2026-08-27 تشغيلتان متتاليتان خضراء (run 64 · 25f8c95 وrun 63 · 90f4b0f) — فيبقى إحصاءُ ثمانٍ. ولا سطرَ شفرةٍ ينقص البندَ، فحجزُ الشفرة أُفرج عنه ولم يبقَ محجوزًا إلّا تقريرُه وعقدُه (انظر §3 من عقده)."
     }
   ]
 }
