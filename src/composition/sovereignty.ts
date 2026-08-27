@@ -9,6 +9,7 @@
  * أُضيف ولا حُذف ولا أُعيد ترتيبه. الترتيب داخل الوحدة مُلزم كما كان في الجذر.
  */
 import type { BootstrapOptions } from './state';
+import { guardDeployDeclaration } from './deploy_declaration';
 import {
   guardDeclarationBudget, DECLARATION_REACH, resetBootWork, resetDeclarationMemo, resetDirectoryMeasures,
   loadPersistence, loadQuotas, loadRegions, loadEconomy, loadExternal, loadContracts, loadEnterprises, loadServices, loadResearch, loadReproduction, loadInference, loadIntent, loadChannels, loadScale, loadRecovery, loadRoyalAuthority,
@@ -49,6 +50,14 @@ export function composeSovereignty(
   //      مرّةً، ثمّ يُعاد استخدامُ القياسِ ببصمةٍ تُفحَص — فيبقى عدُّ العمل ثابتًا بين إقلاعَين.
   resetDirectoryMeasures();
   const declarationCensus = guardDeclarationBudget(configDir);
+  // -1هـ) وإعلانُ النشر يُحصى معه **قبل البناء** (البند T-138): كان `deploy/staging` و
+  //      `deploy/production` محروسَي المجموع عند أوّلِ قراءةٍ منهما في `composeOperations`
+  //      — آخرِ المُركِّبات — فتُبنى الدولةُ تسعةَ أعشارِها ثمّ يُقال «إعلانُ النشر أكبرُ من
+  //      ميزانيّته». وهو عينُ ما رُفض في T-130 لمجلد التهيئة، فسُدّت العلّةُ في مجلدٍ وبقيت
+  //      في مجلدَين. **والحرَسُ قُدِّم ولم يُضاعَف**: المفتاحُ مفتاحُ القارئ نفسُه، فيجد
+  //      القارئُ بعدَه قياسًا محفوظًا. وموضعُه بعد حصر التهيئة لا قبلَه: ميزانيّةُ الدولة
+  //      أوّلًا، فمن سقط إعلانُ تهيئتِه لا يُسأل عن إعلانِ نشرِه.
+  const deployCensus = guardDeployDeclaration(options.deployDir);
 
   // -1أ) والتعداداتُ المغلقةُ قبلها (البند T-131): ما استُثني من سقوف T-129 بحجّة أنّ
   //      «تعدادًا مغلقًا يحدُّه» لا يُصدَّق إلّا مقيسًا — فيُسأل كلُّ تعدادٍ قبل أوّلِ تحميل:
@@ -77,6 +86,15 @@ export function composeSovereignty(
     // مدى الحصر يُدوَّن مع رقمِه (T-133): من قرأ عددًا بلا مداه لا يعرف ما لم يُعدّ
     reach_extensions: DECLARATION_REACH.extensions.join(' '),
     reach_max_depth: DECLARATION_REACH.max_depth,
+  });
+  // وأثرُ حصرِ النشر كذلك (T-138): حاجزٌ لا أثرَ له في الدفتر لا يُراجَع (RULE-009)
+  audit.append('authority:bootstrap', 'deploy_declaration_measured', {
+    dirs: deployCensus.dirs,
+    files: deployCensus.files,
+    bytes: deployCensus.bytes,
+    environments: deployCensus.names.join(' '),
+    // موضعُ الحرَس يُدوَّن مع رقمِه: هذا القيدُ يسبق كلَّ محمّلٍ وكلَّ جزءٍ من الدولة
+    guarded: 'before_state_build',
   });
   // وأثرُ حرَسِ التعدادات كذلك: عددُ التعدادات المحروسة وعددُ المفاتيح التي تحدُّها
   audit.append('authority:bootstrap', 'closed_enums_guarded', {

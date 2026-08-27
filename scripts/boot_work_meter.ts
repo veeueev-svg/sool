@@ -24,6 +24,7 @@
  *      العمل في الأعلى، وهذا هو الشرطُ الثاني الذي أذن به البند صريحًا.
  */
 import { bootstrapState } from '../src/index';
+import { guardDeployDeclaration } from '../src/composition/deploy_declaration';
 import {
   BOOT_WORK_CEILINGS, BootWork, bootWork, censusDeclaration, directoryMeasureCount,
   loadedDeclaration, resolveConfigDir,
@@ -87,7 +88,17 @@ say(`- ما بقي من العمل: الحصرُ يقرأ ${census.files} ملف
     ? 'فلا ملفَّ إعلانٍ يُحصى ولا يُقرأ (T-137 مُنفَّذٌ ومتروكٌ للمراجعة — W-2026-002)، '
       + 'والحاجزُ يمنع رجوعَ الفرق: src/kernel/config/declaration_readers.ts. '
     : 'فرقٌ مفتوحٌ بندًا: T-137. ')
-  + 'و\`deploy/\` يُحرس عند القراءة لا في الحصر — مفتوحٌ بندًا: T-138');
+  + 'ولا فرقَ في إعلانِ النشر كذلك (T-138) — والسطرُ التالي يقيسُه لا يصفُه');
+
+// إعلانُ النشر يُقاس كما يُقاس إعلانُ التهيئة — **لا يُوصف بجملةٍ محفوظة** (T-138).
+// فالسطرُ الذي كان هنا يقول «`deploy/` يُحرس عند القراءة لا في الحصر» كان صحيحًا يومَ
+// كُتب، ثمّ بقي يُقال بعد أن زال سببُه. والقياسُ لا يشيخ: يُنادى الحصرُ نفسُه فيُطبع ما أرجعَه.
+const deployCensus = guardDeployDeclaration();
+say(`- وإعلانُ النشر يُحصى قبل البناء (T-138): ${deployCensus.dirs} مجلدَي بيئةٍ `
+  + `(${deployCensus.names.join(' و')}) و${deployCensus.files} ملفًا و${deployCensus.bytes} بايتًا — `
+  + 'محروسًا في `composeSovereignty` لا في آخرِ المُركِّبات. وثمنُه في عدِّ المشي أعلاه '
+  + '**صفرُ مشياتٍ**: مفتاحُ القياس مفتاحُ القارئ نفسُه، فما كان مشيةً صار إعادةَ '
+  + 'استخدام — القياسان في docs/audit/measurements/phase-40-T138.txt');
 
 // 3) الزمنُ تاريخًا لا عقدًا
 const calib = median([calibrationMs(), calibrationMs(), calibrationMs()]);
