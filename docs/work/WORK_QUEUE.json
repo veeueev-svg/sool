@@ -128,11 +128,11 @@
     {
       "id": "W-2026-006",
       "title": "بوابةُ التعدادات المغلقة تعرفها باصطلاحِ الاسم لا ببنيتها (T-136)",
-      "owner": "غير مستلَم",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 62)",
       "reviewer": "القيّم على المستودع",
       "area": "بوابات الحكم",
       "phase": 40,
-      "status": "PROPOSED",
+      "status": "IN_PROGRESS",
       "progress_items": [
         "T-136"
       ],
@@ -141,7 +141,9 @@
       ],
       "scope": [
         "scripts/check_closed_enums.sh",
-        "tests/governance/closed_enums_gate.test.ts"
+        "tests/governance/closed_enums_gate.test.ts",
+        "docs/test-reports/phase-40-T136.md",
+        "docs/audit/measurements/phase-40-T136.txt"
       ],
       "excluded": [
         "src/kernel/config/ — محجوزٌ لبند T-137 (W-2026-002)"
@@ -159,7 +161,7 @@
         "و6 قوائمَ أخرى بنيةً في src/ خارجَ مدخلات البوابة (منها السجلّان CLOSED_ENUMS وCLOSED_MAP_KEY_ENUMS)",
         "بقيّةُ الدليل تُملأ عند الاستلام"
       ],
-      "next_step": "لا يُستلَم قبل رفعِ الحاجز: W-2026-002 في REVIEW يحجز PROGRESS.md وCHANGELOG.md وversion.json وsrc/kernel/config/. فالخطوةُ لصاحبها: القيّمُ يراجع W-2026-002 ويُغلقه أو يُضيّق نطاقَه",
+      "next_step": "الحصرُ بالبنية مع إبقاءِ بابِ الاسم، وجدولُ استثناءٍ بأسبابٍ مكتوبةٍ عليه أربعةُ حرّاس، وإسقاطُ الفحصِ بيدٍ خمسَ مرّاتٍ بخرجٍ خامّ، وقوّةُ التأكيدات بالتطفير لا بالنجاح",
       "created_at": "2026-08-27",
       "updated_at": "2026-08-27"
     },
