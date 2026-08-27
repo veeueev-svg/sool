@@ -1,5 +1,5 @@
 {
-  "version": "0.62.0",
+  "version": "0.63.0",
   "phase": 39,
   "completion_percent": 97.0,
   "phases_complete": [
@@ -46,11 +46,11 @@
     39
   ],
   "tests": {
-    "total": 2114,
-    "passing": 2114,
+    "total": 2133,
+    "passing": 2133,
     "command": "npm test"
   },
   "declared_by": "القيّم على المستودع",
-  "declared_at": "2026-08-27",
+  "declared_at": "2026-08-28",
   "royal_approval": "pending"
 }
