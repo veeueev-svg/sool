@@ -28,6 +28,11 @@
  * 3) **السجلُّ الحقيقيُّ لا يُلمس**: كلُّ حالةٍ تُبنى في مجلدٍ مؤقّتٍ يُمرَّر بـ`SOOL_WORK_ROOT`،
  *    فلا يُعطب سجلُّ المستودع ولو سقط تأكيد. وغيابُ `.git` هناك يُسقط بابَ الفَرق وحده،
  *    فيُقاس بابُ الفَرق بتمريرِ `WORK_CHANGED_FILES` صراحةً (انحرافٌ معلن في رأس البوابة).
+ *
+ * 4) **والمدخلُ المصطنعُ يُعلن اصطناعَه** (T-143): `run` يمرّر
+ *    `WORK_DIFF_SOURCE=declared`، لأنّ البوابةَ صارت ترفض مدخلًا لا تُقابله بفَرقِ git.
+ *    **وما يقيس المقابلةَ نفسَها لا يُقاس بهذا المشغّل**: له `gitFixture` يبني تاريخًا حقيقيًّا
+ *    من التزامتَين في مجلدٍ مؤقّت، لأنّ حاجزًا يُقابِل بفَرقٍ لا يُثبَت على جذرٍ بلا فَرق.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -104,10 +109,59 @@ function fixture(items: Item[], logRows: string[] = [], opts: { queueRaw?: strin
 function run(root: string, changed = '', workItem = 'W-2026-001'): number {
   const r = spawnSync(process.execPath, [SCRIPT], {
     encoding: 'utf8',
-    env: { ...process.env, SOOL_WORK_ROOT: root, WORK_CHANGED_FILES: changed, WORK_ITEM: workItem },
+    env: { ...process.env, SOOL_WORK_ROOT: root, WORK_CHANGED_FILES: changed, WORK_ITEM: workItem, WORK_DIFF_SOURCE: 'declared' },
   });
   return r.status ?? -1;
 }
+
+/**
+ * يُشغّل البوابةَ **بلا علامةِ الاصطناع**، فيُقاس ما تفعله عند مقابلةِ المدخلِ بالحقيقة (T-143).
+ * ومن مرّر `changed === null` قاس حالَ من لم يُعلن مدخلًا أصلًا — وهي حالُ CI.
+ */
+function runRaw(root: string, changed: string | null, workItem = 'W-2026-001'): number {
+  const env: Record<string, string> = { ...process.env as Record<string, string>, SOOL_WORK_ROOT: root, WORK_ITEM: workItem };
+  delete env.WORK_DIFF_SOURCE;
+  if (changed === null) delete env.WORK_CHANGED_FILES;
+  else env.WORK_CHANGED_FILES = changed;
+  const r = spawnSync(process.execPath, [SCRIPT], { encoding: 'utf8', env });
+  return r.status ?? -1;
+}
+
+/**
+ * جذرٌ فيه **تاريخُ git حقيقيٌّ** من التزامتَين؛ والثانيةُ هي محلُّ الحكم (T-143).
+ * وتتحرّك فيها `src/alpha/x.ts` والسجلُّ وعقدُ البندِ حتّى لا تُغطيَ علّةُ RULE-015 المقصودَ،
+ * ويُزاد ما في `touched` فيصير جزءًا من الفَرقِ الحقيقيِّ شاء المُشغّلُ أم أبى.
+ */
+function gitFixture(items: Item[], touched: string[] = []): string {
+  const root = fixture(items);
+  const g = (...args: string[]): void => {
+    const r = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+    assert.equal(r.status, 0, `git ${args.join(' ')}: ${r.stderr}`);
+  };
+  const write = (rel: string, body: string): void => {
+    mkdirSync(join(root, rel.split('/').slice(0, -1).join('/')), { recursive: true });
+    writeFileSync(join(root, rel), body);
+  };
+  write('src/alpha/x.ts', 'export const a = 1;\n');
+  g('init', '-q', '-b', 'main');
+  g('config', 'user.email', 'qiyas@example.invalid');
+  g('config', 'user.name', 'قياسٌ آليّ');
+  g('add', '-A');
+  g('commit', '-q', '-m', 'التزامةُ الأساس\n\nWork: W-2026-001');
+  // الالتزامةُ الثانية: يتحرّك فيها السجلُّ والعقدُ مع العمل (RULE-015) فلا تُغطّى العلّةُ المقصودة
+  write('src/alpha/x.ts', 'export const a = 2;\n');
+  for (const t of touched) write(t, '// مسٌّ مقصودٌ للقياس\n');
+  const qp = join(root, 'docs/work/WORK_QUEUE.json');
+  writeFileSync(qp, `${readFileSync(qp, 'utf8')}\n`);
+  const op = join(root, 'docs/work/orders/W-2026-001.md');
+  writeFileSync(op, `${readFileSync(op, 'utf8')}\nأثرٌ في العقد مع العمل.\n`);
+  g('add', '-A');
+  g('commit', '-q', '-m', 'الالتزامةُ المحكومة\n\nWork: W-2026-001');
+  return root;
+}
+
+/** الفَرقُ الحقيقيُّ لـ`gitFixture` بلا زيادةٍ: ثلاثةُ مساراتٍ لا رابعَ لها */
+const REAL_DIFF = 'src/alpha/x.ts,docs/work/WORK_QUEUE.json,docs/work/orders/W-2026-001.md';
 
 const logRow = (over: Partial<Record<'id' | 'scope' | 'result' | 'merge' | 'report' | 'closed' | 'rest', string>> = {}): string => {
   const c = { id: 'W-2026-090', scope: '`src/gamma/`', result: 'MERGED', merge: 'abc1234', report: '[تقرير](docs/test-reports/r.md)', closed: '2026-01-01', rest: 'لا شيء', ...over };
@@ -295,4 +349,41 @@ test('T-144: مِذيالٌ يشير إلى بندٍ لا وجودَ له يُس
 test('التزامةُ الإغلاق تمرّ بنطاقٍ صار تاريخًا في السجل نفسِه', () => {
   const root = fixture([item()], [logRow()]);
   assert.equal(run(root, 'src/gamma/x.ts,docs/work/WORK_LOG.md', 'W-2026-090'), 0);
+});
+
+// ── T-143: مدخلُ الفَرقِ لا يُصدَّق كما يُعطى، ومصدرُه يُعلن دائمًا ──────────────
+test('T-143: بلا مدخلٍ مُعلَنٍ يُحكم بفَرقِ git الحقيقيِّ ويمرّ — وهي حالُ بوابة CI', () => {
+  assert.equal(runRaw(gitFixture([item()]), null), 0);
+});
+
+test('T-143: مدخلٌ أوسعُ من الفَرقِ الحقيقيِّ يُسقط البوابة — والزيادةُ في المدخلِ زيادةٌ في أسبابِ القبول', () => {
+  // «src/alpha/ghost.ts» داخلَ النطاقِ المحجوزِ ولم يتغيّر: كان يمرّ بالرمز 0 قبل T-143
+  assert.equal(runRaw(gitFixture([item()]), `${REAL_DIFF},src/alpha/ghost.ts`), 1);
+});
+
+test('T-143: مدخلٌ أضيقُ من الحقيقة يُسقط البوابة ولو كان المُخفَى مباحًا — فالمُدانُ إخفاءُ الحقيقةِ لا ما أُخفي', () => {
+  // «src/alpha/hidden.ts» **داخلَ النطاقِ المحجوز** فلا يمسّه RULE-011؛ ولو جُعل خارجَه لمرّ
+  // التأكيدُ بحاجزٍ أخرَ ولم يقس هذا — وقد وقع ذلك وكشفه التطفيرُ لا النجاح.
+  const root = gitFixture([item()], ['src/alpha/hidden.ts']);
+  assert.equal(runRaw(root, `${REAL_DIFF},src/alpha/hidden.ts`), 0, 'المُعلَنُ صادقًا يمرّ');
+  assert.equal(runRaw(root, REAL_DIFF), 1, 'المُعلَنُ منقوصًا يُسقط');
+});
+
+test('T-143: الحكمُ يقع على الفَرقِ الحقيقيِّ لا على المُعلَن — فالالتزامةُ الواحدةُ لا يختلف حكمُها بمدخلِ مُشغّلِها', () => {
+  const truthful = runRaw(gitFixture([item()], ['src/zeta/unclaimed.ts']), null);
+  const trimmed = runRaw(gitFixture([item()], ['src/zeta/unclaimed.ts']), REAL_DIFF);
+  assert.equal(truthful, 1);
+  assert.equal(trimmed, truthful);
+});
+
+test('T-143: مدخلٌ مطابقٌ للفَرقِ الحقيقيِّ يمرّ — فمن أغلق البابَ على الصادقِ أغلقه على نفسه', () => {
+  assert.equal(runRaw(gitFixture([item()]), REAL_DIFF), 0);
+});
+
+test('T-143: مدخلٌ مُعلَنٌ بلا تاريخِ git يُقابله يُسقط البوابة فشلًا مغلقًا', () => {
+  assert.equal(runRaw(fixture([item()]), 'src/alpha/x.ts,docs/work/WORK_QUEUE.json,docs/work/orders/W-2026-001.md'), 1);
+});
+
+test('T-143: العلامةُ الصريحةُ تُبقي المدخلَ المصطنعَ مشروعًا — وبها تُقاس هذه المجموعةُ كلُّها', () => {
+  assert.equal(run(fixture([item()]), 'src/alpha/x.ts,docs/work/WORK_QUEUE.json,docs/work/orders/W-2026-001.md'), 0);
 });

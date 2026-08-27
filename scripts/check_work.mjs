@@ -37,6 +37,17 @@
  *    فصار يسأل عن البندِ **المُعلَنِ** في مِذيال `Work:` من رسالة الالتزام (أو WORK_ITEM في
  *    الاختبار): أهذا المسارُ في نطاقِ هذا البندِ بعينِه؟ وما لا يُعلَن صاحبُه يُرفض.
  *
+ * 7) **مدخلُ الفَرقِ لا يُصدَّق كما يُعطى، ومصدرُه يُعلن دائمًا** (T-143): كان
+ *    `WORK_CHANGED_FILES` يُقبل بلا سؤالٍ عن أصله، وحكمُ الحجزِ وRULE-015 يقعان على **مجموعِ**
+ *    المسارات — فتوسيعُ المدخلِ يزيد أسبابَ القبول، و**تقليمُه يُسقط المخالفةَ من الوجود**.
+ *    وقيس ذلك: التزامةٌ واحدةٌ بعينها حُكم عليها بـ1 حين صدق مُشغّلُها وبـ0 حين قلّم مدخلَه.
+ *    فصار المدخلُ **يُقابَل بفَرقِ git** ويسقط عند الاختلاف برمزَين مسمَّيَين (أوسعُ · أضيقُ)،
+ *    **والحكمُ يقع على الفَرقِ الحقيقيِّ لا على المُعلَن**. ويبقى للمُختبِر مدخلٌ مصطنعٌ بعلامةٍ
+ *    صريحةٍ `WORK_DIFF_SOURCE=declared` **تُعلن نفسَها في الخرج**، لأنّ من أغلق البابَ على
+ *    المُختبِر أغلقه على نفسه. **وحدُّه المُعلَن**: من وضع العلامةَ متعمّدًا مرّ — فالبوابةُ
+ *    تحكم على السهوِ لا على الاحتيال. ومصدرُ الفَرقِ يُطبَع في كلِّ تشغيلٍ بلا استثناء، فلا
+ *    يُقرأ «✓» بلا معرفةِ ما قيس.
+ *
  */
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname, posix } from 'node:path';
@@ -56,6 +67,13 @@ const STATUSES = ['PROPOSED', 'CLAIMED', 'IN_PROGRESS', 'BLOCKED', 'REVIEW', 'VE
 const LOCKING = ['CLAIMED', 'IN_PROGRESS', 'BLOCKED', 'REVIEW', 'VERIFIED'];
 /** نتائجُ الإغلاق في السجل التاريخي */
 const RESULTS = ['MERGED', 'CANCELLED'];
+/**
+ * العلامةُ الصريحةُ التي تُبيح مدخلَ فَرقٍ مصطنعًا — وتُعلن نفسَها في الخرج (الثابت 7).
+ * وموضعُها هنا لا بعد `readChanged` لأنّ البابَ يُشغَّل في المتنِ قبل تعريفِها، فتُقرأ في
+ * منطقةِ الموتِ الزمنيّ ويسقط الملفُّ كلُّه بـReferenceError — وقد وقع ذلك فعلًا وقيس.
+ */
+const DIFF_FLAG = 'WORK_DIFF_SOURCE';
+const DIFF_FLAG_VALUE = 'declared';
 /** المساراتُ المحكومة: تغييرُها يستلزم حجزًا (الثابت 3) */
 const GOVERNED = ['src/', 'tests/', 'scripts/', 'config/', 'docs/', '.github/'];
 /** ملفاتُ الجذر المحكومة */
@@ -236,9 +254,12 @@ for (const it of items) {
 }
 
 // ── 7) بابُ الفَرق: كلُّ مسارٍ محكومٍ تغيّر له مالكٌ حاجزٌ (الثابت 3) ──────────
-const changed = readChanged();
-if (changed === null) {
-  notes.push('ℹ بابُ الفَرق مُسقَط: لا تاريخَ git يُقارَن به (انحرافٌ معلن — الثابت 4)');
+const diffSource = readChanged();
+const changed = diffSource.kind === 'paths' ? diffSource.paths : null;
+if (diffSource.kind === 'dropped') {
+  notes.push('ℹ بابُ الفَرق مُسقَط: لا تاريخَ git يُقارَن به ولا مدخلَ مُعلَن (انحرافٌ معلن — الثابت 4)');
+} else if (changed === null) {
+  notes.push('ℹ بابُ الفَرق مُسقَط: مدخلُ الفَرقِ مرفوضٌ فلا يُحكم به (فشلٌ مغلقٌ — الثابت 7)');
 } else if (changed.length === 0) {
   notes.push('ℹ بابُ الفَرق: لا مساراتَ في الفَرق');
 } else {
@@ -326,16 +347,64 @@ function declaredImpact(id) {
   return SHARED_DOCS.filter((d) => section.includes(d));
 }
 
-function readChanged() {
-  const env = process.env.WORK_CHANGED_FILES;
-  if (env !== undefined) {
-    return env.split(/[\n,]/).map((s) => s.trim()).filter((s) => s !== '').map((s) => posix.normalize(s));
-  }
-  if (!existsSync(abs('.git'))) return null;
-  const base = process.env.WORK_DIFF_BASE ?? 'HEAD^';
+/** فَرقُ المراجعةِ الحقيقيُّ من تاريخِ git — أو null إن لم يُقرأ */
+function gitDiff(base) {
   const r = spawnSync('git', ['diff', '--name-only', base, 'HEAD'], { cwd: ROOT, encoding: 'utf8' });
   if (r.status !== 0) return null;
-  return r.stdout.split('\n').map((s) => s.trim()).filter((s) => s !== '');
+  return r.stdout.split('\n').map((s) => s.trim()).filter((s) => s !== '').map((s) => posix.normalize(s));
+}
+
+/**
+ * مصدرُ الفَرقِ الذي يُحكم به (الثابت 7). ويُعلن في `notes` دائمًا، وأحوالُه أربعةٌ لا خامسَ لها:
+ *   { kind: 'paths', paths }  — يُحكم بهذه المسارات
+ *   { kind: 'dropped' }       — لا تاريخَ git ولا مدخلَ: بابُ الفَرقِ يُسقَط (الثابت 4)
+ *   { kind: 'refused' }       — مدخلٌ مُعلَنٌ لا يُقابَل بشيء: فشلٌ مغلقٌ والخطأُ سُجّل
+ * ولا يُصدَّق مدخلٌ بلا مقابلةٍ أو علامةٍ صريحة.
+ */
+function readChanged() {
+  const env = process.env.WORK_CHANGED_FILES;
+  const base = process.env.WORK_DIFF_BASE ?? 'HEAD^';
+  const hasGit = existsSync(abs('.git'));
+
+  if (env === undefined) {
+    if (!hasGit) return { kind: 'dropped' };
+    const real = gitDiff(base);
+    if (real === null) {
+      errors.push(`مصدرُ الفَرقِ لا يُقرأ: \`git diff --name-only ${base} HEAD\` سقط في «${ROOT}» — ولا يُحكم على التزامٍ بفَرقٍ مجهول (الثابت 4 · الثابت 7)`);
+      return { kind: 'refused' };
+    }
+    notes.push(`ℹ مصدرُ الفَرق: \`git diff --name-only ${base} HEAD\` — فَرقُ المراجعةِ الحقيقيّ (${real.length} مسارًا)`);
+    return { kind: 'paths', paths: real };
+  }
+
+  const given = env.split(/[\n,]/).map((s) => s.trim()).filter((s) => s !== '').map((s) => posix.normalize(s));
+
+  if (process.env[DIFF_FLAG] === DIFF_FLAG_VALUE) {
+    notes.push(`ℹ مصدرُ الفَرق: WORK_CHANGED_FILES بإذنٍ صريح (${DIFF_FLAG}=${DIFF_FLAG_VALUE}) — تشغيلٌ مصطنعٌ **لا يُحتجُّ به على التزام** (${given.length} مسارًا · الثابت 7)`);
+    return { kind: 'paths', paths: given };
+  }
+
+  if (!hasGit) {
+    errors.push(`مدخلُ فَرقٍ مُعلَنٌ بلا ما يُقابله: WORK_CHANGED_FILES موضوعٌ ولا تاريخَ git في «${ROOT}» — فإن كان تشغيلًا مصطنعًا فأعلِنه بـ${DIFF_FLAG}=${DIFF_FLAG_VALUE}، وإلّا فلا يُصدَّق مدخلٌ لا يُقابَل (T-143 · الثابت 7)`);
+    return { kind: 'refused' };
+  }
+
+  const real = gitDiff(base);
+  if (real === null) {
+    errors.push(`مدخلُ فَرقٍ مُعلَنٌ لا يُقابَل: \`git diff --name-only ${base} HEAD\` سقط في «${ROOT}» (T-143 · الثابت 7)`);
+    return { kind: 'refused' };
+  }
+
+  const wider = given.filter((p) => !real.includes(p));
+  const narrower = real.filter((p) => !given.includes(p));
+  notes.push(`ℹ مصدرُ الفَرق: WORK_CHANGED_FILES مُقابَلًا بـ\`git diff --name-only ${base} HEAD\` (${given.length} مُعلَنًا · ${real.length} حقيقيًّا) — والحكمُ على الحقيقيّ (الثابت 7)`);
+  if (wider.length > 0) {
+    errors.push(`مدخلُ فَرقٍ أوسعُ من الحقيقة: ${wider.map((p) => `«${p}»`).join(' · ')} مُعلَنٌ ولم يتغيّر بين ${base} وHEAD — وكلُّ زيادةٍ في المدخلِ زيادةٌ في أسبابِ القبول (T-143 · الثابت 7)`);
+  }
+  if (narrower.length > 0) {
+    errors.push(`مدخلُ فَرقٍ أضيقُ من الحقيقة: ${narrower.map((p) => `«${p}»`).join(' · ')} تغيّر بين ${base} وHEAD ولم يُعلَن — وما أُخفي عن البوابةِ تحكم فيه (T-143 · الثابت 7)`);
+  }
+  return { kind: 'paths', paths: real };
 }
 
 function report() {
