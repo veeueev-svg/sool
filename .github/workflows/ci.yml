@@ -13,10 +13,13 @@ jobs:
     name: بناء + اختبار + سلامة السجل + مدقّق التوثيق
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # الوسمُ v5 لا v4: بيانُ الإجراءِ نفسُه (action.yml) يقول على v4 `runs.using: node20`
+      # والعارضُ يرفعه قسرًا إلى node24 — فالمُعلَنُ ليس المنفَّذ، وv5 يُعلن node24 (T-146).
+      # وهذا زمنُ تشغيلِ الإجراءِ لا زمنُ المشروع: node-version أدناه يبقى 20 كما في الجذرِ المحلّيّ.
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: npm
@@ -42,6 +45,17 @@ jobs:
         run: bash scripts/check_config_readers.sh
       - name: فاحصُ الأرقام المنقولة — جدولُ المجلدات وعددُ الاختبارات يُولَّدان من مصدرهما (T-128)
         run: bash scripts/check_generated_numbers.sh
+      # الحواجزُ الثلاثةُ التالية كانت في سلسلة `verify` ولا تُشغَّل هنا منذ 2026-08-23،
+      # وأحدُها هو الحاجزُ الذي أُعيدت كتابتُه في W-2026-006 — فحاجزٌ لا يُشغَّل على الدمج
+      # حاجزٌ بالاسم وحدَه (RULE-001 · T-148). وترتيبُها هنا كترتيبِها في `verify` قصدًا.
+      - name: حاجزُ التعدادات المغلقة — لا تعدادَ قيمٍ مغلقًا بلا سجلٍّ أو استثناءٍ بسبب (T-136)
+        run: bash scripts/check_closed_enums.sh
+      - name: حاجزُ عملِ الإقلاع — الزمنُ يُحرس بعدِّ العمل لا بالساعة (T-134)
+        run: bash scripts/check_boot_work.sh
+      - name: حاجزُ الحصر على مستوى النواة (T-16)
+        run: node dist/scripts/check_confinement.js
+      - name: بوابةُ الدمجِ مقابلَ سلسلةِ التحقّق — لا حاجزَ يُقاس عليه محلّيًّا ولا يُشغَّل هنا (T-148 · T-146)
+        run: bash scripts/check_ci_gates.sh
       - name: مدقّق التوثيق (يفشل إذا تغيّر src بلا PROGRESS.md وتقرير اختبار)
         run: bash scripts/check_documentation.sh
 
