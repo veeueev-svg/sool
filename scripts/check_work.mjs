@@ -27,6 +27,16 @@
  *
  * 4) **فشلٌ مغلق**: كلُّ ما لا يُقرأ يُرفض (لا يُفترض صحيحًا). وغيابُ `.git` يُسقط بابَ الفَرق
  *    وحده — وهو انحرافٌ معلن يُستخدم في الاختبار، ولا يُسقط الأبوابَ الأخرى.
+ * 5) **وثائقُ الحالِ مشتركةٌ بإعلانٍ لا مباحةٌ ولا محجوزة** (T-144): SHARED_DOCS يلمسها كلُّ
+ *    عملٍ بحكم RULE-000 والخطوةِ 6 من الميثاق، فحجزُها حجزًا مانعًا يُجمّد المستودعَ كلَّه
+ *    على بندٍ واحد — وقد قيس ذلك ثلاثَ مرّاتٍ متعاقبة. فلا تُدرَج في scope (والإدراجُ يُرفض)،
+ *    ولمسُها يُوجب أن يُسمّيها عقدُ البندِ في §6 «الأثر في الوثائق». فالمشاركةُ بإعلانٍ مقروء.
+ *
+ * 6) **الحجزُ يُقاس بالهويّة لا بالوجود** (T-144): بابُ الفَرق كان يسأل «ألهذا المسارِ حاجزٌ
+ *    حيٌّ أيًّا كان؟» فكانت الكتابةُ في نطاقِ بندٍ آخرَ تمرّ آليًّا — وهو نقيضُ RULE-011.
+ *    فصار يسأل عن البندِ **المُعلَنِ** في مِذيال `Work:` من رسالة الالتزام (أو WORK_ITEM في
+ *    الاختبار): أهذا المسارُ في نطاقِ هذا البندِ بعينِه؟ وما لا يُعلَن صاحبُه يُرفض.
+ *
  */
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname, posix } from 'node:path';
@@ -56,6 +66,13 @@ const GOVERNED_FILES = [
 ];
 /** ملفاتُ الحكم نفسها: يُسمح بتغييرها في التزامة الإغلاق بلا نطاقٍ يشملها */
 const SELF = [QUEUE, LOG];
+/**
+ * وثائقُ الحالِ (الثابت 5): مشتركةٌ بإعلانٍ في §6 من العقد، ولا تُحجَز حجزًا مانعًا.
+ * القائمةُ **مغلقةٌ مسمّاةٌ** لا اصطلاحَ اسمٍ — فلا يصير ملفٌّ مشتركًا بأن يُشبه اسمُه اسمَها.
+ */
+const SHARED_DOCS = ['PROGRESS.md', 'ROADMAP.md', 'CHANGELOG.md', 'version.json'];
+/** القسمُ الذي يُعلن فيه البندُ ما يلمسه من وثائق الحال */
+const IMPACT = '## 6) الأثر في الوثائق';
 const REQUIRED = ['id', 'title', 'owner', 'reviewer', 'area', 'phase', 'status', 'scope', 'acceptance', 'evidence', 'next_step', 'created_at', 'updated_at'];
 const SECTIONS = ['## 1) المسألة', '## 2) النطاق المحجوز', '## 3) خارج النطاق', '## 4) معيار القبول', '## 5) الدليل', '## 6) الأثر في الوثائق', '## 7) الخطوة التالية'];
 const ID_RE = /^W-\d{4}-\d{3}$/;
@@ -125,6 +142,9 @@ for (const it of items) {
     if (p.startsWith('/') || p.includes('..')) fail(`${id}: نطاقٌ غيرُ مسموح «${p}» — المساراتُ نسبيّةٌ داخل المستودع (RULE-006)`);
     if (p === '' || p === '.' || p === '*' || p === '**' || p === '**/*' || p === '/') {
       fail(`${id}: نطاقٌ يستولي على المستودع كلِّه «${p}» — الحجزُ يُسمّى ولا يُعمّم`);
+    }
+    if (SHARED_DOCS.includes(p)) {
+      fail(`${id}: وثيقةُ حالٍ محجوزةٌ حجزًا مانعًا «${p}» — يلمسها كلُّ عملٍ بحكم RULE-000، فحجزُها يُجمّد المستودعَ على بندٍ واحد. أَخرِجها من scope وأَعلِنها في «${IMPACT}» من عقدِك (T-144)`);
     }
   }
 }
@@ -231,9 +251,34 @@ if (changed === null) {
     ...active.flatMap((it) => (it.scope ?? []).map((s) => ({ id: it.id, owner: it.owner, scope: String(s) }))),
     ...(logTouched ? [...logIds.values()].flatMap((r) => r.scope.split('·').map((s) => ({ id: r.id, owner: r.owner, scope: s.trim().replace(/^`|`$/g, '') }))) : []),
   ].filter((c) => c.scope !== '');
-  for (const p of selfOnly) {
-    if (!claims.some((c) => covers(c.scope, p))) {
-      fail(`تغييرٌ بلا حجز: «${p}» تغيّر ولا بندَ حيًّا يحجزه — افتح بندًا في ${QUEUE} قبل العمل (RULE-011)`);
+  // وثائقُ الحالِ تُقاس بقاعدةٍ أخرى: مشتركةٌ بإعلانٍ لا محجوزةٌ بنطاق (الثابت 5)
+  const sharedTouched = selfOnly.filter((p) => SHARED_DOCS.includes(p));
+  const ownedChanges = selfOnly.filter((p) => !SHARED_DOCS.includes(p));
+  const declared = declaredItem();
+  if (declared === null) {
+    if (selfOnly.length > 0) {
+      fail(`تغييرٌ محكومٌ بلا بندٍ مُعلَن: ${selfOnly.length} مسارًا تغيّر ولا مِذيالَ «Work: W-YYYY-NNN» في رسالة الالتزام — والحجزُ يُقاس بالهويّة لا بالوجود، فمن لم يُعلن بندَه لم يُقَس عملُه (RULE-011 · GOVERNING_RULE.md قالبُ رسالة الالتزام)`);
+    }
+  } else if (!seen.has(declared.id) && !logIds.has(declared.id)) {
+    fail(`البندُ المُعلَن ${declared.id} (${declared.source}) لا وجودَ له في ${QUEUE} ولا في ${LOG} — ومِذيالٌ يشير إلى لا شيءٍ أسوأُ من لا مِذيال`);
+  } else {
+    const mine = claims.filter((c) => c.id === declared.id).map((c) => c.scope);
+    for (const p of ownedChanges) {
+      if (mine.some((s) => covers(s, p))) continue;
+      const other = claims.find((c) => covers(c.scope, p));
+      if (other) {
+        fail(`كتابةٌ في نطاقِ بندٍ آخر: «${p}» محجوزٌ لـ${other.id} (${other.owner}) والعملُ المُعلَن ${declared.id} — ووجودُ حاجزٍ ليس إذنًا لغير صاحبِه (RULE-011 · الثابت 6)`);
+      } else {
+        fail(`تغييرٌ بلا حجز: «${p}» تغيّر وليس في نطاق ${declared.id} ولا يحجزه بندٌ أخرُ — وسِّع نطاقَك في ${QUEUE} قبل اللمس (RULE-011)`);
+      }
+    }
+    const impact = declaredImpact(declared.id);
+    for (const p of sharedTouched) {
+      if (impact === null) {
+        fail(`وثيقةُ حالٍ لُمست بلا عقدٍ يُقرأ: «${p}» تغيّرت ولا عقدَ لـ${declared.id} في ${ORDERS}/`);
+      } else if (!impact.includes(p)) {
+        fail(`وثيقةُ حالٍ لُمست بلا إعلان: «${p}» تغيّرت ولا يذكرها «${IMPACT}» من عقد ${declared.id} — والمشتركُ يُعلَن في العقدِ ولا يُحجَز بالنطاق (الثابت 5)`);
+      }
     }
   }
   if (selfOnly.length > 0 && !queueTouched && !logTouched) {
@@ -251,6 +296,36 @@ function isGoverned(p) {
   return GOVERNED.some((g) => p.startsWith(g)) || GOVERNED_FILES.includes(p);
 }
 
+/**
+ * البندُ المُعلَنُ لهذا الفَرق (الثابت 6): مِذيالُ `Work:` من رسالة الالتزام، أو WORK_ITEM.
+ * ولا يُستنبَط من المسارات المتغيّرة أبدًا: استنباطُ صاحبِ العملِ من العملِ دورٌ يُبطِل الحكم.
+ */
+function declaredItem() {
+  const env = process.env.WORK_ITEM;
+  if (env !== undefined && env.trim() !== '') return { id: env.trim(), source: 'متغير WORK_ITEM' };
+  if (!existsSync(abs('.git'))) return null;
+  const r = spawnSync('git', ['log', '-1', '--pretty=%B'], { cwd: ROOT, encoding: 'utf8' });
+  if (r.status !== 0) return null;
+  const m = r.stdout.match(/^[ \t]*Work:[ \t]*(W-\d{4}-\d{3})[ \t]*$/m);
+  return m === null ? null : { id: m[1], source: 'مِذيال Work: من رسالة الالتزام' };
+}
+
+/**
+ * أسماءُ وثائقِ الحالِ المُعلَنةُ في §6 من عقدِ بندٍ — أو null إن لا عقدَ يُقرأ.
+ * والمقيسُ **ورودُ الاسم** في القسم لا صدقُ ما يُقال عنه — حدٌّ مُعلَنٌ لا يُدَّعى غيرُه.
+ */
+function declaredImpact(id) {
+  const path = `${ORDERS}/${id}.md`;
+  if (!existsSync(abs(path))) return null;
+  const body = read(path);
+  const start = body.indexOf(IMPACT);
+  if (start < 0) return null;
+  const after = body.slice(start + IMPACT.length);
+  const end = after.search(/\n## /);
+  const section = end < 0 ? after : after.slice(0, end);
+  return SHARED_DOCS.filter((d) => section.includes(d));
+}
+
 function readChanged() {
   const env = process.env.WORK_CHANGED_FILES;
   if (env !== undefined) {
@@ -265,7 +340,8 @@ function readChanged() {
 
 function report() {
   const live = items.filter((it) => LOCKING.includes(it.status)).length;
-  console.log(`بوابةُ ضبط العمل: ${items.length} بندًا في السجل الحيّ (منها ${live} حاجزٌ للنطاق) · ${logIds.size} بندًا مغلقًا`);
+  const d = declaredItem();
+  console.log(`بوابةُ ضبط العمل: ${items.length} بندًا في السجل الحيّ (منها ${live} حاجزٌ للنطاق) · ${logIds.size} بندًا مغلقًا · البندُ المُعلَن: ${d === null ? 'لا شيء' : `${d.id} (${d.source})`} · وثائقُ الحالِ المشتركة: ${SHARED_DOCS.length}`);
   for (const n of notes) console.log(`  ${n}`);
   if (errors.length === 0) {
     console.log('✓ كلُّ عملٍ محجوزٌ ومملوكٌ ومراجَعٌ بلا تداخل — RULE-010..017 مستوفاة');

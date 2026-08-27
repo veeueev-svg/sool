@@ -11,6 +11,8 @@
  *   عقدٌ مفقودٌ أو ناقصُ قسمٍ أو لا يذكر نطاقَه · نطاقٌ مطلقٌ أو مستولٍ · BLOCKED بلا سبب ·
  *   VERIFIED بلا دليلِ تحقّق · معرّفٌ في السجلَّين · صفُّ سجلٍّ ناقصُ الخلايا · دمجٌ بلا مرجع ·
  *   تقريرٌ غيرُ موجود · معجمٌ مُحرَّفٌ في البيان · تبعيةٌ مجهولةٌ أو غيرُ مغلقة · تاريخٌ مقلوب ·
+ *   وثيقةُ حالٍ محجوزةٌ في scope · وثيقةُ حالٍ لُمست بلا إعلانٍ في §6 · كتابةٌ في نطاقِ بندٍ آخر ·
+ *   فَرقٌ بلا بندٍ مُعلَن · مِذيالٌ يشير إلى بندٍ لا وجودَ له (T-144) ·
  *   JSON معطوب · سجلٌّ تاريخيٌّ مفقود · تغييرٌ بلا حجز · تغييرٌ بلا أثرٍ في السجل
  * اختبار القبول: هذا الملف نفسه — `npm test`
  * الوثيقة المرتبطة: docs/work/WORK_CONTROL.md · docs/test-reports/W-2026-001-work-control.md
@@ -61,7 +63,7 @@ function item(over: Item = {}): Item {
 }
 
 /** يبني سجلًّا حيًّا وتاريخيًّا وعقودًا في مجلدٍ مؤقّت، ويُعيد جذرَه */
-function fixture(items: Item[], logRows: string[] = [], opts: { queueRaw?: string; noLog?: boolean; statuses?: unknown; skipOrders?: string[] } = {}): string {
+function fixture(items: Item[], logRows: string[] = [], opts: { queueRaw?: string; noLog?: boolean; statuses?: unknown; skipOrders?: string[]; impact?: Record<string, string> } = {}): string {
   const root = mkdtempSync(join(tmpdir(), 'sool-work-'));
   mkdirSync(join(root, 'docs/work/orders'), { recursive: true });
   mkdirSync(join(root, 'docs/test-reports'), { recursive: true });
@@ -83,17 +85,26 @@ function fixture(items: Item[], logRows: string[] = [], opts: { queueRaw?: strin
     if ((opts.skipOrders ?? []).includes(id)) continue;
     const scope = (it.scope as string[] ?? []).map((s) => `- \`${s}\``).join('\n');
     const sections = ['## 1) المسألة', '## 2) النطاق المحجوز', '## 3) خارج النطاق', '## 4) معيار القبول', '## 5) الدليل', '## 6) الأثر في الوثائق', '## 7) الخطوة التالية'];
-    const body = `# ${id} — ${String(it.title ?? '')}\n\n${sections.map((s) => (s.startsWith('## 2') ? `${s}\n\n${scope}\n` : `${s}\n\nنصٌّ\n`)).join('\n')}`;
+    const body = `# ${id} — ${String(it.title ?? '')}\n\n${sections.map((s) => {
+      if (s.startsWith('## 2')) return `${s}\n\n${scope}\n`;
+      if (s.startsWith('## 6')) return `${s}\n\n${(opts.impact ?? {})[id] ?? 'نصٌّ'}\n`;
+      return `${s}\n\nنصٌّ\n`;
+    }).join('\n')}`;
     writeFileSync(join(root, `docs/work/orders/${id}.md`), body);
   }
   return root;
 }
 
-/** يُشغّل البوابةَ على جذرٍ مصنوع؛ وبابُ الفَرق يُقاس بتمريرِ المسارات صراحةً */
-function run(root: string, changed = ''): number {
+/**
+ * يُشغّل البوابةَ على جذرٍ مصنوع؛ وبابُ الفَرق يُقاس بتمريرِ المسارات صراحةً.
+ * و`workItem` هو البندُ المُعلَنُ لهذا الفَرق (الثابت 6 في البوابة): في المستودع الحقيقيِّ
+ * يأتي من مِذيال `Work:` في رسالة الالتزام، وفي الاختبار من `WORK_ITEM` — ومن مرّره فارغًا
+ * قاس **حالَ من لم يُعلن بندَه**، وهي حالةٌ مقصودةٌ تُختبر كغيرها.
+ */
+function run(root: string, changed = '', workItem = 'W-2026-001'): number {
   const r = spawnSync(process.execPath, [SCRIPT], {
     encoding: 'utf8',
-    env: { ...process.env, SOOL_WORK_ROOT: root, WORK_CHANGED_FILES: changed },
+    env: { ...process.env, SOOL_WORK_ROOT: root, WORK_CHANGED_FILES: changed, WORK_ITEM: workItem },
   });
   return r.status ?? -1;
 }
@@ -247,7 +258,41 @@ test('تغييرٌ محكومٌ بلا أثرٍ في السجل يُسقط ال�
   assert.equal(run(root, 'src/alpha/x.ts'), 1);
 });
 
+// ── T-144: وثائقُ الحالِ مشتركةٌ بإعلان، والحجزُ يُقاس بالهويّة لا بالوجود ──────
+test('T-144: بندٌ يحجز وثيقةَ حالٍ في scope يُسقط البوابة — فالحجزُ المانعُ يُجمّد المستودعَ على بندٍ واحد', () => {
+  for (const doc of ['PROGRESS.md', 'ROADMAP.md', 'CHANGELOG.md', 'version.json']) {
+    assert.equal(run(fixture([item({ scope: ['src/alpha/', doc] })])), 1, doc);
+  }
+});
+
+test('T-144: لمسُ وثيقةِ حالٍ يذكرها §6 من العقد يمرّ بلا حجزٍ لها — وهو ما كان مستحيلًا قبل البند', () => {
+  const root = fixture([item()], [], { impact: { 'W-2026-001': '`PROGRESS.md` · `CHANGELOG.md`' } });
+  assert.equal(run(root, 'src/alpha/x.ts,PROGRESS.md,docs/work/WORK_QUEUE.json,docs/work/orders/W-2026-001.md'), 0);
+});
+
+test('T-144: لمسُ وثيقةِ حالٍ لا يذكرها §6 يُسقط البوابة — فالمشتركُ بإعلانٍ لا مباح', () => {
+  const root = fixture([item()], [], { impact: { 'W-2026-001': '`CHANGELOG.md`' } });
+  assert.equal(run(root, 'src/alpha/x.ts,PROGRESS.md,docs/work/WORK_QUEUE.json,docs/work/orders/W-2026-001.md'), 1);
+});
+
+test('T-144: الكتابةُ في نطاقٍ محجوزٍ لبندٍ آخرَ تُسقط البوابة — ووجودُ حاجزٍ ليس إذنًا لغير صاحبِه', () => {
+  const a = item({ id: 'W-2026-001', scope: ['src/alpha/'], progress_items: ['T-900'] });
+  const b = item({ id: 'W-2026-002', scope: ['src/beta/'], owner: 'جهةُ هـ', progress_items: ['T-901'] });
+  const changed = 'src/beta/x.ts,docs/work/WORK_QUEUE.json,docs/work/orders/W-2026-001.md';
+  assert.equal(run(fixture([a, b]), changed, 'W-2026-001'), 1);
+  // وصاحبُه يمرّ في الفَرقِ نفسِه — فالمقيسُ الهويّةُ لا المسار
+  assert.equal(run(fixture([a, b]), 'src/beta/x.ts,docs/work/WORK_QUEUE.json,docs/work/orders/W-2026-002.md', 'W-2026-002'), 0);
+});
+
+test('T-144: فَرقٌ محكومٌ بلا بندٍ مُعلَنٍ يُسقط البوابة — ومن لم يُعلن بندَه لم يُقَس عملُه', () => {
+  assert.equal(run(fixture([item()]), 'src/alpha/x.ts,docs/work/WORK_QUEUE.json,docs/work/orders/W-2026-001.md', ''), 1);
+});
+
+test('T-144: مِذيالٌ يشير إلى بندٍ لا وجودَ له يُسقط البوابة', () => {
+  assert.equal(run(fixture([item()]), 'src/alpha/x.ts,docs/work/WORK_QUEUE.json,docs/work/orders/W-2026-001.md', 'W-2026-777'), 1);
+});
+
 test('التزامةُ الإغلاق تمرّ بنطاقٍ صار تاريخًا في السجل نفسِه', () => {
   const root = fixture([item()], [logRow()]);
-  assert.equal(run(root, 'src/gamma/x.ts,docs/work/WORK_LOG.md'), 0);
+  assert.equal(run(root, 'src/gamma/x.ts,docs/work/WORK_LOG.md', 'W-2026-090'), 0);
 });
