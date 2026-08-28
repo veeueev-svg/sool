@@ -36,35 +36,16 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdtempSync, mkdirSync, rmSync, copyFileSync, readdirSync, existsSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import {
+  ROOT, allCriteriaMet, editIn, runCheck, withRoot, withTampered, writeOrder,
+} from './helpers';
 
-// جذرُ المستودع هو مكانُ تشغيل `npm test` (كما في tests/governance/criteria_status.test.ts)
-const ROOT = process.cwd();
-const SCRIPT = 'scripts/check_declaration.sh';
 const VERSION = 'version.json';
 const CRITERIA = 'COMPLETION_CRITERIA.md';
 const ROADMAP = 'ROADMAP.md';
 const ORDER = 'docs/royal-orders/2026-01-01-000-اختبار-حاجز.md';
-
-function runCheck(): { code: number; out: string } {
-  const r = spawnSync('bash', [SCRIPT], { cwd: ROOT, encoding: 'utf8' });
-  return { code: r.status ?? -1, out: `${r.stdout}${r.stderr}` };
-}
-
-/**
- * يعبث بملفٍّ **في الجذر المنسوخ** لا في المستودع (W-2026-004).
- * لا `finally` يستعيد أصلًا هنا: فالمعبوثُ نسخةٌ في tmpdir تُحذف بتمامها في `withRoot`.
- */
-function withTampered(
-  file: string,
-  mutate: (text: string) => string,
-  assertOn: (r: { code: number; out: string }) => void,
-): void {
-  withRoot((root) => editIn(root, file, mutate), assertOn);
-}
 
 test('T-127: الحاجز يمرّ على المستودع كما هو، ويعلن الدعوى والحال معًا', () => {
   const r = runCheck();
@@ -148,82 +129,6 @@ test('T-127: عددُ البنود المفتوحة في ROADMAP.md يُطابَ
 
 /* ───────── W-2026-005: العائقُ المسمّى والدَّينُ المعلن — على جذرٍ منسوخٍ لا على المستودع ───────── */
 
-const DECL_FILES = ['version.json', 'COMPLETION_CRITERIA.md', 'PROGRESS.md', 'ROADMAP.md'] as const;
-
-/**
- * ينسخ ما يقرأه الحاجزُ إلى جذرٍ في tmpdir ثم يشغّله عليه بـ`SOOL_DECL_ROOT`.
- * والنسخُ **يُتحقَّق منه**: لو تسابق ملفُّ اختبارٍ آخرُ على `version.json` لحظةَ النسخ لَقِيسَ
- * عبثُ غيرِنا حكمًا لنا — فتُعاد المحاولةُ حتى تُقرأ نسخةٌ صحيحةُ البنية (RULE-007).
- */
-function withRoot(
-  mutate: (root: string) => void,
-  assertOn: (r: { code: number; out: string }) => void,
-): void {
-  const root = mkdtempSync(join(tmpdir(), 'sool-decl-'));
-  try {
-    let ok = false;
-    for (let attempt = 0; attempt < 5 && !ok; attempt += 1) {
-      for (const f of DECL_FILES) copyFileSync(join(ROOT, f), join(root, f));
-      try {
-        const v = JSON.parse(readFileSync(join(root, 'version.json'), 'utf8')) as { completion_percent?: number };
-        ok = typeof v.completion_percent === 'number';
-      } catch {
-        ok = false;
-      }
-    }
-    assert.ok(ok, 'لم تُقرأ نسخةٌ صحيحةُ البنية من version.json — لا يُحكم على قياسٍ مشكوكٍ فيه');
-    const orders = join(root, 'docs/royal-orders');
-    mkdirSync(orders, { recursive: true });
-    const src = join(ROOT, 'docs/royal-orders');
-    if (existsSync(src)) {
-      for (const f of readdirSync(src)) {
-        if (f.endsWith('.md')) copyFileSync(join(src, f), join(orders, f));
-      }
-    }
-    mutate(root);
-    const r = spawnSync('bash', [SCRIPT], {
-      cwd: ROOT,
-      encoding: 'utf8',
-      env: { ...process.env, SOOL_DECL_ROOT: root },
-    });
-    assertOn({ code: r.status ?? -1, out: `${r.stdout}${r.stderr}` });
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-}
-
-/** يقرأ ملفًّا من الجذر المنسوخ ويكتبه بعد تعديلٍ يجب أن يُغيّر شيئًا */
-function editIn(root: string, file: string, mutate: (t: string) => string): void {
-  const p = join(root, file);
-  const before = readFileSync(p, 'utf8');
-  const after = mutate(before);
-  assert.notEqual(after, before, `العبثُ لم يغيّر شيئًا في ${file} — فالتأكيدُ لا يقيس شيئًا`);
-  writeFileSync(p, after);
-}
-
-/** يرقّي كلَّ صفٍّ إلى ✅ ويُصلح سطرَ الحصيلة معه — فحالُ «لا عائقَ مسمّى» يُصطنع في النسخة وحدَها */
-function allCriteriaMet(root: string): void {
-  editIn(root, 'COMPLETION_CRITERIA.md', (t) => {
-    const rows = t.split('\n').map((l) => (l.startsWith('| C-')
-      ? l.replace('| ⚠️ فجوة |', '| ✅ مستوفى |').replace('| 🟡 اكتُفي بتقرير المنفّذ |', '| ✅ مستوفى |')
-      : l)).join('\n');
-    const met = (rows.match(/\| ✅ مستوفى \|/g) ?? []).length;
-    return rows.replace(
-      /^\*\*الحصيلة اليوم:\*\*.*$/m,
-      `**الحصيلة اليوم:** ✅ مستوفى **${met}** · ⚠️ فجوة **0** · 🟡 اكتُفي بتقرير المنفّذ **0**.`,
-    );
-  });
-}
-
-/** أمرٌ ملكيٌّ مقيَّدٌ في السلسلة، يُذكر فيه الدَّينُ أو لا يُذكر */
-function writeOrder(root: string, debtLine: string | null): void {
-  const lines = ['الرقم: 000', 'التاريخ: 2026-01-01', 'المُصدِر: الملك', 'الموضوع: اختبارُ الحاجز',
-    'النص: لا أثرَ لهذا الملفِّ خارج الاختبار', 'الأثر على المراحل: لا شيء',
-    'معرّف السجل في سلسلة التدقيق (auditId): audit-اختبار-000'];
-  if (debtLine !== null) lines.push(debtLine);
-  writeFileSync(join(root, 'docs/royal-orders/2026-01-01-000-اختبار-حاجز.md'), `${lines.join('\n')}\n`);
-}
-
 test('W-2026-005: البندُ المفتوحُ صنفان مقيسان — عائقٌ مسمّى ودَينٌ معلن، والمُغلقُ لا يُحسب عائقًا', () => {
   withRoot(() => {}, (r) => {
     assert.equal(r.code, 0, r.out);
@@ -277,10 +182,10 @@ test('W-2026-005: عددُ الدَّين المذكورُ في الأمر إن 
 test('W-2026-005: بابٌ يُفتح — كلُّ صفٍّ ✅ ولا عائقَ مسمًّى ودَينٌ مذكورٌ في أمرٍ مقيَّد', () => {
   withRoot((root) => {
     allCriteriaMet(root);
-    const progress = readFileSync(join(root, 'PROGRESS.md'), 'utf8');
-    const a = progress.split('\n').findIndex((l) => l.startsWith('## 2) ما تبقّى'));
-    const b = progress.split('\n').findIndex((l) => l.startsWith('## 3) '));
-    const debt = progress.split('\n').slice(a + 1, b).filter((l) => l.startsWith('| T-')).length;
+    const lines = readFileSync(join(root, 'PROGRESS.md'), 'utf8').split('\n');
+    const a = lines.findIndex((l: string) => l.startsWith('## 2) ما تبقّى'));
+    const b = lines.findIndex((l: string) => l.startsWith('## 3) '));
+    const debt = lines.slice(a + 1, b).filter((l: string) => l.startsWith('| T-')).length;
     editIn(root, 'version.json', (t) => t.replace(/"royal_approval": *"[^"]*"/, '"royal_approval": "granted"'));
     writeOrder(root, `الدَّينُ المعلن عند الإعلان: ${debt} بندًا`);
   }, (r) => {
@@ -344,5 +249,106 @@ test('W-2026-005: مرحلةٌ في phases_complete لا صفَّ لها في ج
   }, (r) => {
     assert.equal(r.code, 1, r.out);
     assert.match(r.out, /لا صفَّ لها في جدول/);
+  });
+});
+
+/*
+ * (T-142 · W-2026-012) تصنيفُ العائق كان يتّكئ على خانةٍ يكتبها إنسان بلا حاجزٍ يقيسها:
+ * حذفُ `T-85` من خانة `C-17` نقل عائقًا حقيقيًّا مفتوحًا إلى الدَّينِ المُعلَن **ورمزُ الخروج 0**.
+ * والخمسةُ أدناه تقيس الأحكامَ الخمسةَ **برمز الخروج** لا بنصِّ رسالة.
+ */
+
+test('T-142/DC-01: رأسُ جدولٍ لا يُعلن عمودَ «البند المفتوح» يُسقط الحاجزَ — فلا يُقرأ عمودٌ برقمٍ مغروس', () => {
+  withTampered(CRITERIA, (t) => t.replace('| البند المفتوح |', '| البند المتبقّي |'), (r) => {
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.out, /\[DC-01\]/);
+    assert.match(r.out, /موضعُ الخانةِ لا يُقاس/);
+  });
+});
+
+test('T-142/DC-02: صفٌّ غيرُ ✅ خانتُه «—» يُسقط الحاجزَ ويُسمّى — وهذه العلّةُ المقيسةُ عينُها', () => {
+  withTampered(CRITERIA, (t) => t.replace('| T-85 |', '| — |'), (r) => {
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.out, /\[DC-02\] C-17/);
+    // ولا يُطبع ✓ الخِتام: فالرمزُ والخِتامُ يتوافقان
+    assert.doesNotMatch(r.out, /✓ حاجزُ الإعلان/);
+  });
+});
+
+test('T-142/DC-03: بندٌ يذكره حكمُ التدقيق ولا تذكره الخانةُ يُسقط الحاجزَ — والحكمُ سندُ الصفّ', () => {
+  // C-08 يسمّي T-27 وT-29؛ فيُحذف الثاني من **الخانة** وحدَها: فلا تفرغ الخانةُ (فلا DC-02)
+  withTampered(CRITERIA, (t) => t.replace('| T-27 · T-29 |', '| T-27 |'), (r) => {
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.out, /\[DC-03\] C-08/);
+    assert.match(r.out, /T-29/);
+    assert.doesNotMatch(r.out, /\[DC-02\]/);
+  });
+});
+
+test('T-142/DC-04: معرَّفٌ لا صفَّ له في §2 ولا استثناءَ معلنًا يُسقط الحاجز', () => {
+  withTampered(CRITERIA, (t) => t.replace('| T-115 |', '| T-115 · T-9001 |'), (r) => {
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.out, /\[DC-04\] C-18 يسمّي T-9001/);
+    assert.match(r.out, /يسقط من العائق ومن الدَّين معًا/);
+  });
+});
+
+test('T-142/DC-04: الاستثناءُ المعلنُ يُطبع بسببِه في كلِّ تشغيلة — لا يُطوى', () => {
+  const r = runCheck();
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /ℹ \[DC-04\] استثناءٌ معلن: T-25/);
+  assert.match(r.out, /لا صفَّ له في PROGRESS\.md §2 قطُّ/);
+  // وT-23 **ليس** استثناءً: له صفٌّ مشطوبٌ مُغلقٌ في §2 يجمعه بغيره
+  assert.doesNotMatch(r.out, /استثناءٌ معلن: T-23/);
+});
+
+test('T-142/DC-04: خانةُ صفٍّ مشطوبٍ تجمع بندَين — والثاني جذرٌ كالأوّل', () => {
+  // «| ~~T-31~~ · ~~T-23~~ |» مقيسٌ في PROGRESS.md: فقراءةُ أوّلِ معرَّفٍ وحدَه تجعل T-23
+  // يبدو بلا جذرٍ فيُطلب له استثناءٌ لا يستحقُّه — وهذا خطأٌ وقع فعلًا وصُحِّح بالقياس.
+  const r = runCheck();
+  assert.equal(r.code, 0, r.out);
+  const m = r.out.match(/مشطوبًا مُغلقًا \[([^\]]*)\]/);
+  assert.ok(m, `تفصيلُ المشطوب غائب:\n${r.out}`);
+  assert.match(m[1] ?? '', /T-23/);
+});
+
+test('T-142/DC-05: صفوفٌ غيرُ ✅ ولا معرَّفَ واحدٌ استُخرج ⇒ رفضٌ — فلا ✓ على حصرٍ لم يقع', () => {
+  withRoot((root) => {
+    editIn(root, CRITERIA, (t) => t.split('\n').map((l) => (l.startsWith('| C-') && !l.includes('✅ مستوفى')
+      ? l.replace(/\| [^|]*\|$/, '| — |') : l)).join('\n'));
+  }, (r) => {
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.out, /\[DC-05\] 9 صفًّا ليس ✅ ولم يُستخرج معرَّفُ بندٍ واحد/);
+  });
+});
+
+test('T-142/DC-05: استخراجٌ يتخطّى صفًّا تعدُّه الحصيلةُ يُسقط الحاجز', () => {
+  // معرَّفُ صفٍّ لا يقرؤه التصنيفُ وحالتُه تُعدُّ في الحصيلة: فالمقروءُ 8 والمعدودُ 9
+  withTampered(CRITERIA, (t) => t.replace('| C-17 |', '| X-17 |'), (r) => {
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.out, /\[DC-05\] التصنيفُ قرأ/);
+  });
+});
+
+test('T-142: خرجُ التصنيف يُظهر ما كان يسقط صمتًا — مفتوحٌ ومشطوبٌ وبلا صفّ', () => {
+  const r = runCheck();
+  assert.equal(r.code, 0, r.out);
+  const m = r.out.match(/والمسمّى في الصفوف: (\d+) معرَّفًا = (\d+) مفتوحًا · (\d+) مشطوبًا مُغلقًا/);
+  assert.ok(m, `سطرُ التصنيف الموسَّع غائب:\n${r.out}`);
+  const [total, open, closed] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const unrooted = Number((r.out.match(/· (\d+) بلا صفٍّ باستثناءٍ معلن/) ?? [])[1]);
+  assert.equal(open + closed + unrooted, total, `المجموعُ لا يُطابق التفصيل: ${r.out}`);
+  assert.ok(total > 0, 'صفرُ معرَّفٍ مسمًّى مع صفوفٍ غيرِ ✅ حصرٌ لم يقع');
+});
+
+test('T-142/DC-02: الخانةُ الفارغةُ تُسقط الحاجزَ وحدَها — ولو وافقها حكمُ الملفّ فلم يُنبِّه DC-03', () => {
+  // العزلُ مقصود: مطفَّرُ «DC-02 بلا fail» نجا أوّلًا لأنّ DC-03 كان يُسقط الرمزَ عنه.
+  withRoot((root) => {
+    editIn(root, CRITERIA, (t) => t.replace('| T-85 |', '| — |'));
+    editIn(root, 'docs/audit/criteria/C-17.md', (t) => t.replace(/T-85/g, 'بندٍ لم يُسمَّ'));
+  }, (r) => {
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.out, /\[DC-02\] C-17/);
+    assert.doesNotMatch(r.out, /\[DC-03\]/);
   });
 });

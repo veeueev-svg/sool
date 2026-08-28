@@ -14,8 +14,11 @@
 #   أمرٍ موقَّعٍ مقيَّدٍ بـauditId · المرحلة 40 في phases_complete بلا أمر · حصيلةُ
 #   COMPLETION_CRITERIA.md لا تطابق صفوفَه · عددُ ROADMAP.md لا يطابق §2 · أمرٌ ملكيٌّ بلا
 #   auditId · صفُّ شرطٍ خارجيٍّ ناقصُ خانةٍ أو بلا جهةٍ من غير المنفّذين · النسبةُ المعلنة لا
-#   تساوي مجموعَ أوزان phases_complete · مرحلةٌ في phases_partial وهي في phases_complete
-# اختبار القبول: tests/governance/declaration_gate.test.ts + تشغيله في البوابة
+#   تساوي مجموعَ أوزان phases_complete · مرحلةٌ في phases_partial وهي في phases_complete ·
+#   **وأحكامُ التصنيف الخمسة (T-142)**: [DC-01] رأسُ الجدول لا يُعلن عمودَ «البند المفتوح» ·
+#   [DC-02] صفٌّ غيرُ ✅ بخانةٍ فارغةٍ أو «—» · [DC-03] حكمُ التدقيق يذكر بندًا وتُسقطه الخانةُ ·
+#   [DC-04] معرَّفٌ لا صفَّ له في §2 ولا استثناءَ معلنًا · [DC-05] حصرٌ لم يقع أو يتخطّى صفوفًا
+# اختبار القبول: tests/governance/declaration_gate.test.ts (ومساعداتُه في tests/governance/helpers.ts) + تشغيله في البوابة
 # الوثيقة المرتبطة: docs/test-reports/phase-40.md · docs/test-reports/W-2026-005-declaration-convergence.md
 #   · COMPLETION_CRITERIA.md §«قاعدة الإعلان»
 #
@@ -89,25 +92,126 @@ open_ids="$(awk -v a="$s2_start" -v b="$s2_end" 'NR>a && NR<b && /^\| T-/' "$PRO
   | sed -n 's/^| *\(T-[0-9]*[^ |]*\).*/\1/p')"
 open_items=$(printf '%s\n' "$open_ids" | grep -c 'T-' || true)
 
-# ــــ 2ب) العائقُ المسمّى: بندٌ يذكره صفٌّ غيرُ ✅ في معايير القبول وهو مفتوحٌ في §2 ــــ
-# (والخانةُ الخامسةُ «البند المفتوح» وحدَها تُقرأ — لا كلُّ نصِّ الصفّ، فلا يُصطاد رقمٌ من عنوان)
-named_ids="$(awk -F'|' '/^\| C-/ && $0 !~ /\| ✅ مستوفى \|/ {print $6}' "$CRITERIA_FILE" \
-  | grep -o 'T-[0-9]\+' | sort -u || true)"
-# والمطابقةُ تحتمل لاحقةً غيرَ رقمٍ (`T-115` في المعايير = `T-115أ`/`T-115ب` في §2)،
-# ولا تحتمل لاحقةً رقميّةً فلا يُصطاد `T-11` بـ`T-115`
-blocking=""
-for t in $named_ids; do
-  if printf '%s\n' "$open_ids" | awk -v t="$t" '
-      $0 == t { found = 1 }
-      index($0, t) == 1 && length($0) > length(t) {
-        rest = substr($0, length(t) + 1);
-        if (rest !~ /^[0-9]/) { found = 1 }
-      }
-      END { exit !found }'; then
-    blocking="$blocking $t"
+# ــــ 2ب) العائقُ المسمّى — يُقاس ولا يُصدَّق (T-142 · W-2026-012) ــــ
+# كان يُستخرج من **الخانة الخامسة** بلا حاجزٍ يقيسها: فحذفُ معرَّفٍ منها ينقل عائقًا حقيقيًّا
+# إلى الدَّينِ المُعلَن **ورمزُ الخروج 0** (قيس في docs/audit/measurements/phase-40-T142.txt).
+# فصار الاستخراجُ محكومًا بخمسة أحكامٍ مسمّاةٍ ترفض: DC-01..DC-05.
+VERDICTS_DIR="docs/audit/criteria"
+# استثناءاتٌ مجمَّدةٌ لـ[DC-04]: معرَّفٌ لا صفَّ له في §2 بسببٍ **يُقرأ في الفحص ويُطبع في كلِّ
+# تشغيلة** لا يُطوى. وتصحيحُ خانتِه حكمُ مدقّقٍ لا حكمُ منفّذ (RULE-004).
+UNROOTED_EXCEPTIONS="T-25|C-11 يذكره وحكمُه معه، ولا صفَّ له في PROGRESS.md §2 قطُّ — لا مفتوحًا ولا مشطوبًا (قيس بـgit log -S فلم يُنشأ أصلًا)؛ وإنشاءُ الصفِّ أو تصحيحُ الخانةِ حكمُ مدقّقٍ لا حكمُ منفّذ (RULE-004)"
+
+# حقلُ صفٍّ بفاصل «|» مُشذَّبًا
+row_field() { printf '%s' "$1" | awk -F'|' -v i="$2" '{gsub(/^ +| +$/,"",$i); print $i}'; }
+
+# [DC-01] موضعُ الخانةِ يُقاس من رأس الجدول: فرقمٌ مغروسٌ يجعل الفحصَ أعمى وهو يطبع ✓
+col_of() {
+  awk -F'|' -v want="$1" '/^\| *# *\|/ {
+    for (i = 1; i <= NF; i++) { c = $i; gsub(/^ +| +$/, "", c); if (index(c, want) == 1) { print i; exit } }
+    exit }' "$CRITERIA_FILE"
+}
+item_col="$(col_of 'البند المفتوح')"
+status_col="$(col_of 'الحالة')"
+verdict_col="$(col_of 'حكم التدقيق')"
+if [ -z "$item_col" ] || [ -z "$status_col" ] || [ -z "$verdict_col" ]; then
+  echo "✗ [DC-01] $CRITERIA_FILE: رأسُ الجدول لا يُعلن أعمدةَ «الحالة · حكم التدقيق · البند المفتوح»"
+  echo "  فموضعُ الخانةِ لا يُقاس، ولا يُغرَس رقمًا: فحصٌ يقرأ عمودًا بالرقم يصير أعمى أوّلَ تغيُّرٍ في الصيغة وهو يطبع ✓"
+  exit 1
+fi
+
+# المشطوبُ المُغلقُ في §2 جذرٌ كذلك: «| ~~T-…~~ |». و**الخانةُ الأولى قد تجمع بندَين**
+# («| ~~T-31~~ · ~~T-23~~ |» مقيسٌ في هذا الملفّ)، فتُقرأ الخانةُ كلُّها لا أوّلُ معرَّفٍ فيها:
+# فقراءةُ الأوّلِ وحدَه تجعل بندًا مُغلقًا يبدو بلا جذرٍ فيُطلب له استثناءٌ لا يستحقُّه.
+closed_ids="$(awk -F'|' -v a="$s2_start" -v b="$s2_end" 'NR>a && NR<b && /^\| *~~T-/ {print $2}' "$PROGRESS_FILE" \
+  | grep -o 'T-[0-9]\+[^~ |·]*' | sort -u || true)"
+
+named_ids=""
+open_named=""
+closed_named=""
+unrooted_declared=""
+rows_not_met=0
+while IFS= read -r row; do
+  [ -n "$row" ] || continue
+  cid="$(row_field "$row" 2)"
+  case "$(row_field "$row" "$status_col")" in *'✅ مستوفى'*) continue ;; esac
+  rows_not_met=$((rows_not_met + 1))
+  cell="$(row_field "$row" "$item_col")"
+  cell_ids="$(printf '%s' "$cell" | grep -o 'T-[0-9]\+' | sort -u || true)"
+
+  # [DC-02] صفٌّ غيرُ ✅ بلا معرَّفٍ في خانته: «—» دعوى «لا بندَ له» بلا سند
+  if [ -z "$cell_ids" ]; then
+    echo "✗ [DC-02] $cid ليس ✅ وخانةُ «البند المفتوح» فيه «${cell:-فارغة}» — بلا معرَّفِ بندٍ واحد"
+    echo "  فصفٌّ مفتوحٌ لا يُسمّي بندَه يسقط من التصنيف صمتًا: لا هو عائقٌ يمنع الإعلان ولا دَينٌ يُذكر عددُه"
+    fail=1
   fi
-done
+
+  # [DC-03] البنودُ تُقابل **حكمَ الملفّ** لا كاتبَ الخانة: فما يذكره الحكمُ وتُسقطه الخانةُ عائقٌ مُبتلع
+  vp="$(row_field "$row" "$verdict_col" | sed -n 's/.*(\([^)]*\.md\)).*/\1/p' | head -1)"
+  case "$vp" in "$VERDICTS_DIR"/*)
+    if [ -f "$vp" ]; then
+      for v in $(grep -o 'T-[0-9]\+' "$vp" | sort -u || true); do
+        if ! printf '%s\n' "$cell_ids" | grep -qx "$v"; then
+          echo "✗ [DC-03] $cid: حكمُ التدقيق في $vp يذكر $v وخانةُ «البند المفتوح» لا تذكره"
+          echo "  والحكمُ سندُ الصفّ، فبندٌ يسمّيه الحكمُ ويُسقطه كاتبُ الخانةِ عائقٌ يُبتلع بسهوٍ لا بقرار"
+          fail=1
+        fi
+      done
+    fi ;;
+  esac
+
+  for t in $cell_ids; do
+    named_ids="$named_ids $t"
+    if printf '%s\n' "$open_ids" | awk -v t="$t" '
+        $0 == t { found = 1 }
+        index($0, t) == 1 && length($0) > length(t) {
+          rest = substr($0, length(t) + 1);
+          if (rest !~ /^[0-9]/) { found = 1 }
+        }
+        END { exit !found }'; then
+      open_named="$open_named $t"
+    elif printf '%s\n' "$closed_ids" | grep -qx "$t"; then
+      closed_named="$closed_named $t"
+    else
+      # [DC-04] معرَّفٌ لا يُقابل صفًّا في §2 — لا مفتوحًا ولا مشطوبًا
+      why="$(printf '%s\n' "$UNROOTED_EXCEPTIONS" | awk -F'|' -v t="$t" '$1 == t { print $2; exit }')"
+      if [ -n "$why" ]; then
+        unrooted_declared="$unrooted_declared $t"
+        echo "  ℹ [DC-04] استثناءٌ معلن: $t ($cid) لا صفَّ له في §2 — $why"
+      else
+        echo "✗ [DC-04] $cid يسمّي $t ولا صفَّ له في $PROGRESS_FILE §2: لا مفتوحًا ولا مشطوبًا مُغلقًا"
+        echo "  فمعرَّفٌ بلا جذرٍ لا يُصنَّف: يسقط من العائق ومن الدَّين معًا. فإمّا صفٌّ في §2، وإمّا استثناءٌ معلنٌ بسببِه في هذا الفحص"
+        fail=1
+      fi
+    fi
+  done
+done <<EOF
+$(grep '^| C-' "$CRITERIA_FILE" || true)
+EOF
+
+named_ids="$(printf '%s\n' $named_ids | sort -u | tr '\n' ' ')"
+blocking="$(printf '%s\n' $open_named | sort -u | tr '\n' ' ')"
+closed_named="$(printf '%s\n' $closed_named | sort -u | tr '\n' ' ')"
+unrooted_declared="$(printf '%s\n' $unrooted_declared | sort -u | tr '\n' ' ')"
+named_n=$(printf '%s' "$named_ids" | wc -w | tr -d ' ')
+
+# [DC-05] حرَسُ حصرٍ أعمى: صفوفٌ غيرُ ✅ موجودةٌ ولا معرَّفَ واحدٌ استُخرج ⇒ الحصرُ لم يقع
+# **مطفَّرُه ناجٍ ويُعلن ناجيا (M5)**: كلُّ حالةٍ تُفرِغ المعرَّفاتِ تُفرِغ خانةً أوّلًا
+# فيُسقِطُها [DC-02] قبله — فلا يُمكن عزلُ حكمِه باختبار. ويُبقى **حارسًا لا مقيسًا**:
+# حدُّ التصنيف لا يُترك بلا تأكيد، وأما المقيسُ فالشّرطُ الثاني أدناه (مطفَّرُه مقتول).
+if [ "$rows_not_met" -gt 0 ] && [ "$named_n" -eq 0 ]; then
+  echo "✗ [DC-05] $rows_not_met صفًّا ليس ✅ ولم يُستخرج معرَّفُ بندٍ واحد — فالحصرُ لم يقع"
+  echo "  ولا يُطبع ✓ على حصرٍ لم يقع: صفرُ عائقٍ مسمًّى إمّا استيفاءٌ مقيسٌ وإمّا استخراجٌ معطوب، والفرقُ بينهما حاجزٌ لا نيّة"
+  fail=1
+fi
+# وحصيلةُ الصفوف تُطابَق بعدِّها: فتصنيفٌ يقرأ صفوفًا أقلَّ ممّا يعدُّه الحاجزُ حصرٌ ناقصٌ لا حصر
+if [ "$rows_not_met" -ne "$not_met" ]; then
+  echo "✗ [DC-05] التصنيفُ قرأ $rows_not_met صفًّا غيرَ ✅ والحصيلةُ المقيسةُ $not_met — والفرقُ استخراجٌ يتخطّى صفوفًا"
+  fail=1
+fi
+
 blocking_n=$(printf '%s' "$blocking" | wc -w | tr -d ' ')
+closed_named_n=$(printf '%s' "$closed_named" | wc -w | tr -d ' ')
+unrooted_n=$(printf '%s' "$unrooted_declared" | wc -w | tr -d ' ')
 debt_n=$((open_items - blocking_n))
 
 # ــــ 2ج) الشروطُ الخارجيّةُ المعلنة: بابٌ مقفلٌ بجهةٍ مسمّاةٍ ودليلِ استيفاء، لا عذرٌ مفتوح ــــ
@@ -167,6 +271,8 @@ done
 echo "  الدعوى: النسبة $percent% · royal_approval=$approval · المرحلة 40 في phases_complete: $phase40"
 echo "  الحال:  مستوفى $met · فجوة $gap · اكتُفي $rep (فما ليس ✅: $not_met) · بنود §2 المفتوحة: $open_items"
 echo "          منها عائقٌ مسمّى:$([ "$blocking_n" -eq 0 ] && echo ' لا شيء' || echo "$blocking") ($blocking_n) · ودَينٌ معلن: $debt_n · شروطٌ خارجيّة معلنة: $ext_rows · أوامر ملكية مقيَّدة: $orders"
+# ما كان يسقط صمتًا صار يُطبع (T-142): معرَّفاتٌ تسمّيها الصفوفُ غيرُ ✅ ولا تُحسب عائقًا
+echo "          والمسمّى في الصفوف: $named_n معرَّفًا = $blocking_n مفتوحًا · $closed_named_n مشطوبًا مُغلقًا [$closed_named] · $unrooted_n بلا صفٍّ باستثناءٍ معلن [$unrooted_declared]"
 
 # ــــ 3) الأمرُ الذي لا أثرَ له في السجل ليس أمرًا (RULE-001) ــــ
 if [ -n "$orders_unrecorded" ]; then
