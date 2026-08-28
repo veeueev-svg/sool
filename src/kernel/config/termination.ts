@@ -49,19 +49,19 @@ export const STOP_KNOWN_PROBES: readonly StopProbeKind[] = Object.freeze(
  * أن يُستدعى فعلٌ (أداة)، وأن يُستهلك مورد (إيجار)، وأن تُمارَس صلاحية (قدرة).
  * حذف أحدها يُسقط الإقلاع كي لا يُعلن «توقف مؤكَّد» عن تمرين لم يجرّب ما يُثبته.
  */
-export const STOP_REQUIRED_PROBES: readonly StopProbeKind[] = ['tool', 'lease', 'capability'];
+export const STOP_REQUIRED_PROBES: readonly StopProbeKind[] = Object.freeze(['tool', 'lease', 'capability']);
 
 /**
  * الجهات المنفّذة للإنهاء. الشاهد لا يكون واحدًا منها (RULE-004): شهادة المنفّذ
  * لنفسه هي بعينها العيب الذي جاءت هذه المرحلة لتغلقه.
  */
-export const TERMINATION_EXECUTORS: readonly string[] = [
+export const TERMINATION_EXECUTORS: readonly string[] = Object.freeze([
   'authority:king',
   'king:sovereign',
   'authority:crown_guard',
   'ministry:cybersecurity',
   'ministry:interior',
-];
+]);
 
 export function loadTermination(configDir = resolveConfigDir()): TerminationConfig {
   const raw = loadYamlFile(join(configDir, 'termination.yaml')) as unknown as TerminationConfig;

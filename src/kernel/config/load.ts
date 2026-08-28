@@ -42,9 +42,9 @@ export interface LoadConfig {
 }
 
 /** جهات التنفيذ التي لا يجوز أن تُشغّل تمرين الضغط على نفسها (RULE-004). */
-export const LOAD_FORBIDDEN_DRILL_AUTHORITIES: readonly string[] = [
+export const LOAD_FORBIDDEN_DRILL_AUTHORITIES: readonly string[] = Object.freeze([
   'identity:king', 'authority:crown', 'authority:crown_guard', 'authority:bootstrap',
-];
+]);
 
 export function loadLoad(configDir = resolveConfigDir()): LoadConfig {
   const raw = loadYamlFile(join(configDir, 'load.yaml')) as unknown as LoadConfig;

@@ -71,7 +71,7 @@ export const STAGING_KNOWN_WATCHES: readonly WatchKind[] = Object.freeze([
  * «تشغيل مقيَّد لمدة مراقبة كاملة بلا حادث حرج» — و«مقيَّد» يوجب حرس النطاق،
  * و«بلا حادث» يوجب حرسًا يقرأ سلامة السلسلة، وإلّا فالشهادة على صمتٍ لا على سلامة.
  */
-export const STAGING_REQUIRED_WATCHES: readonly WatchKind[] = ['scope', 'audit_chain'];
+export const STAGING_REQUIRED_WATCHES: readonly WatchKind[] = Object.freeze(['scope', 'audit_chain']);
 
 /** الحوادث المعروفة بأسمائها — التهيئة هي المصدر وهذه هي المقياس */
 export const STAGING_KNOWN_INCIDENTS: readonly IncidentKind[] = Object.freeze([
@@ -85,9 +85,9 @@ export const STAGING_KNOWN_INCIDENTS: readonly IncidentKind[] = Object.freeze([
  * القيد نفسه، وسلسلة تدقيق مكسورة تُبطل كل شهادة تُبنى عليها (RULE-006)،
  * وكيانٌ منتهٍ يعمل هو ثقب المرحلة 35 عائدًا. تصنيفها «جسيمة» يُسقط الشرط ضمنًا.
  */
-export const STAGING_MUST_BE_CRITICAL: readonly IncidentKind[] = [
+export const STAGING_MUST_BE_CRITICAL: readonly IncidentKind[] = Object.freeze([
   'scope_violation', 'audit_chain_broken', 'terminated_entity_acting',
-];
+]);
 
 /** كتب التشغيل المعروفة — ما ليس منها لا يُنفَّذ: كتابٌ مجهول لا يُعرف تحققه */
 export const STAGING_KNOWN_RUNBOOKS: readonly string[] = Object.freeze([
@@ -98,13 +98,13 @@ export const STAGING_KNOWN_RUNBOOKS: readonly string[] = Object.freeze([
  * الجهات المشغّلة للتشغيل المحدود. المراقب لا يكون واحدًا منها (RULE-004):
  * من يشغّل النافذة لا يشهد لنفسه أنها مرّت بلا حادث.
  */
-export const STAGING_OPERATORS: readonly string[] = [
+export const STAGING_OPERATORS: readonly string[] = Object.freeze([
   'authority:king',
   'king:sovereign',
   'authority:crown_guard',
   'authority:royal_court',
   'ministry:infrastructure',
-];
+]);
 
 export function loadStaging(configDir = resolveConfigDir()): StagingConfig {
   const raw = loadYamlFile(join(configDir, 'staging.yaml')) as unknown as StagingConfig;

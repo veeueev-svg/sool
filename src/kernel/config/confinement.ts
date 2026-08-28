@@ -25,7 +25,7 @@ import { guardDeclaredCount } from './declaration_limits';
 import { loadYamlFile } from './yaml';
 
 /** الشروطُ المعروفة — قائمة مغلقة: شرطٌ غير معلن لا يُقاس ولا يُشترط */
-export const CONFINEMENT_REQUIREMENTS = [
+export const CONFINEMENT_REQUIREMENTS = Object.freeze([
   'non_root',
   'no_effective_capabilities',
   'empty_bounding_set',
@@ -33,7 +33,7 @@ export const CONFINEMENT_REQUIREMENTS = [
   'seccomp_filter',
   'read_only_root',
   'default_deny_egress',
-] as const;
+] as const);
 export type ConfinementRequirement = (typeof CONFINEMENT_REQUIREMENTS)[number];
 
 export interface InfrastructurePort {

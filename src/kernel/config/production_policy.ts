@@ -81,7 +81,7 @@ export const PRODUCTION_KNOWN_SCANNERS: readonly ScannerKind[] = Object.freeze([
  * ماسح الأقاليم، و«تحت مرور التاج» توجب ماسح المرور، و«مراقبة» لا تُبنى على سلسلة
  * غير مُتحقَّقة (audit_chain) ولا على نطاق غير محروس (scope).
  */
-export const PRODUCTION_REQUIRED_SCANNERS: readonly ScannerKind[] = [
+export const PRODUCTION_REQUIRED_SCANNERS: readonly ScannerKind[] = Object.freeze([
   'regions', 'passage', 'audit_chain', 'scope',
   // المرحلة 39 (T-120): الثباتُ مشترطٌ لا مرجوّ — تشغيلٌ دائمٌ بحالةٍ تموت مع العمليّة
   // ليس دائمًا؛ وحذفُ الماسح من التهيئة يُسقط الإقلاع برمزه المعلن.
@@ -90,7 +90,7 @@ export const PRODUCTION_REQUIRED_SCANNERS: readonly ScannerKind[] = [
   // خارجيٍّ غير معلن»، ومنعٌ داخلَ العمليّة وحده يسقط بأول ثغرةٍ في الشيفرة
   // نفسها. ومن لا يمسح الحصرَ لا يعلم أقائمٌ هو أم سقط بعد الإقلاع (RULE-006).
   'confinement',
-];
+]);
 
 /** الحوادث المعروفة في التشغيل الاتحادي */
 export const PRODUCTION_KNOWN_INCIDENTS: readonly IncidentKind[] = Object.freeze([
@@ -104,7 +104,7 @@ export const PRODUCTION_KNOWN_INCIDENTS: readonly IncidentKind[] = Object.freeze
  * ما لا يجوز تصنيفه دون «حرج». يُضاف إلى قائمة المرحلة 36 فعلٌ إقليمي نفُذ بلا إذن
  * مرور: تصنيفه «جسيمًا» يُسقط شرط القبول ضمنًا — لأن الشرط هو ألّا ينفُذ.
  */
-export const PRODUCTION_MUST_BE_CRITICAL: readonly IncidentKind[] = [
+export const PRODUCTION_MUST_BE_CRITICAL: readonly IncidentKind[] = Object.freeze([
   ...STAGING_MUST_BE_CRITICAL,
   'region_action_without_passage',
   // T-120: تصنيفُ انعدام الثبات «جسيمًا» يُبقي التشغيل مارًّا والحالةُ تموت مع العمليّة.
@@ -112,7 +112,7 @@ export const PRODUCTION_MUST_BE_CRITICAL: readonly IncidentKind[] = [
   // T-16: تصنيفُ انعدام الحصر «جسيمًا» يُبقي الدولة تُعلن «صفر أثرٍ خارجي»
   // والطريقُ مفتوحٌ في جدول النواة — وهو الوعدُ بلا حاملٍ الذي تمنعه RULE-007.
   'process_not_confined',
-];
+]);
 
 /** كتب التشغيل المعروفة في الطور الاتحادي */
 export const PRODUCTION_KNOWN_RUNBOOKS: readonly string[] = Object.freeze([

@@ -46,7 +46,7 @@ export const CHAOS_KNOWN_FAULTS: readonly ChaosFault[] = Object.freeze(
  * «انقطاع الشبكة والهوية والطاقة ⇒ توقف آمن موثّق». حذف أحدها من التهيئة يُسقط الإقلاع
  * كي لا يُعلن قبولٌ عن تمرين لم يمارس ما أُعلن أنه يمارسه.
  */
-export const CHAOS_REQUIRED_FAULTS: readonly ChaosFault[] = ['network', 'identity', 'power'];
+export const CHAOS_REQUIRED_FAULTS: readonly ChaosFault[] = Object.freeze(['network', 'identity', 'power']);
 
 export function loadChaos(configDir = resolveConfigDir()): ChaosConfig {
   const raw = loadYamlFile(join(configDir, 'chaos.yaml')) as unknown as ChaosConfig;
