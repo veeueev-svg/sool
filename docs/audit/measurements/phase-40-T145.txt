@@ -1,0 +1,39 @@
+docs/audit/measurements/phase-40-T145.txt — القياسُ الخامُّ للبند T-145 (البند W-2026-016)
+المالك: المساعد الآلي — Perplexity Computer (الجلسة 67) | المراجع: القيّم على المستودع
+التاريخ: 2026-08-30 | الأداة: node /tmp/measure_t145.mjs (نسخةٌ من dist في جذرٍ مؤقّتٍ بلا شبكة)
+القاعدة: العلّةُ تُقاس قبل أن تُلمس شفرة — وكلُّ رقمٍ أدناه خرجٌ لا وصف.
+
+§0) خطُّ الأساسِ قبل أوّلِ تعديل
+  npm test        ⇒ tests 2175 · pass 2175 · fail 0 · رمزُ الخروج 0
+  npm run verify  ⇒ tests 2175 · pass 2174 · fail 1 · رمزُ الخروج 1
+    الساقطُ الوحيد: not ok 1673 — «قبول: خمسون ألف هوية مسجلة وقياس البوابة تحت عتبة
+    التهيئة بهامش معلن» @ dist/tests/scale/scale_lifecycle.test.js:35
+    الحكمُ الساقط: assert.ok(samples.at(-1) <= h.s.scaleConfig.policy.gateway_max_ms)
+    التصنيف: تقلّبُ عتبةِ زمنِ جدارٍ مطلقةٍ تحت التوازي — قائمٌ قبل هذا البند،
+    موضعُه W-2026-004 (BLOCKED). لم يُلمس ولم تُخفَّض عتبةٌ ولا يُدَّعى إصلاحُه.
+
+§1) حصرُ حلقاتِ الصعود في src/ (النمطُ: for (let i = 0; i < 8)
+src/composition/deploy_declaration.ts:93:  for (let i = 0; i < 8; i += 1) {
+src/kernel/config/paths.ts:20:  for (let i = 0; i < 8; i++) {
+src/production/supervision_checkpoint.ts:50:  for (let i = 0; i < 8; i++) {
+src/production/production_manifest.ts:41:  for (let i = 0; i < 8; i++) {
+src/staging/manifest.ts:56:  for (let i = 0; i < 8; i++) {
+العدد المقيس: 5
+
+§2) الدوالُّ الأربعُ: الشرطُ (sentinel) والمُخرَجُ ورمزُ الرفض
+- resolveConfigDir @ src/kernel/config/paths.ts | الشرط: join(dir, 'config', 'royal-authority.yaml') | رمزُ الرفض: 'CONFIG_DIR_MISSING' | سطورُ الحلقة: 12
+- resolveDeployRoot @ src/composition/deploy_declaration.ts | الشرط: join(dir, 'deploy', 'staging', 'manifest.yaml') | رمزُ الرفض: 'MANIFEST_DEPLOY_DIR_MISSING' | سطورُ الحلقة: 14
+- resolveDeployDir @ src/staging/manifest.ts | الشرط: join(dir, 'deploy', 'staging', 'manifest.yaml') | رمزُ الرفض: 'MANIFEST_DEPLOY_DIR_MISSING' | سطورُ الحلقة: 11
+- resolveProductionDeployDir @ src/production/production_manifest.ts | الشرط: join(dir, 'deploy', 'production', 'manifest.yaml') | رمزُ الرفض: 'PRODUCTION_MANIFEST_DEPLOY_DIR_MISSING' | سطورُ الحلقة: 16
+
+§3) برهانٌ تجريبيٌّ: الحدُّ «8» أربعُ نسخٍ مستقلّةٍ لا ثابتٌ واحد
+بعد تغيير الحدِّ إلى 1 في dist/src/staging/manifest.js وحدَه:
+resolveDeployDir => رُفض MANIFEST_DEPLOY_DIR_MISSING
+resolveProductionDeployDir => نجح /tmp/t145-vrB9dy/deploy/production
+resolveDeployRoot => نجح /tmp/t145-vrB9dy/deploy
+resolveConfigDir => نجح /tmp/t145-vrB9dy/config
+
+§4) عدمُ تناسقِ الشرط: جذرٌ فيه deploy/production ولا deploy/staging
+resolveProductionDeployDir(asym) => نجح /tmp/t145-asym-8zH11P/deploy/production
+resolveDeployRoot(asym) => رُفض MANIFEST_DEPLOY_DIR_MISSING
+resolveDeployDir(asym) => رُفض MANIFEST_DEPLOY_DIR_MISSING

@@ -23,10 +23,10 @@
  * الوثيقة المرتبطة: docs/runbooks/README.md
  */
 import { existsSync } from 'fs';
-import { join, dirname, resolve } from 'path';
+import { join } from 'path';
 import { EntityId, SovereignViolation } from '../kernel/types';
 import {
-  loadYamlFile, StagingConfig, WatchKind, STAGING_OPERATORS,
+  loadYamlFile, StagingConfig, WatchKind, STAGING_OPERATORS, ascendToDeclaredDir,
 } from '../kernel/config';
 
 export interface StagingManifest {
@@ -50,16 +50,18 @@ export interface DeclaredRunbook {
   readonly steps: readonly DeclaredStep[];
 }
 
-/** يبحث عن مجلد النشر صعودًا من هذا الملف — كما يفعل `resolveConfigDir` للتهيئة */
+/**
+ * يبحث عن مجلد النشر صعودًا من هذا الملف — **بالمصعدِ المشتركِ نفسِه** الذي يستنبط به
+ * `resolveConfigDir` مجلدَ التهيئة (T-145). والدليلُ والمُخرَجُ والرمزُ والنصُّ كما كانت
+ * حرفًا: وحدَها الحلقةُ لم تبقَ منسوخةً في أربعةِ مواضع.
+ */
 export function resolveDeployDir(startDir = __dirname): string {
-  let dir = resolve(startDir);
-  for (let i = 0; i < 8; i++) {
-    if (existsSync(join(dir, 'deploy', 'staging', 'manifest.yaml'))) return join(dir, 'deploy', 'staging');
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  throw new SovereignViolation('مجلد النشر غير موجود: deploy/staging', 'MANIFEST_DEPLOY_DIR_MISSING');
+  return ascendToDeclaredDir({
+    sentinel: ['deploy', 'staging', 'manifest.yaml'],
+    result: ['deploy', 'staging'],
+    code: 'MANIFEST_DEPLOY_DIR_MISSING',
+    message: 'مجلد النشر غير موجود: deploy/staging',
+  }, startDir);
 }
 
 function sameSet(a: readonly string[], b: readonly string[]): boolean {

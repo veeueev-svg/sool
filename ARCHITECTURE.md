@@ -39,9 +39,9 @@
 | المجلد | ملفات | أسطر | ماذا يسكنه | المالك |
 |---|---:|---:|---|---|
 | `src/` (الجذر) | 1 | 220 | `index.ts` — جذر التركيب: ينادي طبقات `composition/` بترتيبها الملزم، ولا يبني ولا يحمل سياسة | القيّم |
-| `src/composition/` | 12 | 1845 | طبقات البناء بحدود الاعتماد: `sovereignty` ← `population` ← `economy` ← `enterprises` ← `scale` ← `institutions` ← `resilience` ← `operations`، و`state.ts` (عقد الحالة) و`public_api.ts` (سطح التصدير) و`alignment_snapshot.ts` و`deploy_declaration.ts` (حصرُ إعلانِ النشر قبل البناء — T-138) | القيّم |
+| `src/composition/` | 12 | 1852 | طبقات البناء بحدود الاعتماد: `sovereignty` ← `population` ← `economy` ← `enterprises` ← `scale` ← `institutions` ← `resilience` ← `operations`، و`state.ts` (عقد الحالة) و`public_api.ts` (سطح التصدير) و`alignment_snapshot.ts` و`deploy_declaration.ts` (حصرُ إعلانِ النشر قبل البناء — T-138) | القيّم |
 | `src/kernel/` | 4 | 526 | الأنواع السيادية، سجل الموارد، حدود النواة | القيّم |
-| `src/kernel/config/` | 36 | 5658 | مُحمِّل لكل نطاق: `royal_authority`, `quotas`, `regions`, `economy`, `external`, `contracts`, `enterprises`, `services`, `research`, `scale`, `recovery`, `load`, `chaos`, `termination`, `staging`, `production` (+ `production_policy`), `persistence`, `confinement`, `reproduction`, **`inference`** (الجلسة 35) و`yaml` و`paths`، و**ميزانيّةُ الإعلان**: `declaration_limits` (سقفُ كلِّ قائمة) و`declaration_budget` + `declaration_census` (سقفُ المجموع وبايتاتِ الملف — T-130) و**`closed_enums`** (سجلُّ التعدادات المغلقة وحرسُها — T-131) و**`declaration_reach`** (مدى الحصر ودفترُ ما حُمِّل وحرَسُ المجلد عند كلِّ قراءة — T-133) و**`declaration_work`** (عدّادُ عملِ الإقلاع وسقوفُه المجمَّدة — T-134) و**`declaration_memo`** (ذاكرةُ قراءةٍ واحدةٍ لكلِّ مسارٍ في الإقلاع — T-139) و**`declaration_dir_memo`** (بصمةُ قياسِ المجلد: مشيةٌ واحدةٌ لكلِّ مجلدٍ في الإقلاع — T-140، وتُعلن ما حفظته لتُعاد مراجعتُه في خاتمة الإقلاع — T-141) و**`policies`** و**`roles`** (السياساتُ الحاكمةُ وفصلُ الصلاحيات: إعلانانِ كانا لا يقرؤهما أحدٌ فصارا يُقرآن ويُنفَذان — T-137) و**`declaration_readers`** (سجلُّ قارئٍ لكلِّ ملفِّ إعلانٍ وحرَسُه في الإقلاع — T-137) | القيّم |
+| `src/kernel/config/` | 36 | 5737 | مُحمِّل لكل نطاق: `royal_authority`, `quotas`, `regions`, `economy`, `external`, `contracts`, `enterprises`, `services`, `research`, `scale`, `recovery`, `load`, `chaos`, `termination`, `staging`, `production` (+ `production_policy`), `persistence`, `confinement`, `reproduction`, **`inference`** (الجلسة 35) و`yaml` و`paths`، و**ميزانيّةُ الإعلان**: `declaration_limits` (سقفُ كلِّ قائمة) و`declaration_budget` + `declaration_census` (سقفُ المجموع وبايتاتِ الملف — T-130) و**`closed_enums`** (سجلُّ التعدادات المغلقة وحرسُها — T-131) و**`declaration_reach`** (مدى الحصر ودفترُ ما حُمِّل وحرَسُ المجلد عند كلِّ قراءة — T-133) و**`declaration_work`** (عدّادُ عملِ الإقلاع وسقوفُه المجمَّدة — T-134) و**`declaration_memo`** (ذاكرةُ قراءةٍ واحدةٍ لكلِّ مسارٍ في الإقلاع — T-139) و**`declaration_dir_memo`** (بصمةُ قياسِ المجلد: مشيةٌ واحدةٌ لكلِّ مجلدٍ في الإقلاع — T-140، وتُعلن ما حفظته لتُعاد مراجعتُه في خاتمة الإقلاع — T-141) و**`policies`** و**`roles`** (السياساتُ الحاكمةُ وفصلُ الصلاحيات: إعلانانِ كانا لا يقرؤهما أحدٌ فصارا يُقرآن ويُنفَذان — T-137) و**`declaration_readers`** (سجلُّ قارئٍ لكلِّ ملفِّ إعلانٍ وحرَسُه في الإقلاع — T-137) | القيّم |
 | `src/audit/` | 3 | 384 | السلسلة غير القابلة للمحو ومخزنها | ديوان التدقيق |
 | `src/identity/` | 4 | 265 | جذر الثقة، سلطة الشهادات، سجل الهويات | حرس التاج |
 | `src/crown/` | 7 | 977 | البوابة، النقض، النبض، الحرس، قناة الأوامر | الديوان الملكي |
@@ -61,8 +61,8 @@
 | `src/load/` | 5 | 925 | تمرين الضغط ودفتر الأحمال (والأشكالُ وحصرُ الخرق وحدتان جارتان من الجلسة 42، و`load_calibration.ts` معايرةُ عتباتِ الزمن على عتادِ المُشغّل من الجلسة 58 — W-2026-004) | ديوان التدقيق |
 | `src/chaos/` | 4 | 614 | حقن القطوع وحكم التوقف الآمن | ديوان التدقيق |
 | `src/termination/` | 3 | 534 | مسالك الإنهاء والشاهد المستقل ودفتر الحكم | حرس التاج |
-| `src/staging/` | 8 | 1315 | التشغيل المحدود: نطاق، نافذة، حرّاس، كتب | المشغّل |
-| `src/production/` | 8 | 1903 | التشغيل الاتحادي: مرور التاج، مشرفٌ مستمر، أحد عشر ماسحًا، دفتر خروق | المشغّل |
+| `src/staging/` | 8 | 1317 | التشغيل المحدود: نطاق، نافذة، حرّاس، كتب | المشغّل |
+| `src/production/` | 8 | 1900 | التشغيل الاتحادي: مرور التاج، مشرفٌ مستمر، أحد عشر ماسحًا، دفتر خروق | المشغّل |
 
 > **تصحيحٌ مُعلن (الجلسة 43 · RULE-008):** أعدادُ الملفاتِ والأسطر أعلاه **قيست من الشجرة
 > نفسِها** في الجلسة 43، فتبيّن أنّ **18 صفًّا من 25** كانت متأخّرةً عن الواقع — أكبرُها

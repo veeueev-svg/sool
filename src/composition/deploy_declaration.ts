@@ -48,18 +48,28 @@
  *      `composeOperations` برمزِ `MANIFEST_DEPLOY_DIR_MISSING`، فصار يُسقطه أبكرَ **بالرمز
  *      نفسِه**. فلا حالةَ فشلٍ جديدةٌ أُضيفت، ولا رمزَ رفضٍ تغيّر لمن يقرؤه.
  *
- *   6) **ومستنبِطُ الجذر مكرَّرٌ ثالثًا — دَينٌ مُعلنٌ بندًا (`T-145`)**: يستنبط هذا الملفُّ
- *      جذرَ النشر صعودًا، وتستنبطه `resolveDeployDir` و`resolveProductionDeployDir`
- *      كذلك — ثلاثةُ مواضعَ تصعد بشرطٍ واحد. وقد وُحِّد **الشرطُ** ولم يُوحَّد **الكود**،
- *      لأنّ توحيدَه يمسّ قارئتَي بيانٍ خارجَ نطاقِ هذا البند المحجوز (خطوة 2 من
- *      `docs/work/WORK_CONTROL.md`: النطاقُ يُعلن ولا يُوسَّع في أثناء العمل بلا إعلان).
- *      وأثرُه المقيس: مَن مرّر `deployDir` في تشغيلٍ حقيقيٍّ حرَس مجلدًا وقرأ غيرَه —
- *      **ولذلك لا يُمرَّر إلّا في اختبار**، والاختبارُ يُثبت الفرقَ صراحةً لا ضِمنًا.
+ *   6) **ومستنبِطُ الجذر صار واحدًا — والدَّينُ أُدِيَ في `W-2026-016` (`T-145`)**: كان
+ *      هذا الملفُّ يكتب حلقةَ الصعودِ بنفسِه، وتكتبُها `resolveDeployDir` و
+ *      `resolveProductionDeployDir` و`resolveConfigDir` — **أربعُ نسخٍ وحدُّها `8` أربعُ
+ *      مرّاتٍ لا مرّةً** (مقيسٌ في §3 من `docs/audit/measurements/phase-40-T145.txt`).
+ *      فصار الصعودُ `ascendToDeclaredDir` في `src/kernel/config/paths.ts` وحدُّه
+ *      `DECLARED_DIR_ASCENT_LIMIT`، **ولم يُوحَّد رمزُ رفضٍ ولا نصٌّ ولا شرطٌ**: الآلةُ
+ *      تُوحَّد والحكمُ يبقى لصاحبِه.
+ *
+ *   7) **وعدمُ تناسقٍ مُعلَنٌ لم يُسوَّ في `W-2026-016`**: دليلُ هذا الملفِّ
+ *      `deploy/staging/manifest.yaml`، فجذرٌ فيه `deploy/production/` ولا `deploy/staging/`
+ *      **يُرفَض هنا ويُقبَل في `resolveProductionDeployDir`** (مقيسٌ في §4 من القياس
+ *      الخامّ). وبقي كما كان لأنّ تبديلَ الدليلِ قرارُ حصرٍ **يحكم فيه المراجع**
+ *      (RULE-004) — والمنفّذُ يُعلن ولا يقضي. وأثرُ `deployDir` المقيسُ باقٍ كما هو: مَن
+ *      مرّرَه في تشغيلٍ حقيقيٍّ حرَس مجلدًا وقرأ غيرَه — **ولذلك لا يُمرَّر إلّا في
+ *      اختبار**، والاختبارُ يُثبت الفرقَ صراحةً لا ضِمنًا.
  */
 import { existsSync } from 'fs';
-import { dirname, join, resolve } from 'path';
+import { join } from 'path';
 import { SovereignViolation } from '../kernel/types';
-import { guardDeclarationDirectoryBytes, storedDirectoryMeasure } from '../kernel/config';
+import {
+  guardDeclarationDirectoryBytes, storedDirectoryMeasure, ascendToDeclaredDir,
+} from '../kernel/config';
 
 /**
  * بيئاتُ النشر المعلنةُ حصرًا — مجمَّدةٌ في التشغيل لا `readonly` في الترجمة وحدَها
@@ -89,17 +99,14 @@ export type DeployDeclarationCensus = {
  * @param startDir موضعُ البدء — لا يُمرَّر من خارج الوحدة إلّا في اختبارٍ يقصده
  */
 export function resolveDeployRoot(startDir = __dirname): string {
-  let dir = resolve(startDir);
-  for (let i = 0; i < 8; i += 1) {
-    if (existsSync(join(dir, 'deploy', 'staging', 'manifest.yaml'))) return join(dir, 'deploy');
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  throw new SovereignViolation(
-    'مجلد النشر غير موجود: deploy — ولا تُقلع دولةٌ على إعلانِ نشرٍ لا يُحصى (T-138)',
-    'MANIFEST_DEPLOY_DIR_MISSING',
-  );
+  // T-145: المصعدُ واحدٌ في `src/kernel/config/paths.ts`، والدليلُ هو دليلُ قارئتي
+  // البيانِ نفسُه كما كان — والرمزُ والنصُّ لم يُلمسا حرفًا.
+  return ascendToDeclaredDir({
+    sentinel: ['deploy', 'staging', 'manifest.yaml'],
+    result: ['deploy'],
+    code: 'MANIFEST_DEPLOY_DIR_MISSING',
+    message: 'مجلد النشر غير موجود: deploy — ولا تُقلع دولةٌ على إعلانِ نشرٍ لا يُحصى (T-138)',
+  }, startDir);
 }
 
 /**

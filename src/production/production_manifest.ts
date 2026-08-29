@@ -21,9 +21,11 @@
  * الوثيقة المرتبطة: docs/decisions/ADR-0021-federated-operation.md
  */
 import { existsSync } from 'fs';
-import { dirname, join, resolve } from 'path';
+import { join } from 'path';
 import { EntityId, SovereignViolation } from '../kernel/types';
-import { loadYamlFile, ProductionConfig, ScannerKind, PRODUCTION_OPERATORS } from '../kernel/config';
+import {
+  loadYamlFile, ProductionConfig, ScannerKind, PRODUCTION_OPERATORS, ascendToDeclaredDir,
+} from '../kernel/config';
 
 export interface ProductionManifest {
   readonly environment: string;
@@ -37,19 +39,14 @@ export interface ProductionManifest {
 
 /** يبحث عن مجلد نشر التشغيل الاتحادي صعودًا — كما تفعل نظيرتها في المرحلة 36 */
 export function resolveProductionDeployDir(startDir = __dirname): string {
-  let dir = resolve(startDir);
-  for (let i = 0; i < 8; i++) {
-    if (existsSync(join(dir, 'deploy', 'production', 'manifest.yaml'))) {
-      return join(dir, 'deploy', 'production');
-    }
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  throw new SovereignViolation(
-    'مجلد النشر غير موجود: deploy/production',
-    'PRODUCTION_MANIFEST_DEPLOY_DIR_MISSING',
-  );
+  // T-145: المصعدُ مشتركٌ، **والدليلُ والرمزُ غيرُ دليلِ نطيرتِها ورمزِها — والفرقُ
+  // محفوظٌ لا مُسوَّى**: توحيدُ رمزٍ أو شرطٍ تغييرُ عقدٍ يحكم فيه المراجع (RULE-004).
+  return ascendToDeclaredDir({
+    sentinel: ['deploy', 'production', 'manifest.yaml'],
+    result: ['deploy', 'production'],
+    code: 'PRODUCTION_MANIFEST_DEPLOY_DIR_MISSING',
+    message: 'مجلد النشر غير موجود: deploy/production',
+  }, startDir);
 }
 
 function sameSet(a: readonly string[], b: readonly string[]): boolean {
