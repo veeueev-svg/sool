@@ -5,7 +5,8 @@
  * التبعيات: ContinuousSupervisor, CheckpointStore, KillSwitch
  * الصلاحيات: قياس فقط — ولا يُعدّل الاختبار تسامح التهيئة
  * حالات الفشل المقيسة: ماسح مجهول، ماسح معلن بلا ماسحة، مراقب غير معلن، ماسح يرمي،
- *   نقطة تفتيش معدَّلة، وقفٌ من غير مشغّل، وقفٌ بلا سبب، تأخّر عن الإقلاع، صمت، فجوة عبور
+ *   نقطة تفتيش معدَّلة، وقفٌ من غير مشغّل، وقفٌ بلا سبب، تأخّر عن الإقلاع، صمت، فجوة عبور،
+ *   وصمتٌ فسّره حجبُ المُشغّل يُسمّى ولا يُدان به المراقب، وصمتٌ زاد على الحجب يُدان (T-155)
  * اختبار القبول: tests/production/production_lifecycle.test.ts
  * الوثيقة المرتبطة: docs/decisions/ADR-0021-federated-operation.md
  * ملاحظة: «تبدأ مع الإقلاع» تُقاس بفارق أول مسحة عن لحظة الإقلاع لا ببدءٍ داخل
@@ -112,6 +113,14 @@ test('التأخّر عن الإقلاع فجوةٌ تُقاس على مهلة �
   } finally { h.dispose(); }
 });
 
+/**
+ * ثابت 8 (T-155): مِجَسٌّ في موعده يعني «المُشغّل كان قادرًا على النداء»، فصمتُ
+ * المراقبة صمتُها هي. تُنادى النبضاتُ صراحةً كي يُقاس التمييزُ لا حظُّ الجدولة.
+ */
+function tickProbe(s: ContinuousSupervisor, from: number, to: number, tick: number): void {
+  for (let at = from + tick; at <= to; at += tick) s.observeProbe(at);
+}
+
 test('الصمت بين مسحتين يُقيَّد ويُحصى — والعودة بعد انقطاع ليست استمرارًا', () => {
   const now = Date.now();
   const h = productionHarness({ now });
@@ -119,12 +128,122 @@ test('الصمت بين مسحتين يُقيَّد ويُحصى — والعو�
     const s = supervisorOn(h, silentProbes(h.policy), now);
     s.start(now);
     const silence = h.policy.supervision.max_silence_ms + 100;
+    tickProbe(s, now, now + silence, h.policy.supervision.tick_ms);
     s.sweep(now + silence);
     const gaps = s.report().gaps.filter((g) => g.kind === 'silence');
     assert.equal(gaps.length, 1);
     assert.equal(gaps[0]?.ms, silence);
     assert.equal(lastDetail(h.state, 'supervision_gap').limitMs, h.policy.supervision.max_silence_ms);
+    assert.equal(lastDetail(h.state, 'supervision_gap').stallMs, 0, 'ولا حجبَ مُشغّلٍ يُعتذر به');
+    assert.equal(s.report().hostStalls.length, 0);
     s.stop(OPERATOR, 'انتهى القياس', now + silence);
+  } finally { h.dispose(); }
+});
+
+test('ثابت 8: صمتٌ فسّره حجبُ المُشغّل يُسمّى `supervision_host_stall` ولا يُحسب فجوةَ مراقبة', () => {
+  const now = Date.now();
+  const h = productionHarness({ now });
+  try {
+    const tick = h.policy.supervision.tick_ms;
+    const s = supervisorOn(h, silentProbes(h.policy), now);
+    // نبضةُ البدايةِ تُسجّل مباشرةً لا بمؤقّتٍ حقيقي: موقِتٌ لا يُوقَف يكتب بعد
+    // انتهاءِ الاختبارِ في مجلّدٍ محذوفٍ (ENOENT)، والمقيسُ هنا حسابٌ لا جدولة.
+    s.observeProbe(now);
+    s.sweep(now);
+    // المِجَسُّ نفسُه محجوبٌ فلم يُنادَ قطًّا خلالَ النافذة: فالحجبُ من المُشغّلِ لا من المراقبة
+    const silence = h.policy.supervision.max_silence_ms + 300;
+    s.sweep(now + silence);
+    const report = s.report();
+    assert.equal(report.gaps.filter((g) => g.kind === 'silence').length, 0, 'لا فجوةَ مراقبة');
+    assert.equal(report.hostStalls.length, 1, 'بل حالةُ حجبٍ واحدةٌ معلنة');
+    assert.equal(report.hostStalls[0]?.silenceMs, silence);
+    assert.equal(report.hostStalls[0]?.stallMs, silence - tick);
+    assert.equal(countEvent(h.state, 'supervision_host_stall'), 1, 'مقيَّدةٌ في السجل لا مطويّة');
+    assert.equal(lastDetail(h.state, 'supervision_host_stall').toleranceMs, 2 * tick);
+  } finally { h.dispose(); }
+});
+
+test('ثابت 8: حجبُ المُشغّلِ لا يعتذر عمّا زاد عليه — الفارقُ فوق النبضةِ فجوةٌ تُدان', () => {
+  const now = Date.now();
+  const h = productionHarness({ now });
+  try {
+    const tick = h.policy.supervision.tick_ms;
+    const s = supervisorOn(h, silentProbes(h.policy), now);
+    s.observeProbe(now);
+    s.sweep(now);
+    // مِجَسٌّ منتظمٌ حتّى now+1440 ثمّ حجبٌ مقدارُه 440ms، والصمتُ 2000ms:
+    // الزائدُ على الحجبِ (1560ms) يبقى خرقًا يُدان
+    const silence = 2_000;
+    const lastProbe = 1_440;
+    const stall = silence - lastProbe - tick;
+    tickProbe(s, now, now + lastProbe, tick);
+    s.sweep(now + silence);
+    const gaps = s.report().gaps.filter((g) => g.kind === 'silence');
+    assert.equal(gaps.length, 1, 'الفجوةُ تُدان ولو وقع حجبٌ');
+    assert.equal(gaps[0]?.ms, silence);
+    assert.equal(lastDetail(h.state, 'supervision_gap').stallMs, stall, 'والحجبُ يُدوّن بمقداره');
+    assert.equal(s.report().hostStalls.length, 0);
+  } finally { h.dispose(); }
+});
+
+test('ثابت 8: حدُّ التسامحِ نبضتانِ بالضبط — ونبضتانِ وواحدٌ تُدان', () => {
+  const now = Date.now();
+  const h = productionHarness({ now });
+  try {
+    const tick = h.policy.supervision.tick_ms;
+    const silence = h.policy.supervision.max_silence_ms + 300;
+    const at = (excess: number): { gaps: number; stalls: number } => {
+      const s = supervisorOn(h, silentProbes(h.policy), now);
+      s.observeProbe(now);
+      s.sweep(now);
+      // أخيرُ نبضةٍ للمِجَسِّ عند now+excess: فالحجبُ = silence − excess − tick،
+      // والفارقُ = tick + excess ⇒ يُحتمل حتّى excess = tick ويُدان عند tick+1
+      s.observeProbe(now + excess);
+      s.sweep(now + silence);
+      const r = s.report();
+      return { gaps: r.gaps.filter((g) => g.kind === 'silence').length, stalls: r.hostStalls.length };
+    };
+    assert.deepEqual(at(tick), { gaps: 0, stalls: 1 }, 'الفارقُ = نبضتان ⇒ حجبٌ معلن');
+    assert.deepEqual(at(tick + 1), { gaps: 1, stalls: 0 }, 'ونبضتانِ وواحدٌ ⇒ فجوةٌ تُدان');
+  } finally { h.dispose(); }
+});
+
+test('ثابت 8: الحجبُ لا يُعطّل الحرسَ لِما بعده — صمتٌ تالٍ بمِجَسٍّ في موعده يُدان', () => {
+  const now = Date.now();
+  const h = productionHarness({ now });
+  try {
+    const tick = h.policy.supervision.tick_ms;
+    const s = supervisorOn(h, silentProbes(h.policy), now);
+    s.observeProbe(now);
+    s.sweep(now);
+    const first = h.policy.supervision.max_silence_ms + 300;
+    s.sweep(now + first);
+    assert.equal(s.report().hostStalls.length, 1, 'الأولى حجبٌ');
+    const second = first + h.policy.supervision.max_silence_ms + 300;
+    tickProbe(s, now + first, now + second, tick);
+    s.sweep(now + second);
+    assert.equal(s.report().gaps.filter((g) => g.kind === 'silence').length, 1, 'والثانيةُ فجوةٌ');
+    assert.equal(s.report().hostStalls.length, 1, 'ولا يُضاعف الحجبُ نفسُه');
+  } finally { h.dispose(); }
+});
+
+test('ثابت 8: تجويعُ حلقةِ الحدثِ الحقيقيُّ يُسمّى حجبًا ولا يُدان به المراقب', async () => {
+  const now = Date.now();
+  const h = productionHarness({ now, probes: silentProbes(productionHarness_policy()) });
+  try {
+    const start = Date.now();
+    h.supervisor.start(start);
+    await sleep(h.policy.supervision.tick_ms * 2);
+    // حجبٌ صناعيٌّ محسوب: حبسُ حلقةِ الحدثِ فوق حدِّ الصمتِ المعلن
+    const until = Date.now() + h.policy.supervision.max_silence_ms + 400;
+    while (Date.now() < until) { /* حبسٌ مقصودٌ يُحاكي مُشغّلًا مزدحمًا */ }
+    await sleep(h.policy.supervision.tick_ms * 3);
+    const report = h.supervisor.report();
+    assert.equal(
+      report.gaps.filter((g) => g.kind === 'silence').length, 0,
+      `فجواتٌ ${JSON.stringify(report.gaps)} — والحجبُ ${JSON.stringify(report.hostStalls)}`,
+    );
+    assert.ok(report.hostStalls.length >= 1, 'والحجبُ يُعلن لا يُطوى');
   } finally { h.dispose(); }
 });
 

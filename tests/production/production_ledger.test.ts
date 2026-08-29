@@ -35,7 +35,7 @@ function supervision(patch: Partial<SupervisionReport> = {}): SupervisionReport 
   for (const scanner of POLICY.scanners) scannerSweeps[scanner] = POLICY.supervision.min_sweeps;
   return {
     sweeps: POLICY.supervision.min_sweeps, failedSweeps: 0, incidents: [], critical: 0, high: 0,
-    scannerSweeps, halted: false, running: true, gaps: [], bootAt: BOOT,
+    scannerSweeps, halted: false, running: true, gaps: [], hostStalls: [], bootAt: BOOT,
     startedAt: BOOT, firstSweepAt: BOOT, lastSweepAt: BOOT + POLICY.supervision.tick_ms,
     restartGapMs: null, ...patch,
   };

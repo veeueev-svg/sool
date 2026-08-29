@@ -8,7 +8,8 @@
  * الصلاحيات: المسح والرفع والتصعيد والكتابة في نقطة التفتيش؛ **ولا يُصلح ما يجده**
  * السجلات: continuous_supervision_started / production_sweep / production_incident /
  *           production_scanner_failed / supervision_gap / production_critical_halt /
- *           production_checkpoint_written / supervision_stopped / supervision_stop_refused
+ *           production_checkpoint_written / supervision_stopped / supervision_stop_refused /
+ *           supervision_host_stall
  * ثوابت هذه الوحدة:
  *   1) **لا مدة ولا نهاية**: المرحلة 36 راقبت «نافذة» لها `duration_ms` تنتهي. هنا لا
  *      يوجد طول: المراقبة تبدأ ولا تُغلق نفسها، ووقفها قرارٌ مُعلَن من مشغّل بسبب
@@ -21,6 +22,11 @@
  *   5) **الشدّة من التهيئة لا من الكود** (RULE-005)، و**الحرج يوقف** (RULE-007)
  *   6) **انهيار الماسح ليس سلامة**: يُقيَّد `production_scanner_failed` ويُحصى خرقًا
  *   7) **الوقف مقيَّد بالسبب والجهة**: وقفٌ من غير مشغّل معلن أو بلا سبب يُرفض ويُقيَّد
+ *   8) **حجبُ المُشغّل يُسمّى ولا يُنسب إلى المراقبة** (T-155): المراقبة تلتزم ألّا تتوقف،
+ *      وأن تُنادى في موعدها التزامُ مُشغّل النظام. فيُقاس الثاني بمِجَسٍّ مرجعيٍّ منفصل
+ *      بنبضة `tick_ms` يسجّل تأخّرَه هو؛ وصمتٌ يفسّره تأخّرُ المِجَسِّ (silence − stall ≤
+ *      2×tick_ms) يُقيَّد `supervision_host_stall` ويُحصى معلنًا ولا يُحسب فجوةَ مراقبة،
+ *      وما زاد على ذلك فجوةٌ تُدان كما كانت. فلا حدَّ يُرخى، ولا سببٌ يُخلط بسبب.
  * ملاحظة على `unref`: المؤقّت غير مُثبَّت كي لا يمنع خروج العملية، وهذا لا يُخفي
  *   قياسًا — درس المرحلة 36 كان في `unref` على مؤقّت النافذة المنتظرة، أما هنا فالمسحات
  *   تجري فعلًا لأن الاختبار ينتظر نومًا حقيقيًّا يُبقي العملية حيّة.
@@ -49,6 +55,14 @@ export interface SupervisionGap {
   readonly auditId: string;
 }
 
+/** ثابت 8: صمتٌ فسّره حجبُ المُشغّل — معلنٌ لا مطويٌّ، وليس فجوةَ مراقبة */
+export interface HostStall {
+  readonly silenceMs: number;
+  readonly stallMs: number;
+  readonly at: number;
+  readonly auditId: string;
+}
+
 export interface SupervisionReport {
   readonly sweeps: number;
   readonly failedSweeps: number;
@@ -60,6 +74,8 @@ export interface SupervisionReport {
   readonly halted: boolean;
   readonly running: boolean;
   readonly gaps: readonly SupervisionGap[];
+  /** ثابت 8: حالاتُ حجبِ المُشغّلِ المرصودة — تُقرأ ولا تُسقط الحكم */
+  readonly hostStalls: readonly HostStall[];
   readonly bootAt: number;
   readonly startedAt: number | null;
   readonly firstSweepAt: number | null;
@@ -81,6 +97,9 @@ export interface ContinuousSupervisorDeps {
 
 export class ContinuousSupervisor {
   private timer: ReturnType<typeof setInterval> | null = null;
+  private probeTimer: ReturnType<typeof setInterval> | null = null;
+  private lastProbeAt: number | null = null;
+  private probeLateMs = 0;
   private sweeps = 0;
   private failedSweeps = 0;
   private halted = false;
@@ -91,6 +110,7 @@ export class ContinuousSupervisor {
   private priorCheckpoint: SupervisionCheckpoint | null = null;
   private readonly incidents: Incident[] = [];
   private readonly gaps: SupervisionGap[] = [];
+  private readonly hostStalls: HostStall[] = [];
   private readonly scannerSweeps = new Map<ScannerKind, number>();
 
   constructor(private readonly deps: ContinuousSupervisorDeps) {
@@ -147,6 +167,14 @@ export class ContinuousSupervisor {
       this.deps.policy.supervision.tick_ms,
     );
     if (typeof this.timer.unref === 'function') this.timer.unref();
+    // ثابت 8: مِجَسٌّ مرجعيٌّ يقيس قدرةَ المُشغّلِ على أن يُنادي في موعده
+    this.lastProbeAt = now;
+    this.probeLateMs = 0;
+    this.probeTimer = setInterval(
+      () => this.observeProbe(Date.now()),
+      this.deps.policy.supervision.tick_ms,
+    );
+    if (typeof this.probeTimer.unref === 'function') this.probeTimer.unref();
     this.sweep(now);
   }
 
@@ -163,6 +191,9 @@ export class ContinuousSupervisor {
     if (!this.timer) return refuse('لا مراقبة جارية ليُوقفها أحد');
     clearInterval(this.timer);
     this.timer = null;
+    if (this.probeTimer) clearInterval(this.probeTimer);
+    this.probeTimer = null;
+    this.lastProbeAt = null;
     this.deps.audit.append(by, 'supervision_stopped', {
       at: now, reason: reason.trim(), sweeps: this.sweeps,
       incidents: this.incidents.length, failedSweeps: this.failedSweeps,
@@ -216,14 +247,52 @@ export class ContinuousSupervisor {
     if (found.some((i) => i.severity === 'critical')) this.haltOnCritical(found, now);
   }
 
-  /** ثابت 3: الصمت يُقاس ويُعلن */
+  /**
+   * ثابت 8: نبضةُ المِجَسِّ المرجعيّ. تُنادى من مؤقّتِ المِجَسِّ في التشغيل، وتُنادى
+   * مباشرةً في الاختبار كي يُقاس التمييزُ بأزمنةٍ مُصطنعةٍ لا بحظِّ الجدولة.
+   */
+  observeProbe(now: number): void {
+    if (this.lastProbeAt !== null) {
+      const late = now - this.probeBase() - this.deps.policy.supervision.tick_ms;
+      if (late > this.probeLateMs) this.probeLateMs = late;
+    }
+    this.lastProbeAt = now;
+  }
+
+  /**
+   * أساسُ قياسِ تأخّرِ المِجَسِّ: متأخّرٌ داخلَ النافذةِ الجاريةِ وحدها — فلا يُعتذر
+   * بحجبٍ ماضٍ عن صمتٍ تالٍ (ولا يُحسب تأخّرٌ مرّتين على حدّي مسحتين).
+   */
+  private probeBase(): number {
+    const probeAt = this.lastProbeAt ?? 0;
+    return this.lastSweepAt === null ? probeAt : Math.max(probeAt, this.lastSweepAt);
+  }
+
+  /** ثابت 3 + ثابت 8: الصمت يُقاس ويُعلن، وسببُه يُسمّى ولا يُخلط */
   private measureSilence(now: number): void {
     if (this.lastSweepAt === null) return;
     const silence = now - this.lastSweepAt;
-    if (silence <= this.deps.policy.supervision.max_silence_ms) return;
+    // التسامحُ نبضتان من `tick_ms` المعلن: نبضةٌ لفارقِ مرساتينِ المؤقّتين (المِجَسُّ
+    // يسبق المسحةَ داخلَ النافذةِ بما لا يتجاوز نبضةً) ونبضةٌ لجدولةِ المسحةِ نفسِها.
+    // وهي دونَ `max_silence_ms` (خمسُ نبضات) فلا يُعطّل الحرسُ باسمِ التسامح.
+    const toleranceMs = 2 * this.deps.policy.supervision.tick_ms;
+    // تأخّرٌ لم يُسجّله المِجَسُّ بعدُ لأنّه هو نفسُه محجوبٌ الآن — يُحسب ولا يُنتظر
+    const pendingLate = this.lastProbeAt === null
+      ? 0
+      : now - this.probeBase() - this.deps.policy.supervision.tick_ms;
+    const stallMs = Math.max(this.probeLateMs, pendingLate, 0);
+    this.probeLateMs = 0;
+    const limitMs = this.deps.policy.supervision.max_silence_ms;
+    if (silence <= limitMs) return;
+    if (silence - stallMs <= toleranceMs) {
+      const stalled = this.deps.audit.append(this.deps.observer, 'supervision_host_stall', {
+        silenceMs: silence, stallMs, at: now, limitMs, toleranceMs,
+      });
+      this.hostStalls.push({ silenceMs: silence, stallMs, at: now, auditId: stalled.hash });
+      return;
+    }
     const entry = this.deps.audit.append(this.deps.observer, 'supervision_gap', {
-      kind: 'silence', ms: silence, at: now,
-      limitMs: this.deps.policy.supervision.max_silence_ms,
+      kind: 'silence', ms: silence, at: now, limitMs, stallMs,
     });
     this.gaps.push({ kind: 'silence', ms: silence, at: now, auditId: entry.hash });
   }
@@ -296,6 +365,7 @@ export class ContinuousSupervisor {
       halted: this.halted,
       running: this.running,
       gaps: [...this.gaps],
+      hostStalls: [...this.hostStalls],
       bootAt: this.deps.bootAt,
       startedAt: this.startedAt,
       firstSweepAt: this.firstSweepAt,

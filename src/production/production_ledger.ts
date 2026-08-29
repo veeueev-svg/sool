@@ -109,6 +109,11 @@ export interface ProductionVerdict {
   readonly blockedBypasses: number;
   readonly runbooksExecuted: readonly string[];
   readonly breaches: readonly string[];
+  /**
+   * ثابت 8 في المراقبة (T-155): صمتٌ فسّره حجبُ المُشغّل. لا يُسقط الحكم لأنّه
+   * ليس توقّفًا للمراقبة، ويُدوّن في الحكم نفسِه كي لا يُقرأ القبولُ «لم يكن صمتٌ قطّ».
+   */
+  readonly hostStalls: readonly { readonly silenceMs: number; readonly stallMs: number }[];
   readonly escalated: boolean;
   readonly auditId: string;
 }
@@ -290,9 +295,15 @@ export class ProductionLedger {
       regionsOperating: operating, regionsRequired: policy.regions.required.length,
       blockedBypasses: passage.blockedAttempts,
       breaches: [...this.breaches], escalated, runbooks: [...runbooks.passed],
+      hostStalls: (supervision?.hostStalls ?? []).map((s) => ({
+        silenceMs: s.silenceMs, stallMs: s.stallMs,
+      })),
     });
     const verdict: ProductionVerdict = {
       passed,
+      hostStalls: (supervision?.hostStalls ?? []).map((s) => ({
+        silenceMs: s.silenceMs, stallMs: s.stallMs,
+      })),
       sweeps: supervision?.sweeps ?? 0,
       minSweeps: policy.supervision.min_sweeps,
       criticalIncidents: supervision?.critical ?? 0,

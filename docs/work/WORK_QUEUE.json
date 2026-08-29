@@ -5,7 +5,7 @@
   "gate": "scripts/check_work.mjs",
   "history": "docs/work/WORK_LOG.md",
   "id_pattern": "W-YYYY-NNN",
-  "updated_at": "2026-08-28",
+  "updated_at": "2026-08-29",
   "statuses": [
     "PROPOSED",
     "CLAIMED",
@@ -557,6 +557,61 @@
         "bash scripts/check_module_size.sh ⇒ ✓ الاستثناءات المعلنة 0 (والأداةُ 252 سطرًا واختبارُها 314 من سقفٍ 400) · bash scripts/check_absolute_paths.sh ⇒ ✓ · bash scripts/check_declaration.sh ⇒ ✓ دعوى الإصدار مطابقةٌ لحال الدولة",
         "التطفيرُ 15 طفرةً: 14 مقتولةٌ بتأكيداتٍ مسمّاةٍ في التقرير §4، وM15 (إلغاءُ مقابلةِ الشجرةِ بعد الدفع · PA-09) تُعلن ناجيةً بسببِها — تقع بعد كتابةِ مرجعٍ بعيدٍ حقيقيٍّ ولا يُنادى في الاختبارِ شبكةٌ بحكمٍ معلن",
         "npm run verify ⇒ رمزُ الخروج 0 (الخرجُ في §6 من القياس الخامّ) · وشهادةُ الدمجِ من الـAPI في §7 — والدفعُ نفسُه أُنجز بالأداةِ الجديدةِ فقيس PA-09 على مرجعٍ حقيقيّ"
+      ]
+    },
+    {
+      "id": "W-2026-015",
+      "title": "فجوةُ الصمتِ تُحكم بساعةِ الجدارِ فتُدين الآلةَ المزدحمةَ بدلَ المراقبة: حكمٌ لا يفرّق بين مراقبةٍ توقّفت وبين مُهلةٍ حجبها المُشغّل (T-155)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 66)",
+      "reviewer": "القيّم على المستودع",
+      "area": "الإنتاج — المراقبة المستمرة",
+      "phase": 37,
+      "status": "BLOCKED",
+      "progress_items": [
+        "T-155"
+      ],
+      "dependencies": [
+        "W-2026-003"
+      ],
+      "scope": [
+        "src/production/continuous_supervisor.ts",
+        "src/production/production_ledger.ts",
+        "tests/production/continuous_supervisor.test.ts",
+        "tests/production/production_ledger.test.ts",
+        "tests/production/production_lifecycle.test.ts",
+        "tests/production/helpers.ts",
+        "docs/test-reports/phase-37-T155.md",
+        "docs/audit/measurements/phase-37-T155.txt",
+        "docs/decisions/ADR-0044-supervision-host-stall.md"
+      ],
+      "excluded": [
+        "ARCHITECTURE.md (W-2026-003)",
+        "src/kernel/config/production_policy.ts و load.ts (W-2026-013) — فلا مفتاحَ تهيئةٍ جديد",
+        "scripts/check_generated_numbers.sh (W-2026-011) — البوابةُ الحمراءُ لم تُلمس ولم يُخفَّف حكمُها",
+        ".github/workflows/ci.yml و package.json (W-2026-009) · scripts/push_guard.sh (W-2026-010)",
+        "فجوتا start و restart: لم يُقَس لهما فشلٌ في التكرار"
+      ],
+      "acceptance": [
+        "يُميَّز حجبُ المُشغّلِ عن توقّفِ المراقبةِ بمِجَسٍّ مرجعيٍّ مستقلٍّ بنبضةِ tick_ms",
+        "الحجبُ يُسمّى ويُقيَّد supervision_host_stall في السجلّ وفي التقرير وفي الحكم، ولا يُطوى",
+        "ما زاد على الحجبِ يبقى فجوةً تُدان بحقلٍ مُعلَنٍ stallMs",
+        "لا حدَّ أُرخي ولا رمزَ خرقٍ غُيِّر: max_silence_ms=600 و PROD_SUPERVISION_GAP كما هما",
+        "إعادةُ تكرارِ الفشلِ نفسِه بعد الإصلاح: 6/6 بلا فجوةِ صمتٍ وبحكمٍ passed=true",
+        "npm test أخضرُ كاملًا و npm run verify رمزُ 0 — غيرُ محقَّقٍ: متعطّلٌ بالعائقِ المُعلَن"
+      ],
+      "evidence": [
+        "node --test dist/tests/production/ ⇒ 84/84 · فشل 0 · رمزُ خروج 0",
+        "إعادةُ التكرار (6 عمليات متزامنة) بعد الإصلاح ⇒ 6/6 passed=true · breaches=[] · 0 فجوةَ صمت · حالاتُ حجبٍ مسمّاة 756/636 · 904/784 · 1080/960 · 1102/982",
+        "قبلَ الإصلاح: 6/6 خرقُ PROD_SUPERVISION_GAP بصمتٍ 1092–1755ms مقابل حدٍّ 600ms والمسحاتُ 8–10 ≥ 4",
+        "npm test ⇒ 2175 · 2173 ناجحًا · 2 فاشلًا، والفاشلان همُا بوابةُ الأرقامِ وحدَها (T-128 · T-154)",
+        "docs/audit/measurements/phase-37-T155.txt (§1–§9) · docs/test-reports/phase-37-T155.md · docs/decisions/ADR-0044-supervision-host-stall.md"
+      ],
+      "next_step": "المراجعُ يختار: (أ) مراجعةُ W-2026-003 وإغلاقُه · (ب) تضييقُ نطاقه فيُخرَج ARCHITECTURE.md منه · (ج) إعلانُ جدولِ الأرقامِ مشتركًا بإعلان. ثمّ يُصحَّح الصفُّ بالقياس ويُشغَّل npm test و verify ويُدفَع ويُقرأ CI خطوةً خطوة",
+      "created_at": "2026-08-29",
+      "updated_at": "2026-08-29",
+      "blocked_reason": "صفُّ `src/production/` في ARCHITECTURE.md صار أقدمَ من الشجرة (الجدولُ 8·1822 · المقيسُ 8·1903 بعد نموِّ 81 سطرًا من هذا الإصلاح) فتحمرُّ scripts/check_generated_numbers.sh ويسقط اختباران في tests/governance/generated_numbers.test.ts ويمنع push_guard.sh الدفع. والملفُّ محجوزٌ لـW-2026-003 (REVIEW) وليس من وثائقِ الحالِ الأربعِ المشتركةِ بإعلان: تصحيحُه يرفضه RULE-012، وإدراجُه في هذا النطاق يرفضه حاجزُ النطاقَين المتداخلَين. القرارُ للمراجع: مراجعةُ W-2026-003، أو تضييقُ نطاقه، أو إعلانُ جدولِ الأرقامِ مشتركًا بإعلانٍ كما فعل T-144 بالوثائقِ الأربع",
+      "verification": [
+        "لم يُتحقَّق بعد: RULE-004 يمنع أن يُصادق المنفّذُ على عملِ نفسِه، والبوّاباتُ لم تخضرَّ لعائقٍ محكومٍ مُعلَن"
       ]
     }
   ]
