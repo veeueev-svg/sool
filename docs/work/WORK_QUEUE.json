@@ -583,8 +583,7 @@
         "tests/kernel/declared_dir_ascent.test.ts",
         "docs/test-reports/phase-40-T145.md",
         "docs/audit/measurements/phase-40-T145.txt",
-        "docs/work/orders/W-2026-016.md",
-        "ARCHITECTURE.md"
+        "docs/work/orders/W-2026-016.md"
       ],
       "excluded": [
         "src/production/supervision_checkpoint.ts — الحلقةُ الخامسةُ المقيسة: تُرجع process.cwd() ولا ترفض برمز، فتوحيدُها تغييرُ سلوكٍ يحكم فيه المراجع (تُعلَن T-157)",
@@ -593,7 +592,8 @@
         "src/kernel/config/{chaos,termination,staging,production_policy,confinement,load}.ts (W-2026-013) — ولا مفتاحَ تهيئةٍ جديد",
         "tests/staging/ و tests/composition/ و tests/production/ — لا يُعدَّل اختبارٌ قائمٌ ليوافق الشفرةَ الجديدة",
         "تقلّبُ عتبةِ الزمنِ (W-2026-004 · BLOCKED) — لا يُلمس ولا تُخفَّض عتبة",
-        "ARCHITECTURE.md — **لا يُلمس منه إلّا أرقامُ الأسطرِ في جدولِ الشجرة** (src/composition/ · src/kernel/config/ · src/production/ · src/staging/) بإذنِ المراجعِ المُصرَّحِ في الجلسة 67 بعد تضييقِ نطاقِ W-2026-015: لا وصفَ معماريٍّ ولا حدَّ اعتمادٍ ولا صفًّا جديدًا ولا مالكًا يُبدَّل."
+        "ARCHITECTURE.md — **لا يُلمس منه إلّا أرقامُ الأسطرِ في جدولِ الشجرة** (src/composition/ · src/kernel/config/ · src/production/ · src/staging/) بإذنِ المراجعِ المُصرَّحِ في الجلسة 67 بعد تضييقِ نطاقِ W-2026-015: لا وصفَ معماريٍّ ولا حدَّ اعتمادٍ ولا صفًّا جديدًا ولا مالكًا يُبدَّل.",
+        "ARCHITECTURE.md — أُخرج من هذا الحجز بإذنِ المراجعِ الصريح في الجلسة 68، ليُصحّح W-2026-017 صفَّه الرقميَّ لـsrc/kernel/config/ وحدَه (36 ملفًا · 5763 سطرًا) لا غير"
       ],
       "acceptance": [
         "حصرُ حلقاتِ الصعودِ في src/ يعود من 5 إلى 2 (واحدةٌ للمُستنبِطات الأربعِ + المُستثنى المُعلَن supervision_checkpoint.ts)",
@@ -623,6 +623,66 @@
       "created_at": "2026-08-30",
       "updated_at": "2026-08-30",
       "verification": "شُغِّل في الجلسة 67 (2026-08-30): npm run build رمزُ 0 · npm test ⇒ **2183/2183 صفرُ فشل** (كان 2175) · node --test dist/tests/kernel/declared_dir_ascent.test.js ⇒ 8/8 · npm run check:size ⇒ ✓ باستثناءاتٍ 0 · npm run check:work ⇒ ✓ · bash scripts/check_generated_numbers.sh ⇒ ✓ (25 صفًّا مطابقًا للشجرة وعددُ الاختباراتِ مطابقٌ لخرجِ المُشغّل) · npm run verify ⇒ **رمزُ الخروج 0** بكلِّ حواجزه. والتطفيرُ 8 من 8 مقتولةٌ وM8 تُعلَن ناقصةً بسببِها. ولم يُوحَّد رمزُ رفضٍ ولا دليلٌ ولا نصٌّ، ولم يُخفَّف حاجزٌ، ولم تُلمس عتبةُ زمنٍ، ولم يُلمس من ARCHITECTURE.md إلّا أرقامُ الأسطرِ بإذنٍ مُقيَّد. ولم يُنقل البندُ إلى VERIFIED: المنفِّذُ لا يُصادق على عملِ نفسِه (RULE-004)."
+    },
+    {
+      "id": "W-2026-017",
+      "title": "حرسُ التكرار: مسؤوليّةٌ مُعلَنةٌ في كلِّ محمّلٍ واطّرادٌ محروسٌ بحصرٍ تشغيليٍّ من الشفرة (T-135)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 68)",
+      "reviewer": "القيّم على المستودع",
+      "area": "النواة · محمّلاتُ التهيئة",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-135"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "src/kernel/config/external.ts",
+        "src/kernel/config/channels.ts",
+        "ARCHITECTURE.md",
+        "tests/kernel/config_duplicate_census.test.ts",
+        "docs/decisions/ADR-0045-duplicate-guard-locality.md",
+        "docs/test-reports/phase-40-T135.md",
+        "docs/audit/measurements/phase-40-T135.txt",
+        "docs/work/orders/W-2026-017.md"
+      ],
+      "excluded": [
+        "توحيدُ حرسِ التكرارِ في دالّةٍ واحدةٍ وتبديلُ 29 رمزَ رفضٍ معلنًا برمزٍ واحد — تغييرُ عقدِ فشلٍ يحكم فيه المراجع، ومحجوزٌ ماديًّا أيضًا: 3 من 13 ملفًا في نطاقِ W-2026-013 (REVIEW)",
+        "src/kernel/config/{chaos,termination,staging,production_policy,confinement,load}.ts (W-2026-013) — ومنها confinement.ts حيث القائمةُ المنتفخةُ infrastructure_ports: تُعلَن دَينًا T-158 ولا تُلمس",
+        "تبديلُ الرمزَين العامَّين CONFIG_CHANNEL_SPEC و CONFIG_INFERENCE_SAFETY برمزَي تكرارٍ خاصَّين — عقدُ فشلٍ معلنٌ في اختباراتٍ قائمة، يُعلَن دَينًا T-159",
+        "src/kernel/config/declaration_limits.ts — لا سقفَ يُزاد ولا يُنقص ولا مفتاحَ سقفٍ جديد",
+        "بواباتٌ محجوزةٌ لغيري: check_closed_enums.sh (W-2026-006) · check_work.mjs (W-2026-007) · ci.yml و package.json (W-2026-009) · push_guard.sh (W-2026-010) · check_generated_numbers.sh (W-2026-011) · check_declaration.sh و tests/governance/helpers.ts (W-2026-012) · push_api.mjs (W-2026-014)",
+        "config/*.yaml — لا إعلانَ يُعدَّل: العلّةُ في المحمّلِ لا في الإعلان",
+        "تعديلُ اختبارٍ قائمٍ ليوافق الشفرةَ الجديدة",
+        "تقلّبُ عتبةِ الزمنِ في tests/scale/scale_lifecycle.test.ts (W-2026-004 · BLOCKED) — لا يُلمس ولا تُخفَّض عتبة",
+        "ARCHITECTURE.md — لا يُلمس: الإذنُ المُقيَّدُ في الجلسة 67 كان لبندٍ آخر، ولا صفَّ فيه لـtests/ يتحرّك بإضافةِ اختبار",
+        "كلُّ ARCHITECTURE.md خلا صفِّ src/kernel/config/ الرقميّ — الإذنُ مُقيَّدٌ بصفٍّ واحد"
+      ],
+      "acceptance": [
+        "حصرُ التكرارِ يُبنى من الشفرةِ لا من جدولٍ مكتوبٍ بيد: كلُّ اسمِ سقفٍ في DECLARATION_CEILINGS يُقرأ ثم يُقاس تشغيليًّا بتكرارِ عنصرٍ حقيقيٍّ في نسخةٍ من config/",
+        "الثابتُ المحروس: قائمةٌ مسقوفةٌ إمّا ترفضُ التكرارَ برمز، وإمّا لا ينتفخُ عددُها المقيسُ به (خريطةٌ يتلاشى فيها التكرار) — والانتفاخُ الصامتُ يُسقط الاختبارَ باسمِ سقفِه",
+        "من أضاف سقفًا جديدًا بلا حرسٍ يسقط عنده الاختبارُ باسمِ سقفِه لا برسالةٍ عامّة",
+        "suspend_authorities و channel_kinds و channel_participants تُرفض عند التكرار برموزٍ خاصّةٍ مسمّاةٍ تُعلَن في التقرير — والانتفاخُ المقيسُ (4⇒5 · 2⇒3 · 2⇒3) يصير رفضًا",
+        "infrastructure_ports تُعلَن استثناءً مقيسًا محجوزًا لـW-2026-013 داخل الاختبارِ نفسِه بحيث لا يُنسى: يُثبَّت سلوكُها اليومَ فمن أصلحه يسقط عنده الاختبارُ فيُحدِّث الجدولَ والدَّينَ معًا",
+        "ADR يعلن صراحةً أنّ التكرارَ مسؤوليّةُ كلِّ محمّلٍ وأنّ اطّرادَه محروسٌ بالاختبارِ وحده — وهو الفرعُ الثاني من نصِّ T-135",
+        "صفُّ T-135 يُصحَّح عددُه: 29 رمزًا في 13 ملفًا لا 15 موضعًا و13 رمزًا",
+        "تأكيداتٌ على رموزٍ وأسماءِ سقوفٍ لا على نصٍّ عربيٍّ مشكول · بناءُ الحالاتِ في مجلداتٍ مؤقّتةٍ ونظافتُها في finally · لا لمسَ للمستودعِ الحقيقيّ",
+        "قوّةُ كلِّ حكمٍ جديدٍ مقيسةٌ بطفرة، والناجيةُ تُعلن ناجيةً بسببِها",
+        "npm test أخضرُ بعددٍ أعلى من 2183 · check:size و check:work رمزُ 0 · check_generated_numbers.sh ✓ · verify يُعلَن رمزُه كما هو",
+        "ARCHITECTURE.md: صفُّ src/kernel/config/ وحدَه يُصحَّح بالمقيس (36 ملفًا · 5763 سطرًا) بإذنِ المراجعِ في الجلسة 68 — ولا صفَّ آخرَ ولا سطرَ نصٍّ يُلمس"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-T135.md — التقريرُ الكامل: خطُّ الأساس · تصحيحُ الدعوى (29 رمزًا في 13 ملفًا لا 15/13) · القياسُ التشغيليُّ للقوائمِ الثمانيَ عشرةَ · الطفراتُ 6 من 6 مقتولة · البوابات",
+        "docs/audit/measurements/phase-40-T135.txt §0..§5 — الخرجُ الخامّ: خطُّ الأساسِ 2183/2183 · حصرُ السقوفِ من الشفرة · حكمُ كلِّ قائمةٍ مقيسًا · قياسُ الحاجزِ الماديّ",
+        "docs/decisions/ADR-0045-duplicate-guard-locality.md — القرارُ المُعلَن وثمنُه",
+        "npm test ⇒ 2187/2187 صفرُ فشل (كان 2183/2183) · check:size ✓ (exceptions: []) · check:declaration ✓ (66 بندًا مقيسًا) · check_generated_numbers.sh ✓"
+      ],
+      "next_step": "مراجعةُ القيّم على المستودع: ثلاثةُ رفضٍ جديدٍ عقدُ فشلٍ جديد (جهةُ تعليقٍ مكرَّرةٌ كانت تُقبل) · T-158 باقيةٌ بحجزٍ · T-159 رمزان عامّان · ومدى الحصرِ محدودٌ بالمسقوف",
+      "created_at": "2026-08-30",
+      "updated_at": "2026-08-30",
+      "verification": "المنفِّذُ لا يُصادق على عملِ نفسِه (RULE-004): npm run build ⇒ 0 · npm test ⇒ 2187/2187 · check:size ✓ · check:work ✓ (بعد الالتزام) · check:declaration ✓ · check_generated_numbers.sh ✓ · npm run verify يُعلَن رمزُه في §6 من التقرير · الطفراتُ 6 من 6 مقتولة"
     }
   ]
 }

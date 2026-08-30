@@ -93,6 +93,15 @@ export function loadExternal(configDir = resolveConfigDir()): ExternalConfig {
   guardDeclaredCount(
     'suspend_authorities', policy.suspend_authorities.length, 'جهاتُ تعليق القنوات الخارجيّة',
   );
+  // فشل مغلق: جهةٌ مكرَّرةٌ تنفخ العددَ ولا تزيد الأيدي — «أربعُ جهاتٍ» تصير جهةً واحدةً
+  // كُتبت أربعًا، فيمرّ تعدُّدُ الجهات من السقفِ وهو وهمٌ عدديّ (T-135)
+  const authorities = policy.suspend_authorities.map((a) => String(a));
+  if (new Set(authorities).size !== authorities.length) {
+    throw new SovereignViolation(
+      'جهةُ تعليقٍ مكرَّرةٌ في الإعلان — تعدُّدُ الأيدي لا يُبلغ بالتكرار',
+      'CONFIG_EXTERNAL_SUSPEND_AUTHORITY_DUPLICATE',
+    );
+  }
   if (!Array.isArray(raw.counterparties) || raw.counterparties.length === 0) {
     throw new SovereignViolation(
       'لا نظائر خارجية معلنة — لا حساب بلا إعلان', 'CONFIG_EXTERNAL_NO_COUNTERPARTIES',

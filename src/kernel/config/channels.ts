@@ -11,6 +11,8 @@
  *   - شرطٌ مُلزمٌ مُعطَّل ⇒ CONFIG_CHANNEL_GUARD_DISABLED
  *   - حدٌّ غائبٌ أو غيرُ صحيحٍ موجب ⇒ CONFIG_CHANNEL_LIMIT
  *   - قناةٌ بلا معرِّفٍ أو بلا مشتركين أو بلا أنواعٍ أو مكرَّرةٌ ⇒ CONFIG_CHANNEL_SPEC
+ *   - نوعُ تفاعلٍ مكرَّرٌ في قناةٍ ⇒ CONFIG_CHANNEL_KIND_DUPLICATE
+ *   - مشتركٌ مكرَّرٌ في قناةٍ ⇒ CONFIG_CHANNEL_PARTICIPANT_DUPLICATE
  *   - إشارةٌ مستورةٌ مسموحةٌ فوق الصفر ⇒ CONFIG_CHANNEL_COVERT
  *   - شدّةُ الإنتاج ليست «حرجة» ⇒ CONFIG_CHANNEL_SEVERITY
  * اختبار القبول: tests/kernel/channels_config.test.ts
@@ -161,6 +163,13 @@ function readChannel(raw: unknown, seen: Set<string>): DeclaredChannel {
     throw new SovereignViolation(`قناةٌ بلا أنواعِ تفاعلٍ معلنة: ${id}`, SPEC);
   }
   guardDeclaredCount('channel_kinds', kinds.length, `أنواعُ تفاعلِ القناة المعلنة: ${id}`);
+  // فشل مغلق: نوعٌ مكرَّرٌ ينفخ مدى القناةِ عدًّا لا مدًى — والسقفُ يعدّ التكرارَ إعلانًا (T-135)
+  const kindNames = kinds.map((k) => String(k));
+  if (new Set(kindNames).size !== kindNames.length) {
+    throw new SovereignViolation(
+      `نوعُ تفاعلٍ مكرَّرٌ في القناة: ${id}`, 'CONFIG_CHANNEL_KIND_DUPLICATE',
+    );
+  }
   const participants = channel.participants;
   if (!Array.isArray(participants) || participants.length < 2) {
     throw new SovereignViolation(`قناةٌ بأقلَّ من مشتركين اثنين: ${id}`, SPEC);
@@ -168,6 +177,14 @@ function readChannel(raw: unknown, seen: Set<string>): DeclaredChannel {
   guardDeclaredCount(
     'channel_participants', participants.length, `مشتركو القناة المعلنون: ${id}`,
   );
+  // فشل مغلق: مشتركٌ مكرَّرٌ يجعل «مشتركَين اثنين» مشتركًا واحدًا كُتب مرّتين — وشرطُ
+  // الاثنين ضمانةٌ ألّا تكون القناةُ حديثَ طرفٍ مع نفسِه (T-135)
+  const participantNames = participants.map((p) => String(p));
+  if (new Set(participantNames).size !== participantNames.length) {
+    throw new SovereignViolation(
+      `مشتركٌ مكرَّرٌ في القناة: ${id}`, 'CONFIG_CHANNEL_PARTICIPANT_DUPLICATE',
+    );
+  }
   const purpose = String(channel.purpose ?? '');
   if (purpose.trim() === '') {
     throw new SovereignViolation(`قناةٌ بلا غرضٍ معلن: ${id}`, SPEC);
