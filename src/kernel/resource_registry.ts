@@ -11,6 +11,10 @@
  *   - طلب يتجاوز سقف الكيان أو المتاح الكلي ⇒ رفض
  *   - مورد بسقف صفري (مثل الخروج الشبكي) ⇒ رفض دائم
  *   - انتهاء مدة الإيجار ⇒ استعادة تلقائية ولا تمديد ضمني
+ *   - مدة إيجار مُصرَّح بها غير صالحة (صفر أو سالب أو كسر) ⇒ رفض، ولا تُحمل على الافتراض (T-74)
+ *   - مدة مُصرَّح بها فوق سقف الإعلان ⇒ تُقصَّر إلى السقف ويُسجَّل التقصير resource_lease_duration_capped
+ *     (فالمستأجر لا يرفع سقف نفسه — RULE-005 — والفارق يُقرأ في السجل لا يُكتَم)
+ *   - استعادة إيجار سبق أن استُعيد بانتهاء وقته ⇒ resource_release_missed (كان يُرجع false صامتًا)
  * اختبار القبول: tests/kernel/resource_registry.test.ts
  * الوثيقة المرتبطة: docs/specs/digital-state-build-guide.md — نواة التشغيل والحصص
  */
@@ -138,8 +142,32 @@ export class ResourceRegistry {
     return true;
   }
 
+  /**
+   * مدة الإيجار (T-74): **عقد** بين طالبٍ يعرف مدة عمله وسقفٍ معلنٍ هو السلطة.
+   * `requestedSeconds` غائبةً ⇒ السقف كما كان قبل هذا البند (لا سلوك قائم يتغيّر بلا إعلان).
+   * وترجع `null` رفضًا — والرفضُ يُكتب في `lease` لا هنا، فهذه قراءةٌ وحكمٌ لا سجلّ.
+   */
+  private grantedSeconds(
+    entity: EntityId, resource: string, spec: ResourceSpec, requestedSeconds?: number,
+  ): number | null {
+    if (requestedSeconds === undefined) return spec.lease_seconds;
+    if (!Number.isSafeInteger(requestedSeconds) || requestedSeconds <= 0) return null;
+    if (requestedSeconds > spec.lease_seconds) {
+      // الفارق الذي كان صامتًا: عملٌ مدتُه المعلنة أطول من سقف حصته يُقصَّر ويُقرأ تقصيرُه
+      this.audit.append(entity, 'resource_lease_duration_capped', {
+        resource, requestedSeconds, grantedSeconds: spec.lease_seconds,
+        shortfallSeconds: requestedSeconds - spec.lease_seconds,
+      });
+      return spec.lease_seconds;
+    }
+    return requestedSeconds;
+  }
+
   /** منح إيجار مؤقّت — لا استخدام دائم لأي مورد (كل مورد معلن ومسجَّل ومؤقَّت) */
-  lease(entity: EntityId, resource: string, amount: number, now = Date.now()): LeaseResult {
+  lease(
+    entity: EntityId, resource: string, amount: number, now = Date.now(),
+    requestedSeconds?: number,
+  ): LeaseResult {
     const deny = (reason: string): LeaseResult => {
       const entry = this.audit.append(entity, 'resource_denied', { resource, amount, reason });
       return { granted: false, reason, auditId: entry.hash };
@@ -159,24 +187,36 @@ export class ResourceRegistry {
     }
     if (amount > this.available(resource, now)) return deny('لا يوجد متاح كافٍ من المورد');
 
+    const seconds = this.grantedSeconds(entity, resource, spec, requestedSeconds);
+    if (seconds === null) {
+      return deny('مدة إيجار مُصرَّح بها غير صالحة — عدد صحيح موجب بالثواني (LEASE_DURATION_INVALID)');
+    }
+
     this.counter += 1;
     const lease: Lease = Object.freeze({
       leaseId: `lease:${resource}:${this.counter}`,
       entity, resource, amount,
       grantedAt: now,
-      expiresAt: now + spec.lease_seconds * 1000,
+      expiresAt: now + seconds * 1000,
     });
     this.leases.set(lease.leaseId, lease);
     const entry = this.audit.append(entity, 'resource_leased', {
       leaseId: lease.leaseId, resource, amount, expiresAt: lease.expiresAt,
+      grantedSeconds: seconds, ceilingSeconds: spec.lease_seconds,
     });
     return { granted: true, lease, auditId: entry.hash };
   }
 
-  /** استعادة صريحة قبل الانتهاء */
+  /**
+   * استعادة صريحة قبل الانتهاء. ومن استعاد إيجارًا سبق أن استُعيد بانتهاء وقته
+   * كان يُجاب بـ`false` صامتة — فصارت حدثًا مسمّى: العمل عاش بعد حصته وهذا يُقرأ (T-74).
+   */
   release(leaseId: string): boolean {
     const lease = this.leases.get(leaseId);
-    if (!lease) return false;
+    if (!lease) {
+      this.audit.append('ministry:infrastructure', 'resource_release_missed', { leaseId });
+      return false;
+    }
     this.leases.delete(leaseId);
     this.audit.append(lease.entity, 'resource_released', { leaseId, resource: lease.resource });
     return true;

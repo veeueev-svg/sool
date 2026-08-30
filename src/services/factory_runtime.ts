@@ -160,8 +160,12 @@ export class FactoryRuntime {
         'الفقد المعلن غير صالح — عدد صحيح بين صفر و999', { waste });
     }
     // ثابت 3: التأجير قبل الاستهلاك — وفشله رفضٌ لا استهلاك بعده
+    // ومدةُ الحصة تُشتقُّ من مدةِ الدفعةِ المعلنة لا من قيمةٍ ثابتة (T-74): فإن كان سقفُ
+    // المورد أقصرَ من المدةِ المعلنةِ قُصِّرت الحصةُ وسُجِّل تقصيرُها عند البداية،
+    // فلا يُفاجأ الإقفالُ بحصةٍ انتهت (ثابت 6) بلا سببٍ مقروءٍ في السجل.
+    const runSeconds = this.deps.maxRunDurationHours * 3600;
     const lease = this.deps.resources.lease(
-      facilityId, kind.resourceCost.resource, kind.resourceCost.amount, now,
+      facilityId, kind.resourceCost.resource, kind.resourceCost.amount, now, runSeconds,
     );
     if (!lease.granted) {
       return this.refuse(request.runId, facilityId, 'start',
@@ -201,6 +205,8 @@ export class FactoryRuntime {
     const entry = this.deps.audit.append(by, 'production_started', {
       runId: run.runId, facilityId, kindId: kind.id, batches,
       consumed, leaseId: run.leaseId, wastePerMille: waste, deadline: run.deadline,
+      runSeconds, leaseSeconds: (lease.lease.expiresAt - now) / 1000,
+      leaseCoversRun: lease.lease.expiresAt >= run.deadline,
     });
     return { ok: true, run, auditId: entry.hash };
   }
