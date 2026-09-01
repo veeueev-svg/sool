@@ -5,7 +5,7 @@
   "gate": "scripts/check_work.mjs",
   "history": "docs/work/WORK_LOG.md",
   "id_pattern": "W-YYYY-NNN",
-  "updated_at": "2026-08-30",
+  "updated_at": "2026-09-01",
   "statuses": [
     "PROPOSED",
     "CLAIMED",
@@ -690,6 +690,50 @@
       "created_at": "2026-08-30",
       "updated_at": "2026-08-30",
       "verification": "المنفِّذُ لا يُصادق على عملِ نفسِه (RULE-004): npm run build ⇒ رمزُ 0 · npm test ⇒ 2198/2198 صفرُ فشل (كان 2187/2187) · check:size ✓ (exceptions: []) · check:work ✓ · check:declaration ✓ · check_generated_numbers.sh ✓ بعد إعادةِ قياسِ الصفَّين من المصدر · npm run verify يُعلَن رمزُه في §5ب من التقرير · الطفراتُ 6 من 6 مقتولةٌ وصفرُ ناجية"
+    },
+    {
+      "id": "W-2026-019",
+      "title": "حسابٌ مصنوعٌ خارج بابِ الفتح يُصرف إليه: بابُ الإرجاع يحرس العددَ ولا يحرس شرطَ القبول (T-54)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 70)",
+      "reviewer": "القيّم على المستودع",
+      "area": "الاقتصاد والدفتر",
+      "phase": 25,
+      "status": "BLOCKED",
+      "progress_items": [
+        "T-54"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "src/economy/ledger.ts",
+        "tests/economy/treasury.test.ts",
+        "docs/test-reports/phase-25-T54.md",
+        "docs/audit/measurements/phase-25-T54.txt",
+        "docs/work/orders/W-2026-019.md"
+      ],
+      "excluded": [
+        "ARCHITECTURE.md (محجوزٌ لـW-2026-018)",
+        "src/data/rehydrate_state.ts",
+        "tests/economy/count_caps.test.ts (حرٌّ — يُضمّ عند رفعِ الحاجز)",
+        "src/economy/budget.ts"
+      ],
+      "acceptance": [
+        "شرطُ قبولِ الحساب دالّةٌ واحدةٌ يشترك فيها openAccount وrestore",
+        "حقنةُ الانحرافِ تُردّ بفشلٍ مغلقٍ مسمّى RECOVERY_LEDGER_ACCOUNT_INVALID",
+        "disburse إلى الحسابِ المصنوعِ لا يُجرَّب لأنّ الحسابَ لم يدخل الدفتر",
+        "بيانةُ T-49 تبقى تقيس سقفَ العدد بفشلِه المسمّى",
+        "npm test بلا فشل · npm run verify أخضر · حكمُ CI أخضرُ فعلًا"
+      ],
+      "evidence": [
+        "docs/audit/measurements/phase-25-T54.txt — الخرجُ الحرفيّ: 250,000 خرجت إلى ghost-account والميزانُ متوازن",
+        "npm test قبل أيِّ لمسة: 2198/2198",
+        "npm test بعد الإصلاحِ التجريبيّ (ثمّ رُدَّ): 2195/2198 — الثلاثةُ من الحاجزِ لا من الحارس"
+      ],
+      "next_step": "القيّم على المستودع يحكم على W-2026-018 فيتحرّر ARCHITECTURE.md، ثمّ يستأنف المالكُ: يضمّ tests/economy/count_caps.test.ts إلى النطاق ويطبّق دالّةَ القبولِ الواحدة",
+      "created_at": "2026-09-01",
+      "updated_at": "2026-09-01",
+      "blocked_reason": "ARCHITECTURE.md محجوزٌ لـW-2026-018 (REVIEW)، وبوابةُ check:numbers تُلزم مطابقةَ صفِّ src/economy/ للشجرة — فأيُّ سطرٍ يُضاف في src/ يوجب تحديثَ صفٍّ في وثيقةٍ لا يملك هذا البندُ لمسَها (RULE-011 · RULE-012). والرفعُ بحكمِ المراجعِ على W-2026-018."
     }
   ]
 }
