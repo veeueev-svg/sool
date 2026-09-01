@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   bootstrapState, GOVERNOR_EXECUTOR, GOVERNOR_PROPOSER, REGION_AUDITOR, ROYAL_COURT,
+  RegionRegistry, RegionMonitor,
 } from '../../src/index';
 
 const T0 = Date.now();
@@ -155,4 +156,113 @@ test('سلامة سلسلة التدقيق باقية بعد المسح والا
     GOVERNOR_EXECUTOR, 'region:research', 'delegated_without_governor', 'شغور مطوَّل', T0 + VACANCY * 3,
   );
   assert.equal(s.audit.verifyIntegrity().valid, true);
+});
+
+/* ————————————————— T-46: حقنُ الانحراف — حاكمٌ جالسٌ في إقليمٍ غير قائم —————————————————
+ * الحالةُ لا يُنتجها بابٌ من أبوابِ الدولة: الأبوابُ الثلاثةُ مغلقةٌ ويُقاس إغلاقُها أدناه
+ * ([DR-01] · [DR-02] · [DR-03]). فتُنتَج **بحقنةٍ صريحةٍ في التركيب** لا نظريًّا: مراقبٌ
+ * يُركَّب على سجلِّ حكّامٍ فيه مقعدٌ مشغول، وعلى سجلِّ أقاليمَ **لا يعرف الإقليم** — وهو
+ * تباعدُ سجلَّين كالذي يقع بإرجاعِ أحدِهما دون الآخر. ثمّ يُثبَت أنّ المسحَ يرفعها ([DR-04])،
+ * وأنّ الاحتواءَ عليها مرفوضٌ لأنّ الإقليمَ غيرُ قائم ([DR-05]) — فالمراقبُ يرفع ولا يعالج.
+ */
+
+/** [DR-01] البابُ الأوّل: لا ترشيحَ أصلًا لإقليمٍ غير قائم */
+test('T-46 [DR-01]: ترشيحُ حاكمٍ لإقليمٍ لا وجودَ له مرفوضٌ عند الباب', () => {
+  const { s } = monitoredState();
+  const r = s.governors.propose(GOVERNOR_PROPOSER, {
+    nominationId: 'nom:ghost', kind: 'appointment',
+    regionId: 'region:ghost', candidate: 'official:hind', reason: 'كفاءة موثّقة',
+  }, T0);
+  assert.equal(r.ok, false);
+  assert.equal(r.ok ? '' : r.reason, 'إقليم غير قائم');
+  assert.equal(s.governors.seatedRegions().length, 0, 'لا مقعدَ نشأ من الرفض');
+});
+
+/** [DR-02] البابُ الثاني: إقليمٌ يُحلّ بين الاعتمادِ والتنفيذ لا يُجلَس عليه حاكم */
+test('T-46 [DR-02]: حلُّ الإقليمِ بعد الاعتمادِ وقبل التنفيذِ يُسقط التنفيذ', () => {
+  const { s, structural } = monitoredState();
+  s.governors.propose(GOVERNOR_PROPOSER, {
+    nominationId: 'nom:gap', kind: 'appointment',
+    regionId: 'region:research', candidate: 'official:noor', reason: 'كفاءة موثّقة',
+  }, T0);
+  s.governors.approve(
+    s.king.issueCommand('appoint_official', 'official:noor', {}, T0), 'nom:gap', T0,
+  );
+  // الحلُّ يلزمه سحبُ التفويض أوّلًا — والمقعدُ ما يزال خاليًا فلا يمنعه حاكمٌ جالس
+  assert.equal(
+    s.regions.revokeDelegation(structural('region:research'), 'region:research', 'إعادة تنظيم', T0).ok,
+    true,
+  );
+  assert.equal(
+    s.regions.dissolve(structural('region:research'), 'region:research', 'دمج معلن', T0).ok,
+    true,
+  );
+  const r = s.governors.execute(GOVERNOR_EXECUTOR, 'nom:gap', T0 + 1);
+  assert.equal(r.ok, false);
+  assert.equal(r.ok ? '' : r.reason, 'إقليم غير قائم');
+  assert.equal(s.governors.seatedRegions().length, 0, 'لا مقعدَ في إقليمٍ محلول');
+});
+
+/** [DR-03] البابُ الثالث: حاكمٌ جالسٌ يمنع حلَّ إقليمِه */
+test('T-46 [DR-03]: حلُّ إقليمٍ وحاكمُه جالسٌ مرفوض', () => {
+  const { s, structural, seat } = monitoredState();
+  seat('region:research', 'official:noor');
+  s.regions.revokeDelegation(structural('region:research'), 'region:research', 'إعادة تنظيم', T0);
+  const r = s.regions.dissolve(structural('region:research'), 'region:research', 'دمج معلن', T0);
+  assert.equal(r.ok, false);
+  assert.equal(r.ok ? '' : r.reason, 'حاكم جالس: يُعزل بمساره المعلن أولًا');
+  assert.equal(s.regions.isActive('region:research'), true, 'الرفضُ لا يغيّر الحالة');
+});
+
+/** [DR-04] الحقنةُ الصريحةُ: المسحُ يرفع المخالفةَ بشدّةٍ عاليةٍ ويُسمّي الحاكم */
+test('**T-46 [DR-04]: حاكمٌ جالسٌ في إقليمٍ غير قائمٍ — المسحُ يرفعه لا يسكت عنه**', () => {
+  const { s, seat } = monitoredState();
+  seat('region:research', 'official:noor');
+  assert.equal(s.governors.seatedRegions().length, 1, 'المقعدُ مشغولٌ بالمسار المعلن');
+
+  // الحقنة: سجلُّ أقاليمَ لا يعرف الإقليمَ، والمقاعدُ كما هي — تباعدُ سجلَّين
+  const blindRegions = new RegionRegistry({
+    audit: s.audit, gateway: s.gateway, declaredRegions: ['region:research', 'region:industry'],
+  });
+  blindRegions.bindGovernorProbe((regionId) => s.governors.governorOf(regionId)?.governor ?? null);
+  assert.equal(blindRegions.isActive('region:research'), false, 'الحقنةُ واقعةٌ لا مفترضة');
+
+  const driftedMonitor = new RegionMonitor({
+    audit: s.audit, regions: blindRegions, governors: s.governors,
+    tribunal: s.tribunal, killSwitch: s.killSwitch,
+    vacancyGraceMs: VACANCY, disputeGraceMs: DISPUTE_GRACE,
+  });
+  const before = s.audit.find('region_flagged').length;
+  const r = driftedMonitor.sweep(T0 + 1000);
+
+  const drift = r.flags.filter((f) => f.kind === 'governor_without_region');
+  assert.equal(drift.length, 1, 'المخالفةُ ترتفع مرّةً واحدةً بلا مهلة');
+  assert.equal(drift[0]?.regionId, 'region:research');
+  assert.equal(drift[0]?.severity, 'high', 'سلطةٌ بلا إقليمٍ انحرافٌ جسيم');
+  assert.match(drift[0]?.detail ?? '', /official:noor/, 'المخالفةُ تُسمّي الحاكمَ لا تُبهمه');
+  assert.equal(s.audit.find('region_flagged').length, before + 1, 'المخالفةُ مكتوبةٌ في السجل');
+  assert.equal(s.audit.find('region_flagged').at(-1)?.actor, REGION_AUDITOR);
+  assert.equal(s.audit.verifyIntegrity().valid, true);
+});
+
+/** [DR-05] المراقبُ يرفع ولا يعالج: لا احتواءَ على إقليمٍ غير قائم */
+test('T-46 [DR-05]: الاحتواءُ على المخالفةِ المحقونةِ مرفوضٌ — الإقليمُ غيرُ قائم', () => {
+  const { s, seat } = monitoredState();
+  seat('region:research', 'official:noor');
+  const blindRegions = new RegionRegistry({
+    audit: s.audit, gateway: s.gateway, declaredRegions: ['region:research', 'region:industry'],
+  });
+  blindRegions.bindGovernorProbe((regionId) => s.governors.governorOf(regionId)?.governor ?? null);
+  const driftedMonitor = new RegionMonitor({
+    audit: s.audit, regions: blindRegions, governors: s.governors,
+    tribunal: s.tribunal, killSwitch: s.killSwitch,
+    vacancyGraceMs: VACANCY, disputeGraceMs: DISPUTE_GRACE,
+  });
+  driftedMonitor.sweep(T0 + 1000);
+  const r = driftedMonitor.contain(
+    GOVERNOR_EXECUTOR, 'region:research', 'governor_without_region', 'سلطةٌ بلا إقليم', T0 + 2000,
+  );
+  assert.equal(r.ok, false);
+  assert.equal(r.ok ? '' : r.reason, 'إقليم غير قائم');
+  assert.equal(s.killSwitch.status.engaged, false, 'لا إيقافَ يقع من احتواءٍ مرفوض');
 });

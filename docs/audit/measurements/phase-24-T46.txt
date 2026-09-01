@@ -1,0 +1,122 @@
+القياسُ الخام — المرحلة 24 · البند T-46 · بندُ العمل W-2026-020
+حاكمٌ جالسٌ في إقليمٍ غير قائم: حقنةٌ صريحة، والمسحُ يرفعها
+الجلسة 70 · 2026-09-01 (UTC) · المنفِّذ: المساعد الآلي — Perplexity Computer
+البيئة: Node v20.20.1 · npm 10.8.2 · المرآةُ المحليّةُ لِـ origin/main @ 7eacc34b
+
+════════════════════════════════════════════════════════════════════════
+1) خطُّ الأساسِ قبل أوّلِ سطر
+════════════════════════════════════════════════════════════════════════
+
+$ npm test
+# tests 2198
+# pass 2198
+# fail 0
+
+$ node --test dist/tests/federation/region_monitor.test.js
+# tests 11
+# pass 11
+# fail 0
+لا تأكيدَ واحدًا على `governor_without_region` — الحارسُ قائمٌ في
+src/federation/region_monitor.ts (المسحُ، الأسطر 103-109) وغيرُ مُختبَر.
+
+════════════════════════════════════════════════════════════════════════
+2) الأبوابُ الثلاثةُ: قياسُ إغلاقِها لا الادّعاء
+════════════════════════════════════════════════════════════════════════
+
+الحالةُ المطلوبةُ لا يُنتجها بابٌ من أبوابِ الدولة. وهذا مقيسٌ لا مفترض:
+
+[DR-01] governors.propose({regionId:'region:ghost'})
+        → ok:false · السبب: «إقليم غير قائم»
+        (src/federation/governor.ts: `if (!this.deps.regions.isActive(...))`)
+        → seatedRegions().length = 0
+
+[DR-02] propose('region:research') → approve(أمرٌ ملكي)
+        → revokeDelegation ok:true → dissolve ok:true  (المقعدُ خالٍ فلا يمنعُه حاكم)
+        → execute → ok:false · السبب: «إقليم غير قائم»
+        فنافذةُ ما بين الاعتمادِ والتنفيذِ محروسةٌ أيضًا (فحصٌ ثانٍ عند التنفيذ).
+        → seatedRegions().length = 0
+
+[DR-03] seat('region:research') → revokeDelegation → dissolve
+        → ok:false · السبب: «حاكم جالس: يُعزل بمساره المعلن أولًا»
+        → isActive('region:research') = true (الرفضُ لا يغيّر الحالة)
+
+النتيجة: البابُ الأماميُّ مغلقٌ بثلاثةِ أقفال. فالانحرافُ إن وقع فمن تباعدِ
+سجلَّين لا من فعلٍ مشروعٍ واحد — ولذلك يُحقَن في التركيبِ صريحًا.
+
+════════════════════════════════════════════════════════════════════════
+3) الحقنةُ الصريحة [DR-04]
+════════════════════════════════════════════════════════════════════════
+
+الطريقة (كلُّها عبر الواجهةِ العامّة `src/index`، بلا لمسِ سطرٍ في src/):
+
+  seat('region:research','official:noor')      // بالمسارِ المعلن: ترشيح+أمرٌ ملكي+تنفيذ
+  seatedRegions().length = 1                    // المقعدُ مشغولٌ حقًّا
+
+  blindRegions = new RegionRegistry({ audit, gateway, declaredRegions:[...] })
+  blindRegions.bindGovernorProbe(...)
+  blindRegions.isActive('region:research') = false   ← الحقنةُ واقعةٌ لا مفترضة
+
+  driftedMonitor = new RegionMonitor({ regions: blindRegions, governors: s.governors, ... })
+  driftedMonitor.sweep(T0 + 1000)
+
+وهو تباعدُ سجلَّين كالذي يقع بإرجاعِ (restore) أحدِهما دون الآخر — أي الوجهُ
+نفسُه الذي قِيس في T-54 على الدفتر: بابانِ لحالةٍ واحدةٍ لا يتّفقان.
+
+الخرجُ المقيس:
+  flags(kind='governor_without_region').length = 1
+  regionId  = 'region:research'
+  severity  = 'high'
+  detail    = «حاكم جالس في إقليم غير قائم: official:noor»   ← يُسمّي الحاكمَ لا يُبهمه
+  لا مهلةَ سماحٍ لهذه المخالفة: ترتفع عند T0+1000 لا بعد VACANCY
+  سجلُّ التدقيق: `region_flagged` +1 · actor = REGION_AUDITOR
+  audit.verifyIntegrity().valid = true
+
+════════════════════════════════════════════════════════════════════════
+4) حدُّ سلطةِ المراقب [DR-05]
+════════════════════════════════════════════════════════════════════════
+
+driftedMonitor.contain(GOVERNOR_EXECUTOR,'region:research','governor_without_region',...)
+  → ok:false · السبب: «إقليم غير قائم»
+  → killSwitch.status.engaged = false
+
+فالمراقبُ يرفع ولا يعالج (ثابت 1)، والاحتواءُ لا يجد إقليمًا يحتويه. وهذه
+حدودٌ صادقةٌ لا عطب: علاجُ «سلطةٍ بلا إقليم» عزلُ الحاكمِ بمسارِه المعلن،
+وهو بابُ `governors` لا بابُ `regionMonitor`.
+
+════════════════════════════════════════════════════════════════════════
+5) قياسُ حساسيّةِ الاختبار (طَعنُ الحارسِ ثمّ ردُّه)
+════════════════════════════════════════════════════════════════════════
+
+اختبارٌ لا يسقط بسقوطِ الحارسِ ليس اختبارًا. فطُعن الحارسُ محليًّا:
+كتلةُ `for (const seat of ... seatedRegions())` في src/federation/region_monitor.ts
+استُبدلت بتعليقٍ، ثمّ:
+
+  $ npm run build && node --test dist/tests/federation/region_monitor.test.js
+  not ok 15 - **T-46 [DR-04]: حاكمٌ جالسٌ في إقليمٍ غير قائمٍ — المسحُ يرفعه لا يسكت عنه**
+  # tests 16 · # pass 15 · # fail 1
+  (والأبوابُ الثلاثةُ DR-01..DR-03 وDR-05 بقيت خضراءَ — فالفشلُ مُصوَّبٌ على الحارسِ وحدَه)
+
+ثمّ رُدَّ الملفُّ إلى أصلِه حرفًا:
+  $ cp /tmp/rm.bak src/federation/region_monitor.ts
+  $ git status --porcelain src/     → (فارغ)
+  $ npm run build && node --test dist/.../region_monitor.test.js
+  # tests 16 · # pass 16 · # fail 0
+
+إفصاحٌ صريح: هذا الطعنُ قياسٌ محليٌّ لم يُدفع منه سطرٌ واحد، وsrc/ نظيفةٌ
+مقيسةٌ بـ`git status`. ولم يُدفَع تغييرٌ في src/ في هذا البند، فنطاقُه
+اختباراتٌ ووثائقُ فحسب — والسببُ عائقُ ARCHITECTURE.md المُسجَّلُ في W-2026-019.
+
+════════════════════════════════════════════════════════════════════════
+6) الحكمُ بعد العمل
+════════════════════════════════════════════════════════════════════════
+
+$ node --test dist/tests/federation/region_monitor.test.js
+# tests 16 · # pass 16 · # fail 0        (11 → 16 · +5 تأكيداتِ ملفّ)
+
+$ npm test
+# tests 2203
+# pass 2203
+# fail 0                                  (2198 → 2203)
+
+$ npm run verify        → يُلحَق حكمُه في docs/test-reports/phase-24-T46.md
+حكمُ CI الفعليّ         → يُلحَق برقمِ التشغيلِ وخُلاصتِه في التقرير، ولا يُختلق

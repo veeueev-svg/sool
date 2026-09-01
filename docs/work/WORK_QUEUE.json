@@ -734,6 +734,61 @@
       "created_at": "2026-09-01",
       "updated_at": "2026-09-01",
       "blocked_reason": "ARCHITECTURE.md محجوزٌ لـW-2026-018 (REVIEW)، وبوابةُ check:numbers تُلزم مطابقةَ صفِّ src/economy/ للشجرة — فأيُّ سطرٍ يُضاف في src/ يوجب تحديثَ صفٍّ في وثيقةٍ لا يملك هذا البندُ لمسَها (RULE-011 · RULE-012). والرفعُ بحكمِ المراجعِ على W-2026-018."
+    },
+    {
+      "id": "W-2026-020",
+      "title": "حقنُ انحرافٍ صريحٌ: حاكمٌ جالسٌ في إقليمٍ غير قائم — والمسحُ يرفعه (T-46)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 70)",
+      "reviewer": "القيّم على المستودع",
+      "area": "الاتحاد والأقاليم",
+      "phase": 24,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-46"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "tests/federation/region_monitor.test.ts",
+        "docs/test-reports/phase-24-T46.md",
+        "docs/audit/measurements/phase-24-T46.txt",
+        "docs/work/orders/W-2026-020.md"
+      ],
+      "excluded": [
+        "src/ كلُّها — ولا سيّما src/federation/region_monitor.ts (البندُ بيانةٌ على حارسٍ قائمٍ لا تعديلٌ له)",
+        "ARCHITECTURE.md (محجوزٌ لـW-2026-018)",
+        "src/federation/governor.ts · src/federation/region_registry.ts (سدُّ تباعدِ السجلَّين متعطّلٌ بعائقِ W-2026-019)",
+        "tests/federation/region_registry.test.ts · tests/federation/governor.test.ts"
+      ],
+      "acceptance": [
+        "الحالةُ تُنتَج بحقنةٍ واقعةٍ لا بافتراض: isActive مقيسةٌ false والمقعدُ مقيسٌ مشغولًا",
+        "إغلاقُ الأبوابِ الثلاثةِ مقيسٌ لا مُدَّعى (DR-01 · DR-02 · DR-03)",
+        "المسحُ يرفع المخالفةَ مرّةً واحدةً بشدّةِ high بلا مهلةِ سماح، والتفصيلُ يُسمّي الحاكم",
+        "السجلُّ يكتبها بفاعلِ REGION_AUDITOR وسلسلةُ التدقيقِ سليمة",
+        "حدُّ سلطةِ المراقبِ مقيس: contain مرفوضٌ ولا إيقافَ شاملَ يقع",
+        "البيانةُ تسقط بسقوطِ الحارس: طَعنٌ محليٌّ يُفشل DR-04 وحدَه، ثمّ يُردُّ الملفُّ حرفًا",
+        "npm test بلا فشل · npm run verify أخضر · حكمُ CI أخضرُ مقروءًا من مصدرِه"
+      ],
+      "evidence": [
+        "docs/audit/measurements/phase-24-T46.txt — الخرجُ الحرفيّ: الأبوابُ الثلاثةُ، والحقنةُ، وطَعنُ الحارسِ وردُّه",
+        "docs/test-reports/phase-24-T46.md",
+        "تأكيداتُ region_monitor.test.ts: 11 → 16 · على governor_without_region: 0 → 5",
+        "npm test: 2198/2198 → 2203/2203 · npm run verify أخضرُ قبلَ وبعد"
+      ],
+      "next_step": "القيّم على المستودع يحكم على هذا البند — والمنفِّذُ لا يضع VERIFIED على عملِ نفسِه (RULE-016)",
+      "created_at": "2026-09-01",
+      "updated_at": "2026-09-01",
+      "documentation_impact": [
+        "version.json (tests.total و tests.passing: 2198 → 2203)",
+        "PROGRESS.md (صفُّ T-46)"
+      ],
+      "verification": {
+        "verified_by": null,
+        "verified_at": null,
+        "method": "npm test (2203/2203) · npm run verify أخضرُ بكلِّ حواجزِه · حكمُ CI الفعليُّ يُقرأ من تشغيلِ «بوابة التاج» على الالتزامِ المدفوع · طَعنُ الحارسِ يُثبت حساسيّةَ البيانة",
+        "note": "الحكمُ النهائيُّ لمراجعٍ مستقلٍّ (RULE-004 · RULE-016) — والمنفِّذُ لا يصادق على عملِ نفسِه"
+      }
     }
   ]
 }
