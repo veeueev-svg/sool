@@ -103,20 +103,34 @@ test('المعايرة: التمرينُ يدوّن مقياسَه في السج
     assert.equal(detail.effectiveP99Ms, h.policy.channel_p99_ms * 3);
     assert.equal(out.report.calibration.scale, 3, 'والتقريرُ يحمل مقياسَه لا يُخفيه');
     assert.equal(out.report.verdict, 'pass');
+    // النسبةُ داخلَ السقفِ ⇒ **لا رمزَ معايرةٍ** — وهذا حتميٌّ لأنّ الوحدةَ محقونةٌ برقمٍ
+    // مصنوع. أمّا حكمُ الزمنِ جملةً فيتبع ساعةَ الآلةِ ولا يُؤكَّد عليه هنا (ADR-0047).
+    assert.equal(out.report.timing.breaches.includes('CALIBRATION_OVER_MAX_SCALE'), false);
+    assert.deepEqual(out.report.split.integrity, [], 'وسلامةُ الدولةِ خضراءُ على أيِّ آلة');
   } finally { h.clean(); }
 });
 
-test('المعايرة: آلةٌ أبطأُ من السقف تُسقط الحكمَ برمزٍ معلنٍ في آخر الخرق', () => {
+test('المعايرة: آلةٌ أبطأُ من السقف تُسقط الحكمَ الزمنيَّ وحدَه برمزٍ معلنٍ مُذيَّل', () => {
   const h = drillWith(() => 12 * 500);
   try {
     const out = h.run();
     assert.equal(out.ok, true);
     if (!out.ok) return;
     const r = out.report;
-    assert.equal(r.verdict, 'fail', 'بطءٌ فوق المسموح لا يمرّ بحكمٍ ناجح');
+    // بعد عزلِ الحكمَين (W-2026-023): بطءُ الآلةِ **حكمٌ زمنيٌّ أحمرُ مُعلن**، وليس حكمًا
+    // على سلامةِ الدولة. فالرمزُ يُذيَّل كما كان، والحمرةُ تُقيَّد في السجل، ولا تُسقط
+    // بوابةَ الفقد — لأنّ الدولةَ لم تفقد شيئًا، والآلةُ وحدَها كانت بطيئة.
+    assert.equal(r.timing.verdict, 'fail', 'بطءٌ فوق المسموح لا يمرّ بحكمٍ زمنيٍّ ناجح');
     assert.equal(r.breaches[r.breaches.length - 1], 'CALIBRATION_OVER_MAX_SCALE',
       'ورمزُ المعايرة مُذيَّلٌ آخرًا فترتيبُ الرموز القائم لم يتغيّر');
-    assert.equal(h.s.audit.find('load_drill_breach').length, 1);
-    assert.equal(h.s.audit.find('escalated_to_king').length >= 1, true, 'الخرقُ يُصعَّد لا يُسكت');
+    assert.deepEqual(r.timing.breaches, ['CALIBRATION_OVER_MAX_SCALE']);
+    assert.equal(r.verdict, 'pass', 'وسلامةُ الدولةِ لا تُحاكم بسرعةِ عتادٍ (ADR-0047)');
+    assert.deepEqual(r.split.integrity, []);
+    assert.equal(h.s.audit.find('load_timing_breach').length, 1, 'الحمرةُ الزمنيّةُ تُقيَّد لا تُسكت');
+    assert.equal((h.s.audit.find('load_timing_breach')[0]!.detail as {
+      measured: { calibrationScale: number };
+    }).measured.calibrationScale >= 1, true, 'والقيدُ يحمل مقياسَه');
+    assert.equal(h.s.audit.find('load_drill_breach').length, 0,
+      'وقيدُ خرقِ السلامةِ لا يُكتب بخرقٍ زمنيّ — وإلّا عاد الخلطُ من بابٍ آخر');
   } finally { h.clean(); }
 });

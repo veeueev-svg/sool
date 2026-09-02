@@ -25,6 +25,7 @@ import { KillSwitch } from '../security/kill_switch';
 import { LoadConfig } from '../kernel/config';
 import { LoadLedger, LoadLedgerReport } from './load_ledger';
 import { CalibrationReading } from './load_calibration';
+import { SplitBreaches } from './load_verdicts';
 
 export type LoadPolicy = LoadConfig['policy'];
 
@@ -79,8 +80,28 @@ export interface LoadDrillReport {
   readonly quota: QuotaPressureReport;
   readonly scheduler: SchedulerPressureReport;
   readonly ledger: LoadLedgerReport;
+  /** كلُّ ما وقع بترتيبه المعلن — يبقى كما كان فلا يُنقص قارئٌ قائمًا (RULE-008) */
   readonly breaches: readonly string[];
+  /**
+   * الحكمُ الأصليُّ **صار حكمَ سلامةِ الدولةِ وحدَه** (W-2026-023 · ADR-0047): حتميٌّ
+   * لا يقرأ ساعةً، فلا يقلبه ازدحامُ نواةٍ ولا بطءُ آلة. والحكمُ الزمنيُّ في `timing`.
+   */
   readonly verdict: 'pass' | 'fail';
+  /** القائمةُ مقسومةً بصنفَيها — مجموعُهما `breaches` عددًا وترتيبًا، ولا يسقط رمز */
+  readonly split: SplitBreaches;
+  /** حكمُ الزمنِ والأداء: معيارٌ مستقلٌّ مُعلنٌ وقياسٌ مستقل — يُعلَن ولا يُبتلع */
+  readonly timing: {
+    readonly verdict: 'pass' | 'fail';
+    readonly breaches: readonly string[];
+    /** ما قِيس فعلًا على هذه الآلة — فحكمٌ زمنيٌّ بلا مقياسِ آلتِه دعوى */
+    readonly measured: {
+      readonly p99Ms: number;
+      readonly maxMs: number;
+      readonly perCommandMs: number;
+      readonly calibrationScale: number;
+      readonly calibrationMs: number;
+    };
+  };
 }
 
 export type PressureOutcome<T> = { readonly ok: true; readonly report: T } | { readonly ok: false; readonly code: string };

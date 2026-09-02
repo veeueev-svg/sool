@@ -11,6 +11,11 @@
  *   1) **الحمل الأقصى المعلن لا حمل مصغّر**: الأرقام من config/load.yaml مباشرة.
  *   2) **الفقد صفر حرفيًا**: يُتحقَّق منه من دفترين مستقلّين لا من واحد.
  *   3) **الحالة تعود إلى خط الأساس**: تمرينٌ يترك أثرًا ليس تمرينًا.
+ *   4) **حكمُ القبولِ لا يقرأ ساعةً** (W-2026-023 · ADR-0047): كان هذا الملفُّ يؤكّد
+ *      `p99 <= العتبة` فيسقط على آلةٍ مزدحمةٍ بلا فقدِ أمرٍ واحد — قِيس ذلك خامًّا في
+ *      `docs/audit/measurements/phase-33-verdict-split.txt`. فصار المؤكَّدُ زمنيًّا **عقدَ
+ *      الإعلان** (رمزٌ يظهر إذا وفقط إذا تجاوز المقيسُ العتبة) وهو تكافؤٌ يصدق على أيِّ
+ *      آلةٍ وتحت أيِّ توازٍ — فلا يمرّ الاختبارُ بالحظِّ ولا يسقط به.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -85,16 +90,38 @@ test('قبول المرحلة 33: الحمل الأقصى المعلن يمرّ 
     // 5) العتبات الزمنية المعلنة محترمة والحكم واحد لا مجزّأ
     // العتبةُ هي المعلنةُ مضروبةً في نسبةِ معايرةِ الآلة (W-2026-004 · ADR-0041): لم يُرفع رقمٌ
     // في config/load.yaml، وإنما يُحكم على الآلة بقدرِ سرعتها المقيسة، وفوق السقفِ يُعلن خرقٌ.
+    // 5) **حكمُ السلامةِ حتميٌّ**: صفرُ خرقِ سلامةٍ وحكمٌ `pass` — ولا سطرَ هنا يقرأ ساعةً
+    //    ولا معايرةً، فلا يقلبه ازدحامُ نواةٍ ولا بطءُ آلةٍ ولا حظُّ التوازي (W-2026-023).
+    assert.deepEqual(r.split.integrity, [], 'خرقُ سلامةٍ واحدٌ يُسقط القبول');
+    assert.equal(r.verdict, 'pass');
+    assert.equal(r.split.integrity.length + r.split.timing.length, r.breaches.length,
+      'القسمةُ لا تُسقط رمزًا: مجموعُ الصنفَين هو كلُّ ما وقع');
+
+    // 6) **الحكمُ الزمنيُّ يُقاس ويُعلَن ولا يُحاكم عليه القبول**: والمؤكَّدُ هنا **عقدُ
+    //    الإعلان** لا سرعةُ الآلة — تكافؤٌ منطقيٌّ يصدق على آلةٍ خاليةٍ وعلى آلةٍ مزدحمة:
+    //    الرمزُ يظهر **إذا وفقط إذا** تجاوز المقيسُ العتبةَ الفعّالة. فلا يمرّ الاختبارُ
+    //    بحظٍّ ولا يسقط بحظّ، ولا يُبتلع تجاوزٌ في صمت.
     const effective = effectiveThresholds(h.policy, r.calibration.scale);
     assert.equal(r.calibration.scale >= 1, true, 'المعايرةُ تُرخي ولا تُشدَّد');
-    assert.equal(r.commands.p99Ms <= effective.p99Ms, true,
-      `p99 المقيس ${r.commands.p99Ms} تجاوز العتبة الفعّالة ${effective.p99Ms}`
-      + ` (المعلنة ${h.policy.channel_p99_ms} × نسبة المعايرة ${r.calibration.scale})`);
-    assert.equal(r.commands.maxMs <= effective.maxMs, true);
-    assert.deepEqual(r.breaches, []);
-    assert.equal(r.verdict, 'pass');
+    assert.equal(
+      r.timing.breaches.includes('COMMAND_P99_OVER_THRESHOLD'),
+      r.commands.p99Ms > effective.p99Ms,
+      `p99 المقيس ${r.commands.p99Ms} والعتبةُ الفعّالة ${effective.p99Ms}: الرمزُ يُعلَن بقدرِ ما قِيس`,
+    );
+    assert.equal(
+      r.timing.breaches.includes('COMMAND_MAX_OVER_THRESHOLD'),
+      r.commands.maxMs > effective.maxMs,
+    );
+    assert.equal(r.timing.verdict, r.timing.breaches.length === 0 ? 'pass' : 'fail');
+    assert.equal(r.timing.measured.p99Ms, r.commands.p99Ms, 'الحكمُ الزمنيُّ يحمل مقياسَه');
+    // والحمرةُ الزمنيّةُ تُكتب في اليوميّة الأبديّة حين تقع — عزلٌ لا إسكات:
+    assert.equal(
+      h.s.audit.find('load_timing_breach').length === 1,
+      r.timing.verdict === 'fail',
+      'خرقٌ زمنيٌّ بلا قيدٍ في السجل تستُّرٌ لا عزل',
+    );
 
-    // 6) سلسلة التدقيق سليمة بعد الضغط كله
+    // 7) سلسلة التدقيق سليمة بعد الضغط كله
     assert.equal(h.s.audit.verifyIntegrity().valid, true);
   } finally { h.clean(); }
 });
@@ -166,8 +193,17 @@ test('قبول المرحلة 33: التقرير يُسجَّل في السجل 
     });
     const reports = h.s.audit.find('load_drill_report');
     assert.equal(reports.length, 1);
-    assert.equal((reports[0]!.detail as { verdict: string }).verdict, 'pass');
-    assert.equal((reports[0]!.detail as { lost: number }).lost, 0);
+    // الحكمُ المسجَّلُ هو حكمُ السلامةِ الحتميّ — والزمنُ مُقيَّدٌ بجانبِه لا ممزوجٌ به
+    const detail = reports[0]!.detail as Record<string, unknown>;
+    assert.equal(detail.verdict, 'pass');
+    assert.equal(detail.lost, 0);
+    assert.deepEqual(detail.integrityBreaches, []);
+    assert.equal(typeof detail.timingVerdict, 'string', 'الحكمُ الزمنيُّ مُقيَّدٌ في السجل لا محذوف');
+    assert.equal(
+      detail.timingVerdict === 'fail',
+      (detail.timingBreaches as string[]).length > 0,
+      'حكمٌ زمنيٌّ لا يطابق رموزَه دعوى',
+    );
     assert.equal(h.s.audit.find('load_drill_breach').length, 0);
   } finally { h.clean(); }
 });

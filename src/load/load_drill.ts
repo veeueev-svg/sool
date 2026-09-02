@@ -41,10 +41,11 @@ import {
   LoadDrillReport, LoadPolicy, PressureOutcome, QuotaPressureReport,
   SchedulerPressureInput, SchedulerPressureReport,
 } from './load_drill_types';
-import { CalibrationReading, effectiveThresholds, latencyScale, measureCalibrationMedianMs } from './load_calibration';
+import { CalibrationProbe } from './load_calibration_probe';
 import {
   burstBreaches, commandBreaches, ledgerBreaches, percentile, quotaBreaches, schedulerBreaches,
 } from './load_breach';
+import { judgeDrill } from './load_verdicts';
 
 /**
  * واجهةُ التصدير تبقى هنا كما كانت قبل التفكيك: من كان يستورد شكلًا من هذا المسار
@@ -65,26 +66,10 @@ export class LoadDrill {
       p99Ms: deps.policy.channel_p99_ms, maxMs: deps.policy.channel_max_ms,
       maxLoss: deps.policy.max_command_loss, maxOverrun: deps.policy.max_quota_overrun,
     });
+    this.probe = new CalibrationProbe(deps);
   }
 
-  private reading: CalibrationReading | null = null;
-
-  /** معايرةُ الآلة: تُقاس مرّةً واحدةً وتُدوَّن بأرقامها قبل أي حكمٍ زمني (W-2026-004) */
-  private calibration(by: EntityId): CalibrationReading {
-    if (this.reading) return this.reading;
-    const p = this.deps.policy;
-    const measure = this.deps.calibrationMs ?? measureCalibrationMedianMs;
-    const reading = latencyScale(measure(), p.channel_calibration_baseline_ms, p.channel_calibration_max_scale);
-    this.reading = reading;
-    const effective = effectiveThresholds(p, reading.scale);
-    this.deps.audit.append(by, 'load_calibration_measured', {
-      measuredMs: Number(reading.measuredMs.toFixed(3)), baselineMs: reading.baselineMs,
-      rawScale: Number(reading.rawScale.toFixed(3)), scale: Number(reading.scale.toFixed(3)),
-      maxScale: reading.maxScale, effectiveP99Ms: effective.p99Ms, effectiveMaxMs: effective.maxMs,
-      breaches: reading.breaches,
-    });
-    return reading;
-  }
+  private readonly probe: CalibrationProbe;
 
   /** بوابة كل طور: الجهة ثم وضع الدولة. الرفض مسجَّل باسم سببه. */
   private admit(by: EntityId, phase: string): string | null {
@@ -151,7 +136,7 @@ export class LoadDrill {
     const meanMs = latencies.reduce((sum, value) => sum + value, 0) / (latencies.length || 1);
     const settled = counted.executed + counted.denied + counted.failed;
     const breaches = commandBreaches(
-      { p99Ms, maxMs, settled, count: input.count }, policy, this.calibration(input.by).scale,
+      { p99Ms, maxMs, settled, count: input.count }, policy, this.probe.read(input.by).scale,
     );
 
     const report: CommandPressureReport = {
@@ -203,7 +188,7 @@ export class LoadDrill {
     }
     const perCommandMs = durationMs / input.count;
     const breaches = burstBreaches(
-      { settled, count: input.count, perCommandMs }, policy, this.calibration(input.by).scale,
+      { settled, count: input.count, perCommandMs }, policy, this.probe.read(input.by).scale,
     );
 
     const report: BurstPressureReport = { size: input.count, settled, durationMs, perCommandMs, breaches };
@@ -365,28 +350,43 @@ export class LoadDrill {
     })));
 
     // ترتيبُ الرموز عقدٌ: المعايرةُ تُذيَّل آخرًا كي لا يتغيّر ما تقرؤه الاختباراتُ القائمة
-    const calibration = this.calibration(input.by);
+    const calibration = this.probe.read(input.by);
     const breaches = [
       ...commands.report.breaches, ...burst.report.breaches,
       ...quota.report.breaches, ...scheduler.report.breaches,
       ...ledgerBreaches(ledger, policy), ...calibration.breaches,
     ];
-    const verdict: 'pass' | 'fail' = breaches.length === 0 ? 'pass' : 'fail';
+    // حكمان لا حكمٌ ممزوج (W-2026-023 · ADR-0047): `verdict` صار حكمَ سلامةِ الدولةِ
+    // وحدَه — حتميٌّ لا يقرأ ساعةً — والزمنُ له حكمُه وقيدُه ومقياسُه المُعلن.
+    const { split, verdict, timing } = judgeDrill(breaches, {
+      p99Ms: commands.report.p99Ms, maxMs: commands.report.maxMs,
+      perCommandMs: burst.report.perCommandMs,
+      calibrationScale: calibration.scale, calibrationMs: calibration.measuredMs,
+    });
     const report: LoadDrillReport = {
       calibration,
       commands: commands.report, burst: burst.report, quota: quota.report,
-      scheduler: scheduler.report, ledger, breaches, verdict,
+      scheduler: scheduler.report, ledger, breaches, verdict, split, timing,
     };
     if (verdict === 'fail') {
-      this.deps.audit.append(input.by, 'load_drill_breach', { breaches, lost: ledger.lost });
+      this.deps.audit.append(input.by, 'load_drill_breach', { breaches: split.integrity, lost: ledger.lost });
       if (policy.escalate_on_breach) {
         this.deps.audit.append(input.by, 'escalated_to_king', {
-          reason: 'خرق في تمرين الضغط', breaches,
+          reason: 'خرق في تمرين الضغط', breaches: split.integrity,
         });
       }
     }
+    // الحمرةُ الزمنيّةُ **تُكتب دائمًا** ولو كانت السلامةُ خضراء: عزلُها عن بوابةِ
+    // السلامةِ ليس إسكاتَها، ومن حذف هذا القيدَ حوّل العزلَ إلى تستُّر.
+    if (timing.verdict === 'fail') {
+      this.deps.audit.append(input.by, 'load_timing_breach', {
+        breaches: split.timing, measured: timing.measured,
+      });
+    }
     this.deps.audit.append(input.by, 'load_drill_report', {
       verdict, breaches,
+      integrityBreaches: split.integrity,
+      timingVerdict: timing.verdict, timingBreaches: split.timing,
       commands: commands.report.submitted, burst: burst.report.size,
       quotaGranted: quota.report.granted, schedulerAccepted: scheduler.report.accepted,
       lost: ledger.lost,

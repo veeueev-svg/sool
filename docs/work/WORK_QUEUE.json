@@ -5,7 +5,7 @@
   "gate": "scripts/check_work.mjs",
   "history": "docs/work/WORK_LOG.md",
   "id_pattern": "W-YYYY-NNN",
-  "updated_at": "2026-09-01",
+  "updated_at": "2026-09-02",
   "statuses": [
     "PROPOSED",
     "CLAIMED",
@@ -733,6 +733,50 @@
       "created_at": "2026-09-02",
       "updated_at": "2026-09-02",
       "blocked_reason": "موضعُ العلاجِ الوحيدُ `.github/workflows/ci.yml` محجوزٌ لـW-2026-009 وهو `REVIEW` — فلا يُلمس (RULE-011 · RULE-012). والمحجوزُ لهذا البندِ وثيقتاه وحدَهما (العقدُ والقياسُ الخام) ليُقيَّد الدليلُ فلا يضيع. يُفَكُّ بإغلاقِ W-2026-009 بحكمِ المراجع، وهو حكمٌ ليس للمنفِّذ (RULE-004 · RULE-016)."
+    },
+    {
+      "id": "W-2026-023",
+      "title": "حكمُ الفقدِ يُخلط بحكمِ الزمن فيصير الحاجزُ قرعةً: عزلُ الحكمَين (الخيار ج من W-2026-004)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 70)",
+      "reviewer": "القيّم على المستودع",
+      "area": "الضغط والقياس",
+      "phase": 33,
+      "status": "CLAIMED",
+      "progress_items": [
+        "لا ينطبق"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "src/load/load_verdicts.ts",
+        "src/load/load_drill.ts",
+        "src/load/load_drill_types.ts",
+        "src/load/load_breach.ts",
+        "tests/load/load_lifecycle.test.ts",
+        "tests/load/load_drill.test.ts",
+        "tests/load/load_calibration.test.ts",
+        "tests/load/load_verdict_split.test.ts",
+        "docs/test-reports/phase-33-verdict-split.md",
+        "docs/audit/measurements/phase-33-verdict-split.txt",
+        "docs/decisions/ADR-0047-verdict-separation.md",
+        "src/load/load_calibration_probe.ts",
+        "ARCHITECTURE.md"
+      ],
+      "excluded": [
+        "يُملأ عند الاستلام: ما لن يُلمس ولو بدا قريبًا"
+      ],
+      "acceptance": [
+        "يُملأ في العقد §4 قبل أوّلِ سطرٍ من العمل"
+      ],
+      "evidence": [
+        "يُملأ عند التشغيل: خرج npm test بعددٍ صريح · تقريرٌ في docs/test-reports/"
+      ],
+      "next_step": "ملءُ العقد §1..§4 ثمّ الانتقال إلى IN_PROGRESS",
+      "created_at": "2026-09-02",
+      "updated_at": "2026-09-02",
+      "state": "REVIEW",
+      "verification": "قِيس خامًّا قبل لمسِ شفرةٍ: 28 تشغيلًا ⇒ 12 حمرةً كلُّها زمنيّةٌ وصفرُ فقدٍ في 28/28، والمعايرةُ نفسُها قرعةٌ (1.48 ⇄ 3.05 على الحملِ الواحد). ثمّ عُزل الحكمان: `report.verdict` حكمُ سلامةٍ حتميٌّ لا يقرأ ساعةً، و`report.timing` حكمٌ زمنيٌّ مُعلنٌ بمقياسِه، وقيدٌ جديدٌ `load_timing_breach` يُكتب كلّما احمرَّ الزمنُ ولو كانت السلامةُ خضراء. الإثباتُ أنّ الحظَّ لا يحكم: مصفوفةُ توازٍ 1·2·4·8·16 × جولتَين تحت مزاحمةِ ستِّ عمليّاتٍ ⇒ سلامةٌ 124/124، وأُعيد القياسُ بعد التفكيكِ فبقي 16/16 والحمرةُ الزمنيّةُ ظاهرةٌ 2/8. و8 من 8 طفراتٍ مقتولة. ولم يُمَسّ `config/load.yaml`، ولا عتبةَ تقرأ عتادًا، ولا `retry` ولا `continue-on-error`. وبوابةُ الحجمِ رفضت فُفكِّك `load_drill.ts` (418 ⇒ 395) ورُدَّ `public_api.ts` حرفًا — **بلا رفعِ سقفٍ وبلا إعلانِ دَين**. المقيس: npm test 2218/2218 · build 0 · verify 0. وحكمُ CI الفعليُّ يُقرأ بعد الدفعِ ويُسجَّل كما هو، والمصادقةُ للمراجعِ لا للمنفِّذ (RULE-004)."
     }
   ]
 }

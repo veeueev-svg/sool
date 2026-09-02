@@ -289,8 +289,25 @@ test('الحكم الناجح لا يُصعَّد', () => {
   assert.equal(hasEvent(h.s, 'escalated_to_king'), false);
 });
 
-test('خرق واحد يُفشل الحكم كله ويُصعَّد', () => {
+test('خرقٌ زمنيٌّ وحدَه لا يُسقط حكمَ السلامةِ ولا يُصعَّد — ويُقيَّد بحكمِه', () => {
   const h = loadHarness({ sustained_commands: 4, burst_commands: 2, channel_p99_ms: 0, channel_max_ms: 0 });
+  const out = h.drill.run({
+    by: h.authority, channel: h.channel, scheduler: h.scheduler, issue: () => h.issue(),
+  });
+  assert.equal(out.ok, true);
+  if (!out.ok) return;
+  assert.equal(out.report.timing.verdict, 'fail');
+  assert.equal(out.report.timing.breaches.length > 0, true);
+  assert.equal(out.report.verdict, 'pass', 'عتبةُ زمنٍ صفريّةٌ لا تعني أنّ أمرًا ضاع');
+  assert.equal(hasEvent(h.s, 'load_timing_breach'), true, 'الحمرةُ الزمنيّةُ مقيَّدةٌ لا مُسكتة');
+  assert.equal(hasEvent(h.s, 'load_drill_breach'), false);
+  assert.equal(hasEvent(h.s, 'escalated_to_king'), false, 'ولا يُصعَّد بطءُ آلةٍ إلى الملك');
+});
+
+test('خرقُ سلامةٍ واحدٌ يُفشل الحكم كله ويُصعَّد', () => {
+  // حدٌّ لم يُبلَغ ليس حدًّا: مجسّةٌ لا تبلغ سقفَ المجدول ⇒ SCHEDULER_LIMIT_NEVER_REACHED،
+  // وهو خرقُ **صحّةِ قياسٍ** حتميٌّ لا يقرأ ساعةً — فيُختبر التصعيدُ بما لا يتذبذب.
+  const h = loadHarness({ sustained_commands: 4, burst_commands: 2, scheduler_queue_probe: 1 });
   const out = h.drill.run({
     by: h.authority, channel: h.channel, scheduler: h.scheduler, issue: () => h.issue(),
   });
@@ -304,7 +321,7 @@ test('خرق واحد يُفشل الحكم كله ويُصعَّد', () => {
 
 test('إسكات التصعيد في التهيئة يمنع رفع الخرق — القيمة تُقرأ فعلًا', () => {
   const h = loadHarness({
-    sustained_commands: 4, burst_commands: 2, channel_p99_ms: 0, channel_max_ms: 0,
+    sustained_commands: 4, burst_commands: 2, scheduler_queue_probe: 1,
     escalate_on_breach: false,
   });
   const out = h.drill.run({
