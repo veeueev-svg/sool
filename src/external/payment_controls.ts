@@ -9,7 +9,10 @@
  * السجلات: external_payment_executed / external_payment_refused /
  *           external_payment_confirmed / external_settlement_overdue
  * ثوابت هذه الوحدة:
- *   1) **لا مسار مال ثانٍ**: هذه الوحدة لا تقيّد في الدفتر بنفسها بحال — كل دفعة
+ *   1) **لا مسار مال ثانٍ** — **وقيس فكان دعوى لا حقيقة (T-60)**: قبل ثابت 9
+ *      في سجلّ الحسابات، مرّ `treasury.disburse` مباشرةً إلى `external:ledger:*` بـ9,000,000
+ *      وسقفُ الدفعة 2,000,000، وعلى حسابٍ معلَّق، بلا دفعةٍ مسجّلةٍ ولا التزامِ إثبات.
+ *      فالحمايةُ اليوم تذكرةٌ يُصدرها السجلُّ لحظةَ الدفع لا مجردُ أدبٍ في النداء. وكل دفعة
  *      تمرّ بـ`treasury.disburse` فتلزمها كل ثوابت المرحلة 25 (موازنة، رصيد، وضع
  *      الدولة، تجميد، حدّ الأمر الملكي). إضافة قناة خارجية لا تفتح بابًا يتخطّى الخزانة.
  *   2) **الطالب ليس الدافع** (RULE-004): وزارة الخارجية تطلب، والخزانة تنفّذ بوزارة المالية
@@ -32,7 +35,9 @@ import { AppendOnlyLog } from '../audit/append_only_log';
 import { Treasury } from '../economy/treasury';
 import { FINANCE_MINISTRY } from '../economy/ledger';
 import type { DurableSink } from '../data/persistence';
-import { ExternalAccountRegistry, FOREIGN_MINISTRY, EgressProbe } from './account_registry';
+import {
+  ExternalAccountRegistry, FOREIGN_MINISTRY, EgressProbe, EXTERNAL_LEDGER_PREFIX,
+} from './account_registry';
 
 export interface ExternalPaymentInput {
   readonly accountId: string;
@@ -80,6 +85,8 @@ export class PaymentControls {
   private readonly ministryId: EntityId;
   private sequence = 0;
   private sink: DurableSink | null = null;
+  /** ثابت 1 (T-60): تذكرةُ قيدٍ واحدةٌ لا تعبر أكثرَ من فحص، ولا توجد خارج نداءِ `pay` */
+  private ticket: { to: string; amount: number; at: number } | null = null;
 
   constructor(private readonly deps: PaymentControlsDeps) {
     this.ministryId = deps.ministryId ?? FOREIGN_MINISTRY;
@@ -115,6 +122,22 @@ export class PaymentControls {
     this.deps.audit.append(by, 'payments_restored', {
       payments: this.payments.length, sequence: this.sequence,
     });
+  }
+
+  /**
+   * حرسُ النطاق المحجوز (ثابت 1 · T-60): يُربط بالخزانة مرّةً واحدةً في التركيب، فيُرجع
+   * سببَ الرفض أو `null`. ويستهلك التذكرةَ بأوّلِ فحصٍ فلا تُستعمل مرّتين ولو نجح القيد.
+   * وحدُّه المعلن: يحرس بابَ الخزانة وحدَه — والقيدُ المباشرُ في الدفتر دَينٌ مُعلن (T-165).
+   */
+  reservedTargetRefusal(to: string, amount: number, now: number): string | null {
+    if (!to.startsWith(EXTERNAL_LEDGER_PREFIX)) return null;
+    const ticket = this.ticket;
+    this.ticket = null;
+    if (!ticket) return 'لا تذكرةَ دفعٍ من ضوابط الدفع الخارجيّ';
+    if (ticket.to !== to || ticket.amount !== amount || ticket.at !== now) {
+      return 'تذكرةُ الدفع لا تطابق القيد: حسابٌ أو مبلغٌ أو زمنٌ مختلف';
+    }
+    return null;
   }
 
   pay(
@@ -170,12 +193,20 @@ export class PaymentControls {
       });
     }
 
+    // ثابت 1 (T-60): تذكرةُ القيد تُصدَر هنا وحدَها — بعد كل فحوص هذه الوحدة (ومنها
+    // ثابت 7) وقبل نداء الخزانة مباشرةً — وتُلغى حتمًا في `finally` فلا تبقى معلّقةً.
+    this.ticket = { to: account.ledgerAccount, amount: input.amount, at: now };
     // ثابت 1: لا مسار مال ثانٍ — الخزانة هي التي تقيّد، وبصلاحية وزارة المالية (ثابت 2)
-    const disbursed = this.deps.treasury.disburse({
-      line: input.line, amount: input.amount, to: account.ledgerAccount,
-      purpose: `دفعة خارجية إلى ${account.name}: ${input.purpose.trim()}`,
-      by: FINANCE_MINISTRY,
-    }, now, command);
+    let disbursed;
+    try {
+      disbursed = this.deps.treasury.disburse({
+        line: input.line, amount: input.amount, to: account.ledgerAccount,
+        purpose: `دفعة خارجية إلى ${account.name}: ${input.purpose.trim()}`,
+        by: FINANCE_MINISTRY,
+      }, now, command);
+    } finally {
+      this.ticket = null;
+    }
     if (!disbursed.ok) {
       // ثابت 6: لا سقف يُستهلك بلا دفعة — لم يُسجَّل شيء، والرفض يحمل سبب الخزانة نفسه
       return refuse(`الخزانة رفضت الدفعة: ${disbursed.reason}`, { via: 'treasury' });

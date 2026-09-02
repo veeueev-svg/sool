@@ -19,6 +19,9 @@
  *   9) **ما تراكم يُدوَّن لحظتَه** (T-125): المصروفُ قيدٌ يُضاف ولا يُمحى، والتجميدُ
  *      والعدّادُ حالةٌ يُغني أحدثُها عمّا قبله. والعدّادُ ليس زينةً: معرّفُ المصروف هو
  *      معرّفُ قيدِ الدفتر، فعدّادٌ يعود إلى الصفر بعد إقلاعٍ يصطدم بقيدٍ قائمٍ فيُرفض الصرف.
+ *  11) **نطاقٌ محجوزٌ لا يُدخل إلا من بابِه** (T-60): من وَّكل إليه حرسٌ
+ *      بـ`bindReservedTargets` فلا يُقيَّد في نطاقِه صرفٌ إلا بإذنِ مالكِه لحظتَه.
+ *      يُربط مرّةً واحدةً، والربطُ الثاني استثناءٌ مغلقٌ لا تجاوزٌ صامت.
  *  10) **الإرجاعُ لا يُنفّذ فعلًا**: `restore` يُثبت حالةً مشهودةً ولا ينادي `disburse`،
  *      فلا يُقيَّد صرفٌ قديمٌ مرّتين ولا يُحجز سقفٌ ثانيةً.
  *   8) **لا يخرج مال بغياب النبض الملكي** (RULE-007): في الوضع الحمائي أو المتوقف
@@ -68,6 +71,12 @@ export interface TreasurySnapshot {
   readonly sequence: number;
 }
 
+/**
+ * ثابت 11 (T-60): حرسُ نطاقٍ يملكه بابٌ أخر — يُرجع سببَ الرفض أو `null` للإذن.
+ * ومن حقِّه أن يستهلك إذنَه بالفحص — فالخزانةُ لا تسأله إلا مرّةً واحدةً لكلّ قيد.
+ */
+export type ReservedTargetGuard = (to: string, amount: number, now: number) => string | null;
+
 export type FreezeResult =
   | { readonly ok: true; readonly frozen: boolean; readonly auditId: string }
   | { readonly ok: false; readonly reason: string; readonly auditId: string };
@@ -98,9 +107,17 @@ export class Treasury {
   private frozenReason: string | null = null;
   private sequence = 0;
   private sink: DurableSink | null = null;
+  /** ثابت 11 (T-60): حرسُ مالكِ النطاق المحجوز — غيرُ مربوطٍ حيث لا مالكَ له */
+  private reservedGuard: ReservedTargetGuard | null = null;
 
   constructor(private readonly deps: TreasuryDeps) {
     this.actorId = deps.actorId ?? FINANCE_MINISTRY;
+  }
+
+  /** ثابت 11: يُربط مرّةً واحدةً من التركيب — فحرسٌ يُستبدَل حرسٌ يُلتفَّ عليه */
+  bindReservedTargets(guard: ReservedTargetGuard): void {
+    if (this.reservedGuard !== null) throw new Error('TREASURY_RESERVED_GUARD_ALREADY_BOUND');
+    this.reservedGuard = guard;
   }
 
   /** ثابت 9: يُربط بعد الإرجاع لا قبله — وإلا دُوِّن المُستعادُ ثانيةً كلَّ إقلاع */
@@ -114,7 +131,8 @@ export class Treasury {
 
   /**
    * 1) الصرف: ترتيب الفحوص مقصود ومُلزم (ثوابت 1–5 و7).
-   * تجميد ← جهة ← مبلغ ← غرض ← مستفيد ← بند قائم ← حدّ الأمر الملكي ← رصيد ← حجز ← قيد.
+   * تجميد ← جهة ← مبلغ ← غرض ← مستفيد ← **نطاقٌ محجوز (ثابت 11)** ← بند قائم ←
+   * حدّ الأمر الملكي ← رصيد ← حجز ← قيد.
    * وأي فشل بعد الحجز يفكّه (ثابت 4).
    */
   disburse(
@@ -145,6 +163,13 @@ export class Treasury {
     }
     if (!this.deps.ledger.hasAccount(input.to)) {
       return refuse('حساب المستفيد غير مفتوح في الدفتر');
+    }
+    // ثابت 11 (T-60): النطاقُ المحجوزُ يُفحص قبل أيّ حجزٍ أو قيد
+    const reservedRefusal = this.reservedGuard?.(input.to, input.amount, now) ?? null;
+    if (reservedRefusal) {
+      return refuse(`حساب المستفيد محجوزٌ لبابِه المعلن: ${reservedRefusal}`, {
+        reservedTarget: input.to,
+      });
     }
 
     const appropriation = this.deps.budget.get(input.line);

@@ -18,6 +18,9 @@
  *   6) **فتح حساب خارجي لا يجعل الوحدة قابلة للتحويل**: تنبيه النطاق مُلزم في الكود
  *   7) **لا إغلاق على التزام غير مُثبَت**: الحساب لا يُغلق وله دفعة لم يُقرّ استلامها
  *   8) **لا سجل مال موازٍ**: ما دُفع لنظير يُقرأ من الدفتر لا من عدّاد في هذا السجل
+ *   9) **نطاق `EXTERNAL_LEDGER_PREFIX` محجوزٌ لبابه المعلن** (T-60): قيست الدعوى فسقطت —
+ *      مرّ `treasury.disburse` بـ9,000,000 وسقفُ الدفعة 2,000,000، وعلى حسابٍ معلَّق.
+ *      والحرسُ يسكن مع مَن يملك البابَ لا مع مَن يملك الحساب: `payment_controls.ts`
  * حالات الفشل (كلها مغلقة): نظير غير معلن ⇒ رفض؛ مدة غائبة أو تفوق الحدّ ⇒ رفض؛
  *   حساب مكرَّر ⇒ رفض؛ مضيف بلا إذن خروج ⇒ رفض؛ تعليق من غير مُخوَّل ⇒ رفض؛
  *   استئناف بغير أمر ملكي أو من المعلِّق نفسه ⇒ رفض؛ إغلاق على التزام معلَّق ⇒ رفض
@@ -39,6 +42,8 @@ import { AccountReport, accountInactiveReason, buildAccountReport, isAccountActi
 /** وزارة الخارجية: صاحبة الاختصاص في النوافذ الخارجية — تطلب ولا تدفع */
 export const FOREIGN_MINISTRY: EntityId = 'ministry:foreign_affairs';
 
+/** ثابت 9 (T-60): نطاقُ حسابات النظائر في الدفتر — محجوزٌ لبابه */
+export const EXTERNAL_LEDGER_PREFIX = 'external:ledger:';
 export interface AccountRegistryDeps {
   readonly audit: AppendOnlyLog;
   readonly gateway: CrownGateway;
@@ -60,7 +65,6 @@ export class ExternalAccountRegistry {
   private readonly ministryId: EntityId;
   private egressProbe: EgressProbe | null = null;
   private obligationProbe: ObligationProbe | null = null;
-
   constructor(private readonly deps: AccountRegistryDeps) {
     this.ministryId = deps.ministryId ?? FOREIGN_MINISTRY;
     for (const cp of deps.counterparties) this.declared.set(cp.id, cp);
@@ -135,7 +139,7 @@ export class ExternalAccountRegistry {
     const authorized = this.deps.gateway.authorize(command, now);
     if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
 
-    const ledgerAccount = `external:ledger:${declared.id.replace('external:', '')}`;
+    const ledgerAccount = `${EXTERNAL_LEDGER_PREFIX}${declared.id.replace('external:', '')}`;
     if (!this.deps.ledger.hasAccount(ledgerAccount)) {
       const opened = this.deps.ledger.openAccount(
         ledgerAccount, 'expense', `مدفوعات ${declared.name}`, now,

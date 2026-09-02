@@ -94,6 +94,10 @@ export function composeEconomy(
   });
   externalAccounts.bindEgressProbe((host, port, at) => egress.hasAllowance(host, port, at));
   externalAccounts.bindObligationProbe((accountId) => payments.pendingObligations(accountId));
+  // ثابت 11 في الخزانة · ثابت 1 في ضوابط الدفع (T-60): نطاقُ `external:ledger:` محجوزٌ
+  // لبابِه المعلن، والحرسُ يُربط مرّةً واحدةً. وحدُّه المعلن: خزانةٌ تُركّب بلا ضوابطِ دفعٍ
+  // خارجيّ تبقى بلا حرسٍ — ولا نطاقَ محجوزًا حينها إذ لا حسابَ نظيرٍ يُفتح في الدفتر.
+  treasury.bindReservedTargets((to, amount, at) => payments.reservedTargetRefusal(to, amount, at));
 
   // 3) العقود الخارجية (المرحلة 27) — وزارة الخارجية تقترح، وديوان التدقيق يقدّر،
   //     والتاج يوقّع ويُنهي، ووزارة المالية تسوّي. الترتيب مُلزم: تقدير المخاطر ←
