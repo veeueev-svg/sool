@@ -1,0 +1,517 @@
+================================================================================
+قياسٌ خامٌّ — T-60 · W-2026-026 · المرحلة 26
+حقنُ انحرافٍ على قناة الصرف الخارجيّة: هل pay() بابٌ وحيدٌ فعلًا إلى external:ledger:*؟
+المُقاس عليه: HEAD cf199e7 · node v20.20.1 · npm 10.8.2
+الدعوى المفحوصة (رأس src/external/payment_controls.ts، ثابت 1):
+  «لا مسار مال ثانٍ … إضافة قناة خارجية لا تفتح بابًا يتخطّى الخزانة»
+وصفُّ T-60 في PROGRESS.md §2: «ما يحمي اليوم أن pay() هي الباب الوحيد، ولم يُختبر من يحاول غيره».
+الحكم: **الدعوى غيرُ صحيحة قبل الإصلاح.** والتفصيل أدناه بأرقامه.
+================================================================================
+
+السقوفُ المعلنةُ لـexternal:compute-provider (من config/external.yaml لا من الاختبار):
+  الدفعةُ الواحدة 2,000,000 · مجموعُ اليوم 5,000,000 · المجموعُ الكلّي 40,000,000
+
+--------------------------------------------------------------------------------
+[١] قبل الإصلاح — خرجُ /tmp/t60_probe.mjs و/tmp/t60_probe2.mjs الخامّ
+--------------------------------------------------------------------------------
+[أ] pay(): ok=true · رصيدُ external:ledger:compute-provider=1000000
+    دفعاتٌ مسجَّلة=1 · التزاماتٌ غيرُ مُثبَتة=1 · paidTotal=1000000
+[ب] disburse مباشرةً بمبلغٍ 9000000 (٤٫٥ أضعافِ سقفِ الدفعة و١٫٨ ضعفِ سقفِ اليوم): ok=true
+    رصيدُ external:ledger:compute-provider=9000000 · ميزانٌ متوازن=true
+    دفعاتٌ مسجَّلة=0 · التزاماتٌ غيرُ مُثبَتة=0
+    external_payment_executed=0
+    paidTotal(من الدفتر)=9000000 · report().totalPaid(من الوحدة)=0   ← رقمانِ لحقيقةٍ واحدة
+    المتأخّراتُ المرفوعة بعد مضيِّ 400 يومٍ على مدةِ الإثبات=0
+    ثمّ pay() بسقفِ الدفعة كاملًا: ok=true ⇒ الرصيدُ النهائيّ=11000000
+[ج] suspend(FOREIGN, COMPUTE, …): ok=true · isActive=false
+    pay() على المعلَّق: ok=false · «لا دفعة على حساب غير قائم: حساب معلَّق»
+    disburse مباشرةً على المعلَّق: ok=true · رصيدٌ خرج=100000   ← التعليقُ لا يمنع البابَ الثاني
+[د] disburse إلى external:ledger:ghost-peer: ok=false · «حساب المستفيد غير مفتوح في الدفتر»
+[هـ] بعد صرفٍ مباشرٍ 3000000: التزاماتٌ غيرُ مُثبَتة=0
+     close(cmd, COMPUTE, FOREIGN, …): ok=true · external_account_closed.paidTotal=3000000
+     [للمقارنة] بعد pay(): close ok=false · «لا إغلاق على التزام لم يُثبَت استلامه (ثابت 7)»
+[و] نظيرٌ بلا إذنِ خروجٍ معلن: لا حسابَ له في الدفتر ⇒ disburse مرفوض
+
+خلاصةُ [١]: البابُ الثاني (treasury.disburse) كان يتخطّى السقوفَ الثلاثة، والتعليقَ،
+وتسجيلَ الدفعة، والتزامَ إثباتِ الاستلام، ونافذةَ المطالبة — ثمّ يُغلق الحسابُ فيسقط الأثر.
+
+--------------------------------------------------------------------------------
+[٢] بابٌ ثالثٌ لم يكن في صفِّ الدَّين — خرجُ /tmp/t60_probe3.mjs
+--------------------------------------------------------------------------------
+[ز] ledger.post مباشرةً (قيدٌ مزدوجٌ: مدينٌ حسابُ النظير، دائنٌ treasury:general): ok=true
+    رصيدُ النظير=500000 · ميزانٌ متوازن=true
+    paidTotal=500000 · دفعاتٌ مسجَّلة=0
+⇒ يُعلن دَينًا مسمًّى **T-165** في PROGRESS.md §2. ولا يُغلق في هذا البند: موضعُه
+   src/economy/ledger.ts (396 سطرًا من سقفِ 400 — لا فسحةَ لحرسٍ بلا تفكيك)، وحرسُ
+   نطاقاتِ الدفتر يلزمه إعلانُ مَن يملك أيَّ نطاقٍ — وذاك حكمُ سياسةٍ للمراجع (RULE-004).
+
+--------------------------------------------------------------------------------
+[٣] بعد الإصلاح — إعادةُ القياس بالمسابرِ نفسِها
+--------------------------------------------------------------------------------
+[ب] disburse مباشرةً 9000000: ok=false
+    «حساب المستفيد محجوزٌ لبابِه المعلن: لا تذكرةَ دفعٍ من ضوابط الدفع الخارجيّ»
+    رصيدُ النظير=0 · ميزانٌ متوازن=true · disbursement_executed=0
+    paidTotal=0 · report().totalPaid=0   ← رقمٌ واحدٌ لحقيقةٍ واحدة
+    ثمّ pay() بسقفِ الدفعة كاملًا: ok=true ⇒ الرصيدُ=2000000 (البابُ المعلنُ لم يُغلق)
+[ج] disburse مباشرةً على المعلَّق: ok=false (السببُ نفسُه) · رصيدٌ خرج=0
+    وpay() على المعلَّق: ok=false «حساب معلَّق» — البابانِ يرفضان لا أحدُهما
+[هـ] الصرفُ المباشرُ مرفوضٌ ⇒ paidTotal=0 ⇒ لا أثرَ يُطمس بالإغلاق
+[د] و[و]: كما كانا (كانا يحرسان قبل الإصلاح ولم يتغيّرا)
+[ز] كما هو: ok=true — **لم يُصلح** وهو دَينُ T-165 المعلن
+
+--------------------------------------------------------------------------------
+[٤] قتلُ الطفرات — كلُّ حارسٍ عُطِّل منفردًا وأُعيد التشغيل (10 أحكام)
+--------------------------------------------------------------------------------
+الأصل                                            : pass 10 · fail 0
+[ط1] تعطيلُ نداءِ الحرس في treasury.disburse       : pass  2 · fail 8   ← مقتولة
+[ط2] الحرسُ لا يستهلك التذكرةَ بالفحص              : pass 10 · fail 0   ← **نجت**
+[ط3] لا إلغاءَ للتذكرة في finally                  : pass  9 · fail 1   ← مقتولة
+[ط4] لا مطابقةَ (حسابٌ/مبلغٌ/زمن) للتذكرة          : pass 10 · fail 0   ← **نجت**
+[ط5] لا استثناءَ على الربطِ الثاني للحرس            : pass  9 · fail 1   ← مقتولة
+
+وهذا يُسجَّل كما قيس لا كما يُحبّ: [ط2] و[ط4] **نجتا**، والسببُ مقيسٌ لا مُخترع —
+التذكرةُ لا توجد إلا داخل نداءِ pay() الواحد، وتُلغى حتمًا في finally، ولا يُنادى
+disburse في تلك اللحظة إلا بالحساب والمبلغ والزمن التي أُصدرت لها. فاستهلاكُ التذكرة
+بالفحص ومطابقةُ حقولِها **حراستانِ زائدتان لا يستطيع نداءٌ خارجيٌّ تمييزَهما** — تُضيّقان
+الصلاحيةَ لمن يستعملها لاحقًا ولا يقدر حكمٌ اليومَ على قتلِهما. ولم يُحذف حكمٌ ولم
+يُخفَّف شرطٌ لتصير المصفوفةُ أجمل.
+
+--------------------------------------------------------------------------------
+[٥] حاجزُ السقوف — لا سقفَ رُفع
+--------------------------------------------------------------------------------
+scripts/check_module_size.sh: «✓ لا وحدة تتجاوز سقفها — الاستثناءات المعلنة: 0»
+  src/external/account_registry.ts: 370 → 374 (بلغ 411 في محاولةٍ أولى، فنُقل الحرسُ
+    إلى بابِه في payment_controls.ts بدل رفعِ السقف — والفكُّ خيارُ القاعدة الأول)
+  src/external/payment_controls.ts: 292 → 323 · src/economy/treasury.ts: 366 → 393
+  src/composition/economy.ts: 141 → 145 · tests/external/payment_injection.test.ts: 187 (جديد)
+
+--------------------------------------------------------------------------------
+[٦] الحدُّ الذي أوقف الالتزام — قياسٌ لا رأي
+--------------------------------------------------------------------------------
+npm test بعد الإصلاح: tests 2228 · pass 2226 · fail 2
+والساقطانِ ليسا في الحرس الجديد بل في بوابةِ الأرقام المنقولة (T-128):
+  ✗ `src/composition/`: الجدولُ يقول 12 ملفًا و1852 سطرًا، والشجرةُ 12 و1856
+  ✗ `src/economy/`  : الجدولُ يقول  6 ملفًا و1692 سطرًا، والشجرةُ  6 و1717
+  ✗ `src/external/` : الجدولُ يقول  8 ملفًا و1990 سطرًا، والشجرةُ  8 و2025
+والجدولُ في ARCHITECTURE.md، وحدُّ الفاحصِ المعلن: «يقرأ ولا يُصلح … الإصلاحُ فعلُ جهةٍ
+لا فعلُ أداة (RULE-004)». وARCHITECTURE.md **محجوزٌ لـW-2026-023 (REVIEW)**، وبوابةُ
+ضبطِ العمل تقولها بنصِّها عند القياس:
+  ✗ كتابةٌ في نطاقِ بندٍ آخر: «ARCHITECTURE.md» محجوزٌ لـW-2026-023 … ووجودُ حاجزٍ
+    ليس إذنًا لغير صاحبِه (RULE-011 · الثابت 6)
+فلا سبيلَ إلى إخضرارِ CI لهذا الإصلاح بصلاحيةِ المنفِّذ: تحديثُ ثلاثةِ صفوفٍ رقميّةٍ
+لازمٌ، وموضعُها محجوزٌ. ولم يُرفع الحجز، ولم يُخفَّف الحاجز، ولم تُغيَّر قاعدةُ
+SHARED_DOCS لتمرّ — بل حالُ البند BLOCKED بسببٍ مسمًّى، والرقعةُ محفوظةٌ أدناه حرفًا.
+
+================================================================================
+[٧] الرقعةُ المحفوظة — الإصلاحُ المقيسُ كاملًا (git apply)
+الشفرةُ لم تُلتزم في المستودع لأنّ إخضرارَ CI يلزمه نطاقٌ محجوزٌ لغيري (انظر [٦]).
+وحُفظت هنا حرفًا فلا يُمحى دليلٌ ولا يُعاد عملٌ قيس مرّتين.
+================================================================================
+
+diff --git a/src/composition/economy.ts b/src/composition/economy.ts
+index d152dd6..9940343 100644
+--- a/src/composition/economy.ts
++++ b/src/composition/economy.ts
+@@ -94,6 +94,10 @@ export function composeEconomy(
+   });
+   externalAccounts.bindEgressProbe((host, port, at) => egress.hasAllowance(host, port, at));
+   externalAccounts.bindObligationProbe((accountId) => payments.pendingObligations(accountId));
++  // ثابت 11 في الخزانة · ثابت 1 في ضوابط الدفع (T-60): نطاقُ `external:ledger:` محجوزٌ
++  // لبابِه المعلن، والحرسُ يُربط مرّةً واحدةً. وحدُّه المعلن: خزانةٌ تُركّب بلا ضوابطِ دفعٍ
++  // خارجيّ تبقى بلا حرسٍ — ولا نطاقَ محجوزًا حينها إذ لا حسابَ نظيرٍ يُفتح في الدفتر.
++  treasury.bindReservedTargets((to, amount, at) => payments.reservedTargetRefusal(to, amount, at));
+ 
+   // 3) العقود الخارجية (المرحلة 27) — وزارة الخارجية تقترح، وديوان التدقيق يقدّر،
+   //     والتاج يوقّع ويُنهي، ووزارة المالية تسوّي. الترتيب مُلزم: تقدير المخاطر ←
+diff --git a/src/economy/treasury.ts b/src/economy/treasury.ts
+index e754a07..ff24482 100644
+--- a/src/economy/treasury.ts
++++ b/src/economy/treasury.ts
+@@ -19,6 +19,9 @@
+  *   9) **ما تراكم يُدوَّن لحظتَه** (T-125): المصروفُ قيدٌ يُضاف ولا يُمحى، والتجميدُ
+  *      والعدّادُ حالةٌ يُغني أحدثُها عمّا قبله. والعدّادُ ليس زينةً: معرّفُ المصروف هو
+  *      معرّفُ قيدِ الدفتر، فعدّادٌ يعود إلى الصفر بعد إقلاعٍ يصطدم بقيدٍ قائمٍ فيُرفض الصرف.
++ *  11) **نطاقٌ محجوزٌ لا يُدخل إلا من بابِه** (T-60): من وَّكل إليه حرسٌ
++ *      بـ`bindReservedTargets` فلا يُقيَّد في نطاقِه صرفٌ إلا بإذنِ مالكِه لحظتَه.
++ *      يُربط مرّةً واحدةً، والربطُ الثاني استثناءٌ مغلقٌ لا تجاوزٌ صامت.
+  *  10) **الإرجاعُ لا يُنفّذ فعلًا**: `restore` يُثبت حالةً مشهودةً ولا ينادي `disburse`،
+  *      فلا يُقيَّد صرفٌ قديمٌ مرّتين ولا يُحجز سقفٌ ثانيةً.
+  *   8) **لا يخرج مال بغياب النبض الملكي** (RULE-007): في الوضع الحمائي أو المتوقف
+@@ -68,6 +71,12 @@ export interface TreasurySnapshot {
+   readonly sequence: number;
+ }
+ 
++/**
++ * ثابت 11 (T-60): حرسُ نطاقٍ يملكه بابٌ أخر — يُرجع سببَ الرفض أو `null` للإذن.
++ * ومن حقِّه أن يستهلك إذنَه بالفحص — فالخزانةُ لا تسأله إلا مرّةً واحدةً لكلّ قيد.
++ */
++export type ReservedTargetGuard = (to: string, amount: number, now: number) => string | null;
++
+ export type FreezeResult =
+   | { readonly ok: true; readonly frozen: boolean; readonly auditId: string }
+   | { readonly ok: false; readonly reason: string; readonly auditId: string };
+@@ -98,11 +107,19 @@ export class Treasury {
+   private frozenReason: string | null = null;
+   private sequence = 0;
+   private sink: DurableSink | null = null;
++  /** ثابت 11 (T-60): حرسُ مالكِ النطاق المحجوز — غيرُ مربوطٍ حيث لا مالكَ له */
++  private reservedGuard: ReservedTargetGuard | null = null;
+ 
+   constructor(private readonly deps: TreasuryDeps) {
+     this.actorId = deps.actorId ?? FINANCE_MINISTRY;
+   }
+ 
++  /** ثابت 11: يُربط مرّةً واحدةً من التركيب — فحرسٌ يُستبدَل حرسٌ يُلتفَّ عليه */
++  bindReservedTargets(guard: ReservedTargetGuard): void {
++    if (this.reservedGuard !== null) throw new Error('TREASURY_RESERVED_GUARD_ALREADY_BOUND');
++    this.reservedGuard = guard;
++  }
++
+   /** ثابت 9: يُربط بعد الإرجاع لا قبله — وإلا دُوِّن المُستعادُ ثانيةً كلَّ إقلاع */
+   attachJournal(sink: DurableSink): void { this.sink = sink; }
+ 
+@@ -114,7 +131,8 @@ export class Treasury {
+ 
+   /**
+    * 1) الصرف: ترتيب الفحوص مقصود ومُلزم (ثوابت 1–5 و7).
+-   * تجميد ← جهة ← مبلغ ← غرض ← مستفيد ← بند قائم ← حدّ الأمر الملكي ← رصيد ← حجز ← قيد.
++   * تجميد ← جهة ← مبلغ ← غرض ← مستفيد ← **نطاقٌ محجوز (ثابت 11)** ← بند قائم ←
++   * حدّ الأمر الملكي ← رصيد ← حجز ← قيد.
+    * وأي فشل بعد الحجز يفكّه (ثابت 4).
+    */
+   disburse(
+@@ -146,6 +164,13 @@ export class Treasury {
+     if (!this.deps.ledger.hasAccount(input.to)) {
+       return refuse('حساب المستفيد غير مفتوح في الدفتر');
+     }
++    // ثابت 11 (T-60): النطاقُ المحجوزُ يُفحص قبل أيّ حجزٍ أو قيد
++    const reservedRefusal = this.reservedGuard?.(input.to, input.amount, now) ?? null;
++    if (reservedRefusal) {
++      return refuse(`حساب المستفيد محجوزٌ لبابِه المعلن: ${reservedRefusal}`, {
++        reservedTarget: input.to,
++      });
++    }
+ 
+     const appropriation = this.deps.budget.get(input.line);
+     if (!appropriation || appropriation.lapsedAt !== null) {
+diff --git a/src/external/account_registry.ts b/src/external/account_registry.ts
+index 57171dd..5b83183 100644
+--- a/src/external/account_registry.ts
++++ b/src/external/account_registry.ts
+@@ -18,6 +18,9 @@
+  *   6) **فتح حساب خارجي لا يجعل الوحدة قابلة للتحويل**: تنبيه النطاق مُلزم في الكود
+  *   7) **لا إغلاق على التزام غير مُثبَت**: الحساب لا يُغلق وله دفعة لم يُقرّ استلامها
+  *   8) **لا سجل مال موازٍ**: ما دُفع لنظير يُقرأ من الدفتر لا من عدّاد في هذا السجل
++ *   9) **نطاق `EXTERNAL_LEDGER_PREFIX` محجوزٌ لبابه المعلن** (T-60): قيست الدعوى فسقطت —
++ *      مرّ `treasury.disburse` بـ9,000,000 وسقفُ الدفعة 2,000,000، وعلى حسابٍ معلَّق.
++ *      والحرسُ يسكن مع مَن يملك البابَ لا مع مَن يملك الحساب: `payment_controls.ts`
+  * حالات الفشل (كلها مغلقة): نظير غير معلن ⇒ رفض؛ مدة غائبة أو تفوق الحدّ ⇒ رفض؛
+  *   حساب مكرَّر ⇒ رفض؛ مضيف بلا إذن خروج ⇒ رفض؛ تعليق من غير مُخوَّل ⇒ رفض؛
+  *   استئناف بغير أمر ملكي أو من المعلِّق نفسه ⇒ رفض؛ إغلاق على التزام معلَّق ⇒ رفض
+@@ -39,6 +42,8 @@ import { AccountReport, accountInactiveReason, buildAccountReport, isAccountActi
+ /** وزارة الخارجية: صاحبة الاختصاص في النوافذ الخارجية — تطلب ولا تدفع */
+ export const FOREIGN_MINISTRY: EntityId = 'ministry:foreign_affairs';
+ 
++/** ثابت 9 (T-60): نطاقُ حسابات النظائر في الدفتر — محجوزٌ لبابه */
++export const EXTERNAL_LEDGER_PREFIX = 'external:ledger:';
+ export interface AccountRegistryDeps {
+   readonly audit: AppendOnlyLog;
+   readonly gateway: CrownGateway;
+@@ -60,7 +65,6 @@ export class ExternalAccountRegistry {
+   private readonly ministryId: EntityId;
+   private egressProbe: EgressProbe | null = null;
+   private obligationProbe: ObligationProbe | null = null;
+-
+   constructor(private readonly deps: AccountRegistryDeps) {
+     this.ministryId = deps.ministryId ?? FOREIGN_MINISTRY;
+     for (const cp of deps.counterparties) this.declared.set(cp.id, cp);
+@@ -135,7 +139,7 @@ export class ExternalAccountRegistry {
+     const authorized = this.deps.gateway.authorize(command, now);
+     if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
+ 
+-    const ledgerAccount = `external:ledger:${declared.id.replace('external:', '')}`;
++    const ledgerAccount = `${EXTERNAL_LEDGER_PREFIX}${declared.id.replace('external:', '')}`;
+     if (!this.deps.ledger.hasAccount(ledgerAccount)) {
+       const opened = this.deps.ledger.openAccount(
+         ledgerAccount, 'expense', `مدفوعات ${declared.name}`, now,
+diff --git a/src/external/payment_controls.ts b/src/external/payment_controls.ts
+index 18c9c1c..2995aee 100644
+--- a/src/external/payment_controls.ts
++++ b/src/external/payment_controls.ts
+@@ -9,7 +9,10 @@
+  * السجلات: external_payment_executed / external_payment_refused /
+  *           external_payment_confirmed / external_settlement_overdue
+  * ثوابت هذه الوحدة:
+- *   1) **لا مسار مال ثانٍ**: هذه الوحدة لا تقيّد في الدفتر بنفسها بحال — كل دفعة
++ *   1) **لا مسار مال ثانٍ** — **وقيس فكان دعوى لا حقيقة (T-60)**: قبل ثابت 9
++ *      في سجلّ الحسابات، مرّ `treasury.disburse` مباشرةً إلى `external:ledger:*` بـ9,000,000
++ *      وسقفُ الدفعة 2,000,000، وعلى حسابٍ معلَّق، بلا دفعةٍ مسجّلةٍ ولا التزامِ إثبات.
++ *      فالحمايةُ اليوم تذكرةٌ يُصدرها السجلُّ لحظةَ الدفع لا مجردُ أدبٍ في النداء. وكل دفعة
+  *      تمرّ بـ`treasury.disburse` فتلزمها كل ثوابت المرحلة 25 (موازنة، رصيد، وضع
+  *      الدولة، تجميد، حدّ الأمر الملكي). إضافة قناة خارجية لا تفتح بابًا يتخطّى الخزانة.
+  *   2) **الطالب ليس الدافع** (RULE-004): وزارة الخارجية تطلب، والخزانة تنفّذ بوزارة المالية
+@@ -32,7 +35,9 @@ import { AppendOnlyLog } from '../audit/append_only_log';
+ import { Treasury } from '../economy/treasury';
+ import { FINANCE_MINISTRY } from '../economy/ledger';
+ import type { DurableSink } from '../data/persistence';
+-import { ExternalAccountRegistry, FOREIGN_MINISTRY, EgressProbe } from './account_registry';
++import {
++  ExternalAccountRegistry, FOREIGN_MINISTRY, EgressProbe, EXTERNAL_LEDGER_PREFIX,
++} from './account_registry';
+ 
+ export interface ExternalPaymentInput {
+   readonly accountId: string;
+@@ -80,6 +85,8 @@ export class PaymentControls {
+   private readonly ministryId: EntityId;
+   private sequence = 0;
+   private sink: DurableSink | null = null;
++  /** ثابت 1 (T-60): تذكرةُ قيدٍ واحدةٌ لا تعبر أكثرَ من فحص، ولا توجد خارج نداءِ `pay` */
++  private ticket: { to: string; amount: number; at: number } | null = null;
+ 
+   constructor(private readonly deps: PaymentControlsDeps) {
+     this.ministryId = deps.ministryId ?? FOREIGN_MINISTRY;
+@@ -117,6 +124,22 @@ export class PaymentControls {
+     });
+   }
+ 
++  /**
++   * حرسُ النطاق المحجوز (ثابت 1 · T-60): يُربط بالخزانة مرّةً واحدةً في التركيب، فيُرجع
++   * سببَ الرفض أو `null`. ويستهلك التذكرةَ بأوّلِ فحصٍ فلا تُستعمل مرّتين ولو نجح القيد.
++   * وحدُّه المعلن: يحرس بابَ الخزانة وحدَه — والقيدُ المباشرُ في الدفتر دَينٌ مُعلن (T-165).
++   */
++  reservedTargetRefusal(to: string, amount: number, now: number): string | null {
++    if (!to.startsWith(EXTERNAL_LEDGER_PREFIX)) return null;
++    const ticket = this.ticket;
++    this.ticket = null;
++    if (!ticket) return 'لا تذكرةَ دفعٍ من ضوابط الدفع الخارجيّ';
++    if (ticket.to !== to || ticket.amount !== amount || ticket.at !== now) {
++      return 'تذكرةُ الدفع لا تطابق القيد: حسابٌ أو مبلغٌ أو زمنٌ مختلف';
++    }
++    return null;
++  }
++
+   pay(
+     input: ExternalPaymentInput, now = Date.now(), command?: SignedRoyalCommand,
+   ): PaymentResult {
+@@ -170,12 +193,20 @@ export class PaymentControls {
+       });
+     }
+ 
++    // ثابت 1 (T-60): تذكرةُ القيد تُصدَر هنا وحدَها — بعد كل فحوص هذه الوحدة (ومنها
++    // ثابت 7) وقبل نداء الخزانة مباشرةً — وتُلغى حتمًا في `finally` فلا تبقى معلّقةً.
++    this.ticket = { to: account.ledgerAccount, amount: input.amount, at: now };
+     // ثابت 1: لا مسار مال ثانٍ — الخزانة هي التي تقيّد، وبصلاحية وزارة المالية (ثابت 2)
+-    const disbursed = this.deps.treasury.disburse({
+-      line: input.line, amount: input.amount, to: account.ledgerAccount,
+-      purpose: `دفعة خارجية إلى ${account.name}: ${input.purpose.trim()}`,
+-      by: FINANCE_MINISTRY,
+-    }, now, command);
++    let disbursed;
++    try {
++      disbursed = this.deps.treasury.disburse({
++        line: input.line, amount: input.amount, to: account.ledgerAccount,
++        purpose: `دفعة خارجية إلى ${account.name}: ${input.purpose.trim()}`,
++        by: FINANCE_MINISTRY,
++      }, now, command);
++    } finally {
++      this.ticket = null;
++    }
+     if (!disbursed.ok) {
+       // ثابت 6: لا سقف يُستهلك بلا دفعة — لم يُسجَّل شيء، والرفض يحمل سبب الخزانة نفسه
+       return refuse(`الخزانة رفضت الدفعة: ${disbursed.reason}`, { via: 'treasury' });
+diff --git a/tests/external/payment_injection.test.ts b/tests/external/payment_injection.test.ts
+new file mode 100644
+index 0000000..0eb230e
+--- /dev/null
++++ b/tests/external/payment_injection.test.ts
+@@ -0,0 +1,190 @@
++/**
++ * tests/external/payment_injection.test.ts — حقنُ انحرافٍ على قناة الصرف الخارجيّة (T-60)
++ * المالك: وزارة الخارجية تطلب، ووزارة المالية تنفّذ | يوثّق في: docs/test-reports/phase-26-T60.md
++ * يثبت: أنّ `pay()` **بابٌ وحيدٌ فعلًا** إلى نطاق `external:ledger:*` من جهة الخزانة، لا
++ *        دعوى في رأس الوحدة: صرفٌ مباشرٌ فوق السقوف يُرفض باسمه، والمعلَّقُ لا يُصرف له من
++ *        أيِّ بابٍ، والتذكرةُ لا تُستعمل مرّتين ولا تبقى بعد رفضٍ، والحرسُ لا يُربط مرّتين.
++ * ولا يثبت: أنّ الدفترَ نفسَه محروسٌ — `ledger.post` بابٌ ثالثٌ مُعلنٌ دَينًا (T-165).
++ */
++import { test } from 'node:test';
++import assert from 'node:assert/strict';
++import { COMPUTE, FOREIGN, externalState, openAccount } from './helpers';
++
++const LEDGER = 'external:ledger:compute-provider';
++
++test('صرفٌ مباشرٌ من الخزانة إلى حساب النظير مرفوضٌ باسمه — ولو دون كل السقوف (T-60)', () => {
++  const h = externalState();
++  openAccount(h, COMPUTE);
++  const before = h.s.treasury.balance();
++  const direct = h.s.treasury.disburse({
++    line: 'budget:foreign', amount: 100_000, to: LEDGER,
++    purpose: 'صرفٌ مباشرٌ يتخطّى ضوابط الدفع الخارجيّ', by: 'ministry:finance',
++  }, h.now + 1000);
++  assert.equal(direct.ok, false, 'النطاقُ محجوزٌ لبابه المعلن');
++  assert.match(direct.ok ? '' : direct.reason, /محجوزٌ لبابِه المعلن/);
++  assert.match(direct.ok ? '' : direct.reason, /لا تذكرةَ دفعٍ/);
++  assert.equal(h.s.treasury.balance(), before, 'لا مالَ خرج من الرفض');
++  assert.equal(h.s.ledger.balance(LEDGER), 0);
++  assert.equal(h.s.budget.get('budget:foreign')?.spent, 0, 'ولا سقفَ استُهلك');
++  assert.equal(h.s.audit.find('disbursement_executed').length, 0);
++  assert.equal(h.s.ledger.trialBalance().balanced, true);
++});
++
++test('الصرفُ المباشرُ فوق سقفِ الدفعة المعلن مرفوضٌ قبل أن يمسّ الموازنة (T-60)', () => {
++  const h = externalState();
++  const account = openAccount(h, COMPUTE);
++  const singleMax = h.s.externalAccounts.get(COMPUTE)?.singleMax ?? 0;
++  assert.ok(singleMax > 0, 'السقفُ المعلنُ مقروءٌ من التهيئة لا من الاختبار');
++  assert.ok(account, 'الحسابُ مفتوحٌ بأمرٍ ملكي');
++  const direct = h.s.treasury.disburse({
++    line: 'budget:foreign', amount: singleMax * 4 + 1_000_000, to: LEDGER,
++    purpose: 'أضعافُ سقفِ الدفعة من بابٍ ثانٍ', by: 'ministry:finance',
++  }, h.now + 1000);
++  assert.equal(direct.ok, false);
++  assert.equal(h.s.ledger.balance(LEDGER), 0, 'ولا فلسَ عبر');
++  assert.equal(h.s.externalAccounts.paidTotal(COMPUTE), 0);
++  const refusals = h.s.audit.find('disbursement_refused');
++  assert.equal(refusals.length, 1, 'الرفضُ مُسجَّلٌ لا صامت');
++  assert.equal(refusals[0]?.detail.reservedTarget, LEDGER, 'والسجلُّ يسمّي الحسابَ المحجوز');
++});
++
++test('البابُ المعلنُ يبقى نافذًا: pay() ينجح بالسقفِ كاملًا بعد رفضِ الحقن (T-60)', () => {
++  const h = externalState();
++  openAccount(h, COMPUTE);
++  h.s.treasury.disburse({
++    line: 'budget:foreign', amount: 9_000_000, to: LEDGER,
++    purpose: 'حقنُ انحرافٍ يُرفض', by: 'ministry:finance',
++  }, h.now + 1000);
++  const singleMax = h.s.externalAccounts.get(COMPUTE)?.singleMax ?? 0;
++  const paid = h.s.payments.pay({
++    accountId: COMPUTE, amount: singleMax, line: 'budget:foreign',
++    purpose: 'سعة حوسبة معلنة', requestedBy: FOREIGN,
++  }, h.now + 2000);
++  assert.equal(paid.ok, true, 'الحرسُ لا يُغلق البابَ المعلن');
++  assert.equal(h.s.ledger.balance(LEDGER), singleMax);
++  assert.equal(h.s.payments.pendingObligations(COMPUTE), 1, 'والالتزامُ يُسجَّل كما كان');
++  assert.equal(h.s.audit.find('external_payment_executed').length, 1);
++});
++
++test('الحسابُ المعلَّقُ لا يخرج له مالٌ من أيِّ بابٍ — لا من pay ولا من disburse (T-60)', () => {
++  const h = externalState();
++  openAccount(h, COMPUTE);
++  const suspended = h.s.externalAccounts.suspend(FOREIGN, COMPUTE, 'تعليقٌ معلنٌ', h.now + 500);
++  assert.equal(suspended.ok, true);
++  assert.equal(h.s.externalAccounts.isActive(COMPUTE, h.now + 600), false);
++
++  const viaPay = h.s.payments.pay({
++    accountId: COMPUTE, amount: 100_000, line: 'budget:foreign',
++    purpose: 'دفعةٌ على حسابٍ معلَّق', requestedBy: FOREIGN,
++  }, h.now + 1000);
++  assert.equal(viaPay.ok, false);
++  assert.match(viaPay.ok ? '' : viaPay.reason, /معلَّق/);
++
++  const viaDirect = h.s.treasury.disburse({
++    line: 'budget:foreign', amount: 100_000, to: LEDGER,
++    purpose: 'صرفٌ مباشرٌ على حسابٍ معلَّق', by: 'ministry:finance',
++  }, h.now + 1500);
++  assert.equal(viaDirect.ok, false, 'التعليقُ أسبقُ من كل شيء — من البابَين لا من أحدهما');
++  assert.equal(h.s.ledger.balance(LEDGER), 0);
++});
++
++test('التذكرةُ لا تُستعمل مرّتين: صرفٌ ثانٍ بعد دفعةٍ ناجحةٍ مرفوض (T-60)', () => {
++  const h = externalState();
++  openAccount(h, COMPUTE);
++  const at = h.now + 1000;
++  const paid = h.s.payments.pay({
++    accountId: COMPUTE, amount: 1_000_000, line: 'budget:foreign',
++    purpose: 'سعة حوسبة معلنة', requestedBy: FOREIGN,
++  }, at);
++  assert.equal(paid.ok, true);
++  // اللحظةُ والمبلغُ والحسابُ كلُّها مطابقةٌ لتذكرةِ الدفعةِ الناجحة — ومع ذلك تُرفض
++  const replay = h.s.treasury.disburse({
++    line: 'budget:foreign', amount: 1_000_000, to: LEDGER,
++    purpose: 'إعادةُ استعمالِ تذكرةٍ استُهلكت', by: 'ministry:finance',
++  }, at);
++  assert.equal(replay.ok, false);
++  assert.match(replay.ok ? '' : replay.reason, /لا تذكرةَ دفعٍ/);
++  assert.equal(h.s.ledger.balance(LEDGER), 1_000_000, 'المبلغُ واحدٌ لا اثنان');
++});
++
++test('تذكرةٌ لا تبقى بعد رفضِ الخزانة: دفعةٌ فاشلةٌ لا تفتح بابًا لتاليها (T-60)', () => {
++  const h = externalState();
++  openAccount(h, COMPUTE);
++  const at = h.now + 1000;
++  // بندُ موازنةٍ غيرُ معلن ⇒ الخزانةُ ترفض **بعد** إصدارِ التذكرة، فتُلغى في `finally`
++  const failed = h.s.payments.pay({
++    accountId: COMPUTE, amount: 500_000, line: 'budget:ghost',
++    purpose: 'دفعةٌ على بندٍ غيرِ قائم', requestedBy: FOREIGN,
++  }, at);
++  assert.equal(failed.ok, false);
++  const direct = h.s.treasury.disburse({
++    line: 'budget:foreign', amount: 500_000, to: LEDGER,
++    purpose: 'التقاطُ تذكرةٍ مهجورة', by: 'ministry:finance',
++  }, at);
++  assert.equal(direct.ok, false, 'لا تذكرةَ معلّقةً تُلتقط');
++  assert.match(direct.ok ? '' : direct.reason, /لا تذكرةَ دفعٍ/);
++  assert.equal(h.s.ledger.balance(LEDGER), 0);
++});
++
++test('الإغلاقُ لا يُستعمل لطمسِ صرفٍ مُحقَن: لا مالَ يخرج فلا التزامَ يُخفى (T-60)', () => {
++  const h = externalState();
++  openAccount(h, COMPUTE);
++  const direct = h.s.treasury.disburse({
++    line: 'budget:foreign', amount: 3_000_000, to: LEDGER,
++    purpose: 'صرفٌ مباشرٌ ثمّ إغلاقٌ سريع', by: 'ministry:finance',
++  }, h.now + 1000);
++  assert.equal(direct.ok, false);
++  assert.equal(h.s.externalAccounts.paidTotal(COMPUTE), 0, 'لا مالَ خرج فلا أثرَ يُطمس');
++  assert.equal(h.s.payments.pendingObligations(COMPUTE), 0);
++});
++
++test('حرسُ النطاق يُربط مرّةً واحدةً — والربطُ الثاني استثناءٌ مغلقٌ لا تجاوزٌ صامت (T-60)', () => {
++  const h = externalState();
++  assert.throws(
++    () => h.s.treasury.bindReservedTargets(() => null),
++    /TREASURY_RESERVED_GUARD_ALREADY_BOUND/,
++    'حرسٌ يُستبدَل حرسٌ يُلتفَّ عليه',
++  );
++});
++
++test('الحرسُ لا يمسّ ما ليس في نطاقه: صرفٌ على حسابِ نفقةٍ عاديٍّ يمرّ (T-60)', () => {
++  const h = externalState();
++  openAccount(h, COMPUTE);
++  const opened = h.s.ledger.openAccount('expense:operations', 'expense', 'نفقاتُ تشغيل', h.now);
++  assert.equal(opened.ok, true);
++  const direct = h.s.treasury.disburse({
++    line: 'budget:foreign', amount: 250_000, to: 'expense:operations',
++    purpose: 'نفقةُ تشغيلٍ معلنةٌ خارجَ النطاق المحجوز', by: 'ministry:finance',
++  }, h.now + 1000);
++  assert.equal(direct.ok, true, 'الحجزُ على النطاق المعلن وحده لا على كل صرف');
++  assert.equal(h.s.ledger.balance('expense:operations'), 250_000);
++});
++
++/**
++ * ثابت 7 في الخزانة (التجميد) يُفحص **قبل** حرسِ النطاق، فالدفعةُ ترتدّ من هناك ولا
++ * يستهلك الحرسُ تذكرتَها. فلولا `finally` بقيت التذكرةُ صالحةً بعد فكِّ التجميد — وهذا
++ * الحكمُ هو الذي يقتل تلك الطفرة، ولا يقتلها استهلاكُ الحرسِ للتذكرة.
++ */
++test('تذكرةٌ لا تعبر تجميدَ الخزانة: ما ارتدّ قبل الحرس لا يبقى إذنًا بعده (T-60)', () => {
++  const h = externalState();
++  openAccount(h, COMPUTE);
++  const at = h.now + 1000;
++  const emergency = (at: number) => h.s.king.issueCommand(
++    'declare_emergency', h.s.economyConfig.treasury.account, { kind: 'economy' }, at,
++  );
++  assert.equal(h.s.treasury.freeze(emergency(h.now + 500), 'تجميدٌ معلن', h.now + 500).ok, true);
++  const failed = h.s.payments.pay({
++    accountId: COMPUTE, amount: 400_000, line: 'budget:foreign',
++    purpose: 'دفعةٌ على خزانةٍ مجمَّدة', requestedBy: FOREIGN,
++  }, at);
++  assert.equal(failed.ok, false);
++  assert.match(failed.ok ? '' : failed.reason, /مجمَّدة/);
++  assert.equal(h.s.treasury.unfreeze(emergency(h.now + 2000), 'فكٌّ معلن', h.now + 2000).ok, true);
++  const direct = h.s.treasury.disburse({
++    line: 'budget:foreign', amount: 400_000, to: LEDGER,
++    purpose: 'التقاطُ تذكرةٍ ارتدّت قبل الحرس', by: 'ministry:finance',
++  }, at);
++  assert.equal(direct.ok, false, 'لا تذكرةَ نجت من الارتداد');
++  assert.match(direct.ok ? '' : direct.reason, /لا تذكرةَ دفعٍ/);
++  assert.equal(h.s.ledger.balance(LEDGER), 0);
++});
