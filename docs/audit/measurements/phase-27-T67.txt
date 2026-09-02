@@ -1,0 +1,373 @@
+قياسٌ خامٌّ — المرحلة 27 · الدَّين T-67 · البند W-2026-027
+المُقيس: src/external/partner_risk.ts (292 سطرًا) · الأداة: مسابرُ على dist/ المبنيّ
+التاريخ: 2026-09-03 · المقيس: المساعد الآلي (الجلسة 72) — ولا إقرارَ لنفسه
+الدعوى المفحوصة (PROGRESS.md سطر 3433): «ثلاثة إخلالات تُثقل الدرجة بلا معرفة أيّ عقد أخلّ ولا هل ما زال قائمًا»
+
+════════ §١ ما قبل أيِّ لمسِ شفرة — خرجُ المسبارِ حرفًا ════════
+--- /tmp/t67_probe.cjs ---
+
+أقصى عقود قائمة لنظير: (اقرأ التهيئة)
+مفاتيح التهيئة: policy kinds risk_factors
+
+عقدان قائمان معًا: extc:1 extc:2
+قائمان؟ true true
+
+=== [أ] إخلالٌ في العقد «أ» وحدَه — والسجلُّ لا يعرف أيَّهما ===
+قيدُ الإخلال: {"counterparty":"external:compute-provider","reason":"تسليم غير مطابق: العقد الأول وحدَه","at":1788391109539,"breaches":1,"penalty":15}
+  ⇒ أيُّ عقدٍ أخلّ؟ لا جواب في القيدِ ولا في البنية: true
+  ⇒ ولا في الذاكرة: حقولُ BreachNote = counterparty/reason/notedBy/at
+الدرجة الفعلية للنوع كلِّه: 40 (الأساس 25 + عقوبة 15)
+  ⇒ العقد «ب» البريءُ حُمِّل ثقلَ إخلالِ «أ» في كلِّ تقديرٍ لاحق: نعم — الدرجةُ للنوعِ لا للعقد
+
+=== [ب] إخلالٌ يُسجَّل قبل وجودِ أيِّ عقدٍ — ويُثقلُ عقدًا يُوقَّع بعده ===
+عقدٌ أوّلُ للنظير، ولا عقدَ سبقه: true · درجتُه المسجّلة: 40
+  ⇒ أوّلُ عقدٍ يُوقَّع حمل عقوبةَ إخلالٍ لا عقدَ له: true
+
+=== [ج] نظيرٌ مُختلقٌ لا وجودَ له في النظائرِ المعلنة (الثابت 8 · RULE-005) ===
+noteBreach عليه = true · عدّاده = 1
+  ⇒ النظائرُ المعلنة: external:compute-provider · external:data-archive · external:model-registry
+
+=== [د] لا بابَ يرفع إخلالًا ولا ينسبُه إلى دفعةٍ ولا يقرأُ إخلالاتِ عقدٍ بعينه ===
+الدوالُّ العامّة: attachJournal restore assess noteBreach latest history breachCount effectiveScore isAcceptable unacceptableReason staleKinds declaredKinds kind report
+
+--- مسبارٌ أوّلُ: نظيرٌ مُختلقٌ وتوقيعُ الدالة ---
+
+--- أنواع العقود المعلنة ---
+عقوبة الإخلال: 15 · سقف الدرجة: 60
+
+=== [أ] إخلال على نظير لا عقد له ولا وجود له في النظائر المعلنة ===
+noteBreach على نظير مُختلق = true · عدّاده = 1
+
+=== [ب] هل يُقبل معرّف عقد؟ توقيع الدالة ===
+3 وسائط — noteBreach(by, counterparty, reason, now = Date.now()) {
+
+════════ §٢ ما تُثبته الأرقامُ الثلاثةُ أعلاه — بلا تأويل ════════
+
+[أ] عقدان قائمان معًا (extc:1 و extc:2)، والإخلالُ في الأوّلِ وحدَه.
+    قيدُ التدقيق: {counterparty, reason, at, breaches, penalty} — ولا حقلَ contractId.
+    وبنيةُ BreachNote في الذاكرة: {counterparty, reason, notedBy, at} — كذلك.
+    ⇒ فالسؤالُ «أيُّ عقدٍ أخلّ؟» لا جوابَ له في السجلِّ ولا في الذاكرة. والدرجةُ
+      الفعليّةُ صارت 40 (25 أساسًا + 15 عقوبةً) **لنوعِ العقدِ كلِّه**، فحمل العقدُ
+      الثاني — الذي لم يُخِلّ — ثقلَ إخلالِ الأوّل في كلِّ تقديرٍ لاحق.
+
+[ب] إخلالٌ يُسجَّل ولا عقدَ للنظيرِ أصلًا: ثمّ يُوقَّع **أوّلُ** عقدٍ له، فتُسجَّل
+    درجتُه 40 لا 25.
+    ⇒ فعقوبةٌ تُحمَّل على عقدٍ لم يكن موجودًا لحظةَ الإخلال، ولا يمكن نقضُها لأنّ
+      المُخِلَّ نفسَه لا يُسمّى.
+
+[ج] noteBreach يقبل نظيرًا مُختلقًا لا وجودَ له في النظائرِ المعلنة
+    (external:vendor-does-not-exist ⇒ true · عدّاده 1)، والنظائرُ المعلنةُ ثلاثةٌ
+    وحدَها. ⇒ يخالف الثابت 8 المكتوبَ في رأسِ الوحدة («لا شريك خارج النظائر
+      المعلنة — RULE-005») نصًّا: التقديرُ لا يُنشئ شريكًا، لكنّ الإخلالَ يُنشئه.
+
+[د] لا دالّةَ تقرأ إخلالاتِ عقدٍ بعينه ولا تنسب إخلالًا إلى دفعة، والدوالُّ العامّةُ
+    كلُّها مسرودةٌ في §١.
+
+════════ §٣ ما لا يدّعيه هذا القياس ════════
+- لا يدّعي أنّ الثابت 7 خطأ: «الإخلالُ يُثقل ولا يُنسى» شرطٌ معلنٌ ويبقى بحاله.
+  فالعلاجُ نسبةُ الإخلالِ إلى مُخِلِّه، **لا** تخفيفُ وزنِه ولا نسيانُه بالإنهاء.
+- لا يدّعي أنّ الدرجةَ يجب أن تنقص بإنهاءِ العقد: ذلك حكمُ سياسةٍ للمراجع.
+- لا يدّعي حكمَ CI: يُقرأ من واجهةِ التشغيلاتِ بعد الدفع.
+
+════════ §٤ ما بعد الإصلاح — خرجُ المسبارِ حرفًا (البناءُ نفسُه) ════════
+
+عقدان قائمان: extc:1 extc:2
+
+=== [أ] الإخلالُ يُنسب إلى مُخِلٍّ يُسمّى ===
+قيدُ الإخلال: {"contractId":"extc:1","counterparty":"external:compute-provider","reason":"تسليم غير مطابق: العقد الأول وحدَه","at":1788392121440,"contractActive":true,"contractBreaches":1,"breaches":1,"penalty":15}
+  ⇒ يحمل contractId: true · وحالَ قيامِه: true
+إخلالاتُ «أ» = 1 · إخلالاتُ «ب» = 0
+تفصيلُ ثقلِ النظير: [{"contractId":"extc:1","breaches":1,"active":true}]
+
+=== [ب] الثابت 7 قائمٌ بحاله: الوزنُ لا يخفّ ولا يُنسى ===
+الدرجة الفعلية: 40 (كانت 40 قبل الإصلاح — لم تنقص)
+أُنهي «أ»: true · الدرجةُ بعده: 40 ⇒ لم يُنسَ الإخلالُ بالإنهاء
+والتفصيلُ يُظهر أنّه لم يعد قائمًا: [{"contractId":"extc:1","breaches":1,"active":false}]
+
+=== [ج] إخلالٌ على عقدٍ لا وجودَ له يُرفض برفضٍ مسمًّى (كان يمرّ) ===
+على معرّفٍ مُختلق = false
+على نظيرٍ لا عقدَ له = false
+قيودُ الرفض: لا إخلال على عقد لا وجود له في السجل | لا إخلال على عقد لا وجود له في السجل
+عدّادُ النظير بعد المحاولتَين = 0 ⇒ لا عقوبةَ بلا مُخِلّ
+
+=== [د] الربطُ الثاني للقارئ يرمي ===
+✓ رمى: PARTNER_RISK_CONTRACT_READER_ALREADY_BOUND
+
+════════ §٥ مصفوفةُ الطفرات — أتقتُل الأحكامُ عطبًا حقيقيًّا؟ ════════
+الأصل: 9 أحكامٍ · 9 نجاحًا · 0 فشلًا
+[M1] إسقاطُ فحصِ وجودِ العقدِ في noteBreach        ⇒ 6 نجاحًا · 2 فشلًا  · مقتولة
+[M2] breachesFor يُرشّح بالنظيرِ لا بمعرّفِ العقد   ⇒ 7 نجاحًا · 1 فشلًا  · مقتولة
+[M3] إسقاطُ رميِ الربطِ الثاني للقارئ               ⇒ 7 نجاحًا · 1 فشلًا  · مقتولة
+[M4] contractActive يُدوَّن true دائمًا              ⇒ 8 نجاحًا · 0 فشلًا  · **نجت أوّلًا**
+     └─ فأُضيف الحكمُ الناقصُ (إخلالٌ يُكشف بعد انتهاءِ المدّة) ⇒ 8 نجاحًا · 1 فشلًا · مقتولة
+        ولم يُحذف دفاعٌ لتصيرَ المصفوفةُ أجملَ: أُضيف حكمٌ على حالةٍ حقيقيّةٍ لم تكن مُغطّاة.
+[M5] النظيرُ يُؤخذ من المعرّفِ لا من العقد          ⇒ 4 نجاحًا · 4 فشلًا  · مقتولة
+[M6] إسقاطُ bindContracts من سجلِّ العقود           ⇒ 2 نجاحًا · 6 فشلًا  · مقتولة
+الحصيلة: ستُّ طفراتٍ كلُّها مقتولةٌ (والرابعةُ بعد إضافةِ حكمٍ ناقصٍ لا بحذفِ حراسة).
+
+════════ §٦ الحدُّ الذي أوقف الالتزام — قياسٌ لا رأي ════════
+npm test بعد الإصلاح:
+  tests 2237 · pass 2235 · fail 2
+والساقطانِ ليسا في أحكامِ النسبة، بل في بوابةِ الأرقامِ المنقولة (T-128):
+  src/external/ = 8 ملفًّا · 2102 سطرًا — وARCHITECTURE.md السطر 58 يقول 2025
+و«ARCHITECTURE.md» محجوزٌ في نطاقِ W-2026-026 (حالُه REVIEW، وREVIEW حالٌ تقفل النطاق
+بنصِّ docs/work/WORK_QUEUE.json: scope_locking_statuses).
+ولم يُوسَّع نطاقُ هذا البندِ ليبتلعَ الملفَّ ولو كان الحاجزُ يسمح بذلك آليًّا:
+  فحصُ scripts/check_work.mjs (السطر 287) يقبل المسارَ إن كان في نطاقِ البندِ المُعلَن
+  **قبل** أن يسأل هل يحجزه غيرُه — فالحجزُ المزدوجُ يمرّ آليًّا وهو نقيضُ RULE-011.
+  فالمرورُ من هذا الباب إخضارُ بوابةٍ بالالتفافِ على غرضِها لا باستيفائه.
+⇒ فأُعلن هذا التعارضُ دَينًا مسمًّى T-166، ولم يُلمس محجوز، ولم يُلطَّف حاجز.
+
+════════ §٧ الرقعةُ المحفوظةُ حرفًا (git diff src/ tests/) ════════
+diff --git a/src/external/contract_registry.ts b/src/external/contract_registry.ts
+index 50cefcf..5b0bf47 100644
+--- a/src/external/contract_registry.ts
++++ b/src/external/contract_registry.ts
+@@ -105,6 +105,16 @@ export class ExternalContractRegistry {
+ 
+   constructor(private readonly deps: ContractRegistryDeps) {
+     this.proposerId = deps.proposerId ?? FOREIGN_MINISTRY;
++    // T-67: يُربط قارئُ العقودِ في تقديرِ المخاطر من هنا لا من التركيب، لأنّ
++    // التقديرَ تبعيّةٌ لهذا السجلِّ فلا يُعكس الاتّجاه. قراءةٌ محضةٌ لا كتابة:
++    // فلا يملك تقديرُ المخاطرِ توقيعًا ولا إنهاءً — يسأل عن عقدٍ ولا يُغيّره.
++    this.deps.risk.bindContracts({
++      get: (contractId) => {
++        const contract = this.contracts.get(contractId);
++        return contract ? { counterparty: contract.counterparty } : null;
++      },
++      isActive: (contractId, now) => this.isActive(contractId, now),
++    });
+   }
+ 
+   /**
+diff --git a/src/external/partner_risk.ts b/src/external/partner_risk.ts
+index efa12ae..5d57f92 100644
+--- a/src/external/partner_risk.ts
++++ b/src/external/partner_risk.ts
+@@ -18,7 +18,12 @@
+  *   7) **الإخلال يُثقل الدرجة ولا يُنسى**: كل إخلال موثَّق يزيد الدرجة الفعلية بقيمة
+  *      معلنة، فلا يعود الشريك المخلّ إلى درجته الأولى بتقدير جديد يتجاهل تاريخه
+  *   8) **لا شريك خارج النظائر المعلنة** (RULE-005): التقدير لا يُنشئ شريكًا
++ *      ولا الإخلال: الإخلال يُنسب إلى عقدٍ في السجل، ونظيرُه يُستنبَط منه لا يُعطى
++ *   9) **لا إخلال بلا مُخِلٍّ يُسمّى** (T-67): كل إخلال يحمل معرّف عقدٍ قائمٍ في
++ *      السجل لحظةَ التسجيل، فلا يُثقل النظيرُ جملةً بإخلالٍ لا يُعرف مصدره.
++ *      والثابت 7 يبقى بحاله: النسبةُ تُعرَف، والوزنُ لا يخفّ ولا يُنسى بالإنهاء
+  * حالات الفشل (كلها مغلقة): نوع غير معلن ⇒ رفض؛ مقدِّر غير مخوَّل ⇒ رفض؛
++ *   عقد غير قائم في السجل ⇒ رفض الإخلال (ثابت 9)؛ لا قارئ عقود مربوطًا ⇒ رفض؛
+  *   عامل غير معلن ⇒ رفض؛ عامل مكرَّر ⇒ رفض؛ مبرّر أقصر من ثلاثة أحرف ⇒ رفض؛
+  *   زمن مستقبلي ⇒ رفض؛ لا تقدير ⇒ العقد مرفوض (لا افتراض سلامة)
+  * اختبار القبول: tests/external/external_contracts_lifecycle.test.ts
+@@ -55,12 +60,25 @@ export interface RiskAssessment {
+ }
+ 
+ export interface BreachNote {
++  /** ثابت 9: المُخِلُّ يُسمّى — معرّفُ العقدِ الذي وقع الإخلالُ فيه */
++  readonly contractId: string;
++  /** يُستنبَط من العقدِ في السجل، فلا يُعطى من نداءٍ خارجيّ (ثابت 8) */
+   readonly counterparty: string;
+   readonly reason: string;
+   readonly notedBy: EntityId;
+   readonly at: number;
+ }
+ 
++/**
++ * قارئُ العقودِ الذي تُنسب إليه الإخلالات (ثابت 9). يُربط مرّةً واحدةً من سجلِّ
++ * العقودِ نفسِه بعد إنشائه، لأنّ السجلَّ يتّكئ على المخاطرِ فلا يُعكس الاتّجاه.
++ * ولا يمنح هذا القارئُ سلطةَ تعديلٍ: قراءةٌ محضةٌ لا كتابة.
++ */
++export interface ContractReader {
++  readonly get: (contractId: string) => { readonly counterparty: string } | null;
++  readonly isActive: (contractId: string, now: number) => boolean;
++}
++
+ export type RiskResult =
+   | { readonly ok: true; readonly assessment: RiskAssessment; readonly auditId: string }
+   | { readonly ok: false; readonly reason: string; readonly auditId: string };
+@@ -96,6 +114,8 @@ export class PartnerRisk {
+   private readonly assessorId: EntityId;
+   private sequence = 0;
+   private sink: DurableSink | null = null;
++  /** ثابت 9: يُربط مرّةً واحدةً — والربطُ الثاني يرمي فلا يُبدَّل مصدرُ الحقيقة */
++  private contracts: ContractReader | null = null;
+ 
+   constructor(private readonly deps: PartnerRiskDeps) {
+     this.assessorId = deps.assessorId ?? RISK_ASSESSOR;
+@@ -111,6 +131,16 @@ export class PartnerRisk {
+   /** T-125: يُربط بعد الإرجاع لا قبله — وإلا دُوِّن المُستعادُ ثانيةً كلَّ إقلاع */
+   attachJournal(sink: DurableSink): void { this.sink = sink; }
+ 
++  /**
++   * ثابت 9: ربطُ قارئِ العقودِ مرّةً واحدةً. الربطُ الثاني يرمي
++   * `PARTNER_RISK_CONTRACT_READER_ALREADY_BOUND`: قارئٌ يُبدَّل بعد التسجيلِ يعني
++   * أنّ إخلالًا سُجِّل على عقدٍ في سجلٍّ ثمّ صار يُقرأ في سجلٍّ آخر.
++   */
++  bindContracts(reader: ContractReader): void {
++    if (this.contracts !== null) throw new Error('PARTNER_RISK_CONTRACT_READER_ALREADY_BOUND');
++    this.contracts = reader;
++  }
++
+   /**
+    * بابُ الإرجاع الذرّيّ (T-125): يُثبت تقديراتٍ وخروقًا مشهودةً ولا يُقدِّر من عنده.
+    * ويرفض تقديرًا لنوعِ خطرٍ لم يُعلن في التهيئة ⇒ RECOVERY_RISK_KIND_UNDECLARED:
+@@ -194,26 +224,63 @@ export class PartnerRisk {
+   }
+ 
+   /**
+-   * 2) تسجيل إخلال موثَّق (ثابت 7): يُثقل درجة الشريك الفعلية ولا يُمحى بتقدير جديد.
+-   * سببه: الشريك الذي أخلّ مرة ليس كالذي لم يُخِلّ، ولو تشابه ملفّاهما على الورق.
++   * 2) تسجيل إخلال موثَّق في **عقدٍ بعينه** (ثوابت 7 و9): يُثقل درجة الشريك الفعلية
++   * ولا يُمحى بتقدير جديد ولا بإنهاء العقد — لكنّه يُنسب إلى مُخِلِّه فيُعرَف.
++   * سببه: الشريك الذي أخلّ مرة ليس كالذي لم يُخِلّ، ولو تشابه ملفّاهما على الورق؛
++   * وإخلالٌ بلا عقدٍ يُسمّى عقوبةٌ لا يمكن نقضُها لأنّ المُدَّعى عليه مجهول (T-67).
++   * ترتيب الفحوص مقصود: البيان ← القارئُ مربوط ← العقدُ قائمٌ في السجل ← التسجيل.
+    */
+-  noteBreach(by: EntityId, counterparty: string, reason: string, now = Date.now()): boolean {
+-    if (reason.trim().length < 3) {
++  noteBreach(by: EntityId, contractId: string, reason: string, now = Date.now()): boolean {
++    const refuse = (why: string): false => {
+       this.deps.audit.append(by, 'partner_risk_refused', {
+-        mode: 'breach', counterparty, reason: 'لا إخلال يُسجَّل بلا بيان',
++        mode: 'breach', contractId, reason: why,
+       });
+       return false;
+-    }
+-    const breach: BreachNote = { counterparty, reason: reason.trim(), notedBy: by, at: now };
++    };
++    if (reason.trim().length < 3) return refuse('لا إخلال يُسجَّل بلا بيان');
++    // ثابت 9: لا نسبةَ بلا مصدرِ حقيقةٍ مربوط — والصمتُ هنا يعني عقوبةً بلا مُخِلّ
++    if (this.contracts === null) return refuse('لا قارئ عقود مربوطًا: لا إخلال يُنسب بلا سجلّ');
++    const contract = this.contracts.get(contractId);
++    // ثابت 8: النظيرُ يُستنبَط من العقدِ لا يُعطى، فلا يُنشئ الإخلالُ شريكًا
++    if (!contract) return refuse('لا إخلال على عقد لا وجود له في السجل');
++    const breach: BreachNote = {
++      contractId, counterparty: contract.counterparty,
++      reason: reason.trim(), notedBy: by, at: now,
++    };
+     this.breaches.push(breach);
+     this.sink?.record('partner_breach', { breach });
+     this.deps.audit.append(by, 'partner_breach_noted', {
+-      counterparty, reason: reason.trim(), at: now,
+-      breaches: this.breachCount(counterparty), penalty: this.deps.breachPenalty,
++      contractId, counterparty: breach.counterparty, reason: breach.reason, at: now,
++      // هل المُخِلُّ قائمٌ لحظةَ التسجيل؟ سؤالٌ كان بلا جوابٍ قبل T-67
++      contractActive: this.contracts.isActive(contractId, now),
++      contractBreaches: this.breachesFor(contractId).length,
++      breaches: this.breachCount(breach.counterparty), penalty: this.deps.breachPenalty,
+     });
+     return true;
+   }
+ 
++  /** إخلالاتُ عقدٍ بعينه — الجوابُ الذي كان مستحيلًا قبل T-67 (ثابت 9) */
++  breachesFor(contractId: string): readonly BreachNote[] {
++    return this.breaches.filter((b) => b.contractId === contractId);
++  }
++
++  /**
++   * تفصيلُ ثقلِ النظير: كم أخلّ كلُّ عقدٍ، وهل هو قائمٌ لحظةَ القراءة.
++   * والثابت 7 قائمٌ بحاله: عقدٌ مُنهًى يظهر هنا بثقلِه لا بصفرٍ — ليُعرَف لا ليُنسى.
++   */
++  breachBreakdown(counterparty: string, now = Date.now()): readonly {
++    readonly contractId: string; readonly breaches: number; readonly active: boolean;
++  }[] {
++    const perContract = new Map<string, number>();
++    for (const b of this.breaches) {
++      if (b.counterparty !== counterparty) continue;
++      perContract.set(b.contractId, (perContract.get(b.contractId) ?? 0) + 1);
++    }
++    return [...perContract.entries()].map(([contractId, breaches]) => ({
++      contractId, breaches, active: this.contracts?.isActive(contractId, now) ?? false,
++    }));
++  }
++
+   /** أحدث تقدير قائم (غير بالٍ) لنوع عقد — أو لا شيء (ثوابت 3 و6) */
+   latest(kindId: string, now = Date.now()): RiskAssessment | null {
+     for (let i = this.assessments.length - 1; i >= 0; i -= 1) {
+diff --git a/tests/data/rehydrate_fiscal.test.ts b/tests/data/rehydrate_fiscal.test.ts
+index ee31b43..92601df 100644
+--- a/tests/data/rehydrate_fiscal.test.ts
++++ b/tests/data/rehydrate_fiscal.test.ts
+@@ -107,7 +107,19 @@ function seed(s: State, now = T0): void {
+     justification: 'تقدير معلن لنوع عقد قائم',
+   }, now);
+   assert.equal(assessed.ok, true, 'التقدير واقعةٌ تُدوَّن');
+-  assert.equal(s.partnerRisk.noteBreach(AUDITOR, COMPUTE, 'تأخر تسليم معلن', now), true);
++  // T-67: الإخلالُ يُنسب إلى عقدٍ قائمٍ لا إلى النظيرِ جملةً — فيُوقَّع أوّلًا
++  const contract = s.contracts.sign(
++    s.king.issueCommand('open_external_account', KIND_COMPUTE, { kind: 'external' }, now),
++    {
++      kindId: KIND_COMPUTE, value: 3_000_000, endsAt: now + 30 * 24 * 60 * 60 * 1000,
++      proposedBy: FOREIGN, purpose: 'تعهّد معلن ينجو الإقلاع',
++    }, now,
++  );
++  assert.equal(contract.ok, true, 'العقد المُخِلّ يجب أن يقوم أوّلًا');
++  if (!contract.ok) return;
++  assert.equal(
++    s.partnerRisk.noteBreach(AUDITOR, contract.contract.contractId, 'تأخر تسليم معلن', now), true,
++  );
+ }
+ 
+ test('T-125: الماليّةُ والنافذةُ الخارجيّةُ تنجو الإقلاع — لا صفرَ بعد اليوم', () => {
+diff --git a/tests/external/partner_risk.test.ts b/tests/external/partner_risk.test.ts
+index 152072d..81b8341 100644
+--- a/tests/external/partner_risk.test.ts
++++ b/tests/external/partner_risk.test.ts
+@@ -8,9 +8,22 @@ import test from 'node:test';
+ import assert from 'node:assert/strict';
+ import {
+   AUDITOR, DAY, FOREIGN, KIND_ARCHIVE, KIND_COMPUTE, KIND_WEIGHTS,
+-  assessRisk, beat, contractState,
++  assessRisk, beat, contractState, signContract,
+ } from './helpers';
+ 
++/**
++ * T-67: لا إخلال إلا على عقدٍ يُسمّى — فيُوقَّع عقدٌ قائمٌ ثم يُنسب إليه.
++ * ولا عقدَ بلا تقديرٍ قائم (لا افتراض سلامة)، فيُقدَّر أوّلًا إن لم يكن ثمّ تقدير.
++ */
++function breachingContract(h: ReturnType<typeof contractState>, kindId = KIND_COMPUTE): string {
++  if (h.s.partnerRisk.latest(kindId, h.now) === null) {
++    assert.equal(assessRisk(h, kindId, []).ok, true, 'التقدير شرطُ التوقيع');
++  }
++  const signed = signContract(h, kindId, { value: 3_000_000 });
++  assert.equal(signed.ok, true, 'العقد المُخِلّ يجب أن يقوم أوّلًا');
++  return signed.ok ? signed.contract.contractId : '';
++}
++
+ test('الدرجة تُحسب من وزن النوع المعلن وحده حين لا عوامل', () => {
+   const h = contractState();
+   const done = assessRisk(h, KIND_COMPUTE, []);
+@@ -139,21 +152,24 @@ test('**الإخلال يُثقل الدرجة ولا يُنسى**: ثلاثة 
+   assert.equal(assessRisk(h, KIND_COMPUTE, []).ok, true);
+   assert.equal(h.s.partnerRisk.isAcceptable(KIND_COMPUTE, h.now), true);
+   const penalty = h.s.contractsConfig.policy.breach_penalty;
++  const contractId = breachingContract(h);
+   for (let i = 1; i <= 3; i += 1) {
+     assert.equal(
+-      h.s.partnerRisk.noteBreach(AUDITOR, 'external:compute-provider', `إخلال موثَّق ${i}`, h.now),
++      h.s.partnerRisk.noteBreach(AUDITOR, contractId, `إخلال موثَّق ${i}`, h.now),
+       true,
+     );
+   }
+   assert.equal(h.s.partnerRisk.effectiveScore(KIND_COMPUTE, h.now), 25 + 3 * penalty);
+   assert.equal(h.s.partnerRisk.isAcceptable(KIND_COMPUTE, h.now), false);
+   assert.equal(h.s.audit.find('partner_breach_noted').length, 3);
++  // T-67: والثلاثةُ منسوبةٌ إلى مُخِلٍّ يُسمّى لا إلى النظيرِ جملةً
++  assert.equal(h.s.partnerRisk.breachesFor(contractId).length, 3);
+ });
+ 
+ test('تقدير جديد لا يمحو تاريخ الإخلال — لا عودة إلى الدرجة الأولى', () => {
+   const h = contractState();
+   assert.equal(assessRisk(h, KIND_COMPUTE, []).ok, true);
+-  h.s.partnerRisk.noteBreach(AUDITOR, 'external:compute-provider', 'تسليم غير مطابق', h.now);
++  h.s.partnerRisk.noteBreach(AUDITOR, breachingContract(h), 'تسليم غير مطابق', h.now);
+   const fresh = assessRisk(h, KIND_COMPUTE, [], h.now + 1000);
+   assert.equal(fresh.ok, true);
+   if (!fresh.ok) return;
+@@ -168,7 +184,7 @@ test('تقدير جديد لا يمحو تاريخ الإخلال — لا عو
+ 
+ test('إخلال بلا بيان يُرفض تسجيله (RULE-006)', () => {
+   const h = contractState();
+-  assert.equal(h.s.partnerRisk.noteBreach(AUDITOR, 'external:compute-provider', 'x', h.now), false);
++  assert.equal(h.s.partnerRisk.noteBreach(AUDITOR, breachingContract(h), 'x', h.now), false);
+   assert.equal(h.s.partnerRisk.breachCount('external:compute-provider'), 0);
+ });
+ 
