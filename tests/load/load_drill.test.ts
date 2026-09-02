@@ -10,6 +10,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { countEvent, hasEvent, lastDetail, loadHarness } from './helpers';
+import { isTimingBreach } from '../../src/load/load_verdicts';
 
 test('التمرين يُعلن سياسته لحظة بنائه', () => {
   const h = loadHarness();
@@ -151,10 +152,13 @@ test('عتبة زمن مستحيلة تُنتج خرقًا معلنًا — ال
   assert.equal(out.report.breaches.includes('COMMAND_MAX_OVER_THRESHOLD'), true);
 });
 
-test('عتبة زمن واسعة لا تُنتج خرقًا', () => {
+test('عتبةُ زمنٍ واسعةٌ: ما ظهر فزمنٌ مُعلنٌ بصنفِه لا سلامةٌ مخروقة', () => {
   const h = loadHarness({ sustained_commands: 4, channel_p99_ms: 10_000, channel_max_ms: 10_000 });
   const out = h.drill.pressureCommands({ by: h.authority, channel: h.channel, count: 4, issue: () => h.issue() });
-  if (out.ok) assert.deepEqual(out.report.breaches, []);
+  assert.equal(out.ok, true);
+  if (!out.ok) return;
+  // الحكمُ على الطورِ لا على الآلة: أيُّ رمزٍ يظهر هنا **زمنيٌّ بالاسم**، وصفرُ خرقِ سلامةٍ حتمًا
+  for (const code of out.report.breaches) assert.equal(isTimingBreach(code), true, code);
 });
 
 test('الدفعة تُدرج كاملة ثم تُعالَج مرة واحدة', () => {
@@ -269,17 +273,29 @@ test('كل طور يُعلن بدايته باسمه', () => {
   assert.equal(countEvent(h.s, 'load_drill_started'), 4);
 });
 
-test('التمرين الكامل ينجح بلا خرق على تهيئة الإنتاج', () => {
+/**
+ * كان هذا الحكمُ يقول «بلا خرق» فيدخل في دعواه **زمنُ الآلة** — وبه سقط CI **#115**
+ * برمزٍ واحدٍ `COMMAND_MAX_OVER_THRESHOLD` **بصفرِ فقدٍ** (`load_drill.test.js:270`).
+ * فالدعوى قُسِمت ولم تُلَيَّن: **السلامةُ صفرٌ حتمًا**، والزمنُ يُعلَن بصنفِه ولا يُبتلع
+ * ولا يُسكت — ومن أعاد `deepEqual(breaches, [])` أعاد الحكمَ الممزوجَ وقُرعةَ الجدولة.
+ */
+test('التمرين الكامل: سلامةٌ صفرٌ حتمًا، وما زاد فزمنٌ مُعلنٌ بصنفِه لا يُبتلع', () => {
   const h = loadHarness();
   const out = h.drill.run({
     by: h.authority, channel: h.channel, scheduler: h.scheduler, issue: () => h.issue(),
   });
   assert.equal(out.ok, true);
   if (!out.ok) return;
-  assert.deepEqual(out.report.breaches, []);
-  assert.equal(out.report.verdict, 'pass');
-  assert.equal(out.report.ledger.lost, 0);
-  assert.equal(out.report.ledger.sound, true);
+  const r = out.report;
+  assert.deepEqual(r.split.integrity, [], `خرقُ سلامةٍ على تهيئةِ الإنتاج: ${r.split.integrity.join(', ')}`);
+  assert.equal(r.verdict, 'pass');
+  assert.equal(r.ledger.lost, 0);
+  assert.equal(r.ledger.sound, true);
+  // لا رمزَ يسقط بين الحكمَين، وكلُّ ما ليس سلامةً **مُعلَنٌ زمنيًّا بالاسم** لا مجهولًا مُهمَلًا
+  assert.equal(r.split.integrity.length + r.split.timing.length, r.breaches.length);
+  for (const code of r.split.timing) assert.equal(isTimingBreach(code), true, code);
+  // وإن احمرَّ الزمنُ على هذه الآلةِ فقيدُه مكتوبٌ — فالعزلُ ليس إسكاتًا
+  assert.equal(hasEvent(h.s, 'load_timing_breach'), r.timing.verdict === 'fail');
 });
 
 test('الحكم الناجح لا يُصعَّد', () => {
