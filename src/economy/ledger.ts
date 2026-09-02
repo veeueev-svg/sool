@@ -28,6 +28,10 @@
 import { EntityId } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import type { DurableSink } from '../data/persistence';
+import { accountAdmissionFault } from './account_admission';
+
+// T-54: شرطُ القبولِ حجّةٌ واحدةٌ في وحدتِها، ويُعاد تصديرُه من هنا فلا يتفرّق المُنادون
+export { ACCOUNT_KINDS, accountAdmissionFault } from './account_admission';
 
 /** وزارة المالية: الجهة الوحيدة التي تفتح حسابًا وتُثبت قيدًا */
 export const FINANCE_MINISTRY: EntityId = 'ministry:finance';
@@ -141,9 +145,10 @@ export class Ledger {
       });
       return { ok: false, reason, auditId: entry.hash };
     };
-    if (!accountId.includes(':')) return refuse('معرّف حساب غير صالح: يجب أن يكون <نوع>:<اسم>');
+    // T-54: الشرطُ حجّةٌ واحدةٌ مشتركةٌ مع بابِ الإرجاع — لا نسخةٌ ثانيةٌ تتخلّف عن أختها
+    const fault = accountAdmissionFault({ accountId, kind, name });
+    if (fault !== null) return refuse(fault);
     if (this.accounts.has(accountId)) return refuse('حساب بهذا المعرّف مفتوح — لا يُفتح مرتين');
-    if (name.trim().length < 3) return refuse('لا حساب بلا اسم معلن');
     // T-49: السقفُ المالي لا يحرس العدد. والحسابُ لا يُغلق في هذا الدفتر،
     // فكلُّ مفتوحٍ محسوبٌ أبدًا — ولذلك كان الحدّ على العدد شرطَ قابليةِ التدقيق.
     if (this.accounts.size >= this.deps.maxAccounts) {
@@ -358,6 +363,13 @@ export class Ledger {
     const merged = new Set<string>(this.accounts.keys());
     for (const account of snapshot.accounts) merged.add(account.accountId);
     if (merged.size > this.deps.maxAccounts) throw new Error('RECOVERY_LEDGER_ACCOUNT_CAP');
+    // T-54: وشرطُ القبولِ يُحرَس هنا بالحجّةِ نفسِها التي يحرس بها بابُ الفتح — ويُحكَم
+    // على **الجديدِ** وحدَه: القائمُ في الجدولِ دخل من بابِه، وردُّه اليومَ يمنع إقلاعَ
+    // دولةٍ قائمةٍ على حسابٍ سياديٍّ فُتح قبل هذا الحكم — وذاك انتقالٌ لا يملكه هذا البند.
+    for (const account of snapshot.accounts) {
+      if (this.accounts.has(account.accountId)) continue;
+      if (accountAdmissionFault(account) !== null) throw new Error('RECOVERY_LEDGER_ACCOUNT_INVALID');
+    }
     for (const account of snapshot.accounts) {
       if (!this.accounts.has(account.accountId)) this.accounts.set(account.accountId, { ...account });
     }

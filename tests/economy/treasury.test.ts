@@ -5,6 +5,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FINANCE_MINISTRY, UNIT_TARGET, bootstrapState, ROYAL_COURT } from '../../src/index';
+import type { AccountKind } from '../../src/economy/ledger';
+import { accountAdmissionFault } from '../../src/economy/account_admission';
+import { rehydrateStateFromJournal } from '../../src/data/rehydrate_state';
 
 const T0 = Date.now();
 const DAY = 24 * 60 * 60 * 1000;
@@ -205,4 +208,99 @@ test('الخزانة لا تصرف في الوضع الحمائي (RULE-007)', (
   assert.equal(s.heartbeat.mode(late), 'protective');
   const r = disburse(1_000, late);
   assert.equal(r.ok, false, 'المال لا يتحرّك بغياب التاج');
+});
+
+/**
+ * T-54 — حقنُ الانحراف: حسابٌ مصنوعٌ خارج بابِ الفتح يُصرف إليه.
+ * قبل الحكم: `Ledger.restore` بابٌ ثانٍ يحرس **العددَ** ولا يحرس **شرطَ القبول**، فقيدُ
+ * يوميّةٍ واحدٌ أدخل حسابًا يرفضه `openAccount`، وخرجت إليه 250,000 وحدة، **والميزانُ بقي
+ * متوازنًا** فلا ترفعه مطابقةٌ حسابيّة (القياسُ الحرفيّ: docs/audit/measurements/phase-25-T54.txt §3).
+ * والأحكامُ أدناه تُثبّت البابَين معًا بالحجّةِ الواحدة `accountAdmissionFault`.
+ */
+
+/** [T54-01] بابُ الفتح يردّ الحسابَ المصنوع — الحالُ الذي كان صحيحًا يبقى صحيحًا */
+test('T54-01: بابُ الفتح يردّ معرّفًا بلا فاصلٍ واسمًا فارغًا ونوعًا غيرَ معلن', () => {
+  const { s } = treasuryState();
+  assert.equal(s.ledger.openAccount('ghost-account', 'expense', 'اسم صالح', T0).ok, false);
+  assert.equal(s.ledger.openAccount('expense:ghost', 'expense', '', T0).ok, false);
+  assert.equal(
+    s.ledger.openAccount('expense:ghost', 'ghost' as unknown as AccountKind, 'اسم صالح', T0).ok,
+    false,
+  );
+  assert.equal(s.ledger.hasAccount('ghost-account'), false);
+});
+
+/** [T54-02] الحجّةُ واحدةٌ لا نسختان: الدالّةُ نفسُها تحكم على الحسابِ المصنوع */
+test('T54-02: شرطُ القبولِ دالّةٌ واحدةٌ تُرجع سببَ الردِّ نصًّا وتُرجع null للمقبول', () => {
+  assert.equal(accountAdmissionFault({ accountId: 'expense:ok', kind: 'expense', name: 'مستحقات' }), null);
+  assert.notEqual(accountAdmissionFault({ accountId: 'ghost-account', kind: 'expense', name: 'مستحقات' }), null);
+  assert.notEqual(accountAdmissionFault({ accountId: 'expense:ok', kind: 'expense', name: '' }), null);
+  assert.notEqual(accountAdmissionFault({ accountId: 'expense:ok', kind: 'ghost', name: 'مستحقات' }), null);
+});
+
+/** [T54-03] الحقنةُ نفسُها تُردّ عند العتبة بفشلٍ مغلقٍ مسمّى */
+test('T54-03: قيدُ يوميّةٍ يصنع حسابًا مرفوضًا يُسقط الإرجاعَ بـRECOVERY_LEDGER_ACCOUNT_INVALID', () => {
+  const { s } = treasuryState();
+  const journal = [{
+    kind: 'ledger_entry',
+    payload: {
+      op: 'account_opened',
+      account: { accountId: 'ghost-account', kind: 'expense', name: '', openedAt: T0 },
+    },
+  }];
+  assert.throws(
+    () => rehydrateStateFromJournal(journal as never, { ledger: s.ledger }, 'ministry:data'),
+    /RECOVERY_LEDGER_ACCOUNT_INVALID/,
+  );
+  assert.equal(s.ledger.hasAccount('ghost-account'), false);
+  assert.equal(s.ledger.account('ghost-account'), null);
+});
+
+/** [T54-04] المالُ لا يخرج: الحسابُ لم يدخل الدفترَ فلا يُصرف إليه أصلًا */
+test('T54-04: الصرفُ إلى الحسابِ المصنوعِ مرفوضٌ ولا رصيدَ له والميزانُ متوازن', () => {
+  const { s } = treasuryState();
+  try {
+    rehydrateStateFromJournal(
+      [{
+        kind: 'ledger_entry',
+        payload: {
+          op: 'account_opened',
+          account: { accountId: 'ghost-account', kind: 'expense', name: '', openedAt: T0 },
+        },
+      }] as never,
+      { ledger: s.ledger }, 'ministry:data',
+    );
+  } catch { /* الفشلُ المغلقُ مقصودٌ هنا، والمقيسُ ما بعده */ }
+  const r = s.treasury.disburse({
+    line: 'budget:infrastructure', amount: 250_000, to: 'ghost-account',
+    purpose: 'دفعة إلى حسابٍ مصنوع', by: FINANCE_MINISTRY,
+  }, T0 + 1);
+  assert.equal(r.ok, false, 'المال لا يخرج إلى حسابٍ لم يقبله بابُ الفتح');
+  assert.equal(s.ledger.hasAccount('ghost-account'), false);
+  assert.equal(s.ledger.trialBalance().balanced, true);
+});
+
+/** [T54-05] الحارسُ الجديدُ لا يُخفي أخاه: سقفُ العددِ يبقى فشلَه المسمّى (T-49) */
+test('T54-05: تجاوزُ سقفِ العددِ بحساباتٍ صالحةٍ يبقى RECOVERY_LEDGER_ACCOUNT_CAP', () => {
+  const { s } = treasuryState();
+  const many = Array.from({ length: 5_000 }, (_, i) => ({
+    accountId: `expense:acc-${i}`, kind: 'expense' as const, name: `حساب رقم ${i}`, openedAt: T0,
+  }));
+  assert.throws(
+    () => s.ledger.restore({ accounts: many, entries: [], closedThrough: null }, FINANCE_MINISTRY),
+    /RECOVERY_LEDGER_ACCOUNT_CAP/,
+    'سقفُ العددِ يُحكم قبل شرطِ القبول، فلا يُخفيه الحارسُ الجديد',
+  );
+});
+
+/** [T54-06] القائمُ في الجدولِ دخل من بابِه: الحكمُ على الجديدِ وحدَه فلا تُمنع دولةٌ قائمةٌ من الإقلاع */
+test('T54-06: الإرجاعُ لا يُعيد الحكمَ على حسابٍ قائمٍ في الدفتر', () => {
+  const { s } = treasuryState();
+  const existing = s.ledger.account('expense:contractor');
+  assert.notEqual(existing, null);
+  s.ledger.restore(
+    { accounts: [existing as never], entries: [], closedThrough: null },
+    FINANCE_MINISTRY,
+  );
+  assert.equal(s.ledger.hasAccount('expense:contractor'), true);
 });

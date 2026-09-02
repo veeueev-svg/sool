@@ -631,7 +631,7 @@
       "reviewer": "القيّم على المستودع",
       "area": "الاقتصاد والدفتر",
       "phase": 25,
-      "status": "BLOCKED",
+      "status": "REVIEW",
       "progress_items": [
         "T-54"
       ],
@@ -640,7 +640,9 @@
       ],
       "scope": [
         "src/economy/ledger.ts",
+        "src/economy/account_admission.ts",
         "tests/economy/treasury.test.ts",
+        "ARCHITECTURE.md",
         "docs/test-reports/phase-25-T54.md",
         "docs/audit/measurements/phase-25-T54.txt",
         "docs/work/orders/W-2026-019.md"
@@ -665,8 +667,8 @@
       ],
       "next_step": "القيّم على المستودع يحكم على W-2026-018 فيتحرّر ARCHITECTURE.md، ثمّ يستأنف المالكُ: يضمّ tests/economy/count_caps.test.ts إلى النطاق ويطبّق دالّةَ القبولِ الواحدة",
       "created_at": "2026-09-01",
-      "updated_at": "2026-09-01",
-      "blocked_reason": "ARCHITECTURE.md محجوزٌ لـW-2026-018 (REVIEW)، وبوابةُ check:numbers تُلزم مطابقةَ صفِّ src/economy/ للشجرة — فأيُّ سطرٍ يُضاف في src/ يوجب تحديثَ صفٍّ في وثيقةٍ لا يملك هذا البندُ لمسَها (RULE-011 · RULE-012). والرفعُ بحكمِ المراجعِ على W-2026-018."
+      "updated_at": "2026-09-02",
+      "verification": "المنفِّذُ لا يُصادق على عملِ نفسِه (RULE-004 · RULE-016): npm run build ⇒ رمزُ 0 · npm test ⇒ 2209/2209 صفرُ فشل (كان 2203/2203) · npm run verify ⇒ رمزُ 0 · بوابةُ الحجمِ رفضت `ledger.ts` عند 422 سطرًا فوق سقفِ 400، **فُفكِّكت الوحدةُ ولم يُرفع السقفُ ولا أُعلن دَينًا**: شرطُ القبولِ انتقل إلى `src/economy/account_admission.ts` (53 سطرًا) ويُعاد تصديرُه من الدفتر فلا يتفرّق المُنادون، فصار الدفترُ 396 سطرًا · الطفراتُ 3 من 3 مقتولةٌ وصفرُ ناجية وكلُّ حارسٍ قُتل منفردًا (§9 من القياس الخام) · صفُّ src/economy/ في ARCHITECTURE.md صُحّح مقيسًا من المصدر (5·1627 ⇒ 5·1665) بعد تحرُّرِ الحجزِ لا قبله · وحكمُ CI الفعليُّ يُذيَّل في §7 من التقرير بعد قراءتِه من مصدرِه"
     },
     {
       "id": "W-2026-020",
