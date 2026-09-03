@@ -51,10 +51,22 @@ export interface ExternalContract {
   readonly commandId: string;
   readonly assessmentId: string;
   readonly riskScore: number;
-  terminatedAt: number | null;
-  terminatedBy: EntityId | null;
-  terminationReason: string | null;
+  /**
+   * T-168: حقولُ الإنهاءِ صارت `readonly` كبقيّةِ الحقول. كانت مكشوفةً للكتابةِ فكان
+   * `registry.get(id).terminatedAt = null` يبعث عقدًا أنهاه التاجُ **بلا حكمِ تدقيقٍ يشهد**.
+   * والحَجْرُ هنا حَجْرُ ترجمةٍ وحدَه، فلا يُتّكل عليه: الحارسُ الفعليُّ أنّ كلَّ مخرجٍ
+   * عامٍّ يمرّ بـ`sealed()` فيخرج **نسخةً مجمَّدة** لا مرجعًا حيًّا.
+   */
+  readonly terminatedAt: number | null;
+  readonly terminatedBy: EntityId | null;
+  readonly terminationReason: string | null;
 }
+
+/**
+ * الصورةُ القابلةُ للتغيير **داخل السجلِّ وحدَه**. لا تُصدَّر: من أراد تغييرَ حالةِ عقدٍ
+ * فبابُه `sign` أو صلاحيّةُ الإنهاءِ الممنوحةُ مرّةً واحدة — لا كائنٌ يُعاد إليه.
+ */
+type MutableContract = { -readonly [K in keyof ExternalContract]: ExternalContract[K] };
 
 export interface SignContractInput {
   readonly kindId: string;
@@ -96,7 +108,7 @@ export interface ContractRegistryDeps {
 }
 
 export class ExternalContractRegistry {
-  private readonly contracts = new Map<string, ExternalContract>();
+  private readonly contracts = new Map<string, MutableContract>();
   private readonly proposerId: EntityId;
   private terminationGranted = false;
   private sequence = 0;
@@ -219,7 +231,8 @@ export class ExternalContractRegistry {
       committedTotal: committed, accountTotalCap: account.totalCap,
       commandId: contract.commandId,
     });
-    return { ok: true, contract, auditId: entry.hash };
+    // T-168: حتّى ثمرةُ التوقيعِ تخرج مختومةً — وإلّا صار الموقِّعُ نفسُه بابًا رابعًا.
+    return { ok: true, contract: this.sealed(contract), auditId: entry.hash };
   }
 
   /**
@@ -266,7 +279,8 @@ export class ExternalContractRegistry {
       contractId, kindId: contract.kindId, counterparty: contract.counterparty,
       reason, at, immediate: true, value: contract.value,
     });
-    return { ok: true, contract, auditId: entry.hash };
+    // T-168: وثمرةُ الإنهاءِ كذلك — وإلّا أعاد بابُ الإنهاءِ مفتاحَ نقضِ نفسِه.
+    return { ok: true, contract: this.sealed(contract), auditId: entry.hash };
   }
 
   /** العقد القائم فعلًا: موجود، غير مُنهًى، وغير منتهي المدة (ثوابت 1 و5) */
@@ -287,18 +301,37 @@ export class ExternalContractRegistry {
     return null;
   }
 
-  get(contractId: string): ExternalContract | null {
-    return this.contracts.get(contractId) ?? null;
+  /**
+   * T-168: البابُ الثالث. كان `get` يُعيد **المرجعَ الحيَّ** من الخريطة، فيصير كلُّ قارئٍ
+   * كاتبًا: يُبعث عقدٌ مُنهًى بسطرٍ واحد، وتُرفع قيمةُ عقدٍ قائمٍ فوق سقفِها **فيتبعُها**
+   * `committedValue` الذي تقوم عليه حراسةُ سقفِ القناة — كلُّ ذلك **بلا حكمِ تدقيقٍ واحد**.
+   * والعلّةُ كانت سهوًا لا تصميمًا: `exportAll` و`importAll` ينسخان بالبسط، و`get`/`list` لا.
+   *
+   * فالنسخُ والتجميدُ يجريان **في موضعٍ واحدٍ** يمرّ به كلُّ مخرجٍ عامّ، لا في كلِّ نداءٍ
+   * على حِدة — إذ الحارسُ الموزَّعُ يُنسى عند إضافةِ بابٍ جديد.
+   * و`Object.freeze` في وحداتٍ صارمةٍ **يرمي** عند اللمس فيُكشف العابثُ ولا يصمت.
+   */
+  private sealed(contract: MutableContract): ExternalContract {
+    return Object.freeze({ ...contract });
   }
 
-  list(): readonly ExternalContract[] { return [...this.contracts.values()]; }
+  get(contractId: string): ExternalContract | null {
+    const contract = this.contracts.get(contractId);
+    return contract ? this.sealed(contract) : null;
+  }
+
+  list(): readonly ExternalContract[] {
+    return Object.freeze([...this.contracts.values()].map((c) => this.sealed(c)));
+  }
 
   active(now = Date.now()): readonly ExternalContract[] {
-    return [...this.contracts.values()].filter((c) => this.isActive(c.contractId, now));
+    return Object.freeze([...this.contracts.values()]
+      .filter((c) => this.isActive(c.contractId, now))
+      .map((c) => this.sealed(c)));
   }
 
   activeFor(counterparty: string, now = Date.now()): readonly ExternalContract[] {
-    return this.active(now).filter((c) => c.counterparty === counterparty);
+    return Object.freeze(this.active(now).filter((c) => c.counterparty === counterparty));
   }
 
   /** مجموع قيم العقود القائمة لنظير (ثابت 7) — المنتهي والمُنهَى لا يشغلان سقفًا */

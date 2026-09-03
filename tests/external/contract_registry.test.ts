@@ -249,3 +249,125 @@ test('تقرير العقود يطابق ما وقع فعلًا لا ما نُو
     'المدة القصوى مقروءة من التهيئة لا من الكود',
   );
 });
+
+// ───────────────────────────────────────────────────────────────────────────────
+// T-168 · T-68 — البابُ الثالث: حقنُ انحرافٍ على حالةِ عقدٍ قائمٍ من خارج البابين
+//
+// دعوى §2 كانت: «ما يحمي اليوم أن البابين وحيدان». وقيست الدعوى قبل كتابةِ هذه
+// الأحكام **فسقطت**: كان `get` و`list` يُعيدان المرجعَ الحيَّ من الخريطة، فيصير كلُّ
+// قارئٍ كاتبًا. وهذه الأحكامُ تُثبِّت الإغلاق، **ولا تُثبِّت السلوكَ المعطوبَ بوصفِه
+// المتوقَّع** — فالمقصودُ أن يُرفض العبثُ لا أن يُوثَّق.
+// ───────────────────────────────────────────────────────────────────────────────
+
+/** يعبث بحقلٍ ويُعيد هل رُفض العبثُ بصوتٍ عالٍ أم مرّ صامتًا */
+function tamper(mutate: () => void): 'رُفض' | 'مرّ' {
+  try { mutate(); return 'مرّ'; } catch { return 'رُفض'; }
+}
+
+test('**عقدٌ أُنهي شرعًا لا يُبعث عبر المرجعِ المُعاد** — البابُ الثالث مُغلق (T-168)', () => {
+  const h = contractState();
+  assert.equal(assessRisk(h, KIND_COMPUTE, ['single_source']).ok, true);
+  const signed = signContract(h, KIND_COMPUTE, { value: 5_000_000, days: 30 });
+  assert.equal(signed.ok, true);
+  if (!signed.ok) return;
+  const id = signed.contract.contractId;
+  assert.equal(terminateContract(h, id).ok, true, 'الإنهاءُ بالبابِ الشرعيِّ نفذ');
+  assert.equal(h.s.contracts.isActive(id, h.now), false);
+
+  const returned = h.s.contracts.get(id);
+  assert.ok(returned, 'العقدُ المُنهَى ما زال يُقرأ — الإنهاءُ تغييرُ حالةٍ لا حذف (ثابت 9)');
+  assert.notEqual(returned, h.s.contracts.get(id), 'كلُّ قراءةٍ نسخةٌ مستقلّة لا مرجعٌ حيٌّ مشترك');
+  assert.equal(Object.isFrozen(returned), true, 'المُعادُ مجمَّدٌ فيُكشف اللمسُ ولا يصمت');
+
+  assert.equal(tamper(() => { (returned as { terminatedAt: number | null }).terminatedAt = null; }), 'رُفض');
+  assert.equal(tamper(() => { (returned as { terminatedBy: string | null }).terminatedBy = null; }), 'رُفض');
+  assert.equal(tamper(() => { (returned as { terminationReason: string | null }).terminationReason = null; }), 'رُفض');
+
+  assert.equal(h.s.contracts.isActive(id, h.now), false, '**العقدُ لم يُبعث** — والدفترُ يوافق الواقع');
+  assert.equal(h.s.contracts.get(id)?.terminatedAt, h.now, 'حالُ الإنهاءِ محفوظةٌ كما كتبها البابُ الشرعيّ');
+  assert.equal(
+    h.s.audit.find('external_contract_terminated').length, 1,
+    'ولا حكمَ تدقيقٍ زائدٌ ولا ناقص: تغييرُ الحالةِ الوحيدُ هو الإنهاءُ الشرعيّ',
+  );
+});
+
+test('**قيمةُ عقدٍ قائمٍ لا تُعدَّل عبر المرجعِ المُعاد**، ولا يُلوَّث `committedValue` (T-168)', () => {
+  const h = contractState();
+  assert.equal(assessRisk(h, KIND_COMPUTE, ['single_source']).ok, true);
+  const signed = signContract(h, KIND_COMPUTE, { value: 5_000_000, days: 30 });
+  assert.equal(signed.ok, true);
+  if (!signed.ok) return;
+  const id = signed.contract.contractId;
+  const cp = signed.contract.counterparty;
+  assert.equal(h.s.contracts.committedValue(cp, h.now), 5_000_000);
+
+  // كلُّ بابٍ عامٍّ يُخرج نسخةً مختومة — والعبثُ عبر أيِّها يُرفض
+  for (const [name, expose] of [
+    ['get', () => h.s.contracts.get(id)],
+    ['list', () => h.s.contracts.list()[0]],
+    ['active', () => h.s.contracts.active(h.now)[0]],
+    ['activeFor', () => h.s.contracts.activeFor(cp, h.now)[0]],
+  ] as const) {
+    const exposed = expose();
+    assert.ok(exposed, `${name} يُعيد عقدًا`);
+    assert.equal(Object.isFrozen(exposed), true, `${name}: المُعادُ مجمَّد`);
+    assert.equal(tamper(() => { (exposed as { value: number }).value = 999_999_999; }), 'رُفض', `${name}: القيمةُ لا تُرفع`);
+    assert.equal(tamper(() => { (exposed as { endsAt: number }).endsAt = h.now + 9_999 * DAY; }), 'رُفض', `${name}: المدّةُ لا تُمدّ`);
+    assert.equal(tamper(() => { (exposed as { counterparty: string }).counterparty = 'external:someone-else'; }), 'رُفض', `${name}: النظيرُ لا يُبدَّل`);
+  }
+
+  assert.equal(h.s.contracts.get(id)?.value, 5_000_000, 'القيمةُ الموقَّعةُ كما هي');
+  assert.equal(
+    h.s.contracts.committedValue(cp, h.now), 5_000_000,
+    '**حسابُ سقفِ القناةِ يقرأ الموقَّعَ لا المحقون** — وعليه تقوم حراسةُ السقف',
+  );
+});
+
+test('**ثمرةُ التوقيعِ وثمرةُ الإنهاءِ تخرجان مختومتَين** — فلا بابَ رابعًا من نتيجةِ النداء (T-168)', () => {
+  const h = contractState();
+  assert.equal(assessRisk(h, KIND_COMPUTE, ['single_source']).ok, true);
+  const signed = signContract(h, KIND_COMPUTE, { value: 5_000_000, days: 30 });
+  assert.equal(signed.ok, true);
+  if (!signed.ok) return;
+  assert.equal(Object.isFrozen(signed.contract), true, 'ما يُعيده sign مجمَّد');
+  assert.equal(tamper(() => { (signed.contract as { value: number }).value = 1; }), 'رُفض');
+
+  const terminated = terminateContract(h, signed.contract.contractId);
+  assert.equal(terminated.ok, true);
+  if (!terminated.ok) return;
+  assert.equal(Object.isFrozen(terminated.contract), true, 'وما يُعيده الإنهاءُ مجمَّد');
+  assert.equal(
+    tamper(() => { (terminated.contract as { terminatedAt: number | null }).terminatedAt = null; }), 'رُفض',
+    'وإلّا أعاد بابُ الإنهاءِ مفتاحَ نقضِ نفسِه',
+  );
+  assert.equal(h.s.contracts.isActive(signed.contract.contractId, h.now), false);
+});
+
+test('**سلوكُ `exportAll`/`importAll` الصحيحُ محفوظٌ بحاله** بعد ختمِ الأبواب (T-168)', () => {
+  const h = contractState();
+  assert.equal(assessRisk(h, KIND_COMPUTE, ['single_source']).ok, true);
+  const signed = signContract(h, KIND_COMPUTE, { value: 5_000_000, days: 30 });
+  assert.equal(signed.ok, true);
+  if (!signed.ok) return;
+
+  const snapshot = h.s.contracts.exportAll();
+  assert.equal(snapshot.contracts.length, 1, 'الأرشيفُ يحمل العقودَ كما هي');
+  assert.equal(snapshot.sequence, 1, 'والتسلسلُ معها فلا يُعاد منحُ معرّفٍ بعد إقلاع (ثابت 9)');
+  assert.equal(snapshot.contracts[0]?.value, 5_000_000);
+
+  // نسخةُ الأرشيفِ منفصلةٌ عن السجل — وهذا هو السلوكُ الذي كان صحيحًا أصلًا فبقي
+  (snapshot.contracts[0] as { value: number }).value = 42;
+  assert.equal(
+    h.s.contracts.get(signed.contract.contractId)?.value, 5_000_000,
+    'العبثُ بالنسخةِ المُصدَّرةِ لا يمسّ السجلَّ — سلوكُ exportAll لم يتغيّر',
+  );
+
+  const restored = h.s.contracts.exportAll();
+  assert.equal(h.s.contracts.importAll(restored, FOREIGN), true, 'والاستعادةُ تعمل كما كانت');
+  assert.equal(h.s.contracts.list().length, 1);
+  assert.equal(h.s.contracts.get(signed.contract.contractId)?.value, 5_000_000);
+  assert.equal(
+    h.s.contracts.isActive(signed.contract.contractId, h.now), true,
+    'والعقدُ المستعادُ قائمٌ بحاله لا بحالٍ مخترعة',
+  );
+});
