@@ -85,14 +85,20 @@ export class SupplyChain {
 
   constructor(private readonly deps: SupplyChainDeps) {
     this.operatorId = deps.operatorId ?? ECONOMY_MINISTRY;
-    for (const material of deps.materials) this.materials.set(material.id, material);
+    // الإعلانُ يُختم عند الحفظ لا عند القراءةِ وحدَها: من سلّم الكائنَ للمُنشئ
+    // يُمسك مرجعَه بعدَه، فحفظُ المرجعِ يجعل الإعلانَ قابلًا للكتابةِ من الخارج (T-73).
+    for (const material of deps.materials) this.materials.set(material.id, SupplyChain.seal(material));
   }
 
   bindFacilityProbe(probe: FacilityProbe): void { this.facilityProbe = probe; }
   bindContractProbe(probe: ContractProbe): void { this.contractProbe = probe; }
 
   material(materialId: string): DeclaredMaterial | null {
-    return this.materials.get(materialId) ?? null;
+    const declared = this.materials.get(materialId);
+    // نسخةٌ مختومةٌ لا المرجعُ المحفوظ: ثابتُ 3 يقيس السندَ على `source` المُعلن،
+    // فلو خرج المُعلنُ قابلًا للكتابةِ لَهُزم الحارسُ بتبديلِ ما يُقاس عليه
+    // بدلًا من تزييفِ ما يُقاس — فيُصادقُ الحارسُ المهرِّبَ بيدِه (T-73).
+    return declared === undefined ? null : SupplyChain.seal(declared);
   }
 
   private key(facilityId: string, material: string): string { return `${facilityId}|${material}`; }
@@ -105,6 +111,16 @@ export class SupplyChain {
       facilityId, material, mode, reason: why, ...extra,
     });
     return { ok: false, reason: why, auditId: entry.hash };
+  }
+
+  /**
+   * الخاتم: نسخةٌ مجمَّدةٌ تخرج بدلًا من المرجعِ الحيّ (T-73). وموضعُه واحدٌ يمرّ به
+   * كلُّ مخرجٍ عامّ، لأنّ الحارسَ الموزَّعَ على كلِّ نداءٍ يُنسى عند إضافةِ بابٍ جديد.
+   * و`Object.freeze` في وحداتٍ صارمةٍ **يرمي** عند اللمس — فيُكشف العابثُ ولا يصمت،
+   * و`readonly` وحدَها لا تحمي إذ لا وجودَ لها بعد الترجمة.
+   */
+  private static seal<T extends object>(value: T): T {
+    return Object.freeze({ ...value });
   }
 
   /** كمية مُقاسة: عدد صحيح موجب — والصفر و NaN والكسري كلها غير مُقاسة (T-69) */
@@ -120,7 +136,8 @@ export class SupplyChain {
     const movement: StockMovement = {
       movementId: `mov-${this.sequence}`, facilityId, material, delta, at, by, provenance,
     };
-    this.movements.push(movement);
+    // القيدُ يُختم عند التسجيل، فلا يُترك في الصحيفةِ مرجعٌ حيٌّ يُلمس من أيِّ مخرج.
+    this.movements.push(SupplyChain.seal(movement));
     const next = (this.balances.get(this.key(facilityId, material)) ?? 0) + delta;
     this.balances.set(this.key(facilityId, material), next);
     return next;

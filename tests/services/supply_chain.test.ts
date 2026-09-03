@@ -10,6 +10,8 @@ import {
   ARCHIVE_CP, BLOCK, COMPUTE_CP, CROWN_GUARD, DAY, ECONOMY, FACILITY, INDEX, KIND_PLANT, RAW,
   SEALED, beat, establish, industrialState, stockExternal,
 } from './helpers';
+import { AppendOnlyLog } from '../../src/audit/append_only_log';
+import { SupplyChain } from '../../src/services/supply_chain';
 
 /* ————— 1) السند المعلن قبل الكمية (ثابتا 1 و2) ————— */
 
@@ -230,4 +232,113 @@ test('كل رفض في المخزون يُسجَّل باسمه stock_refused و
   assert.equal(stockExternal(h, RAW, 10).ok, false);
   assert.equal(stockExternal(h, SEALED, 10).ok, false);
   assert.equal(h.s.audit.find('stock_refused').length, 2);
+});
+
+/* ————— 7) من خارج البابين: الإعلانُ الذي تُقاس عليه الثوابتُ لا يُكتب (T-73) ————— */
+
+/**
+ * عبثٌ مقصودٌ من خارج `receive`/`consume` — يتخطّى `readonly` التي لا وجودَ لها
+ * بعد الترجمة. وما فوق أُثبت أنّ البابين محروسان؛ وهذه تُثبت من يحاول غيرَهما.
+ */
+function tamper(target: object, field: string, value: unknown): void {
+  (target as Record<string, unknown>)[field] = value;
+}
+
+test('ثابتُ 3 لا يُهزم بتبديلِ ما يُقاس عليه: الإعلانُ المُعاد من material لا يُكتب', () => {
+  const h = industrialState();
+  assert.equal(establish(h).ok, true);
+  // النظيرُ المخالفُ مرفوضٌ قبل أيِّ عبث — فالحارسُ قائمٌ والعلّةُ ليست فيه
+  const before = stockExternal(h, RAW, 40, { contractId: h.contractIds[ARCHIVE_CP] as string });
+  assert.equal(before.ok, false);
+
+  const declared = h.s.supply.material(RAW);
+  assert.notEqual(declared, null);
+  assert.equal(Object.isFrozen(declared), true, 'الإعلانُ يخرج مجمَّدًا لا مرجعًا حيًّا');
+  assert.throws(() => tamper(declared as object, 'source', ARCHIVE_CP), TypeError,
+    'ولمسُه يرمي فيُكشف العابثُ ولا يصمت');
+  assert.equal(h.s.supply.material(RAW)?.source, COMPUTE_CP, 'والمصدرُ المُعلن كما أُعلن');
+
+  // فمن لا يقدر على تزييفِ العقد لا يُبدّل الإعلانَ الذي يُقاس عليه العقد
+  const after = stockExternal(h, RAW, 40, { contractId: h.contractIds[ARCHIVE_CP] as string });
+  assert.equal(after.ok, false, 'وعقدُ النظيرِ المخالفِ يبقى مرفوضًا بعد محاولةِ العبث');
+  assert.equal(h.s.supply.balance(FACILITY, RAW), 0, 'ولا مادةَ دخلت على سندٍ لا يطابق إعلانَها');
+});
+
+test('كلُّ قارئٍ يأخذ نسختَه: لا مرجعَ واحدٌ مشتركٌ يخرج من material', () => {
+  const h = industrialState();
+  const first = h.s.supply.material(RAW);
+  const second = h.s.supply.material(RAW);
+  assert.notEqual(first, null);
+  assert.deepEqual(first, second, 'المضمونُ واحدٌ لكلِّ قارئ');
+  assert.notStrictEqual(first, second,
+    'والمرجعُ ليس واحدًا: حراسةُ القراءةِ قائمةٌ بذاتِها لا مستندةً إلى حراسةِ التهيئة');
+});
+
+test('وحدةُ القياسِ لا تتبدّل على حركاتٍ مسجَّلةٍ بلا حركةٍ ولا حكمِ تدقيق', () => {
+  const h = industrialState();
+  assert.equal(establish(h).ok, true);
+  assert.equal(stockExternal(h, RAW, 10).ok, true);
+  const unit = h.s.supply.material(RAW)?.unit;
+  const refusals = h.s.audit.find('stock_refused').length;
+
+  assert.throws(() => tamper(h.s.supply.material(RAW) as object, 'unit', 'غرام'), TypeError,
+    'فلا تصير عشرةُ وحداتٍ عشرةَ غيرِها بلمسِ حقل');
+  assert.equal(h.s.supply.material(RAW)?.unit, unit);
+  assert.equal(h.s.supply.balance(FACILITY, RAW), 10);
+  assert.equal(h.s.audit.find('stock_refused').length, refusals,
+    'ومحاولةٌ لم تبلغ بابًا لا تُخلّف حكمًا كأنّها بلغته');
+});
+
+test('القيدُ المسجَّلُ لا يُلمس من الصحيفةِ ولا من حركاتِ المنشأة', () => {
+  const h = industrialState();
+  assert.equal(establish(h).ok, true);
+  assert.equal(stockExternal(h, RAW, 25).ok, true);
+
+  const journal = h.s.supply.journal();
+  assert.equal(journal.length, 1);
+  assert.equal(Object.isFrozen(journal[0]), true);
+  assert.throws(() => tamper(journal[0] as object, 'delta', 999_999), TypeError,
+    'ورفعُ الكمِّ على قيدٍ مسجَّلٍ مرفوض');
+
+  const movements = h.s.supply.movementsOf(FACILITY);
+  assert.throws(() => tamper(movements[0] as object, 'facilityId', 'facility:ghost'), TypeError);
+  assert.equal(h.s.supply.movementsOf('facility:ghost').length, 0,
+    'ولا حركةَ تُنقل إلى منشأةٍ أخرى بلمسِ حقل');
+
+  assert.equal(h.s.supply.balance(FACILITY, RAW), 25);
+  assert.equal(h.s.supply.verifyConservation().valid, true, 'والحفظُ سليمٌ كما كان');
+});
+
+test('الإعلانُ المحفوظُ داخلًا لا يتبدّل بلمسِ الكائنِ الذي بُنيَ منه', () => {
+  const h = industrialState();
+  assert.equal(establish(h).ok, true);
+  const outside = h.s.supply.material(SEALED);
+  assert.notEqual(outside, null);
+  // ومن سلّم الإعلانَ للتهيئة لا يُمسك مرجعَه بعدَها
+  assert.throws(() => tamper(outside as object, 'source', COMPUTE_CP), TypeError);
+  // و`SEALED` مُعلنةٌ داخليّةً بالقياس لا بالظنّ — فقلبُها واردةً هو عينُ ما يُمنع
+  assert.equal(h.s.supply.material(SEALED)?.source, 'internal');
+  assert.equal(stockExternal(h, SEALED, 5,
+    { contractId: h.contractIds[COMPUTE_CP] as string }).ok, false,
+    'فلا يُقبل سندٌ لا يطابق الإعلانَ المحفوظ');
+});
+
+/**
+ * وهذا الحكمُ يبني السجلَّ بيدِه لا بمهادِ `industrialState`، لأنّ المهادَ المشترك
+ * لا يُبلِّغ الكائنَ الذي سُلّم للتهيئةِ فلا يُمكن لمسُه بعدها — والمقصودُ هنا لمسُه.
+ */
+test('التهيئةُ تحفظ إعلانَها لا مرجعَ ما سُلّم إليها', () => {
+  const audit = new AppendOnlyLog();
+  const handed = { id: 'material:probe', name: 'مادة قياس', unit: 'وحدة', source: COMPUTE_CP };
+  const supply = new SupplyChain({ audit, materials: [handed], operatorId: ECONOMY });
+  supply.bindFacilityProbe(() => true);
+  supply.bindContractProbe(() => ARCHIVE_CP);
+
+  tamper(handed, 'source', ARCHIVE_CP);
+  assert.equal(supply.material('material:probe')?.source, COMPUTE_CP,
+    'فمن سلّم الإعلانَ للتهيئة لا يُمسك مرجعَه بعدها');
+  const injected = supply.receive(FACILITY, 'material:probe', 5,
+    { kind: 'external_contract', contractId: 'external:any' }, ECONOMY, 1_700_000_000_000);
+  assert.equal(injected.ok, false, 'ولا يُقبل سندٌ لا يطابق الإعلانَ المحفوظ (ثابت 3)');
+  assert.equal(supply.balance(FACILITY, 'material:probe'), 0);
 });
