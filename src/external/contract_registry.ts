@@ -105,6 +105,16 @@ export class ExternalContractRegistry {
 
   constructor(private readonly deps: ContractRegistryDeps) {
     this.proposerId = deps.proposerId ?? FOREIGN_MINISTRY;
+    // T-67: يُربط قارئُ العقودِ في تقديرِ المخاطر من هنا لا من التركيب، لأنّ
+    // التقديرَ تبعيّةٌ لهذا السجلِّ فلا يُعكس الاتّجاه. قراءةٌ محضةٌ لا كتابة:
+    // فلا يملك تقديرُ المخاطرِ توقيعًا ولا إنهاءً — يسأل عن عقدٍ ولا يُغيّره.
+    this.deps.risk.bindContracts({
+      get: (contractId) => {
+        const contract = this.contracts.get(contractId);
+        return contract ? { counterparty: contract.counterparty } : null;
+      },
+      isActive: (contractId, now) => this.isActive(contractId, now),
+    });
   }
 
   /**

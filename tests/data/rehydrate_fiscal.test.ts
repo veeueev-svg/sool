@@ -107,7 +107,19 @@ function seed(s: State, now = T0): void {
     justification: 'تقدير معلن لنوع عقد قائم',
   }, now);
   assert.equal(assessed.ok, true, 'التقدير واقعةٌ تُدوَّن');
-  assert.equal(s.partnerRisk.noteBreach(AUDITOR, COMPUTE, 'تأخر تسليم معلن', now), true);
+  // T-67: الإخلالُ يُنسب إلى عقدٍ قائمٍ لا إلى النظيرِ جملةً — فيُوقَّع أوّلًا
+  const contract = s.contracts.sign(
+    s.king.issueCommand('open_external_account', KIND_COMPUTE, { kind: 'external' }, now),
+    {
+      kindId: KIND_COMPUTE, value: 3_000_000, endsAt: now + 30 * 24 * 60 * 60 * 1000,
+      proposedBy: FOREIGN, purpose: 'تعهّد معلن ينجو الإقلاع',
+    }, now,
+  );
+  assert.equal(contract.ok, true, 'العقد المُخِلّ يجب أن يقوم أوّلًا');
+  if (!contract.ok) return;
+  assert.equal(
+    s.partnerRisk.noteBreach(AUDITOR, contract.contract.contractId, 'تأخر تسليم معلن', now), true,
+  );
 }
 
 test('T-125: الماليّةُ والنافذةُ الخارجيّةُ تنجو الإقلاع — لا صفرَ بعد اليوم', () => {

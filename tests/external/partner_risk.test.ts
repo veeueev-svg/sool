@@ -8,8 +8,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   AUDITOR, DAY, FOREIGN, KIND_ARCHIVE, KIND_COMPUTE, KIND_WEIGHTS,
-  assessRisk, beat, contractState,
+  assessRisk, beat, contractState, signContract,
 } from './helpers';
+
+/**
+ * T-67: لا إخلال إلا على عقدٍ يُسمّى — فيُوقَّع عقدٌ قائمٌ ثم يُنسب إليه.
+ * ولا عقدَ بلا تقديرٍ قائم (لا افتراض سلامة)، فيُقدَّر أوّلًا إن لم يكن ثمّ تقدير.
+ */
+function breachingContract(h: ReturnType<typeof contractState>, kindId = KIND_COMPUTE): string {
+  if (h.s.partnerRisk.latest(kindId, h.now) === null) {
+    assert.equal(assessRisk(h, kindId, []).ok, true, 'التقدير شرطُ التوقيع');
+  }
+  const signed = signContract(h, kindId, { value: 3_000_000 });
+  assert.equal(signed.ok, true, 'العقد المُخِلّ يجب أن يقوم أوّلًا');
+  return signed.ok ? signed.contract.contractId : '';
+}
 
 test('الدرجة تُحسب من وزن النوع المعلن وحده حين لا عوامل', () => {
   const h = contractState();
@@ -139,21 +152,24 @@ test('**الإخلال يُثقل الدرجة ولا يُنسى**: ثلاثة �
   assert.equal(assessRisk(h, KIND_COMPUTE, []).ok, true);
   assert.equal(h.s.partnerRisk.isAcceptable(KIND_COMPUTE, h.now), true);
   const penalty = h.s.contractsConfig.policy.breach_penalty;
+  const contractId = breachingContract(h);
   for (let i = 1; i <= 3; i += 1) {
     assert.equal(
-      h.s.partnerRisk.noteBreach(AUDITOR, 'external:compute-provider', `إخلال موثَّق ${i}`, h.now),
+      h.s.partnerRisk.noteBreach(AUDITOR, contractId, `إخلال موثَّق ${i}`, h.now),
       true,
     );
   }
   assert.equal(h.s.partnerRisk.effectiveScore(KIND_COMPUTE, h.now), 25 + 3 * penalty);
   assert.equal(h.s.partnerRisk.isAcceptable(KIND_COMPUTE, h.now), false);
   assert.equal(h.s.audit.find('partner_breach_noted').length, 3);
+  // T-67: والثلاثةُ منسوبةٌ إلى مُخِلٍّ يُسمّى لا إلى النظيرِ جملةً
+  assert.equal(h.s.partnerRisk.breachesFor(contractId).length, 3);
 });
 
 test('تقدير جديد لا يمحو تاريخ الإخلال — لا عودة إلى الدرجة الأولى', () => {
   const h = contractState();
   assert.equal(assessRisk(h, KIND_COMPUTE, []).ok, true);
-  h.s.partnerRisk.noteBreach(AUDITOR, 'external:compute-provider', 'تسليم غير مطابق', h.now);
+  h.s.partnerRisk.noteBreach(AUDITOR, breachingContract(h), 'تسليم غير مطابق', h.now);
   const fresh = assessRisk(h, KIND_COMPUTE, [], h.now + 1000);
   assert.equal(fresh.ok, true);
   if (!fresh.ok) return;
@@ -168,7 +184,7 @@ test('تقدير جديد لا يمحو تاريخ الإخلال — لا عو�
 
 test('إخلال بلا بيان يُرفض تسجيله (RULE-006)', () => {
   const h = contractState();
-  assert.equal(h.s.partnerRisk.noteBreach(AUDITOR, 'external:compute-provider', 'x', h.now), false);
+  assert.equal(h.s.partnerRisk.noteBreach(AUDITOR, breachingContract(h), 'x', h.now), false);
   assert.equal(h.s.partnerRisk.breachCount('external:compute-provider'), 0);
 });
 
