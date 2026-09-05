@@ -29,13 +29,14 @@
  * الوثيقة المرتبطة: docs/specs/digital-state-build-guide.md — بوابة التاج وقناة الأوامر
  */
 import {
-  appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync,
+  appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync,
 } from 'node:fs';
 import { dirname } from 'node:path';
 import { SignedRoyalCommand } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from './crown_gateway';
 import { canonicalize, sha256 } from '../identity/keys';
+import { withChannelLock } from './command_channel_lock';
 
 export type CommandStatus = 'pending' | 'denied' | 'executed' | 'failed';
 
@@ -106,6 +107,8 @@ export class CommandChannel {
 
   private readonly journalPath: string;
 
+  private readonly lockPath: string;
+
   private journalLines = 0;
 
   constructor(
@@ -115,126 +118,174 @@ export class CommandChannel {
     private readonly maxAttempts = 3,
   ) {
     this.journalPath = `${statePath}.journal`;
+    this.lockPath = `${statePath}.lock`;
     const dir = dirname(statePath);
     if (dir && !existsSync(dir)) mkdirSync(dir, { recursive: true });
-    if (existsSync(statePath)) {
-      this.restore();
-      this.reconcileFromAudit();
-    }
-    else if (existsSync(this.journalPath)) {
-      // يوميّة بلا لقطة: أثرٌ بلا أصل. الفشل مغلق ولا يُخمَّن ما ضاع.
-      throw new Error('يوميّة قناة أوامر بلا لقطة — حالة غير مكتملة');
-    }
+    // الاستعادة تتم تحت القفل: عمليةٌ تنشئ القناة بينما تكتب أخرى لقطةً نصفها
+    // ستقرأ كسرًا. القفل يُأخَذ للاستعادة الأولية كي تكتمل دورة القراءة بلا تداخل.
+    this.withLock(() => {
+      if (existsSync(statePath)) {
+        this.restore();
+        this.reconcileFromAudit();
+      }
+      else if (existsSync(this.journalPath)) {
+        // يوميّة بلا لقطة: أثرٌ بلا أصل. الفشل مغلق ولا يُخمَّن ما ضاع.
+        throw new Error('يوميّة قناة أوامر بلا لقطة — حالة غير مكتملة');
+      }
+    });
     this.audit.append('authority:crown_guard', 'command_channel_online', {
       restored: this.records.size, maxAttempts,
     });
   }
 
+  /** غلافٌ صغيرٌ يمرّر مسار القفل إلى المنطق المفصول في `command_channel_lock.ts`. */
+  private withLock<T>(fn: () => T): T {
+    return withChannelLock({ audit: this.audit, lockPath: this.lockPath }, fn);
+  }
+
   /** إدراج أمر في القناة — الإدراج المتكرر لا يُنشئ سجلًا ثانيًا */
   submit(command: SignedRoyalCommand): ChannelRecord {
     const id = command.payload.commandId;
-    const existing = this.records.get(id);
-    if (existing) {
-      this.audit.append(command.payload.issuedBy, 'command_duplicate_submission', {
-        commandId: id, status: existing.status,
-      });
-      return existing;
+    // دورة restore→mutate→save تحت قفلٍ واحد: الذاكرةُ المحليّةُ قد تكون قديمةً.
+    return this.withLock(() => {
+      this.reloadFromDisk();
+      const existing = this.records.get(id);
+      if (existing) {
+        this.audit.append(command.payload.issuedBy, 'command_duplicate_submission', {
+          commandId: id, status: existing.status,
+        });
+        return existing;
+      }
+      const record: ChannelRecord = {
+        commandId: id, command, status: 'pending', attempts: 0, lastError: null, decidedAt: null,
+      };
+      this.records.set(id, record);
+      // القبول لا يُعلن قبل تثبيته: إن تعذّر الحفظ يُمحى السجل من الذاكرة كي لا يبقى
+      // أمرٌ مقبولٌ بلا أثر على القرص — وهي الحالة المجهولة التي يمنعها البند T-90.
+      try {
+        this.save(record);
+      } catch (err) {
+        this.records.delete(id);
+        this.audit.append('authority:crown_guard', 'command_channel_persist_failed', {
+          commandId: id, stage: 'submit', code: CHANNEL_PERSIST_FAILED, error: (err as Error).message,
+        });
+        throw new Error(`${CHANNEL_PERSIST_FAILED} — تعذّر تثبيت أمر على القرص فلم يُقبل`);
+      }
+      this.audit.append(command.payload.issuedBy, 'command_enqueued', { commandId: id, action: command.payload.action });
+      return record;
+    });
+  }
+
+  /** إعادة تحميل الحالة من القرص تحت القفل قبل كل تحويل — الذاكرة المحليّة قد تكون قديمة. */
+  private reloadFromDisk(): void {
+    // فشلُ القراءة لا يُفرغ الذاكرة: يُترك لـ`save` تكتشفه عند الكتابة برمزها الصحيح.
+    if (!existsSync(this.statePath)) {
+      this.records.clear();
+      this.journalLines = 0;
+      if (existsSync(this.journalPath)) {
+        throw new Error('يوميّة قناة أوامر بلا لقطة — حالة غير مكتملة');
+      }
+      return;
     }
-    const record: ChannelRecord = {
-      commandId: id, command, status: 'pending', attempts: 0, lastError: null, decidedAt: null,
-    };
-    this.records.set(id, record);
-    // القبول لا يُعلن قبل تثبيته: إن تعذّر الحفظ يُمحى السجل من الذاكرة كي لا يبقى
-    // أمرٌ مقبولٌ بلا أثر على القرص — وهي الحالة المجهولة التي يمنعها البند T-90.
-    try {
-      this.save(record);
-    } catch (err) {
-      this.records.delete(id);
-      this.audit.append('authority:crown_guard', 'command_channel_persist_failed', {
-        commandId: id, stage: 'submit', code: CHANNEL_PERSIST_FAILED, error: (err as Error).message,
-      });
-      throw new Error(`${CHANNEL_PERSIST_FAILED} — تعذّر تثبيت أمر على القرص فلم يُقبل`);
-    }
-    this.audit.append(command.payload.issuedBy, 'command_enqueued', { commandId: id, action: command.payload.action });
-    return record;
+    // مسارٌ ليس ملفًا عاديًا (مجلدٌ من اختبار قطع القرص): لا يُخمَّن ما ضاع.
+    if (!statSync(this.statePath).isFile()) return;
+    this.records.clear();
+    this.journalLines = 0;
+    this.restore();
+    this.reconcileFromAudit();
   }
 
   /** معالجة كل المعلّق: اعتماد ثم تنفيذ مرة واحدة، مع إعادة محاولة عند الفشل الجزئي */
   process(executor: CommandExecutor, now = Date.now()): readonly ProcessOutcome[] {
-    const outcomes: ProcessOutcome[] = [];
-    for (const record of this.records.values()) {
-      if (record.status !== 'pending') continue; // «مرة واحدة فقط»
+    // دورة restore→mutate→save تحت قفلٍ واحد: التنفيذُ المتوازي على نفس الملف
+    // هو عينُ التزاحم الذي يكسر «مرة واحدة فقط».
+    return this.withLock(() => {
+      this.reloadFromDisk();
+      const outcomes: ProcessOutcome[] = [];
+      for (const record of this.records.values()) {
+        if (record.status !== 'pending') continue; // «مرة واحدة فقط»
 
-      const decision = this.gateway.authorize(record.command, now);
-      if (!decision.allowed) {
-        record.status = 'denied';
-        record.decidedAt = now;
-        record.lastError = decision.reason;
-        this.audit.append('authority:crown_guard', 'command_channel_denied', {
-          commandId: record.commandId, reason: decision.reason,
-        });
-        outcomes.push({ commandId: record.commandId, status: 'denied', reason: decision.reason });
-        continue;
-      }
-
-      record.attempts += 1;
-      // تثبيت النيّة قبل الأثر: منفّذٌ يجري على قرص لا يُكتب عليه يُنتج تنفيذًا لا سجل له.
-      try {
-        this.save(record);
-      } catch (err) {
-        record.attempts -= 1;
-        this.audit.append('authority:crown_guard', 'command_channel_persist_failed', {
-          commandId: record.commandId, stage: 'intent', code: CHANNEL_PERSIST_FAILED, error: (err as Error).message,
-        });
-        this.audit.append('authority:crown_guard', 'escalated_to_king', {
-          commandId: record.commandId, reason: 'تعذّر تثبيت نيّة التنفيذ — لا أثر بلا سجل',
-        });
-        throw new Error(`${CHANNEL_PERSIST_FAILED} — تعذّر تثبيت نيّة تنفيذ أمر`);
-      }
-      try {
-        executor(record.command);
-        record.status = 'executed';
-        record.decidedAt = now;
-        record.lastError = null;
-        this.audit.append('authority:crown_guard', 'command_channel_executed', {
-          commandId: record.commandId, attempts: record.attempts,
-        });
-        outcomes.push({ commandId: record.commandId, status: 'executed', reason: 'نُفِّذ مرة واحدة' });
-      } catch (err) {
-        const message = (err as Error).message;
-        record.lastError = message;
-        if (record.attempts >= this.maxAttempts) {
-          record.status = 'failed';
+        const decision = this.gateway.authorize(record.command, now);
+        if (!decision.allowed) {
+          record.status = 'denied';
           record.decidedAt = now;
-          this.audit.append('authority:crown_guard', 'command_channel_failed_final', {
-            commandId: record.commandId, attempts: record.attempts, error: message,
+          record.lastError = decision.reason;
+          // الرفضُ يُثبَّت على القرص قبل المتابعة: فرعُ الرفض كان يقفز فوق كتلة الحفظ
+          // بـ`continue`، فتبقى حالةُ `denied` في الذاكرةِ فقط بينما القرصُ يحملُ `pending`.
+          try {
+            this.save(record);
+          } catch (err) {
+            this.audit.append('authority:crown_guard', 'command_channel_persist_failed', {
+              commandId: record.commandId, stage: 'denial', code: CHANNEL_PERSIST_FAILED, error: (err as Error).message,
+            });
+            throw new Error(`${CHANNEL_PERSIST_FAILED} — تعذّر تثبيت رفض أمر`);
+          }
+          this.audit.append('authority:crown_guard', 'command_channel_denied', {
+            commandId: record.commandId, reason: decision.reason,
+          });
+          outcomes.push({ commandId: record.commandId, status: 'denied', reason: decision.reason });
+          continue;
+        }
+
+        record.attempts += 1;
+        // تثبيت النيّة قبل الأثر: منفّذٌ يجري على قرص لا يُكتب عليه يُنتج تنفيذًا لا سجل له.
+        try {
+          this.save(record);
+        } catch (err) {
+          record.attempts -= 1;
+          this.audit.append('authority:crown_guard', 'command_channel_persist_failed', {
+            commandId: record.commandId, stage: 'intent', code: CHANNEL_PERSIST_FAILED, error: (err as Error).message,
           });
           this.audit.append('authority:crown_guard', 'escalated_to_king', {
-            commandId: record.commandId, reason: 'فشل نهائي في تنفيذ أمر ملكي',
+            commandId: record.commandId, reason: 'تعذّر تثبيت نيّة التنفيذ — لا أثر بلا سجل',
           });
-          outcomes.push({ commandId: record.commandId, status: 'failed', reason: message });
-        } else {
-          this.audit.append('authority:crown_guard', 'command_channel_retry_scheduled', {
-            commandId: record.commandId, attempts: record.attempts, error: message,
+          throw new Error(`${CHANNEL_PERSIST_FAILED} — تعذّر تثبيت نيّة تنفيذ أمر`);
+        }
+        try {
+          executor(record.command);
+          record.status = 'executed';
+          record.decidedAt = now;
+          record.lastError = null;
+          this.audit.append('authority:crown_guard', 'command_channel_executed', {
+            commandId: record.commandId, attempts: record.attempts,
           });
-          outcomes.push({ commandId: record.commandId, status: 'pending', reason: `إعادة محاولة: ${message}` });
+          outcomes.push({ commandId: record.commandId, status: 'executed', reason: 'نُفِّذ مرة واحدة' });
+        } catch (err) {
+          const message = (err as Error).message;
+          record.lastError = message;
+          if (record.attempts >= this.maxAttempts) {
+            record.status = 'failed';
+            record.decidedAt = now;
+            this.audit.append('authority:crown_guard', 'command_channel_failed_final', {
+              commandId: record.commandId, attempts: record.attempts, error: message,
+            });
+            this.audit.append('authority:crown_guard', 'escalated_to_king', {
+              commandId: record.commandId, reason: 'فشل نهائي في تنفيذ أمر ملكي',
+            });
+            outcomes.push({ commandId: record.commandId, status: 'failed', reason: message });
+          } else {
+            this.audit.append('authority:crown_guard', 'command_channel_retry_scheduled', {
+              commandId: record.commandId, attempts: record.attempts, error: message,
+            });
+            outcomes.push({ commandId: record.commandId, status: 'pending', reason: `إعادة محاولة: ${message}` });
+          }
+        }
+        // بعد كل تغيير، لا بعد الدفعة. وإن تعذّر التثبيت هنا فالأثر قد جرى بالفعل:
+        // لا تراجع، بل تصعيد ورمي استثناء — والسجل يبقى مرجعًا يُصحِّح اللقطة عند العودة.
+        try {
+          this.save(record);
+        } catch (err) {
+          this.audit.append('authority:crown_guard', 'command_channel_persist_failed', {
+            commandId: record.commandId, stage: 'outcome', code: CHANNEL_PERSIST_FAILED, error: (err as Error).message,
+          });
+          this.audit.append('authority:crown_guard', 'escalated_to_king', {
+            commandId: record.commandId, reason: 'تعذّر تثبيت نتيجة أمر بعد جريان أثره',
+          });
+          throw new Error(`${CHANNEL_PERSIST_FAILED} — تعذّر تثبيت نتيجة أمر`);
         }
       }
-      // بعد كل تغيير، لا بعد الدفعة. وإن تعذّر التثبيت هنا فالأثر قد جرى بالفعل:
-      // لا تراجع، بل تصعيد ورمي استثناء — والسجل يبقى مرجعًا يُصحِّح اللقطة عند العودة.
-      try {
-        this.save(record);
-      } catch (err) {
-        this.audit.append('authority:crown_guard', 'command_channel_persist_failed', {
-          commandId: record.commandId, stage: 'outcome', code: CHANNEL_PERSIST_FAILED, error: (err as Error).message,
-        });
-        this.audit.append('authority:crown_guard', 'escalated_to_king', {
-          commandId: record.commandId, reason: 'تعذّر تثبيت نتيجة أمر بعد جريان أثره',
-        });
-        throw new Error(`${CHANNEL_PERSIST_FAILED} — تعذّر تثبيت نتيجة أمر`);
-      }
-    }
-    return outcomes;
+      return outcomes;
+    });
   }
 
   statusOf(commandId: string): CommandStatus | null {
@@ -252,7 +303,11 @@ export class CommandChannel {
   }
 
   list(): readonly ChannelRecord[] {
-    return [...this.records.values()].map((r) => ({ ...r }));
+    // قراءةٌ تحت القفل: ذاكرةُ العمليةِ قد تكون قديمةً بعد كتابةِ الأخرى.
+    return this.withLock(() => {
+      this.reloadFromDisk();
+      return [...this.records.values()].map((r) => ({ ...r }));
+    });
   }
 
   /**

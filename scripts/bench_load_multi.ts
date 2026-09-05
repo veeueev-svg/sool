@@ -14,7 +14,7 @@
  *   2) لا قفل ملفات — هذا ما يُقاس: هل يلزم أم لا
  *   3) الخرج خام: أرقام مقيسة لا حكم
  */
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, openSync, closeSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -118,19 +118,17 @@ function printResults() {
   console.log('');
   console.log('== النتائج ==');
 
-  // فحص ملف القناة
-  let actualRecords = 0;
-  let duplicates = 0;
-  let corrupted = false;
-  try {
-    const data = JSON.parse(readFileSync(channelPath, 'utf8'));
-    actualRecords = data.records.length;
-    const ids = data.records.map((r: { commandId: string }) => r.commandId);
-    const unique = new Set(ids);
-    duplicates = ids.length - unique.size;
-  } catch {
-    corrupted = true;
-  }
+  // فحص ملف القناة عبر واجهة القناة نفسها — لا قراءة مباشرة للقطة وحدها،
+  // لأنّ السجلات بعد سقف CHANNEL_SNAPSHOT_ALWAYS_UNDER تُكتب في اليومية لا في اللقطة.
+  // قراءة اللقطة وحدها تُغفل اليومية فترى عددًا أقلّ ممّا حُفظ فعلًا — وهذا عيب القياس
+  // نفسه لا عيب القناة. الاستعادة عبر list() تدمج اللقطة واليومية وتُعيد العدد الصحيح.
+  const recovered = new CommandChannel(state.audit, state.gateway, channelPath);
+  const allRecords = recovered.list();
+  const actualRecords = allRecords.length;
+  const ids = allRecords.map((r) => r.commandId);
+  const unique = new Set(ids);
+  const duplicates = ids.length - unique.size;
+  const corrupted = false;
 
   const auditValid = state.audit.verifyIntegrity().valid;
   const lost = EXPECTED_TOTAL - actualRecords;
@@ -147,7 +145,7 @@ function printResults() {
   if (lost > 0) {
     console.log(`فقد تحديثات: ${lost} من ${EXPECTED_TOTAL} سجل ضاعت — الوصول المتزامن غير آمن`);
     console.log('السبب: CommandChannel لا يستخدم قفل ملفات — كل عملية تحمل الحالة وتكتب فوق ما كتبت الأخرى');
-    console.log('الإصلاح: إضافة قفل ملفات إلى src/crown/command_channel.ts — محجوز بقفل ARCHITECTURE.md (W-2026-029 REVIEW)');
+    console.log('الإصلاح: قفلٌ حصريٌّ يغطّي دورة restore→mutate→save كاملة في src/crown/command_channel.ts (T-89)');
   } else if (duplicates > 0) {
     console.log(`معرفات مكررة: ${duplicates} — ضمان «مرة واحدة فقط» منتهك`);
   } else if (corrupted) {

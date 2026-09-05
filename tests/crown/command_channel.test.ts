@@ -210,3 +210,42 @@ test('الطيّ يكتب لقطة كاملة ويمحو اليوميّة فلا
   const reopened = new CommandChannel(s.audit, s.gateway, path);
   assert.equal(reopened.list().length, count);
 });
+
+test('الوصول المتزامن: قناتان مستقلتان على نفس الملف لا تُفقدان سجلًا ولا تكرّانه (T-89)', () => {
+  const s = bootstrapState();
+  const path = tmpPath();
+  // افتح قناتين على نفس المسار قبل أي كتابة — كلٌّ منهما تحمل ذاكرتها الخاصة.
+  const a = new CommandChannel(s.audit, s.gateway, path);
+  const b = new CommandChannel(s.audit, s.gateway, path);
+  const cmdA = s.king.issueCommand('create_agent', 'agent:conc-a-1');
+  const cmdB = s.king.issueCommand('create_agent', 'agent:conc-b-1');
+  a.submit(cmdA);
+  // b لم تُحمَّل بعد تسليم a؛ القفل وإعادة التحميل من القرص هما ما يضمنان رؤية سجل a.
+  b.submit(cmdB);
+  // قناةٌ ثالثةٌ تستعيدُ الحالةَ من القرص: لا تُفقدُ سجلًّا ولا تُكرّرُه.
+  const c = new CommandChannel(s.audit, s.gateway, path);
+  const all = c.list();
+  assert.equal(all.length, 2, 'سجلَّانِ لا أكثر ولا أقلّ');
+  const ids = new Set(all.map((r) => r.commandId));
+  assert.equal(ids.has(cmdA.payload.commandId), true, 'سجلُّ القناة الأولى محفوظٌ');
+  assert.equal(ids.has(cmdB.payload.commandId), true, 'سجلُّ القناة الثانية محفوظٌ');
+});
+
+test('الإنكارُ يُحفظُ على القرص فلا يُعادُ معالجتُه ولا يُضاعفُ عدُّه (T-89)', () => {
+  const s = bootstrapState();
+  const path = tmpPath();
+  const channel = new CommandChannel(s.audit, s.gateway, path);
+  // رفضٌ بالاستحقاق: ضع نقضًا على فعل فيُرفض أيُّ أمرٍ يحمله.
+  s.veto.place(s.king.kingId, 'open_external_account', 'ممنوع في هذا الاختبار');
+  const rejected = s.king.issueCommand('open_external_account', 'external:bank');
+  channel.submit(rejected);
+  const out1 = channel.process(() => { /* لا تنفّذ */ });
+  assert.equal(out1[0]!.status, 'denied', 'سجلٌّ واحدٌ مرفوضٌ في المعالجة الأولى');
+  // أعد فتح القناة من القرص: سجلُّ الإنكارِ يجب أن يكون محفوظًا، فلا يُعادُ معالجتُه.
+  const reopened = new CommandChannel(s.audit, s.gateway, path);
+  const out2 = reopened.process(() => { /* لا تنفّذ */ });
+  assert.equal(out2.length, 0, 'لا يُعادُ رفضُ ما رُفض ولم يُحفظ');
+  const all = reopened.list();
+  const r = all.find((x) => x.commandId === rejected.payload.commandId);
+  assert.equal(r?.status, 'denied', 'حالةُ السجلّ المرفوض محفوظةٌ على القرص');
+});
