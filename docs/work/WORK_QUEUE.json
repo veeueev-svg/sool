@@ -929,7 +929,8 @@
         "docs/test-reports/phase-39-T89.md",
         "src/crown/command_channel.ts",
         "src/crown/command_channel_lock.ts",
-        "tests/crown/command_channel.test.ts"
+        "tests/crown/command_channel.test.ts",
+        "ARCHITECTURE.md"
       ],
       "excluded": [
         "يُملأ عند الاستلام: ما لن يُلمس ولو بدا قريبًا"
