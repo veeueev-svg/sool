@@ -92,6 +92,11 @@ const SHARED_DOCS = ['PROGRESS.md', 'ROADMAP.md', 'CHANGELOG.md', 'version.json'
 /** القسمُ الذي يُعلن فيه البندُ ما يلمسه من وثائق الحال */
 const IMPACT = '## 6) الأثر في الوثائق';
 const REQUIRED = ['id', 'title', 'owner', 'reviewer', 'area', 'phase', 'status', 'scope', 'acceptance', 'evidence', 'next_step', 'created_at', 'updated_at'];
+/** الحالاتُ التي فُرغَ منها العملُ فيُرفضُ فيها نصُّ القالبِ حيث يُوجَب محتوًى (T-164) */
+const FILLED = ['IN_PROGRESS', 'BLOCKED', 'REVIEW', 'VERIFIED'];
+/** علامةُ نصِّ القالبِ: «يُملأ...» — حضورٌ اسمًا وغيابٌ فعلًا (T-164) */
+const TEMPLATE_RE = /^\s*يُملأ/u;
+const isTemplate = (v) => (typeof v === 'string' && TEMPLATE_RE.test(v.trim())) || (Array.isArray(v) && v.some(isTemplate));
 const SECTIONS = ['## 1) المسألة', '## 2) النطاق المحجوز', '## 3) خارج النطاق', '## 4) معيار القبول', '## 5) الدليل', '## 6) الأثر في الوثائق', '## 7) الخطوة التالية'];
 const ID_RE = /^W-\d{4}-\d{3}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -122,6 +127,14 @@ if (queue.schema_version !== 1) fail(`${QUEUE}: schema_version=${queue.schema_ve
 if (JSON.stringify(queue.statuses) !== JSON.stringify(STATUSES)) {
   fail(`${QUEUE}: حقلُ statuses يخالف المعجمَ المغلقَ في البوابة — المعجم: ${STATUSES.join(' · ')}`);
 }
+/**
+ * المفاتيحُ المسموحةُ تُقرأُ من بيانِ السجلِّ نفسِه لا من قائمةٍ في الشفرة (T-164) —
+ * فمن زاد مفتاحًا لا يعرفه البيانُ سقط عنده الحكم. وغيابُ الإعلانِ فشلٌ مغلقٌ لا تساهلٌ.
+ */
+const ITEM_KEYS = Array.isArray(queue.item_keys) ? queue.item_keys : null;
+if (ITEM_KEYS === null || ITEM_KEYS.length === 0) {
+  fail(`${QUEUE}: حقلُ item_keys ناقصٌ أو فارغٌ — والبوابةُ تقرأُ المفاتيحَ المسموحةَ من البيانِ لا من الشفرة، فلا تُحكمُ بلا بيان (T-164)`);
+}
 items = Array.isArray(queue.work_items) ? queue.work_items : [];
 if (!Array.isArray(queue.work_items)) fail(`${QUEUE}: work_items ليست قائمة`);
 
@@ -136,6 +149,19 @@ for (const it of items) {
     const v = it[f];
     const empty = v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
     if (empty) fail(`${id}: حقلٌ واجبٌ ناقصٌ أو فارغ: ${f}`);
+  }
+  // T-164: بابُ دخولِ المفاتيح — كلُّ مفتاحٍ على البندِ يجبُ أن يكونَ من بيانِ السجلِّ،
+  // فالمفتاحُ الذي لا يعرفه البيانُ (state · حال · stattus ...) يُرفضُ ولو سُمّي بأيِّ اسم.
+  if (ITEM_KEYS) {
+    for (const k of Object.keys(it)) {
+      if (!ITEM_KEYS.includes(k)) fail(`${id}: مفتاحٌ لا يعرفه بيانُ السجلِّ «${k}» — والبابُ الذي يُغلقُ على القيمةِ المعلومةِ يتركُ المفتاحَ المجهولَ يمرّ (T-164)`);
+    }
+  }
+  // T-164: نصُّ القالبِ («يُملأ...») في خانةٍ واجبةٍ على بندٍ فُرغَ منه حضورٌ اسمًا وغيابٌ فعلًا.
+  if (FILLED.includes(it.status)) {
+    for (const f of ['acceptance', 'evidence', 'next_step', 'excluded']) {
+      if (isTemplate(it[f])) fail(`${id}: خانةُ «${f}» لا تزالُ على نصِّ القالبِ («يُملأ...») والحالُ ${it.status} — حضورٌ اسمًا وغيابٌ فعلًا (RULE-001 · T-164)`);
+    }
   }
   if (it.status !== undefined && !STATUSES.includes(it.status)) {
     fail(RESULTS.includes(it.status)

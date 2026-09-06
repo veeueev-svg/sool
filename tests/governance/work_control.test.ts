@@ -68,7 +68,7 @@ function item(over: Item = {}): Item {
 }
 
 /** يبني سجلًّا حيًّا وتاريخيًّا وعقودًا في مجلدٍ مؤقّت، ويُعيد جذرَه */
-function fixture(items: Item[], logRows: string[] = [], opts: { queueRaw?: string; noLog?: boolean; statuses?: unknown; skipOrders?: string[]; impact?: Record<string, string> } = {}): string {
+function fixture(items: Item[], logRows: string[] = [], opts: { queueRaw?: string; noLog?: boolean; statuses?: unknown; itemKeys?: string[]; skipOrders?: string[]; impact?: Record<string, string> } = {}): string {
   const root = mkdtempSync(join(tmpdir(), 'sool-work-'));
   mkdirSync(join(root, 'docs/work/orders'), { recursive: true });
   mkdirSync(join(root, 'docs/test-reports'), { recursive: true });
@@ -77,6 +77,12 @@ function fixture(items: Item[], logRows: string[] = [], opts: { queueRaw?: strin
   const queue = {
     schema_version: 1,
     updated_at: '2026-01-02',
+    item_keys: opts.itemKeys ?? [
+      'id', 'title', 'owner', 'reviewer', 'area', 'phase', 'status', 'progress_items',
+      'dependencies', 'scope', 'excluded', 'acceptance', 'evidence', 'next_step',
+      'created_at', 'updated_at', 'blocked_reason', 'verification',
+      'progress', 'documentation_impact', 'discoveries',
+    ],
     statuses: opts.statuses ?? ['PROPOSED', 'CLAIMED', 'IN_PROGRESS', 'BLOCKED', 'REVIEW', 'VERIFIED'],
     work_items: items,
   };
