@@ -329,6 +329,27 @@ export class ExternalAccountRegistry {
     return this.deps.ledger.balance(account.ledgerAccount);
   }
 
+  /**
+   * ثابت 8 (T-56): ما دُفع للنظير **داخل نافذةٍ زمنيّة** — من الدفتر نفسِه لا من ذاكرةِ
+   * وحدةٍ أخرى. فحجّةُ سقفِ اليومِ وحجّةُ السقفِ الكلّيِّ صارتا مصدرًا واحدًا: ما قُيّد
+   * عُدَّ، وما عُكس بقيدٍ معاكسٍ (ثابت 3 في الدفتر) نزل من الحساب — والصافي هو الحكم.
+   * والنافذةُ مفتوحةٌ من أسفلَ حصرًا (`at > since`) كما هي في `spentSince`، فلا يُعَدّ
+   * قيدُ الحدِّ مرّتَين حين تتلاصق نافذتان.
+   */
+  paidSince(accountId: string, since: number): number {
+    const account = this.accounts.get(accountId);
+    if (!account) return 0;
+    let net = 0;
+    for (const entry of this.deps.ledger.journal()) {
+      if (entry.at <= since) continue;
+      for (const line of entry.lines) {
+        if (line.account !== account.ledgerAccount) continue;
+        net += (line.debit ?? 0) - (line.credit ?? 0);
+      }
+    }
+    return net;
+  }
+
   get(accountId: string): ExternalAccount | null {
     return this.accounts.get(accountId) ?? null;
   }

@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ARCHIVE, COMPUTE, DAY, FOREIGN, HOUR, beat, externalState, openAccount,
+  ARCHIVE, COMPUTE, DAY, FOREIGN, HOUR, REGISTRY, beat, externalState, openAccount,
 } from './helpers';
 
 test('كل دفعة تمرّ بالخزانة والدفتر — لا مسار مال ثانٍ (ثابت 1)', () => {
@@ -97,7 +97,7 @@ test('سقف اليوم يُرفض باسمه، ولا تقسيم يُبطله (
     cap: string; spentToday: number;
   };
   assert.equal(refusal.cap, 'daily');
-  assert.equal(refusal.spentToday, 2_000_000, 'المصروف محسوب من الدفعات المسجَّلة');
+  assert.equal(refusal.spentToday, 2_000_000, 'المصروف محسوب من الدفتر (T-56)');
   assert.equal(h.s.payments.spentSince(ARCHIVE, h.now), 2_000_000);
 });
 
@@ -311,4 +311,90 @@ test('تقرير الدفع يطابق الدفتر وسلسلة التدقيق 
   assert.equal(h.s.audit.find('external_payment_refused').length, 1);
   assert.equal(report.totalPaid, h.s.ledger.balance('external:ledger:compute-provider'));
   assert.equal(h.s.audit.verifyIntegrity().valid, true);
+});
+
+test('نافذة اليوم تُقاس من الدفتر لا من ذاكرة الوحدة: إرجاعٌ بيوميّةٍ ناقصةٍ لا يمحو السقف (ثابت 4 · T-56)', () => {
+  const h = externalState();
+  openAccount(h, ARCHIVE, h.now, 30);
+  // دفعتان تستنفدان سقف اليوم المعلن (2,000,000) وكلٌّ منهما تحت سقف الواحدة
+  for (const [i, at] of [h.now + 1000, h.now + HOUR].entries()) {
+    beat(h, at);
+    const paid = h.s.payments.pay({
+      accountId: ARCHIVE, amount: 1_000_000, line: 'budget:foreign',
+      purpose: `دفعة ${i + 1}`, requestedBy: FOREIGN,
+    }, at);
+    assert.equal(paid.ok, true);
+  }
+  assert.equal(h.s.externalAccounts.paidTotal(ARCHIVE), 2_000_000);
+  assert.equal(h.s.payments.spentSince(ARCHIVE, h.now), 2_000_000, 'الدفتر والنافذة رقمٌ واحد');
+
+  // انهيارٌ بين قيدِ الخزانة وتدوينِ الدفعة: اليوميّةُ تُرجَع ناقصةً دفعةً، والدفترُ كما هو
+  const journal = h.s.payments.history();
+  const first = journal[0];
+  assert.ok(first, 'اليوميّةُ فيها دفعتان قبل الإرجاع');
+  h.s.payments.restore([first], 1, FOREIGN);
+  assert.equal(h.s.payments.history().length, 1, 'ذاكرةُ الوحدةِ فقدت دفعةً حقًّا');
+  assert.equal(h.s.externalAccounts.paidTotal(ARCHIVE), 2_000_000, 'الدفترُ لا يُمحى بإرجاع');
+  assert.equal(
+    h.s.payments.spentSince(ARCHIVE, h.now), 2_000_000,
+    'النافذةُ تُقرأ من الدفتر فلا تنقص بنقصان الذاكرة',
+  );
+
+  // الدفعةُ التالية في اليوم نفسِه تُرفض بسقفِ اليوم — وكانت تنجح حين كان العدُّ من الذاكرة
+  const at = h.now + 3 * HOUR;
+  beat(h, at);
+  const after = h.s.payments.pay({
+    accountId: ARCHIVE, amount: 1_000_000, line: 'budget:foreign',
+    purpose: 'دفعة بعد إرجاعٍ ناقص', requestedBy: FOREIGN,
+  }, at);
+  assert.equal(after.ok, false);
+  assert.match(after.ok ? '' : after.reason, /سقف اليوم/);
+  assert.equal(h.s.externalAccounts.paidTotal(ARCHIVE), 2_000_000, 'لا مال خرج فوق سقف اليوم');
+  const refusal = h.s.audit.find('external_payment_refused').at(-1)?.detail as {
+    cap: string; spentToday: number;
+  };
+  assert.equal(refusal.cap, 'daily');
+  assert.equal(refusal.spentToday, 2_000_000, 'الرفضُ مُسبَّبٌ بالرقمِ المقروءِ من الدفتر');
+});
+
+test('القيدُ المعاكسُ ينزل من نافذة اليوم — والصافي هو الحكم لا مجموعُ الطلبات (ثابت 4 · T-56)', () => {
+  const h = externalState();
+  openAccount(h, ARCHIVE, h.now, 30);
+  beat(h, h.now + 1000);
+  const paid = h.s.payments.pay({
+    accountId: ARCHIVE, amount: 1_000_000, line: 'budget:foreign',
+    purpose: 'دفعةٌ ستُعكَس', requestedBy: FOREIGN,
+  }, h.now + 1000);
+  assert.equal(paid.ok, true);
+  assert.equal(h.s.payments.spentSince(ARCHIVE, h.now), 1_000_000);
+  const entry = h.s.ledger.journal().find(
+    (e) => e.lines.some((l) => l.account === 'external:ledger:data-archive'),
+  );
+  assert.ok(entry, 'للدفعة قيدٌ في الدفتر');
+  const reversed = h.s.ledger.reverse(
+    entry.entryId, 'عكسُ قيدٍ مقيس', 'ministry:finance', h.now + 2 * HOUR,
+  );
+  assert.equal(reversed.ok, true);
+  assert.equal(
+    h.s.payments.spentSince(ARCHIVE, h.now), 0,
+    'ما عُكس في الدفتر لا يُعَدّ مصروفًا في النافذة',
+  );
+  assert.equal(h.s.externalAccounts.paidTotal(ARCHIVE), 0, 'السقفُ الكلّيُّ والنافذةُ مصدرٌ واحد');
+});
+
+test('نافذةُ اليوم لا تُعَدّ مرّتين عند تلاصق النافذتين، وحسابٌ غير مفتوحٍ صفرٌ لا استثناء (ثابت 4 · T-56)', () => {
+  const h = externalState();
+  openAccount(h, ARCHIVE, h.now, 30);
+  beat(h, h.now + 1000);
+  h.s.payments.pay({
+    accountId: ARCHIVE, amount: 1_000_000, line: 'budget:foreign',
+    purpose: 'دفعةٌ على حدِّ النافذة', requestedBy: FOREIGN,
+  }, h.now + 1000);
+  assert.equal(
+    h.s.payments.spentSince(ARCHIVE, h.now + 1000), 0,
+    'النافذةُ مفتوحةٌ من أسفلَ حصرًا: قيدُ الحدِّ خارجَها',
+  );
+  assert.equal(h.s.payments.spentSince(ARCHIVE, h.now + 999), 1_000_000);
+  assert.equal(h.s.externalAccounts.paidSince(REGISTRY, h.now), 0, 'حسابٌ غير مفتوحٍ صفرٌ');
+  assert.equal(h.s.payments.spentSince('external:not-declared', h.now), 0);
 });

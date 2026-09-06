@@ -916,7 +916,7 @@
       "reviewer": "القيّم على المستودع",
       "area": "المال الخارجي والسقوف",
       "phase": 26,
-      "status": "BLOCKED",
+      "status": "IN_PROGRESS",
       "progress_items": [
         "T-56"
       ],
@@ -924,9 +924,13 @@
         "لا شيء"
       ],
       "scope": [
-        "docs/work/orders/W-2026-033.md",
+        "ARCHITECTURE.md",
         "docs/audit/measurements/phase-26-T56.txt",
-        "docs/test-reports/phase-26-T56.md"
+        "docs/test-reports/phase-26-T56.md",
+        "docs/work/orders/W-2026-033.md",
+        "src/external/account_registry.ts",
+        "src/external/payment_controls.ts",
+        "tests/external/payment_controls.test.ts"
       ],
       "excluded": [
         "`ARCHITECTURE.md` — محجوزٌ لـW-2026-032 وحالُه REVIEW: لم يُلمس بسطر (RULE-011 · RULE-012)، وهو موضعُ الحاجز",
