@@ -566,11 +566,11 @@
     {
       "id": "W-2026-021",
       "title": "سببُ فشلِ CI يُخرَج إلى ملخّصِ التشغيل: الأحمرُ يُقرأ ولا يُخفى ولا يُلين حاجزُه (T-163)",
-      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 70)",
+      "owner": "القيّم على المستودع — Perplexity Computer (الجلسة 74)",
       "reviewer": "القيّم على المستودع",
       "area": "بوابةُ التكامل المستمر · تشخيصُ الفشل",
       "phase": 40,
-      "status": "BLOCKED",
+      "status": "IN_PROGRESS",
       "progress_items": [
         "T-163"
       ],
@@ -579,7 +579,11 @@
       ],
       "scope": [
         "docs/work/orders/W-2026-021.md",
-        "docs/audit/measurements/phase-40-T163.txt"
+        "docs/audit/measurements/phase-40-T163.txt",
+        ".github/workflows/ci.yml",
+        "scripts/t163_failure_summary.sh",
+        "scripts/check_ci_gates.sh",
+        "docs/test-reports/phase-40-T163.md"
       ],
       "excluded": [
         "`.github/workflows/ci.yml` و `package.json` و `scripts/check_ci_gates.sh` — محجوزةٌ لـW-2026-009 (RULE-012)",
@@ -602,8 +606,9 @@
       ],
       "next_step": "لا يبدأ اليوم: يُنتظر إغلاقُ W-2026-009 بحكمِ المراجع، ثمّ يُنقل إلى CLAIMED بتوسيعِ النطاقِ إلى .github/workflows/ci.yml و docs/test-reports/phase-40-T163.md، ثمّ يُنفَّذ ويُقاس",
       "created_at": "2026-09-02",
-      "updated_at": "2026-09-02",
-      "blocked_reason": "موضعُ العلاجِ الوحيدُ `.github/workflows/ci.yml` محجوزٌ لـW-2026-009 وهو `REVIEW` — فلا يُلمس (RULE-011 · RULE-012). والمحجوزُ لهذا البندِ وثيقتاه وحدَهما (العقدُ والقياسُ الخام) ليُقيَّد الدليلُ فلا يضيع. يُفَكُّ بإغلاقِ W-2026-009 بحكمِ المراجع، وهو حكمٌ ليس للمنفِّذ (RULE-004 · RULE-016)."
+      "updated_at": "2026-09-07",
+      "blocked_reason": "موضعُ العلاجِ الوحيدُ `.github/workflows/ci.yml` محجوزٌ لـW-2026-009 وهو `REVIEW` — فلا يُلمس (RULE-011 · RULE-012). والمحجوزُ لهذا البندِ وثيقتاه وحدَهما (العقدُ والقياسُ الخام) ليُقيَّد الدليلُ فلا يضيع. يُفَكُّ بإغلاقِ W-2026-009 بحكمِ المراجع، وهو حكمٌ ليس للمنفِّذ (RULE-004 · RULE-016).",
+      "verification": "تنفيذ: خطوة if: failure() في ci.yml + scripts/t163_failure_summary.sh + استثناءٌ في check_ci_gates.sh. npm test 2258/2258 · verify أخضرُ (14) · check_ci_gates أخضرُ (3 مستثنًى بسببٍ) · محاكاةٌ محلّيةٌ: السكربتُ يلتقطُ not ok ويكتبُها للملخّصِ برمز 0. بقي إثباتُ §4-1 و§4-2 بتشغيلِ CI ساقطٍ عمدًا (فرعٌ مؤقّت). لا يُصدِّقُه منفِّذُه (RULE-004 · RULE-016)."
     },
     {
       "id": "W-2026-024",
