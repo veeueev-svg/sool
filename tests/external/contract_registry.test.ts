@@ -7,7 +7,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ARCHIVE, COMPUTE, DAY, FINANCE, FOREIGN, KIND_ARCHIVE, KIND_COMPUTE, KIND_WEIGHTS,
+  ARCHIVE, COMPUTE, CROWN_GUARD, DAY, FINANCE, FOREIGN, KIND_ARCHIVE, KIND_COMPUTE, KIND_WEIGHTS,
   REGISTRY, assessRisk, beat, contractState, signContract, terminateContract,
 } from './helpers';
 
@@ -370,4 +370,22 @@ test('**سلوكُ `exportAll`/`importAll` الصحيحُ محفوظٌ بحال�
     h.s.contracts.isActive(signed.contract.contractId, h.now), true,
     'والعقدُ المستعادُ قائمٌ بحاله لا بحالٍ مخترعة',
   );
+});
+
+
+test('**حقنُ انحرافٍ: لمسُ مخرجِ السجلِّ يُرمى ولا يُغيّر الحالة** (T-68 · نظير T-168)', () => {
+  const h = contractState();
+  assert.equal(assessRisk(h).ok, true);
+  const signed = signContract(h, KIND_COMPUTE, { value: 5_000_000, days: 30 });
+  assert.equal(signed.ok, true);
+  if (!signed.ok) return;
+  const id = signed.contract.contractId;
+
+  const got = h.s.contracts.get(id) as unknown as { value: number };
+  assert.throws(() => { got.value = 900_000_000; }, TypeError, 'المخرجُ مجمَّدٌ فيرمي');
+  assert.equal(h.s.contracts.get(id)?.value, 5_000_000, 'والحالةُ لم تتغيّر');
+
+  const listed = h.s.contracts.list() as unknown as unknown[];
+  assert.throws(() => { listed.push({}); }, TypeError, 'والقائمةُ مجمَّدةٌ كذلك');
+  assert.equal(h.s.contracts.list().length, 1);
 });
