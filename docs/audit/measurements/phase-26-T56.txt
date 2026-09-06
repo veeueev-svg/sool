@@ -1,0 +1,293 @@
+قياسٌ خامٌّ — T-56 · W-2026-033 · المرحلة 26
+نافذةُ اليومِ تُحسب من الدفترِ لا من قائمةٍ في الذاكرة
+الجلسة 74 · 2026-09-06 · المالك: المساعد الآلي — Perplexity Computer (الجلسة 74)
+الحال المُنتهى إليه: BLOCKED — العلاجُ مقيسٌ كاملًا ومحفوظٌ حرفًا أدناه، والحاجزُ حجزٌ قائمٌ لغيري (§5)
+
+================================================================================
+§1) خطُّ الأساس — الحالُ قبل أيّ لمسٍ للشفرة
+================================================================================
+$ git rev-parse HEAD
+f52681f  (توثيق(39): تحديث عقد W-2026-032 §4 و§5 بالنتائج النهائية (T-89))
+$ git status --porcelain
+(فارغ)
+$ npm test
+# tests 2249 / # pass 2249 / # fail 0
+$ npm run verify
+رمزُ الخروج 0
+حكمُ CI الفعليُّ مقروءًا من واجهةِ التشغيلاتِ نفسِها: التشغيل #147 على f52681f ⇒ success
+
+================================================================================
+§2) الدعوى قيست فصحّت — مسبارٌ يُشغَّل على dist/ لا على قراءةِ شفرة
+================================================================================
+نصُّ البند: «نافذة اليوم تُحسب من الدفتر لا من قائمة في الذاكرة» — وشرطُ قبولِه المكتوب:
+«السقفُ الكلّيُّ حُصِّن بالدفتر وسقفُ اليومِ ما زال يثق بالذاكرة: حجّتان لرقمين».
+
+السببُ الجذريُّ (مقروءًا من المصدر لا مُستنتَجًا من تقرير):
+  · src/external/payment_controls.ts::spentSince  كان يجمع `this.payments[]` — قائمةٌ في
+    ذاكرةِ هذه الوحدةِ وحدَها، تُبنى بـ`restore()` عند الإقلاع من اليوميّة.
+  · src/external/account_registry.ts::paidTotal    يقرأ `ledger.balance()` — الدفتر.
+  فالسقفُ الكلّيُّ والسقفُ اليوميُّ يُحكَمان برقمَين من مصدرَين مختلفَين. والثابت 5 في رأسِ
+  الوحدةِ يقول «المجموعُ الكلّيُّ يُقرأ من الدفتر»، والثابت 4 (نافذةُ اليوم) لا يقولها.
+
+المسبارُ (نُقل حرفًا إلى tests/external/payment_controls.test.ts في §3):
+  السقوفُ المعلنةُ لِـexternal:data-archive: الواحدة=1,000,000 اليوم=2,000,000 الكلي=20,000,000
+  دفعة 1 (1,000,000): true
+  دفعة 2 (1,000,000): true
+  دفعة 3 (1 وحدة):    false — «تجاوز سقف اليوم المعلن — لا تقسيم يُبطل سقفًا»   ← السقفُ يعمل
+  الدفتر: paidTotal=2,000,000 · الذاكرة: spentToday=2,000,000                  ← الرقمان متفقان الآن
+
+  ثمّ حُقن انهيارٌ واقعٌ لا مفترض: إقلاعٌ بيوميّةٍ فُقد فيها تدوينُ دفعةٍ واحدةٍ بعد نجاحِ
+  قيدِ الخزانةِ والدفتر — وهو عينُ النافذةِ بين `treasury.disburse` و`journalPayment`:
+      payments.restore([journal[0]], 1, ministry:foreign_affairs)
+  الدفترُ لم يتغيّر:  paidTotal   = 2,000,000
+  الذاكرةُ نقصت:      spentToday  = 1,000,000        ← نصفُ سقفِ اليومِ «عاد» بلا مقابل
+  دفعة 4 (1,000,000): true                            ← كان يجب رفضُها
+  المصروفُ الفعليُّ في اليومِ الواحد = 3,000,000 والسقفُ المعلن = 2,000,000
+  فخُرقت الحصيلةُ بـ50% من سقفِ اليومِ بلا سطرِ سياسةٍ يُغيَّر ولا سقفٍ يُرفع.
+
+================================================================================
+§3) العلاجُ — رقعةٌ محفوظةٌ حرفًا (تُطبَّق كما هي متى رُفع الحاجز)
+================================================================================
+$ git diff -- src/external/ tests/external/
+
+diff --git a/src/external/account_registry.ts b/src/external/account_registry.ts
+index 5b83183..18b9cb1 100644
+--- a/src/external/account_registry.ts
++++ b/src/external/account_registry.ts
+@@ -329,6 +329,27 @@ export class ExternalAccountRegistry {
+     return this.deps.ledger.balance(account.ledgerAccount);
+   }
+ 
++  /**
++   * ثابت 8 (T-56): ما دُفع للنظير **داخل نافذةٍ زمنيّة** — من الدفتر نفسِه لا من ذاكرةِ
++   * وحدةٍ أخرى. فحجّةُ سقفِ اليومِ وحجّةُ السقفِ الكلّيِّ صارتا مصدرًا واحدًا: ما قُيّد
++   * عُدَّ، وما عُكس بقيدٍ معاكسٍ (ثابت 3 في الدفتر) نزل من الحساب — والصافي هو الحكم.
++   * والنافذةُ مفتوحةٌ من أسفلَ حصرًا (`at > since`) كما هي في `spentSince`، فلا يُعَدّ
++   * قيدُ الحدِّ مرّتَين حين تتلاصق نافذتان.
++   */
++  paidSince(accountId: string, since: number): number {
++    const account = this.accounts.get(accountId);
++    if (!account) return 0;
++    let net = 0;
++    for (const entry of this.deps.ledger.journal()) {
++      if (entry.at <= since) continue;
++      for (const line of entry.lines) {
++        if (line.account !== account.ledgerAccount) continue;
++        net += (line.debit ?? 0) - (line.credit ?? 0);
++      }
++    }
++    return net;
++  }
++
+   get(accountId: string): ExternalAccount | null {
+     return this.accounts.get(accountId) ?? null;
+   }
+diff --git a/src/external/payment_controls.ts b/src/external/payment_controls.ts
+index 2995aee..5298d16 100644
+--- a/src/external/payment_controls.ts
++++ b/src/external/payment_controls.ts
+@@ -18,7 +18,10 @@
+  *   2) **الطالب ليس الدافع** (RULE-004): وزارة الخارجية تطلب، والخزانة تنفّذ بوزارة المالية
+  *   3) **ثلاثة سقوف لا سقف واحد**: الدفعة الواحدة، ومجموع اليوم، والمجموع الكلي للنظير —
+  *      وتجاوز أيٍّ منها رفضٌ مسجَّل باسمه. والسقوف من الإعلان لا من الطلب
+- *   4) **السقف لا يُتجاوز بالتقسيم**: نافذة اليوم تُقاس على الدفعات المسجَّلة لا على الطلب الواحد
++ *   4) **السقف لا يُتجاوز بالتقسيم**: نافذة اليوم تُقاس على **الدفتر** لا على الطلب الواحد
++ *      ولا على قائمةٍ في الذاكرة (T-56) — وكانت تُقاس على `this.payments`، فقيس أنّ
++ *      إرجاعًا بيوميّةٍ ناقصةٍ يمحو النافذةَ والدفترُ لم يتغيّر، فيُصرَف 3,000,000
++ *      في يومٍ سقفُه 2,000,000 (`docs/audit/measurements/phase-26-T56.txt`)
+  *   5) **المجموع الكلي يُقرأ من الدفتر** لا من عدّاد في هذه الوحدة (حجّة واحدة لكل رقم)
+  *   6) **لا سقف يُستهلك بلا دفعة**: العدّ لا يقع إلا بعد نجاح قيد الخزانة
+  *   7) **التعليق أسبق من كل شيء**: حساب معلَّق أو منتهٍ أو مغلق لا تخرج له دفعة ولو مُقرّة
+@@ -289,13 +292,14 @@ export class PaymentControls {
+     ).length;
+   }
+ 
+-  /** ثابت 4: المصروف داخل نافذة زمنية — يُحسب من الدفعات المسجَّلة لا من طلب واحد */
++  /**
++   * ثابت 4 (T-56): المصروف داخل نافذة زمنية — **من الدفتر لا من قائمةٍ في الذاكرة**.
++   * وكان يُجمع من `this.payments`، فافترقت حجّتا رقمَين: السقفُ الكلّيُّ من الدفتر
++   * وسقفُ اليومِ من ذاكرةِ هذه الوحدةِ وحدها — فمن أُرجِع بيوميّةٍ ناقصةٍ مُحيت عنه
++   * نافذةُ اليومِ والدفترُ لم يتغيّر (القياس: `docs/audit/measurements/phase-26-T56.txt`).
++   */
+   spentSince(accountId: string, since: number): number {
+-    let total = 0;
+-    for (const payment of this.payments) {
+-      if (payment.accountId === accountId && payment.at > since) total += payment.amount;
+-    }
+-    return total;
++    return this.deps.registry.paidSince(accountId, since);
+   }
+ 
+   payment(paymentId: string): ExternalPayment | null {
+diff --git a/tests/external/payment_controls.test.ts b/tests/external/payment_controls.test.ts
+index ae20d38..ce75dde 100644
+--- a/tests/external/payment_controls.test.ts
++++ b/tests/external/payment_controls.test.ts
+@@ -7,7 +7,7 @@
+ import { test } from 'node:test';
+ import assert from 'node:assert/strict';
+ import {
+-  ARCHIVE, COMPUTE, DAY, FOREIGN, HOUR, beat, externalState, openAccount,
++  ARCHIVE, COMPUTE, DAY, FOREIGN, HOUR, REGISTRY, beat, externalState, openAccount,
+ } from './helpers';
+ 
+ test('كل دفعة تمرّ بالخزانة والدفتر — لا مسار مال ثانٍ (ثابت 1)', () => {
+@@ -97,7 +97,7 @@ test('سقف اليوم يُرفض باسمه، ولا تقسيم يُبطله (
+     cap: string; spentToday: number;
+   };
+   assert.equal(refusal.cap, 'daily');
+-  assert.equal(refusal.spentToday, 2_000_000, 'المصروف محسوب من الدفعات المسجَّلة');
++  assert.equal(refusal.spentToday, 2_000_000, 'المصروف محسوب من الدفتر (T-56)');
+   assert.equal(h.s.payments.spentSince(ARCHIVE, h.now), 2_000_000);
+ });
+ 
+@@ -312,3 +312,89 @@ test('تقرير الدفع يطابق الدفتر وسلسلة التدقيق
+   assert.equal(report.totalPaid, h.s.ledger.balance('external:ledger:compute-provider'));
+   assert.equal(h.s.audit.verifyIntegrity().valid, true);
+ });
++
++test('نافذة اليوم تُقاس من الدفتر لا من ذاكرة الوحدة: إرجاعٌ بيوميّةٍ ناقصةٍ لا يمحو السقف (ثابت 4 · T-56)', () => {
++  const h = externalState();
++  openAccount(h, ARCHIVE, h.now, 30);
++  // دفعتان تستنفدان سقف اليوم المعلن (2,000,000) وكلٌّ منهما تحت سقف الواحدة
++  for (const [i, at] of [h.now + 1000, h.now + HOUR].entries()) {
++    beat(h, at);
++    const paid = h.s.payments.pay({
++      accountId: ARCHIVE, amount: 1_000_000, line: 'budget:foreign',
++      purpose: `دفعة ${i + 1}`, requestedBy: FOREIGN,
++    }, at);
++    assert.equal(paid.ok, true);
++  }
++  assert.equal(h.s.externalAccounts.paidTotal(ARCHIVE), 2_000_000);
++  assert.equal(h.s.payments.spentSince(ARCHIVE, h.now), 2_000_000, 'الدفتر والنافذة رقمٌ واحد');
++
++  // انهيارٌ بين قيدِ الخزانة وتدوينِ الدفعة: اليوميّةُ تُرجَع ناقصةً دفعةً، والدفترُ كما هو
++  const journal = h.s.payments.history();
++  const first = journal[0];
++  assert.ok(first, 'اليوميّةُ فيها دفعتان قبل الإرجاع');
++  h.s.payments.restore([first], 1, FOREIGN);
++  assert.equal(h.s.payments.history().length, 1, 'ذاكرةُ الوحدةِ فقدت دفعةً حقًّا');
++  assert.equal(h.s.externalAccounts.paidTotal(ARCHIVE), 2_000_000, 'الدفترُ لا يُمحى بإرجاع');
++  assert.equal(
++    h.s.payments.spentSince(ARCHIVE, h.now), 2_000_000,
++    'النافذةُ تُقرأ من الدفتر فلا تنقص بنقصان الذاكرة',
++  );
++
++  // الدفعةُ التالية في اليوم نفسِه تُرفض بسقفِ اليوم — وكانت تنجح حين كان العدُّ من الذاكرة
++  const at = h.now + 3 * HOUR;
++  beat(h, at);
++  const after = h.s.payments.pay({
++    accountId: ARCHIVE, amount: 1_000_000, line: 'budget:foreign',
++    purpose: 'دفعة بعد إرجاعٍ ناقص', requestedBy: FOREIGN,
++  }, at);
++  assert.equal(after.ok, false);
++  assert.match(after.ok ? '' : after.reason, /سقف اليوم/);
++  assert.equal(h.s.externalAccounts.paidTotal(ARCHIVE), 2_000_000, 'لا مال خرج فوق سقف اليوم');
++  const refusal = h.s.audit.find('external_payment_refused').at(-1)?.detail as {
++    cap: string; spentToday: number;
++  };
++  assert.equal(refusal.cap, 'daily');
++  assert.equal(refusal.spentToday, 2_000_000, 'الرفضُ مُسبَّبٌ بالرقمِ المقروءِ من الدفتر');
++});
++
++test('القيدُ المعاكسُ ينزل من نافذة اليوم — والصافي هو الحكم لا مجموعُ الطلبات (ثابت 4 · T-56)', () => {
++  const h = externalState();
++  openAccount(h, ARCHIVE, h.now, 30);
++  beat(h, h.now + 1000);
++  const paid = h.s.payments.pay({
++    accountId: ARCHIVE, amount: 1_000_000, line: 'budget:foreign',
++    purpose: 'دفعةٌ ستُعكَس', requestedBy: FOREIGN,
++  }, h.now + 1000);
++  assert.equal(paid.ok, true);
++  assert.equal(h.s.payments.spentSince(ARCHIVE, h.now), 1_000_000);
++  const entry = h.s.ledger.journal().find(
++    (e) => e.lines.some((l) => l.account === 'external:ledger:data-archive'),
++  );
++  assert.ok(entry, 'للدفعة قيدٌ في الدفتر');
++  const reversed = h.s.ledger.reverse(
++    entry.entryId, 'عكسُ قيدٍ مقيس', 'ministry:finance', h.now + 2 * HOUR,
++  );
++  assert.equal(reversed.ok, true);
++  assert.equal(
++    h.s.payments.spentSince(ARCHIVE, h.now), 0,
++    'ما عُكس في الدفتر لا يُعَدّ مصروفًا في النافذة',
++  );
++  assert.equal(h.s.externalAccounts.paidTotal(ARCHIVE), 0, 'السقفُ الكلّيُّ والنافذةُ مصدرٌ واحد');
++});
++
++test('نافذةُ اليوم لا تُعَدّ مرّتين عند تلاصق النافذتين، وحسابٌ غير مفتوحٍ صفرٌ لا استثناء (ثابت 4 · T-56)', () => {
++  const h = externalState();
++  openAccount(h, ARCHIVE, h.now, 30);
++  beat(h, h.now + 1000);
++  h.s.payments.pay({
++    accountId: ARCHIVE, amount: 1_000_000, line: 'budget:foreign',
++    purpose: 'دفعةٌ على حدِّ النافذة', requestedBy: FOREIGN,
++  }, h.now + 1000);
++  assert.equal(
++    h.s.payments.spentSince(ARCHIVE, h.now + 1000), 0,
++    'النافذةُ مفتوحةٌ من أسفلَ حصرًا: قيدُ الحدِّ خارجَها',
++  );
++  assert.equal(h.s.payments.spentSince(ARCHIVE, h.now + 999), 1_000_000);
++  assert.equal(h.s.externalAccounts.paidSince(REGISTRY, h.now), 0, 'حسابٌ غير مفتوحٍ صفرٌ');
++  assert.equal(h.s.payments.spentSince('external:not-declared', h.now), 0);
++});
+
+================================================================================
+§4) قياسُ ما بعدَ العلاج
+================================================================================
+$ node --test dist/tests/external/payment_controls.test.js
+# tests 17 / # pass 17 / # fail 0        (كانت 14 — فالزيادةُ +3)
+
+$ npm test
+# tests 2252 / # pass 2250 / # fail 2
+  والفشلانِ ليسا من العلاج: هما GN وT-154 في tests/governance/generated_numbers.test.ts،
+  وسببُهما الوحيدُ صفٌّ في ARCHITECTURE.md لا يُلمس (§5). ولا اختبارَ واحدٌ من 2249 السابقةِ سقط.
+
+قوّةُ الاختباراتِ قيست بالطَّعن لا بالدعوى — رُدَّت src/external/ إلى أصلِها وحدَها:
+$ git checkout -- src/external/ && npm run build && node --test dist/tests/external/payment_controls.test.js
+  not ok 15 - نافذة اليوم تُقاس من الدفتر لا من ذاكرة الوحدة: إرجاعٌ بيوميّةٍ ناقصةٍ لا يمحو السقف
+  not ok 16 - القيدُ المعاكسُ ينزل من نافذة اليوم — والصافي هو الحكم لا مجموعُ الطلبات
+  not ok 17 - نافذةُ اليوم لا تُعَدّ مرّتين عند تلاصق النافذتين، وحسابٌ غير مفتوحٍ صفرٌ لا استثناء
+  # tests 17 / # pass 14 / # fail 3
+  (وقبلَها أسقط المُصرِّفُ الطعنَ أصلًا: «Property 'paidSince' does not exist» — فالبيانةُ مربوطةٌ بالعلاج)
+ثمّ أُعيدت الرقعةُ حرفًا فرجع 17/17.
+
+حرسُ الحجم: src/external/payment_controls.ts 323 ⇒ 327 سطرًا · account_registry.ts 374 ⇒ 395
+  والسقفُ المعلن 400 (scripts/limits/module_limits.yaml) — فلا سقفٌ رُفع ولا استثناءٌ زِيد:
+$ bash scripts/check_module_size.sh   (والرقعةُ مطبَّقة)
+  سقف الوحدة المعلن: 400 سطرًا
+  ✓ لا وحدة تتجاوز سقفها — الاستثناءات المعلنة: 0
+  وsrc/economy/ledger.ts (396/400) لم يُلمس بسطر: القراءةُ من `journal()` القائمةِ أصلًا.
+
+================================================================================
+§5) الحاجزُ — حجزٌ قائمٌ لغيري، فلم يُلتزَم بسطرٍ من الشفرة
+================================================================================
+$ bash scripts/check_generated_numbers.sh
+فحصُ الأرقام المنقولة يدويًّا: التوثيق مقابل الشجرة والمُشغّل (T-128)
+✗ `src/external/`: الجدولُ يقول 8 ملفًا و2135 سطرًا، والشجرةُ 8 و2160
+  التصحيحُ فعلُ جهةٍ لا فعلُ أداة: يُقاس ويُكتب، ولا يُصحَّح الصفُّ المعمولُ فيه وحدَه
+
+وصفُّ `src/external/` في ARCHITECTURE.md — وARCHITECTURE.md **محجوزٌ لـW-2026-032**
+(المالك: المساعد الآلي — الجلسة 73 · الحال: REVIEW · وREVIEW حالٌ حاجزةٌ للنطاق بنصِّ
+docs/work/WORK_CONTROL.md §5). فلمسُه نقضُ RULE-011 ونقضُ RULE-012، وبوابةُ check:work
+ترفضه بنصِّها: «كتابةٌ في نطاقِ بندٍ آخر … ووجودُ حاجزٍ ليس إذنًا لغير صاحبِه».
+
+وقيس أنّ الحاجزَ عامٌّ لا خاصٌّ بهذا البند: scripts/check_generated_numbers.sh يعدُّ الأسطرَ
+بـ`wc -l` على كلِّ ملفِّ .ts في كلِّ مجلدٍ تحت src/ ويقابله بجدولِ ARCHITECTURE.md، فأيُّ
+سطرٍ يُضاف أو يُحذف في أيِّ ملفٍّ تحت src/ يُسقط الحاجز حتّى يُصحَّح الصفُّ بقياس.
+⇒ ما دام ARCHITECTURE.md محجوزًا، فكلُّ عملٍ في src/ متعطّلٌ لا هذا البندُ وحدَه.
+وهذه هي عينُ العلّةِ المُعلنةِ دَينًا في T-166 (الجلسة 72)، وقعت مرّةً ثالثة.
+
+ما لم يُفعَل (نصًّا): لم يُلمس ARCHITECTURE.md · لم يُرفع حجزٌ لغيري · لم يُوسَّع نطاقي إليه ·
+لم يُعطَّل اختبارٌ · لم يُسكَت فشلٌ · لم يُلطَّف حاجزٌ · لم يُمنح استثناءٌ · لم يُنقل رقمٌ بلا قياس ·
+ولم يُدَّع VERIFIED. والشفرةُ رُدَّت إلى أصلِها فالشجرةُ نظيفةٌ والرقعةُ محفوظةٌ أعلاه حرفًا.
+
+================================================================================
+§6) الخطوةُ التالية بصاحبها
+================================================================================
+القرارُ عند القيّم على المستودع (مالكُ المراجعة):
+  (أ) يُراجع W-2026-032 ويُغلقه فيتحرّر ARCHITECTURE.md ⇒ تُطبَّق رقعةُ §3 حرفًا ويُصحَّح
+      صفُّ `src/external/` بقياسٍ من الشجرةِ لحظتَه، ويُنقل W-2026-033 إلى IN_PROGRESS.
+  (ب) أو يُخرج ARCHITECTURE.md من نطاقِ W-2026-032 ويُضيفه إلى نطاقِ W-2026-033 حجزًا
+      جديدًا لا مزدوجًا (كما فُعل في الجلسة 72 مع W-2026-027).
+ولا يملك المنفّذُ أيًّا من الخيارَين: الأوّلُ مراجعةٌ (RULE-016) والثاني نقضُ حجزٍ قائم (RULE-011).
