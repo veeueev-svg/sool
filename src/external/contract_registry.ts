@@ -36,6 +36,7 @@ import type { DurableSink } from '../data/persistence';
 import { CrownGateway } from '../crown/crown_gateway';
 import { ExternalAccountRegistry, FOREIGN_MINISTRY } from './account_registry';
 import { PartnerRisk } from './partner_risk';
+import { validateRecoverySnapshot } from './contract_recovery';
 
 export interface ExternalContract {
   readonly contractId: string;
@@ -380,14 +381,9 @@ export class ExternalContractRegistry {
 
   /** يستعيد الأرشيف الملكي عقودًا متحققة البنية؛ لا يمنح صلاحية إنهاء جديدة. */
   importAll(snapshot: ContractRegistrySnapshot, by: EntityId): boolean {
-    if (!Array.isArray(snapshot.contracts) || !Number.isSafeInteger(snapshot.sequence)
-      || snapshot.sequence < 0
-      || new Set(snapshot.contracts.map((contract) => contract.contractId)).size !== snapshot.contracts.length
-      || snapshot.contracts.some((contract) => !contract.contractId.startsWith('extc:')
-        || !this.deps.risk.kind(contract.kindId) || !Number.isSafeInteger(contract.value)
-        || contract.value <= 0 || !Number.isSafeInteger(contract.endsAt))) {
-      throw new Error('RECOVERY_CONTRACT_INVALID');
-    }
+    // T-68: بابُ الاستعادةِ يُفحصُ بالثوابتِ نفسِها التي يفحصُها `sign` — لا البنيةَ وحدَها،
+    // فلا يدخلُ من هذا البابِ ما يُرفضُ عند البابين. والحارسُ في وحدةٍ جارةٍ لا يُرفعُ سقفُ هذه.
+    validateRecoverySnapshot(snapshot, this.deps, this.contracts);
     this.contracts.clear();
     for (const contract of snapshot.contracts) this.contracts.set(contract.contractId, { ...contract });
     this.sequence = snapshot.sequence;

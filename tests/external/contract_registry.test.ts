@@ -389,3 +389,6 @@ test('**حقنُ انحرافٍ: لمسُ مخرجِ السجلِّ يُرمى �
   assert.throws(() => { listed.push({}); }, TypeError, 'والقائمةُ مجمَّدةٌ كذلك');
   assert.equal(h.s.contracts.list().length, 1);
 });
+
+// أحكامُ بابِ `importAll` الثالث (T-68) فُكّكَت إلى `contract_recovery.test.ts` احترامًا
+// لسقفِ الـ400 سطرًا — لا يُرفعُ سقفٌ خاصٌّ أبدًا.
