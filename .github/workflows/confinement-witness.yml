@@ -1,0 +1,65 @@
+# شاهدُ الحصر داخل الحاوية — T-16 · T-124 (إكمالُ C-09)
+# المالك: وزارة الأمن السيبراني | الوثيقة المرتبطة: docs/decisions/ADR-0026-kernel-confinement.md
+#
+# لماذا وظيفةٌ منفصلةٌ لا خطوةٌ في ci.yml: ci.yml يَحرسُ الدفعَ بحاجزِ check_confinement
+# الذي يُقاسُ على بيئةِ المنفّذ (confined=false — متوقَّع). وهذه الوظيفةُ تُقاسُ على
+# الحاويةِ الفعليّة (confined=true — المُستهدَف). فعلانِ مختلفانِ، فبيئتانِ مختلفتان،
+# فوظيفةٌ منفصلة. ولا تُفتحُ حصرةَ الدفع: نجاحُها شهادةٌ لا شرطُ دمج.
+#
+# ما تُثبته: أنّ صورةَ infra/docker/Dockerfile لمّا تُشغَّل بقيودِ infra/docker/compose.yaml
+# (cap_drop=ALL · no-new-privileges · read-only · network=none) يَشهدُ /proc أنّ كلَّ
+# الشروطِ السبعةِ المُعلنةِ في config/confinement.yaml مستوفاةٌ — فالحصرُ على مستوى
+# النواةِ والحاويةِ قائمٌ، لا تطبيقيٌّ داخلَ العمليّةِ وحده.
+
+name: شاهد الحصر داخل الحاوية
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  witness:
+    name: بناء الحاوية وتشغيل الشاهد المحصور
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: npm
+      - name: تثبيت أدوات البناء من القفل
+        run: npm ci
+      - name: تحقق الأنواع والبناء (ينتج dist/scripts/confinement_witness.js)
+        run: npm run build
+      - name: بناء صورة الحاوية المحصورة
+        run: docker build -f infra/docker/Dockerfile -t sool-confinement-witness .
+      - name: شاهد الحصر داخل الحاوية (T-16 · T-124)
+        run: |
+          docker run --rm \
+            --network=none \
+            --cap-drop=ALL \
+            --security-opt no-new-privileges \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
+            --entrypoint /nodejs/bin/node \
+            sool-confinement-witness \
+            dist/scripts/confinement_witness.js \
+            | tee confinement-witness.txt
+          # الشاهدُ يخرجُ برمز 1 إن لم يكن محصورًا؛ pipefail يُمرّرُه فتسقطُ الخطوة.
+      - name: إخراج القياس إلى ملخّص التشغيل
+        if: always()
+        run: |
+          {
+            echo '## شاهدُ الحصرِ داخلَ الحاوية (T-16 · T-124)'
+            echo '```'
+            cat confinement-witness.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: رفع القياس الخام كأثر
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: confinement-witness
+          path: confinement-witness.txt
