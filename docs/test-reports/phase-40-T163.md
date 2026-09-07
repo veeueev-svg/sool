@@ -88,3 +88,33 @@ PR #1، فشغّل CI (حدث `pull_request`):
   + وجودُ الملفِّ + توفّرُ المتغيّر)، لا بقراءةِ محتوى الصفحةِ.
 
 **ولم يُلمس `main` بفشلٍ**: الفرعُ المؤقّتُ والـPR حُذفا بعدَ قراءةِ النتيجةِ، و`push_guard` لم يُتجاوَز.
+
+---
+
+## §8 مراجعةُ القيّمِ المستقلّ (الجلسة 75 ≠ المنفّذ 74) — 2026-09-07
+
+**أُغلق بقرارِ المراجعِ المفوّضِ (القيّم على المستودع، الجلسة 75) لا منفّذِه**
+(RULE-004 · RULE-016): «أُقرّ W-2026-021 (T-163) وفق الأدلة المُعاد قياسُها».
+أُعيد القياسُ من المصدرِ الحاليّ (HEAD `61c6d1b`):
+
+```
+$ grep -n 'if: failure\|t163_failure_summary' .github/workflows/ci.yml
+39:        if: failure()
+40:        run: bash scripts/t163_failure_summary.sh
+$ ls -la scripts/t163_failure_summary.sh
+-rwxr-xr-x 1 user user 1309 Sep  7 19:16 scripts/t163_failure_summary.sh
+$ grep -n 't163_failure_summary' scripts/check_ci_gates.sh
+42:scripts/t163_failure_summary.sh|...
+$ npm test
+# tests 2258 / # pass 2258 / # fail 0
+$ gh run view 34062657891 --json conclusion,headSha
+{"conclusion":"failure","headSha":"83d3e62336588db72b99b464bc25559d7663a73d"}
+$ gh run view 34062484352 --json conclusion,headSha
+{"conclusion":"success","headSha":"4f8a395647774178d844c06fb08d4d2500b3f597"}
+```
+
+الخطوةُ التشخيصيةُ حاضرةٌ، والسكربتُ موجودٌ، والاستثناءُ مكتوبٌ، والأحمرُ بقي أحمر
+(تشغيلُ السقوطِ المتعمَّد #34062657891 = failure)، ومسارُ CI الأخضر #34062484352 = success.
+حدٌّ مُعلَنٌ: محتوى `$GITHUB_STEP_SUMMARY` غيرُ قابلٍ للقراءةِ عبرَ API العامّ،
+فأُثبِتَ §4-1 بنيويًا ومحلّيًا. والخاصيّةُ الحرجةُ (§4-2) مُتحقَّقٌ منها استقلالًا.
+تُستوفى شروطُ القبول.
