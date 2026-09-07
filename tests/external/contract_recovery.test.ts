@@ -76,7 +76,7 @@ test('**حقنُ انحرافٍ: `importAll` لا يتجاوز سقفَ عددِ
   assert.throws(
     () => h.s.contracts.importAll(flooded, CROWN_GUARD),
     /RECOVERY_CONTRACT_INVALID/,
-    'سقفُ النظيرِ (ثابت 7) يُحكم على المستعادِ كما يُحكم على الموقَّع',
+    'سقفُ النظيرِ (ثابت 6) يُحكم على المستعادِ كما يُحكم على الموقَّع',
   );
   assert.equal(h.s.contracts.active(h.now).length, 1);
 
