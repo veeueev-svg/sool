@@ -1,5 +1,15 @@
 ## [غيرُ مُصدَر] — 2026-09-07
 
+### حوكمة(39)
+- **W-2026-035 (T-16 · T-124) — شاهدُ الحصر داخل الحاوية الفعليّة (REVIEW)**: فجوةُ C-09 كانت «المنعُ تطبيقيٌّ داخلَ العمليّةِ؛ لا حصرَ على مستوى الحاويةِ والنواة». فأُنشئ شاهدٌ قابلٌ للاستنساخ على وظيفةِ CI `confinement-witness.yml` على `ubuntu-latest`: تبني صورةَ `infra/docker/Dockerfile` وتُشغّلُ `scripts/confinement_witness.ts` **داخلَ** الحاويةِ المحصورة (`--network=none --cap-drop=ALL --security-opt no-new-privileges --read-only --tmpfs /tmp`)، فيقرأُ `/proc` ويُثبتُ الحصرَ من النواةِ لا من التطبيق، ويخرجُ برمزِ 1 إن لم يكن محصورًا (لا نجاحٌ صامت — RULE-007).
+  - **اكتشافٌ أثناءَ التنفيذ**: أوّلُ بناءٍ حقيقيٍّ للصورة كشف عيبًا كامنًا — طورُ البناءِ في `infra/docker/Dockerfile` لم يكن يُثبّتُ المُصرِّفَ (`tsc` تبعيةُ تطوير) فصار `tsc: not found` (رمزُ 127). فالصورةُ كانت مُعلنةً لا مَبنية، وحقّقها حاجزُ النصِّ (`check:confinement` يفحصُ USER/FROM-distroless/ENTRYPOINT/لا-privileged) لا التشغيل — عينُ ما أنشئ T-124 لاكتشافه. الإصلاحُ: `COPY package-lock.json` + `RUN npm ci` في طورِ البناءِ قبلَ `npm run build` (المُصرِّفُ تبعيةُ تطويرٍ لا تُشحن للإنتاج).
+  - **القياسُ داخلَ الحاوية** ([التشغيلُ 34167851902](https://github.com/veeueev-svg/sool/actions/runs/34167851902) على `63ae8748`): `confined=true · شروطٌ غيرُ مستوفاة=0` — `uid=10001` · `CapEff=0000000000000000` · `CapBnd=0000000000000000` · `NoNewPrivs=true` · `Seccomp=2` · `readOnlyRoot=true` · `interfaces=lo` · `defaultRoutes=0`. الخرجُ الخامُّ في `docs/audit/measurements/phase-39-T16-container.txt`، والتقريرُ في `docs/test-reports/phase-39-T16.md` §5.
+  - القياسُ المحلّيُّ `confined=false` (5 نقائصَ) — مُعلَنُ الانحرافِ لا مُخفي: بيئةُ التطويرِ ليست الحاوية (RULE-008).
+  - `npm test` **2261/2261** · `verify` رمزُ الخروج 0 (14) · `check:confinement` «لا انحراف» · `check:work` أخضر. وحُكما CI على `63ae8748` أخضران: بوابةُ التاجّ وشاهدُ الحصر.
+  - **ما لم يُفعل:** التصديقُ — المنفّذُ (الجلسة 76) لا يُصدّقُ عملَ نفسِه؛ التصديقُ لمراجعٍ مستقلٍّ (RULE-004 · RULE-016). وحالُ البند `REVIEW`.
+
+## [غيرُ مُصدَر] — 2026-09-07
+
 ### حوكمة(27)
 - **W-2026-034 (T-68) مُصدَّقٌ — VERIFIED بمراجعةٍ مستقلّة**: مراجعةٌ مستقلّةٌ (الجلسة 76 ≠ المنفّذ 75) بإعادةِ القياسِ من المصدر (HEAD `752d836`) لا من شهادةِ التنفيذ: `importAll` يستدعي `validateRecoverySnapshot(snapshot, this.deps, this.contracts)` قبلَ المسحِ (السطر 386) فيفحصُ بثوابتِ `sign` نفسها. الأحكامُ الثلاثةُ (كانت `not ok 26·27·28`) صارت خضراءَ (`ok 1·2·3` في `tests/external/contract_recovery.test.ts`). `contract_recovery`+`contract_registry` **28/28** · `npm test` **2261/2261** · `verify` رمزُ الخروج 0 (14) · `check:size` 0 استثناء · `check:work` أخضرُ. عُدَّ صفُّ `src/external/` استقلالًا: 9 ملفًّا · 2233 سطرًا (يطابقُ `ARCHITECTURE.md`). `version.json` tests.total=`2261` مطابقٌ لخرجِ المُشغّل. **وحكمُ CI مقروءٌ من GitHub API**: HEAD `752d836` ⇒ #34162303618 = success. الادّعاءُ صحّ بالقياسِ لا بالافتراض.
 
