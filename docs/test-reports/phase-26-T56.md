@@ -72,3 +72,37 @@ $ bash scripts/check_generated_numbers.sh
 
 ولم يُرفع سقفٌ (account_registry 395/400 · payment_controls 327/400)، ولم يُزَد استثناءٌ،
 ولم يُلمس `src/economy/ledger.ts` (396/400) بسطر، ولم يُعطَّل اختبارٌ، ولم يُسكَت فشل.
+
+---
+
+## §8 مراجعةُ القيّمِ المستقلّ (الجلسة 75 ≠ المنفّذ 74)
+
+**أُغلق بقرارِ المراجعِ المفوّضِ (القيّم على المستودع، الجلسة 75) لا منفّذِه**
+(RULE-004 · RULE-016): «أُقرّ W-2026-033 (T-56) وفق الأدلة المُعاد قياسُها، وحرّر
+حجز `ARCHITECTURE.md`». أُعيد القياسُ من المصدرِ الحاليّ (HEAD `be2b323`، متزامنٌ
+مع `origin/main`: 0/0) لا من شهادةِ التنفيذ:
+
+```
+$ git rev-parse HEAD
+be2b32332e7310834e58715f885c8cb58bdf94c5
+$ git rev-list --left-right --count origin/main...HEAD
+0	0
+$ git log --oneline -1 -- src/external/payment_controls.ts
+b1f0272 حوكمة(26): تطبيق T-56 — نافذة اليوم تُقاس من الدفتر لا من ذاكرة الوحدة
+$ node --test dist/tests/external/payment_controls.test.js
+# tests 17 / # pass 17 / # fail 0
+$ npm test
+# tests 2258 / # pass 2258 / # fail 0
+$ bash scripts/check_generated_numbers.sh
+✓ جدولُ المجلدات: 25 صفًّا كلُّها مطابقةٌ للشجرة
+✓ عددُ الاختبارات: 2258 مطابقٌ لخرجِ المُشغّل
+$ gh run view 34054764530 --json conclusion,headSha,status
+{"conclusion":"success","headSha":"b1f02721334d0ef201edf5949b3c6f9718897cb6","status":"completed"}
+$ gh run view 34065600149 --json conclusion,headSha,status
+{"conclusion":"success","headSha":"be2b32332e7310834e58715f885c8cb58bdf94c5","status":"completed"}
+```
+
+الرقعةُ حاضرةٌ في HEAD: `spentSince` تقرأ من `registry.paidSince` الذي يقرأ
+`ledger.journal()` صافيًا — مصدرُ السقفِ الكلّيِّ نفسُه. عددُ الاختباراتِ الحاليّ 2258 لا
+2252 — انحرافٌ توثيقيٌّ من أعمالٍ لاحقةٍ بعد REVIEW لا عيبٌ في هذا البند، والشرطُ
+(أخضريةُ المجموعة) مستوفًى. تُستوفى شروطُ القبول.

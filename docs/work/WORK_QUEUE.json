@@ -5,7 +5,7 @@
   "gate": "scripts/check_work.mjs",
   "history": "docs/work/WORK_LOG.md",
   "id_pattern": "W-YYYY-NNN",
-  "updated_at": "2026-09-06",
+  "updated_at": "2026-09-07",
   "statuses": [
     "PROPOSED",
     "CLAIMED",
@@ -613,62 +613,6 @@
       "created_at": "2026-09-02",
       "updated_at": "2026-09-07",
       "verification": "npm test 2258/2258 صفرُ فشل (2253+5 مُضافةٌ في tests/governance/work_control_keys.test.ts) · verify أخضرُ بأربعَ عشرةَ خطوةً · check:work أخضرُ · check:size أخضرُ (work_control.test.ts 396/400، work_control_keys.test.ts 105/400) · الرقعة: item_keys تُقرأُ من بيانِ السجلِّ، والمفتاحُ الغريبُ يُرفضُ، ونصُّ القالبِ يُرفضُ حيث يوجَب محتوًى · الاختباراتُ تسقطُ قبلَ الإصلاحِ وتخضرّ بعده (قياسُ التأكيد بالطعن). حالُه REVIEW لا VERIFIED فلا يُصدِّقُه منفِّذُه (RULE-004 · RULE-016)."
-    },
-    {
-      "id": "W-2026-033",
-      "title": "BUG-T-56: سقفُ اليومِ يُقاس بذاكرةِ الوحدةِ والسقفُ الكلِّيُّ بالدفتر — حجّتان لرقمَين، ونافذةُ اليومِ تُمحى بإرجاعٍ ناقص",
-      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 74)",
-      "reviewer": "القيّم على المستودع",
-      "area": "المال الخارجي والسقوف",
-      "phase": 26,
-      "status": "REVIEW",
-      "progress_items": [
-        "T-56"
-      ],
-      "dependencies": [
-        "لا شيء"
-      ],
-      "scope": [
-        "ARCHITECTURE.md",
-        "docs/audit/measurements/phase-26-T56.txt",
-        "docs/test-reports/phase-26-T56.md",
-        "docs/work/orders/W-2026-033.md",
-        "src/external/account_registry.ts",
-        "src/external/payment_controls.ts",
-        "tests/external/payment_controls.test.ts"
-      ],
-      "excluded": [
-        "`src/external/account_view.ts` — قيس أنّ العلاجَ لا يحتاجه (عقدُه في رأسِه: لا دفترَ مباشرةً) فبقي خارج النطاق",
-        "`src/economy/ledger.ts` — لم يُلمس بسطر (396/400): القراءةُ من `journal()` القائمةِ أصلًا، ولا بابٌ جديدٌ فُتح في الدفتر",
-        "تليينُ الحاجز: لا استثناءٌ في `scripts/limits/module_limits.yaml` ولا في بوابةِ الأرقام، ولا `wc -l` غُيِّر، ولا صفٌّ نُقل بلا قياس",
-        "ادّعاءُ VERIFIED: العلاجُ مُلتزَمٌ ومقيسٌ ومرحلٌ إلى REVIEW فقط — والإقرارُ للقيّم المستقلّ (RULE-016)، والمنفّذُ لا يُقرّ عملَ نفسِه (RULE-004)"
-      ],
-      "acceptance": [
-        "الدعوى قيست قبل لمسِ شفرة فصحّت وظهرت أوسعَ من نصِّها: 3,000,000 تُصرَف في يومٍ سقفُه 2,000,000 بعد إقلاعٍ بيوميّةٍ ناقصةٍ دفعةً (القياس §2) — ✓",
-        "نافذةُ اليومِ تُقرأ من الدفترِ نفسِه لا من قائمةٍ في ذاكرةِ الوحدة، ومن مصدرِ السقفِ الكلّيِّ عينِه — حجّةٌ واحدةٌ لرقمَين (الرقعة §3) — ✓",
-        "الصافي هو الحكم: قيدٌ عُكس بقيدٍ معاكسٍ ينزل من النافذة، ولا يُعَدُّ قيدُ الحدِّ مرّتين عند تلاصقِ نافذتَين، وحسابٌ غير مفتوحٍ صفرٌ لا استثناء — ✓ (الاختباران 16 · 17)",
-        "البيانةُ مربوطةٌ بالعلاج لا موازيةٌ له: رَدُّ src/external/ وحدَها يُسقط الثلاثةَ الجديدةَ (15 · 16 · 17) ولا يُسقط غيرَها — قيس §4 — ✓",
-        "لا انحدار: 2250 اختبارًا سابقًا كلُّها مارّة، والحصيلةُ 2253 بالرقعة (3 جديدة) — ✓",
-        "حرسُ الحجمِ أخضرُ بلا استثناءٍ يُزاد: account_registry 395/400 وpayment_controls 327/400 — ✓",
-        "الالتزامُ والدفعُ وحكمُ CI: رُفع الحاجزُ فالتُزمت الشفرةُ ودُفعت وحكمُ CI مقروءٌ — #34054764530 على b1f0272 = success — ✓"
-      ],
-      "evidence": [
-        "src/external/account_registry.ts — أُضيف `paidSince(accountId, since)` يقرأ `ledger.journal()` صافيًا (القيدُ المعاكسُ ينزل)",
-        "src/external/payment_controls.ts — `spentSince` صارت تقرأ من `registry.paidSince` لا من `this.payments`",
-        "tests/external/payment_controls.test.ts — ثلاثةُ أحكامٍ جديدة (14⇒17) + استيراد REGISTRY + تصحيح رسالة حكم",
-        "ARCHITECTURE.md — صُحّح صفُّ src/external/ بقياسٍ من الشجرة (2135⇒2160) وأُضيف وصفُ T-56",
-        "version.json — tests.total/passing 2250⇒2253 من خرجِ المُشغّلِ نفسِه",
-        "node --test dist/tests/external/payment_controls.test.js ⇒ 17/17 · 0 فشل",
-        "npm test ⇒ 2253/2253 · 0 فشل (كانت 2250 قبل الرقعة)",
-        "npm run verify ⇒ رمزُ الخروج 0 (14 حاجزًا أخضر)؛ تنبيهُ تذبذبٍ: بوابةُ التعدادات المغلقة (T-167) أسقطت حكمًا في التشغيلة الأولى ثم خضرَّت عند إعادة القياس بلا تغيير سطر",
-        "bash scripts/check_generated_numbers.sh ⇒ 2253=2253 وsrc/external/ 2160=2160 (✓)",
-        "bash scripts/check_module_size.sh ⇒ 0 استثناء (account_registry 395/400 · payment_controls 327/400 · ledger 396/400 لم يُلمس)",
-        "حكمُ CI مقروءٌ من GitHub API: #34054764530 على b1f0272 ⇒ completed / success"
-      ],
-      "next_step": "مراجعةُ القيّمِ المستقلِّ على المستودع (RULE-016): إقرارٌ فيُنقل البندُ إلى WORK_LOG.md بخلاياه العشر، أو ردٌّ بعلّةٍ مسمّاةٍ ومقيسة. والمنفّذُ (الجلسة 74) لا يُقرّ عملَ نفسِه (RULE-004).",
-      "created_at": "2026-09-06",
-      "updated_at": "2026-09-06",
-      "verification": "رُفع الحاجزُ بقرارِ المالكِ (الخيار أ): أُغلق W-2026-032 فتحرّر ARCHITECTURE.md. طُبّقت رقعةُ القياس §3 حرفًا: `paidSince` يقرأ `ledger.journal()` صافيًا (القيدُ المعاكسُ ينزل) و`spentSince` تقرأ منه — حجّةٌ واحدةٌ لرقمَين من مصدرٍ واحد. ثلاثةُ أحكامٍ جديدة (14⇒17). المقيس: node --test payment_controls.test.js 17/17 · npm test 2253/2253 (كانت 2250) · npm run verify رمز 0 (14 حاجزًا) · check_generated_numbers 2253=2253 وsrc/external/ 2160=2160 · check_module_size 0 استثناء (395/400 و327/400، ledger 396/400 لم يُلمس). صُحّح صفُّ ARCHITECTURE.md بقياسٍ من الشجرة (2135⇒2160) وversion.json من خرجِ المُشغّل (2250⇒2253). وحكمُ CI مقروءٌ من GitHub API: #34054764530 على b1f0272 ⇒ success. بقي معيارُ المراجعةِ المستقلّةِ (RULE-016) — والمنفّذُ لا يملكُه (RULE-004)."
     },
     {
       "id": "W-2026-034",
