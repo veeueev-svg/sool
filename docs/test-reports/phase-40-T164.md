@@ -75,3 +75,42 @@
   المنفِّذُ (RULE-004 · RULE-016). يُفتحُ للمراجعِ المستقلِّ فينتظرُ قضاءَه.
 - **رفعُ سقفٍ أو استثناءٌ**: لم يُرفعْ سقفُ وحدةٍ ولم يُضَفْ استثناءٌ — الملفُ فُكِّكَ
   تحت السقفِ كما يفرضُ حاجزُ الحجمِ (قاعدةُ «لا يُرفعُ سقفٌ خاصٌّ أبدًا»).
+
+---
+
+## §8 مراجعةُ القيّمِ المستقلّ (الجلسة 75 ≠ المنفّذ 74) — 2026-09-07
+
+**أُغلق بقرارِ المراجعِ المفوّضِ (القيّم على المستودع، الجلسة 75) لا منفّذِه**
+(RULE-004 · RULE-016): «أُقرّ W-2026-024 (T-164) وفق الأدلة المُعاد قياسُها».
+أُعيد القياسُ من المصدرِ الحاليّ (HEAD `9e7b9f8`):
+
+```
+$ grep -n 'item_keys' scripts/check_work.mjs
+134:const ITEM_KEYS = Array.isArray(queue.item_keys) ? queue.item_keys : null;
+136:  fail(`${QUEUE}: حقلُ item_keys ناقصٌ ... (T-164)`);
+157:      if (!ITEM_KEYS.includes(k)) fail(`${id}: مفتاحٌ لا يعرفه بيانُ السجلِّ «${k}» ... (T-164)`);
+$ grep -n 'TEMPLATE_RE\|isTemplate' scripts/check_work.mjs
+98:const TEMPLATE_RE = /^\s*يُملأ/u;
+99:const isTemplate = (v) => ...
+163:      if (isTemplate(it[f])) fail(`${id}: خانةُ «${f}» لا تزالُ على نصِّ القالبِ ... (T-164)`);
+$ node --test dist/tests/governance/work_control_keys.test.js
+# pass 5 / # fail 0
+$ npm test   ⇒ 2258/2258
+$ gh run view 34158810739 --json conclusion
+{"conclusion":"success"}
+```
+
+**إعادةُ الإنتاجِ المستقلّة لرفضِ المفتاحِ الغريب** (على نسخةٍ منسوخةٍ من `git archive HEAD`):
+
+```
+$ git archive HEAD | tar -x -C /tmp/t164
+$ # حقنُ state="VERIFIED" في بندٍ REVIEW
+$ node scripts/check_work.mjs
+✗ W-2026-004: مفتاحٌ لا يعرفه بيانُ السجلِّ «state» ... (T-164)
+✗ بوابةُ ضبط العمل ترفض: 1 مخالفة
+EXIT=1
+```
+
+البوابةُ تقرأُ المفاتيحَ المسموحةَ من `item_keys` في بيانِ السجلِّ، وترفضُ المفتاحَ الغريبَ
+(أُعيد إنتاجُه استقلالًا) ونصَّ القالبِ، والاختباراتُ خضراءُ، وCI على HEAD أخضرُ.
+تُستوفى شروطُ القبول.
