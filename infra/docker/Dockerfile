@@ -20,10 +20,13 @@
 # ── الطور الأول: البناء. يُصرَّف هنا وحده، ولا شيء منه يُشحن إلا `dist/`.
 FROM node:20-bookworm-slim AS build
 WORKDIR /build
-COPY package.json tsconfig.json ./
+COPY package.json package-lock.json tsconfig.json ./
 COPY src ./src
 COPY tests ./tests
 COPY scripts ./scripts
+# المُصرِّفُ (tsc) تبعيةُ تطويرٍ لا تشغيلٍ — يُثبَّت هنا في طور البناء وحده، ولا
+# شيءَ منه يُشحن. والمشروعُ بصفرِ تبعياتِ تشغيل، فلا `node_modules` في الطور الأخير.
+RUN npm ci
 RUN npm run build
 
 # ── الطور الثاني: التشغيل. صورةٌ بلا مُدير حزم وبلا صدفة (ثابت 1).
