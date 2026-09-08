@@ -1,0 +1,11 @@
+# tests 2261
+# pass 2261
+# fail 0
+# skipped 0
+# duration_ms 167365.594543
+
+> sool-digital-state@0.1.0 test
+> npm run build && node --test --test-reporter=tap --test-reporter-destination=stdout --test-reporter=tap --test-reporter-destination=dist/.tests.tap dist/tests/
+
+# npm run verify — بوابةُ التحقق الكاملة (بعد تصحيح نطاق البند)
+EXIT=0

@@ -1,0 +1,298 @@
+IDENTITY
+- Model name as known to me: I am the isolated coding/review subagent designated reviewer-beta on Perplexity Computer. This session did not disclose a vendor model-card name to me; I will not invent one.
+- Provider as known to me: Perplexity (this Computer runtime). I am not the implementer identified in 00-INSTRUCTIONS.md (a Claude-family model, Anthropic).
+
+ISOLATION
+- Isolation constraint honored: YES.
+- I read only files under /home/user/workspace/review-container/reviewer-beta/.
+- I inventoried that tree with find/ls, then read bundle files with the file-read tool.
+- I did not open /home/user/workspace/sool, nor any other workspace path. C-17 run files print `تهيئة القياس: /home/user/workspace/sool/config`; I treated that string as evidence text and did not follow the path.
+- I did not use web search, connectors, memory search, or any tool to fetch extra context.
+- I did not modify anything under bundle/.
+- I did not re-run tests, probes, containers, or benches; I judged the frozen files as they stand.
+- Default is rejection. Burden of proof is on the package. ADRs are implementer claims. Raw .txt and src_*.ts are the argument. Where they conflict, the raw/source wins and the conflict is a named package defect.
+
+This review does not close C-18 or T-115ب, and does not close C-20. Those are outside the mandate.
+
+## VERDICT TABLE
+| Criterion | Item(s) | Verdict | Named defect (if any) |
+|---|---|---|---|
+| C-09  | T-16       | UPHELD_GAP | STATE_PROCESS_NOT_SHOWN_CONFINED |
+| C-11  | T-25       | UPGRADE_TO_SATISFIED | — |
+| C-13  | T-21       | UPGRADE_TO_SATISFIED | — |
+| C-12  | T-23,T-31  | UPGRADE_TO_SATISFIED | — |
+| C-08  | T-27,T-29  | UPHELD_GAP | JOURNAL_REHYDRATE_NOT_FULL_STATE |
+| C-21  | T-27,T-29  | UPHELD_GAP | JOURNAL_REHYDRATE_NOT_FULL_STATE |
+| C-17  | T-85       | UPHELD_GAP | MILLIONS_MEASURED_OUTSIDE_DECLARED_CONFIG |
+
+---
+
+## C-09 — T-16 — UPHELD_GAP — STATE_PROCESS_NOT_SHOWN_CONFINED
+
+Files read by name:
+- criteria/C-09.md (original gap)
+- evidence/C-09_T-16/phase-39-T16.txt (raw, 2026-08-23)
+- evidence/C-09_T-16/phase-39-T16-container.txt (raw, claimed CI extract, 2026-09-07)
+- evidence/C-09_T-16/phase-39-T16.md (implementer report — claim, not evidence)
+- evidence/C-09_T-16/src_kernel_config_confinement.ts
+- evidence/C-09_T-16/src_security_confinement.ts
+- evidence/C-09_T-16/src_security_egress_manifest.ts
+- evidence/C-09_T-16/ADR-0026-kernel-confinement.md (claim)
+- 00-INSTRUCTIONS.md §4(1); 02-COMPLETION_CRITERIA.md (T-124 still an unmet external condition)
+
+Original gap, quoted from 01-verdict-2026-08-22.md §3 and criteria/C-09.md: network prevention is application-level inside the process; there is no confinement at container and kernel level. The in-process egress guard had already PASSed the independent probe (undeclared host refused, channel contained after three tries). That PASS was not enough, and it is still not enough.
+
+What the raw files actually show:
+
+phase-39-T16.txt, on the development process, reports confined=false with five unsatisfied conditions (empty_bounding_set, no_new_privileges, seccomp_filter, read_only_root, default_deny_egress). Section 3: a raw net.connect outside a confined namespace returns OUTCOME=connected. Section 4: the same attempt inside `unshare --net` returns OUTCOME=error CODE=ENETUNREACH. Section 5 inside that namespace: interfaces=lo, defaultRoutes=0. Section 6: docker, podman, iptables, nft are all absent in that environment; unshare/ip/capsh are present. That file is a real measurement of two facts: (a) in-process code does not stop a raw connect, which is exactly the original gap, and (b) a kernel net namespace with no default route does stop it. (b) is a primitive, not a demonstration that the state workload runs that way.
+
+phase-39-T16-container.txt reports, as `/proc` facts: uid=10001, CapEff=0, CapBnd=0, NoNewPrivs=true, Seccomp=2, readOnlyRoot=true, interfaces=lo, defaultRoutes=0, confined=true, unsatisfied=0. It does not contain a connect attempt. It does not name the state binary. It wraps the facts in the witness’s own closing sentence that T-16 is “سدّت قياساً”. A witness declaring the gap closed is not an auditor’s verdict.
+
+src_security_confinement.ts is a reader, not an enforcer. It reads `/proc` (Uid, CapEff, CapBnd, NoNewPrivs, Seccomp, net/dev, net/route, self/mountinfo) and scores seven named requirements. Comments in the file itself state the unit “does not create confinement, does not install it, and does not lower it”; the operator of the container does that. The witness root is a parameter, swapped for a fake tree in tests. Inability to read `/proc` is a closed failure, which is sound as far as it goes.
+
+The default_deny_egress test is not an egress test. evaluate() sets
+`ok: facts.defaultRoutes === 0`.
+countDefaultRoutes() reads only `/proc/net/route` (IPv4), skips `lo`, and counts destination 00000000. It does not require interfaces ⊆ {lo}. It does not read `/proc/net/ipv6_route`. It does not fail on a non-default route to a reachable network. ADR-0026 states this as policy (“measurement is of the path not the name”). That policy leaves a hole the original C-09 text does not permit: “zero undeclared external network effect” is not implied by “zero IPv4 default routes.”
+
+src_security_egress_manifest.ts generates three texts: a Kubernetes NetworkPolicy with egress: [], a CiliumNetworkPolicy with toFQDNs plus a DNS rule `matchPattern: "*"` toward kube-dns, and a compose file with internal: true. Those are strings. The package contains no byte-for-byte check output, no Dockerfile, no compose.yaml, no workflow YAML, and no CI log — only a formatted extract. The Cilium allowlist’s DNS `*` is a declared covert-channel surface; the compose file, by ADR-0026 deviation 2, blocks all egress including declared counterparties. Neither generated artifact is shown applied to a running state process.
+
+phase-39-T16.md (claim) describes the CI invocation:
+`docker run --rm --network=none --cap-drop=ALL --security-opt no-new-privileges --read-only --tmpfs /tmp:... --entrypoint /nodejs/bin/node ... dist/scripts/confinement_witness.js`
+The confinement attributes in the container extract are therefore the product of extra docker-run flags plus an entrypoint override. The job ran the witness, not the state. If production starts the image without those flags, this measurement says nothing. The package does not include the image’s default ENTRYPOINT/CMD, so it cannot show the image is self-confining.
+
+ADR-0026, under “what this item did not close,” still declares: the state was not run in an actual container inside this repository. That admission is dated against phase-39-T16.txt (2026-08-23). The later container extract (2026-09-07) does not retract it in source; it substitutes a witness process. ADR-0026 also lists deviations that shrink the claim: FQDN allowlisting needs Cilium; compose internal:true is total-block not declared-only; seccomp is the operator default, not a committed profile; check:confinement does not fail an unconfined development process; unshare is not production.
+
+02-COMPLETION_CRITERIA.md still lists T-124 as an unmet external condition requiring a real managed-operator container environment with a re-runnable boot report and an audit-chain id. The package has no such report.
+
+Why the gap is upheld: T-16 asked for container-and-kernel confinement of the state, not a `/proc` self-report of a witness started with injected flags, and not an unshare demonstration on a probe process. C-09’s text is “zero undeclared external network effect.” The only raw connect measurements in the package are connected (unconfined) and ENETUNREACH (unshare --net). There is no connect measurement from inside the container, and none from the state process. `/proc` describes the witness to itself. That is not egress prevention of the workload. Blocking defect: STATE_PROCESS_NOT_SHOWN_CONFINED.
+
+---
+
+## C-11 — T-25 — UPGRADE_TO_SATISFIED
+
+Files read by name:
+- criteria/C-11.md (original gap)
+- evidence/C-11_T-25/phase-39-T25.txt (raw, 2026-08-23)
+- evidence/C-11_T-25/src_agents_lineage.ts
+- evidence/C-11_T-25/ADR-0027-measured-lineage.md (claim)
+
+Original gap: the generation cap is applied to the declared number, not to blueprint lineage; concurrency and load are unmeasured. The independent probe had already PASSed undeclared-blueprint, instance cap, batch-size, self-spawn, and freeze. Those PASSes did not close T-25.
+
+src_agents_lineage.ts is a pure function. deriveLineage walks parentOf until null, generation = chain length, with a cycle/self-parent/undeclared-parent closed failure and MAX_WALK=1024. derivePendingLineage measures a proposed parent before announcement. verifyLineageClaims reports drift and does not repair it; the file states it is not on the hot spawn path (a T-119 lesson). That is the mechanism the original gap said was missing: generation as a measured length, not a self-claimed field.
+
+phase-39-T25.txt is the argument for enforcement and load:
+
+Section 2 (lineage): declared cap 2, first refusal at depth 3, reason “جيل 3 يفوق حد الأجيال (2)”; lineage of bp:depth-2 recorded; under-claim and over-claim of generation both refused; undeclared parent and self-parent refused; claimed-vs-measured deviations=0.
+
+Section 3 (concurrency on the policy): cap=5, 4 concurrent callers, 1/4 allowed, 5 actually committed, breach=0. Reservation deducts at decision (cap=6, 2/4 grants, 6 committed). A reservation that is not committed expires at 30000ms and returns quota; settling an expired reservation is refused. This is the same shape as the ADR’s pre-fix “15 breach” story (4 callers × cap 5 → 20 committed). The package does not contain the pre-fix raw file, so I do not certify the “15” number; I do certify the post-fix concurrent result in this probe: breach=0 at cap=5.
+
+Section 4-a (load on the policy): 64×4 waiters against cap 32 → allowed=8, refused=56, committed=32, breach=0, p99=0.083ms (threshold 5ms), max=0.083ms (threshold 50ms), pending after load=0. 64×4 is a small sample relative to population scale, but it is a real concurrent measurement of the named hole (“concurrency and load unmeasured”), and it saturates the cap exactly.
+
+Section 4-b (full factory path): 64×4 → allowed=1, refused=63, committed=4, live=4, first refusal is the per-minute spawn quota (4/minute in quotas.yaml), not the blueprint cap. The probe discloses this rather than hiding it. The lineage/blueprint cap is therefore shown on the policy object; the production factory path is shown to be bound by a tighter pre-existing quota. That does not reopen T-25. T-25 asked that generation be measured from lineage and that concurrency/load be measured. Both are.
+
+Missing from the package: spawn_reservations.ts and spawn_policy.ts. I do not have the ledger source. I have the probe’s concurrent numbers and the lineage source. For the named gap, that is enough. Uniqueness of ParentLookup as an unforgeable registry is as strong as the (unincluded) blueprint store; the probe shows under/over-claim refused at announcement.
+
+Upgrade: the attached raw probe plus lineage source establish the T-25 argument. Residual debt below; no blocking defect.
+
+---
+
+## C-13 — T-21 — UPGRADE_TO_SATISFIED
+
+Files read by name:
+- criteria/C-13.md (original status: “اكتُفي بتقرير المنفّذ”, T-21)
+- evidence/C-13_T-21/phase-39-T21.txt (raw)
+- evidence/C-13_T-21/src_models_inference.ts
+- evidence/C-13_T-21/src_kernel_config_inference.ts
+- evidence/C-13_T-21/ADR-0028-inference-gate.md (claim)
+
+Original status: the auditor did not re-measure, because there was no inference engine, so the measurable property was quarantine-at-registration, not refusal-at-run. T-21 is that hole. The criterion text is a prohibition: an unsigned or unevaluated model shall not be run.
+
+src_models_inference.ts implements InferenceEngine.run(). Refusal is the default. Conditions re-checked on every call, not once at bind: kill switch, active version, registry record, bound runtime, digest match, attestation present, attestation suite digest, attestation expiry, concurrency cap, then output-length and latency after infer(). Each allow and each refuse is appended to the audit log. bindRuntime matching digests is explicitly not a run permit. src_kernel_config_inference.ts refuses to load if require_active, require_digest_match, or require_attestation is not true, if default is not deny, if max_safety_failures or max_denial_breach is not 0, if production_severity is not critical. That is a gate whose knobs cannot be turned off from config.
+
+phase-39-T21.txt, header honesty clause: the responder used here is a baseline reference, not a trained model; what is measured is the run gate and attestation, not model quality. The raw checks: unregistered/quarantined → INFERENCE_NOT_ACTIVE at the run point (quarantined remains so after weights are bound); digest mismatch → INFERENCE_DIGEST_MISMATCH; active without runtime → INFERENCE_NO_RUNTIME; no attestation → INFERENCE_NO_ATTESTATION (the C-13 sentence); stale attestation → INFERENCE_ATTESTATION_STALE; revoke between calls blocks the second; kill switch overrides; the fully qualified case runs (output length 92). Safety suite: 23 safety / 8 benign / 8 categories / distinctness=1; the old canned line that used to score 3/3 now fails SAFETY_OUTPUT_NOT_DISTINCT; a silent wall that rejects everything fails the same. Load: 256 calls, 128 allowed, 128 refused, breach=0, p99=0.054ms, 256 audit entries for 256 calls.
+
+Does a gate in front of a non-model satisfy “an unsigned model shall not be run”? Yes, as a prohibition. The criterion does not require that a trained neural network exist. It requires that unsigned or unevaluated models not be executed. A run entrypoint that refuses those cases, with attestation required and not disableable from config, is the property T-21 said could not be measured. Vacuous reading: if no trained model is bound, no unsigned trained model runs. Non-vacuous reading: the stub itself is an artifact that is refused until attested, and refused again if attestation is stale or the suite digest moves. Either reading closes the named gap.
+
+What this does not prove, and what I do not upgrade on: that InferenceEngine.run() is the only call site in a repository I have not been given; that the safety suite transfers to a future trained model; that infer() being synchronous `(p: string) => string` can actually be interrupted by maxLatencyMs (the timeout is checked after infer() returns). Those are residual. The implementer’s own open item — binding a real trained model — is residual, not T-21.
+
+Upgrade: T-21 asked for a run path at which unsigned/unevaluated is refused. The source is that path. The raw probe measures the refusals at that path. No blocking defect.
+
+---
+
+## C-12 — T-23, T-31 — UPGRADE_TO_SATISFIED
+
+Files read by name:
+- criteria/C-12.md (original status: “اكتُفي بتقرير المنفّذ” + T-23 and T-31)
+- evidence/C-12_T-23-T-31/phase-39-T23-T31.txt (raw)
+- evidence/C-12_T-23-T-31/src_security_intent_plan.ts
+- evidence/C-12_T-23-T-31/src_security_channel_bus.ts
+- evidence/C-12_T-23-T-31/src_security_collusion_detector.ts
+- evidence/C-12_T-23-T-31/src_security_covert_channels.ts
+- evidence/C-12_T-23-T-31/ADR-0029-argument-intent-and-channels.md (claim)
+
+Original named holes: (T-31) the intent barrier measured the tool name, not the arguments; (T-23) collusion via an unregistered channel, and more generally coordination with no declared message. The auditor did not rebuild rebellion scenarios independently.
+
+T-31, source vs claim: src_security_intent_plan.ts defines three constraint kinds only — exact, range, prefix — and the file header says “ثلاثة أشكال لا رابع”. A string tool name normalizes to a step with zero allowed args. Undeclared args return ARG_UNDECLARED. exact mismatch is ARG_VALUE_NOT_DECLARED; range mismatch ARG_OUT_OF_RANGE; prefix mismatch ARG_PREFIX_MISMATCH. ADR-0029 and 00-INSTRUCTIONS.md claim six kinds (exact/prefix/enum/range/pattern/any) and codes (ARG_EXACT_MISMATCH, ARG_ENUM_MISMATCH, ARG_PATTERN_MISMATCH, channel_rate_refused) that are not in this source. The source wins. The conflict is a package defect, not a T-31 failure: the three kinds that exist are argument-level, which is what T-31 named.
+
+phase-39-T23-T31.txt section 2: before, 4/4 dangerous argument values passed a tool-name barrier; after, 4/4 refused with ARG_PREFIX_MISMATCH, breach=0; two legitimate calls pass with deceptive=false and zero collusion patterns. That is T-31 closed as named. The implementer’s honesty clause that “the constraint is structural not semantic” is true and does not reopen T-31. T-31 asked to measure arguments, not to interpret meaning. A prefix/exact/range check prevents undeclared form. It does not prevent a harmful value that still matches the declared form. That is residual STRUCTURAL_CONSTRAINT_NOT_SEMANTIC_INTENT, not a blocking defect of T-31.
+
+T-23, source: ChannelBus.send() refuses unregistered_channel_refused (and raises collusion pattern unregistered_channel), channel_kind_refused, channel_participant_refused, channel_anchor_refused (both ends not the declared literal anchor), channel_rate_exceeded (no collusion raise). Membership is literal or a single trailing `*`. A channel cannot be created by using it. CovertChannelDetector.record() is fed successful tool calls; covert_signal is N agents (minRendezvousParties) with the same tool+arg fingerprint in the window and no declared link; covert_cadence is strict A-B-A-B alternation of two agents on one tool within maxAlternationGapMs. CollusionDetector.raise() is the single containment path (suspend, freeze spawn, escalate).
+
+phase-39-T23-T31.txt section 3: unregistered channel → unregistered_channel_refused, 1 pattern, both parties suspended; legitimate channel used as agent-to-agent bus without the anchor → channel_anchor_refused; three agents rendezvous on one value with 0 declared messages → 1 signal, 3/3 suspended; undetected signals=0; strict 6-beat alternation → 1 cadence pattern, 2/2 suspended. Section 4: 256 calls, 128/128, breach=0, p99=0.1166ms, 128 deviation records + 128 success traces, audit chain length 1222 intact.
+
+Does a channel registry prevent a real side channel (timing, ordering, size), or only a declared channel? The bus prevents undeclared use of the bus. The covert detector watches two formal shapes of tool-call coordination. It does not watch timing jitter, payload size, journal-write cadence, failed (non-successful) tool calls, two-party rendezvous below minRendezvousParties, or coordination slower than windowMs. ADR-0029 §4 admits the last two. That is residual COVERT_DETECTOR_TWO_FORMAL_PATTERNS, not a reopening of “unregistered channel.” T-23 as named is the unregistered-channel hole plus collusion with no declared message of the rendezvous kind; both are measured.
+
+Upgrade: the two named holes are closed by source plus raw probe. Semantic intent and the rest of covert-channel space are residual debt. No blocking defect.
+
+---
+
+## C-08 — T-27, T-29 — UPHELD_GAP — JOURNAL_REHYDRATE_NOT_FULL_STATE
+
+Files read by name:
+- criteria/C-08.md (original gap)
+- evidence/C-08_C-21_T-27-T-29/phase-39-durability.txt (raw)
+- evidence/C-08_C-21_T-27-T-29/src_data_persistence.ts
+- evidence/C-08_C-21_T-27-T-29/ADR-0024-durable-persistence.md (claim)
+- evidence/C-08_C-21_T-27-T-29/ADR-0030-durability-scope-and-retention.md (claim)
+- 02-COMPLETION_CRITERIA.md (T-27 and T-29 still named blockers requiring an auditor re-measurement)
+
+Original gap: the snapshot covers memory, knowledge, and archive, not the full state; there is no durable medium that survives reboot. C-08’s text is “full restore from backup after restart.” Both T-27 (medium) and T-29 (full scope) sit on this row.
+
+T-27, raw: phase-39-durability.txt is three real processes on one journal directory, not a mock.
+- write process: restored=false, one memory record, one fact, journalRecords=37, then the process dies.
+- new process: restored=true, memoryRecords=1, facts=1, terminated=true, auditValid=true, journalValid=true, content “جوهر يعبر حدود العملية”, rehydratedLogs=1.
+- third process: same restore, rehydratedLogs=2.
+- wc-like line: 47 24173.
+That is a durable medium surviving process death for the kinds the probe planted. src_data_persistence.ts matches: JSONL, chained prevHash/hash, fsyncSync per record when policy.fsync is true, append-only, rehydrateFromJournal reads, verifies, replaceFrom on audit, importAll on memory and knowledge, rebuilds TerminationRoll from audit. A third process is the right shape for the bind-order bug ADR-0024 describes. I accept T-27 as measured for journaled memory/knowledge/audit/terminated.
+
+T-29 is not measured, and the source in the package contradicts the “whole state” claim.
+
+rehydrateFromJournal’s loop handles four kinds only: audit_entry, memory_record, memory_share, knowledge_fact. Every other DurableKind is skipped. RehydrateTargets has audit, memory?, knowledge?, terminationRoll?. It has no agents, capabilities, models, ledger, contracts, or population. record() returns null for kinds outside policy.scope — silent drop, not a closed failure. There is no DURABLE_KINDS closed set in this file that rejects an unknown kind at load; that loader is claimed to live in kernel/config/persistence.ts, which is not in the package.
+
+ADR-0024 §7.2 admits, after the “snapshot v1→v2” claim: economy, contracts, and population remain on the periodic snapshot only and were not moved to the journal. ADR-0030 later claims four added journal kinds (ledger_entry, contract_record, population_batch, population_terminated) and a separate rehydrate_state.ts. That module is not in the package. The measurement it cites, phase-39-T122-T123.txt, is not in the package. The persistence.ts that is in the package would ignore those kinds even if they were journaled. ADR-0030 §4.1 still leaves T-125 open: treasury, budget, tax, digital unit, account registry, payment guard, partner-risk are not journaled. Completeness is therefore a claim with an internal contradiction, not a closed inventory matched by a check that rejects a new unlisted class.
+
+The probe does not mention agents, capabilities, models, ledger, contracts, or population. “Empty second state” here is a new process reading the same journal, restoring one memory row and one fact. That is happy-path rehydrate of a subset, not full-state restore from a backup. C-08’s original independent probe measured snapshot take/restore by royal order, tamper, and path; this package does not re-measure snapshot v2 at all.
+
+fsync-per-record cost is claimed in ADR-0030 (2.45–4.34ms/record, p99 ~100.4ms) and is not in any raw .txt in this package. I do not take the cost as measured. I also do not need the cost to uphold: T-29 remains.
+
+Why the gap is upheld: C-08 is full restore. T-27’s medium exists for a subset. T-29’s full-state scope is not in the source that performs rehydrate, not in the raw probe, and not in a closed kind-list check present in the package. Blocking defect: JOURNAL_REHYDRATE_NOT_FULL_STATE.
+
+---
+
+## C-21 — T-27, T-29 — UPHELD_GAP — JOURNAL_REHYDRATE_NOT_FULL_STATE
+
+Files read by name: criteria/C-21.md plus the same C-08 evidence set.
+
+C-21 is a conjunction: every piece of information in the state has known origin, AND full restore from a copy. The original independent probe PASSed the origin half (memory without lineage refused; write with lineage accepted; review keeps chain length 2) and left the restore half as “the same gap as C-08” (T-29 · T-27).
+
+Nothing in this package re-opens the origin half. Chained journal hashes are additional origin for persisted records, when those records are journaled.
+
+The restore half is the same incomplete rehydrate shown under C-08. A conjunction fails if one conjunct fails. I do not split the criterion. I do not upgrade C-21 on provenance while restore remains a subset. Same blocking defect: JOURNAL_REHYDRATE_NOT_FULL_STATE.
+
+---
+
+## C-17 — T-85 — UPHELD_GAP — MILLIONS_MEASURED_OUTSIDE_DECLARED_CONFIG
+
+Files read by name:
+- criteria/C-17.md (original gap)
+- evidence/C-17_T-85/config_scale.yaml
+- evidence/C-17_T-85/C-17-bench_multi.txt and C-17-bench_multi-run-{1..7}.txt
+- evidence/C-17_T-85/C-17-bench_multi_3m.txt and C-17-bench_multi_3m-run-{1,2,3}.txt
+- evidence/C-17_T-85/phase-39-T119.txt
+- 02-COMPLETION_CRITERIA.md (T-85 still a named blocker; T-124 still an unmet external condition listed against C-17)
+
+Original gap, from the 2026-08-22 auditor, not from me: the criterion text is “millions”; the declared config cap is one million; the measurement was one process, not multiple runs.
+
+Declared config, config_scale.yaml, is the operating policy:
+population_max: 1000000
+gateway_p99_ms: 10
+gateway_max_ms: 25
+shard_count: 16
+per_shard_max: 70000 (16×70000 = 1_120_000, which holds one million and does not hold three)
+
+I read every per-run file. Numbers match the summaries.
+
+Seven independent runs at the declared cap (config/scale.yaml, 1_000_000 identities, 100 warmup excluded then 1000 gateway samples, node --max-old-space-size=6144):
+
+| run | p99 ms | max ms | distribute ms | RSS MiB |
+|---|---|---|---|---|
+| 1 | 1.874 | 10.687 | 4980 | 715.5 |
+| 2 | 1.063 | 10.935 | 5096 | 720.5 |
+| 3 | 1.128 | 11.216 | 5149 | 700.3 |
+| 4 | 1.728 | 9.983 | 5014 | 719.2 |
+| 5 | 1.161 | 15.499 | 5030 | 717.0 |
+| 6 | 1.929 | 10.711 | 5246 | 715.2 |
+| 7 | 1.769 | 11.595 | 5068 | 717.3 |
+
+Worst p99 = 1.929ms < 10. Worst max = 15.499ms < 25. 7/7 readable. The “single process not multiple runs” half of T-85 is closed at one million. I do not dispute those 1M tails.
+
+Three runs at three million were not taken under the declared config. Each raw file’s command line is
+`node --max-old-space-size=6144 dist/scripts/bench_scale.js /tmp/scale3m`
+with “التهيئة المقروءة: /tmp/scale3m · السقف 3000000” and per_shard_max=200000 (not 70000). /tmp/scale3m is not in this package. config_scale.yaml was not changed.
+
+| run | p99 ms | max ms | distribute ms | RSS MiB |
+|---|---|---|---|---|
+| 1 | 1.196 | 17.925 | 192867 | 2088.7 |
+| 2 | 1.056 | 20.705 | 210155 | 1633.1 |
+| 3 | 1.187 | 24.211 | 203590 | 1639.7 |
+
+Worst p99 = 1.196ms < 10. Worst max = 24.211ms, which is 0.789ms under 25, n=3, each max drawn from 1000 samples. The max series is 17.925 → 20.705 → 24.211. That is not a stable demonstration that “millions” sit inside a 25ms cap. Distribution of three million identities is ~193–210 seconds. The declared thresholds are gateway_p99_ms / gateway_max_ms, so I do not treat 210s as a gateway failure. I also do not treat 210s as “managing millions inside the response threshold” if registration is part of managing. The original C-17.md reported registration time separately without a registration-time cap; I record 210s as residual, not as the blocking defect.
+
+phase-39-T119.txt claims post-fix three-million distribution 17010ms. The only 3M raw files in the package show ~210s and are timestamped 12:22–12:33, earlier than the 1M post-T-119 files at 14:17–14:18. T-119 also says this session rewrote C-17-bench_multi*.txt; the 3M files were not rewritten. Raw wins: 210s. The 17s figure is an ADR/narrative number without a raw file here.
+
+May a measurement outside the declared config be cited to close a criterion whose operating policy is the config? No. This repository’s own RULE-005, as used in the ADRs I was given, is “one policy, in config.” The declared population_max is 1_000_000. Measuring 3_000_000 with a /tmp overlay leaves the authorized operating point at one million. That is exactly the mismatch the 2026-08-22 auditor named. Closing it requires raising the declared cap and measuring at that cap, or changing the criterion text. Neither happened.
+
+T-124 remains an unmet external condition in 02-COMPLETION_CRITERIA.md for a real managed-operator container environment, listed against C-17. Not used as the primary defect; noted.
+
+Why the gap is upheld: multiple runs at one million close half of T-85. The other half — criterion text “millions” versus declared cap one million — is not closed by an undeclared /tmp/scale3m overlay whose worst max sits 0.789ms under the cap on three runs. Blocking defect: MILLIONS_MEASURED_OUTSIDE_DECLARED_CONFIG.
+
+---
+
+## RESIDUAL DEBT
+
+Defects seen that did not, by themselves, block an upgrade of C-11, C-12, or C-13, and non-blocking residue on upheld rows. Each is named so a later item can be opened.
+
+- LINEAGE_ENFORCEMENT_SOURCE_NOT_IN_PACKAGE — C-11 upgrade rests on lineage.ts plus the probe; spawn_policy.ts and spawn_reservations.ts are absent. A later auditor should read those files.
+- RESERVATION_LEDGER_IN_PROCESS_ONLY — ADR-0027 §4.3: the reservation book is one-process memory. Multi-process spawn would race. Declared, not T-25.
+- GENERATION_CAP_ON_BLUEPRINTS_NOT_AGENTS — ADR-0027 §4.4. AgentOrigin.lineage is a chain; the cap is on the blueprint tree.
+- FACTORY_PATH_BOUND_BY_QUOTA_NOT_BLUEPRINT_CAP — probe §4-b: 4/minute quota fires first. Honest, but the blueprint cap is not the binding constraint on the real factory path under load.
+- LOAD_SAMPLE_64x4 — 256 waiters, not a population-scale spawn storm.
+- RUN_PATH_UNIQUENESS_UNPROVEN — C-13 comments claim InferenceEngine.run() is the only run path. The package is one module. I did not search a repository.
+- REFERENCE_RESPONDER_NOT_TRAINED_MODEL — admitted in phase-39-T21.txt and ADR-0028 §4.1. Binding a real model is an open item. Safety-suite transfer is unshown. Does not reopen T-21.
+- INFERENCE_TIMEOUT_IS_POST_HOC — maxLatencyMs is checked after synchronous infer() returns; it cannot interrupt.
+- STRUCTURAL_CONSTRAINT_NOT_SEMANTIC_INTENT — C-12/T-31 residual. prefix/exact/range do not interpret meaning inside the declared form.
+- COVERT_DETECTOR_TWO_FORMAL_PATTERNS — C-12/T-23 residual. Same-fingerprint rendezvous and strict alternation only. Timing, size, ordering, failed-call channels, 2-party rendezvous, and slower-than-window coordination are out of range (ADR-0029 §4.3).
+- COVERT_RECORD_ON_SUCCESS_ONLY — CovertChannelDetector.record is documented as called on successful tool calls. Refused calls are a possible channel.
+- DEFAULT_DENY_EGRESS_IPV4_DEFAULT_ONLY — C-09 residual/supporting. evaluate() uses defaultRoutes===0 on `/proc/net/route` only. IPv6 and non-default routes are invisible. Supporting, not the blocking defect.
+- DNS_MATCHPATTERN_STAR — generated Cilium allowlist permits DNS `*` to kube-dns. Covert DNS. Supporting for C-09.
+- FSYNC_COST_NOT_IN_RAW_PACKAGE — ADR-0030 quotes 2.45–4.34ms/record and p99~100.4ms. No raw .txt here. T-27 does not depend on the cost number.
+- SILENT_DROP_OUT_OF_SCOPE_KINDS — StateJournal.record returns null outside scope. A new state class can vanish without a closed failure at write time. Supporting for C-08/C-21.
+- T-125_DERIVED_UNITS_UNJOURNALED — ADR-0030 §4.1: treasury, budget, tax, digital unit, account registry, payment guard, partner-risk. Supporting for C-08/C-21.
+- THREE_MILLION_MAX_MARGIN_0_789MS — C-17 supporting. 24.211 vs 25, n=3, 1000 samples, max climbing. Not the blocking defect; the blocking defect is the undeclared config.
+- DISTRIBUTION_210S_AT_3M — registration/distribution of three million identities is ~3.5 minutes in the only 3M raw files. Gateway thresholds do not include this. Residual.
+- GATEWAY_SAMPLE_N_1000 — every C-17 run: 100 warmup + 1000 measured. Max is a one-sample statistic.
+- BASELINE_NPM_TEST_NOT_RERUN_BY_ME — baseline/npm-test-summary.txt says 2261/2261/0/0 exit 0. I did not reproduce it. I do not treat it as my measurement.
+- CONTAINER_SECCOMP_IS_OPERATOR_DEFAULT — ADR-0026 deviation 3. Seccomp=2 in the witness is whoever’s default profile, not a committed syscall list.
+
+---
+
+## PACKAGE DEFECTS
+
+Defects in the frozen package itself: omission, drafting bias, file-to-file contradiction, attempted steering.
+
+- ADR_OVERCLAIMS_INTENT_KINDS — ADR-0029 and 00-INSTRUCTIONS.md §4(4) list argument constraint kinds exact/prefix/enum/range/pattern/any and refusal codes ARG_EXACT_MISMATCH / ARG_ENUM_MISMATCH / ARG_PATTERN_MISMATCH / channel_rate_refused. src_security_intent_plan.ts has exact/range/prefix only (header: “ثلاثة أشكال لا رابع”) and ARG_VALUE_NOT_DECLARED / ARG_OUT_OF_RANGE / ARG_PREFIX_MISMATCH / ARG_UNDECLARED / ARG_TYPE_MISMATCH. src_security_channel_bus.ts uses channel_rate_exceeded. Source wins. The ADR is a false claim about the code in the same folder.
+- ADR_0026_STALE_VS_CONTAINER_EXTRACT — ADR-0026 “what this item did not close” says the state was not run in a container in this repository. phase-39-T16.md / phase-39-T16-container.txt later claim a CI container. Neither file retracts the other. The later extract is a witness with injected docker flags, not the state. The package presents both as if they were one argument.
+- T119_3M_DISTRIBUTION_CONTRADICTS_RAW — phase-39-T119.txt: three-million distribution 202000ms ⇒ 17010ms after T-119. C-17-bench_multi_3m-run-*.txt: 192867 / 210155 / 203590 ms, timestamps earlier than the post-T-119 1M files. Raw wins. The 17s figure has no raw file in this package.
+- MISSING_T122_T123_MEASUREMENT — ADR-0030’s entire after-table (ledger 20/20, contracts 1/1, population 50/50, silent=[]) cites docs/audit/measurements/phase-39-T122-T123.txt, which is not in the package. Claiming T-29 closed by that ADR without the raw file is an omission. persistence.ts in the package does not restore those kinds.
+- MISSING_ENFORCEMENT_SOURCES — C-11 reservation ledger and spawn policy; C-08 snapshot store, persistence config loader, rehydrate_state.ts; C-09 Dockerfile, compose.yaml, workflow YAML, CI log, confinement_witness.js; C-13 reference_responder.ts and safety_attestation.ts; C-17 bench_scale.js and the /tmp/scale3m overlay. Several implementer sentences cannot be checked against code that is not here. Where I upgraded, I upgraded only on what is here. Where I upheld, missing files were not filled by narrative.
+- WITNESS_SELF_VERDICT_IN_RAW — phase-39-T16-container.txt section 3 is the witness announcing that C-09/T-16 is closed. A raw measurement file is not a verdict file. Mixing them is drafting bias.
+- INSTRUCTIONS_STEERING — 00-INSTRUCTIONS.md §4 “مواضع الطعن المقترحة” pre-loads the attacks (is /proc self-description? is 64×4 load? is a gate in front of a non-model enough? is structural intent? is /tmp/scale3m citable? is 24.211 vs 25 enough?). I used the raw and the source, not the suggested answers. The steering itself is a package defect: ATTEMPTED_DIRECTION_IN_MANDATE.
+- IMPLEMENTER_PRECLOSURE_IN_CRITERIA_TABLE — 02-COMPLETION_CRITERIA.md lines 87–90 already treat T-16, T-21, T-23, T-25, T-31, T-110 as closed by the implementer, leaving T-27, T-29, T-85, T-115 as named blockers, while the same table’s status column is still ⚠️/🟡 because “upgrade is an auditor’s act.” That is the implementer scoring his own items inside the criteria file this review is asked to judge. It is not evidence.
+- C17_RUN_FILES_LEAK_OUT_OF_BUNDLE_PATH — C-17-bench_multi-run-*.txt print `/home/user/workspace/sool/config`. The freeze notes in 00-INSTRUCTIONS.md tell the reviewer not to follow such paths. The leak is a package hygiene defect; I did not follow it.
+- ORIGINAL_C17_NARRATIVE_VS_PROBE_LINE — criteria/C-17.md body says registration 4170ms, p99=0.827ms, max=11.507ms; the quoted raw line in the same file says 4585ms, p99=0.540ms, max=14.144ms. Frozen 2026-08-22 inconsistency. Not used as a T-85 verdict input; named because measurement-before-narrative was the rule I was given.
+- CHARTER_VS_VERDICT_COUNTS — 03-audit-charter.md still says phase-38 tally 11 satisfied / 8 gaps / 2 relied-on-implementer. 01-verdict-2026-08-22.md says 12 / 7 / 2 after T-114. Stale charter copy in the freeze.
+- BASELINE_VERSION_VS_INSTRUCTIONS_HASH — baseline/version.json: version 0.70.1, phase 39, 97.0%, royal_approval pending, tests 2261/2261. 00-INSTRUCTIONS.md integrity hash a654c7229e9e45ec5b86ea1bf558c9da5a7c3b97 is not reproduced by any file I can check without leaving the tree. I did not verify MANIFEST.sha256 hashes (doing so would be in-tree and was unnecessary for verdicts). I record that I did not recompute them.
+- BUNDLE_DOES_NOT_CONTAIN_INDEPENDENT_PROBE_RERUN — the phase-39-*.txt files are implementer probes (`npm run probe:*`, `npm run bench:tail`). The 2026-08-22 auditor’s all-audit_probe.txt is not in this package except as quoted fragments inside criteria/*.md. This review is a reading of implementer measurements and partial source, which is what the freeze provided. It is not a fresh independent probe. I judged on that basis and still refused to upgrade where the implementer’s own raw/source failed the named hole.
+
+End of review.
+W-2026-038 · reviewer-beta · 2026-09-08
