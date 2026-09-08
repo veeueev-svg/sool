@@ -527,10 +527,10 @@
       "id": "W-2026-035",
       "title": "شاهدُ الحصر داخل الحاوية — قياسُ confined=true على Docker حقيقي يُغلق فجوةَ C-09 (T-16 · T-124)",
       "owner": "المساعد الآلي — Perplexity Computer (الجلسة 76)",
-      "reviewer": "القيّم على المستودع — Perplexity Computer (جلسةٌ لاحقةٌ ≠ 76) — مراجعٌ مستقلٌّ عن المنفّذ (RULE-016)",
+      "reviewer": "القيّم على المستودع — Perplexity Computer (الجلسة 77) [مراجعٌ مستقلٌّ عن المنفّذ جلسة 76]",
       "area": "الحصر على مستوى النواة والحاوية",
       "phase": 39,
-      "status": "REVIEW",
+      "status": "VERIFIED",
       "progress_items": [
         "T-16",
         "T-124"
@@ -570,8 +570,8 @@
       ],
       "next_step": "المراجعُ يُقرّ أو يردّ (RULE-004): الدمجُ الأخضرُ ليس إقرارًا. والمنفّذُ لا يضعُ VERIFIED على عملِ نفسِه (RULE-016). وللمراجعِ أن يُعيدَ القياسَ ببناءِ الصورةِ وتشغيلِ الشاهدِ على Docker حقيقيٍّ بنفسه.",
       "created_at": "2026-09-07",
-      "updated_at": "2026-09-07",
-      "verification": "قياسٌ مكتملٌ على وظيفةِ CI `confinement-witness.yml` (التشغيلُ 34167851902 على `63ae8748`): بنَتِ الصورةَ وشغّلت الشاهدَ داخلَ الحاويةِ المحصورة فأخرج `confined=true · شروطٌ غيرُ مستوفاة=0` ورمزُ الخروج 0 — الخرجُ الخامُّ في `docs/audit/measurements/phase-39-T16-container.txt`، والتقريرُ في `docs/test-reports/phase-39-T16.md` §5. `npm test` 2261/2261 · `verify` 0 · `check:work` أخضر. التصديقُ لمراجعٍ مستقلٍّ (RULE-004 · RULE-016). • حُدِّثت PROGRESS.md ليعكس أنّ مطلوبَ T-124 التنفيذيَّ نُفّذ بشاهدِ CI القابلِ للاستنساخ (لا «يحتاج مُشغّلَ حاويات» بعد الآن)."
+      "updated_at": "2026-09-08",
+      "verification": "مراجعةٌ مستقلّةٌ (جلسة 77 ≠ 76) بإعادةِ القياسِ من المصدرِ لا من التقرير: قُرئ مصدرُ الشاهدِ `scripts/confinement_witness.ts` (يقرأُ `/proc` بـ`readConfinementFacts` ويُحقّقُ `confinementWitness(policy)` من الشرطِ السبعةِ، ويخرجُ برمزِ 0 إن `confined=true` و1 إن لم — بلا كتابةِ ملفٍّ، فيعملُ في جذرٍ للقراءةِ فقط)، و`infra/docker/Dockerfile` (طورُ بناءٍ يُثبّتُ المُصرِّفَ بـ`npm ci` قبلَ `npm run build` فلا `tsc: not found`؛ طورُ تشغيلٍ distroless بـ`USER 10001` بلا مُديرِ حزم)، و`.github/workflows/confinement-witness.yml` (وظيفةٌ منفصلةٌ على `ubuntu-latest` تبني الصورةَ وتُشغّلُ الشاهدَ داخلَ الحاويةِ بـ`--network=none --cap-drop=ALL --security-opt no-new-privileges --read-only`). وقُرئ التشغيلُ الفعليُّ من واجهةِ GitHub Actions بـ`gh api` لا من الملفِّ المُلتقط: التشغيلُ 34167851902 على `63ae8748` conclusion=success، والوظيفةُ 101882350176 كلُّ خطواتِها التسعُ success ومنها الخطوةُ 7 «شاهدُ الحصرِ داخلَ الحاويةِ (T-16 · T-124)» success — وخرجُها الخامُّ من `/proc`: `uid=10001 · CapEff=0 · CapBnd=0 · NoNewPrivs=true · Seccomp=2 · readOnlyRoot=true · interfaces=lo · defaultRoutes=0 · networkNamespace=net:[4026532255] · confined=true · شروطٌ غيرُ مستوفاة=0` ورمزُ الخروج 0. و`docs/audit/measurements/phase-39-T16-container.txt` مطابقٌ حرفًا لخرجِ سجلِّ التشغيلِ الفعليِّ (قِيل من المصدرِ لا من الادّعاء). والتشغيلُ الرئيسُّ 34167851889 (بوابةُ التاج) على الالتزامِ نفسِه conclusion=success. ومحلّيًّا: `npm test` 2261/2261 صفرُ فشل · `npm run verify` رمزُ الخروج 0 (أربعةَ عشرَ حاجزًا) · `check:work` أخضر. ورفضُ الشاهدِ لغيرِ المحصورِ مقيسٌ في بيئةِ التطويرِ (`confined=false` · رمزُ الخروج 1) كما في التقريرِ §4 — فيُثبتُ أنّ الشاهدَ يرفضُ لا يُزيّن. وحدٌّ مُعلَنٌ للنظر: لم يُمكن تشغيلُ طعنِ Docker (`--cap-add=NET_RAW` أو `seccomp:unconfined`) في هذه البيئةِ (لا مُشغّلَ حاويات)، لكنّ منطقَ الشاهدِ مُقاسٌ من المصدرِ ورفضَهُ مقيسٌ في بيئةِ التطوير، والقياسُ الرئيسُّ قُرئ من سجلِّ CI الفعليِّ لا من الملفِّ المُلتقط. الادّعاءُ كلُّه (§4-1 إلى §4-7) صحّ بالقياسِ لا بالافتراض. المراجعُ مستقلٌّ (77 ≠ 76) — RULE-004 · RULE-016 مستوفاتان."
     }
   ]
 }
