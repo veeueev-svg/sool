@@ -44,5 +44,48 @@
     "REVIEW",
     "VERIFIED"
   ],
-  "work_items": []
+  "work_items": [
+    {
+      "id": "W-2026-037",
+      "title": "BUG-رفض تكرار اسم المنفذ البنيوي في confinement (T-158)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 79)",
+      "reviewer": "القيّم على المستودع — مستشار المراجعة المستقل",
+      "area": "kernel/config",
+      "phase": 40,
+      "status": "VERIFIED",
+      "progress_items": [
+        "T-158"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "src/kernel/config/confinement.ts",
+        "tests/kernel/config_duplicate_census.test.ts",
+        "docs/test-reports/phase-40-T158.md",
+        "ARCHITECTURE.md"
+      ],
+      "excluded": [
+        "لا يُلمسُ مفتاحُ التكرارِ كرقمِ منفذ (53 مكررٌ مشروعًا) — الاسمُ وحدَه. ولا tests/security/confinement*.test.ts ولا ROADMAP.md"
+      ],
+      "acceptance": [
+        "loadConfinement يرفضُ اسمًا مكررًا برمزِ CONFIG_CONFINEMENT_DUPLICATE",
+        "الرمزُ ينتهي بـDUPLICATE ولا يُعادُ في محمّلٍ آخر",
+        "التهيئةُ الفعليّةُ تمرُّ (اسمانِ مختلفانِ)",
+        "صفُّ infrastructure_ports نُقلَ إلى REJECTS في الحصر",
+        "npm test و npm run verify أخضران"
+      ],
+      "evidence": [
+        "npm test 2261/2261 صفرُ فشل · npm run verify أخضرُ (14 حاجزًا) · check_generated_numbers.sh ✓ · check:work ✓ · تقريرٌ في docs/test-reports/phase-40-T158.md"
+      ],
+      "verification": [
+        "شُغِّل في 2026-09-08: npm test (2261/2261) ثم npm run verify (رمزُ الخروج 0، سلسلةُ التحقّق 14) ثم check_generated_numbers.sh (الجدولُ 25 صفًّا مطابقٌ للشجرة) ثم check:work",
+        "DC-02 تُكرّرُ أوّلَ مدخلةٍ dns(53/UDP) فترمي CONFIG_CONFINEMENT_DUPLICATE · DC-03 يؤكّدُ أنّ الرمزَ ينتهي بـDUPLICATE · DC-04 يؤكّدُ عدمَ تكرارِ الرمزِ بين محمّلات",
+        "حالُ البند VERIFIED — صدّقه مراجعٌ مستقلٌّ (مستشارٌ نموذجٌ مختلفٌ عن المنفّذ) في الجولة الثانية بعد معالجةِ عيبِ الجولةِ الأولى `T158_KEY_MISMATCH` بتوضيحِ النطاقِ صراحةً (RULE-004)"
+      ],
+      "next_step": "التزامُ الإغلاق: نقلُ W-2026-037 من WORK_QUEUE.json إلى WORK_LOG.md (التوثيقُ والنسخةُ حدّثت: PROGRESS.md وCHANGELOG.md وversion.json) ثمّ الدفعُ إلى المستودع",
+      "created_at": "2026-09-08",
+      "updated_at": "2026-09-08"
+    }
+  ]
 }

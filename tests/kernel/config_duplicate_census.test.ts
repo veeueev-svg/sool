@@ -12,9 +12,9 @@
  *   2) **التكرارُ يُقاس تشغيليًّا لا نصًّا**: يُكرَّر عنصرٌ حقيقيٌّ في الإعلانِ ثمّ يُنادى المحمّل.
  *   3) **الثابتُ المحروس**: قائمةٌ مسقوفةٌ إمّا ترفضُ التكرارَ برمز، وإمّا لا ينتفخُ عددُها
  *      المقيسُ به (خريطةٌ يتلاشى فيها التكرار). والانتفاخُ الصامتُ خرقٌ يسقط باسمِ سقفِه.
- *   4) **الاستثناءُ يُثبَّت لا يُسكت عنه**: `infrastructure_ports` تنتفخ صامتةً وملفُّها محجوزٌ
- *      لـ`W-2026-013` (الدَّينُ `T-158`) — فسلوكُها اليومَ مُثبَّتٌ هنا، ومن أصلحه يسقط عنده
- *      هذا الاختبارُ فيُحدِّث الجدولَ والدَّينَ معًا.
+ *   4) **الاستثناءُ يُغلَق لا يُتركَ مُثبَتًا**: `infrastructure_ports` كانت تنتفخُ صامتةً
+ *      والدَّينُ `T-158` مُعلنٌ — فلمّا سُدَّ الحرسُ نُقلَ الصفُّ إلى `REJECTS` برمزِه،
+ *      وأُغلقَ الدَّينُ في `PROGRESS.md`. وحدَهُ `channels` و`safety_categories` رمزانِ عامّانِ
  *   5) **لا رمزَ رفضٍ يُعاد استعمالُه** بين حرسَي تكرارٍ مختلفَين في محمّلات النواة.
  */
 import test from 'node:test';
@@ -123,11 +123,10 @@ const CENSUS: readonly CensusRow[] = [
     load: loadContracts, verdict: 'COLLAPSES',
     count: (c: any) => Object.keys(c.risk_factors ?? {}).length,
   },
-  // انتفاخٌ صامتٌ مُثبَّتٌ: ملفُّه محجوزٌ لـW-2026-013 والدَّينُ T-158
+  // أُغلق في W-2026-037: حرسُ تكرارِ الاسمِ في confinement برمزٍ مسمّى — لم يبقَ انتفاخٌ صامتٌ
   {
     ceiling: 'infrastructure_ports', file: 'confinement.yaml', key: 'infrastructure_ports',
-    load: loadConfinement, verdict: 'INFLATES_DECLARED_DEBT',
-    count: (c: any) => (c.policy?.infrastructure_ports ?? []).length,
+    load: loadConfinement, verdict: 'REJECTS', code: 'CONFIG_CONFINEMENT_DUPLICATE',
   },
 ];
 /* eslint-enable @typescript-eslint/no-explicit-any */

@@ -10,6 +10,7 @@
  *   - جذرُ الشاهد ليس مسارًا مطلقًا ⇒ CONFIG_CONFINEMENT_WITNESS
  *   - شرطٌ مُلزم غائب أو معطَّل ⇒ CONFIG_CONFINEMENT_REQUIREMENT
  *   - منفذٌ بنيويٌّ غير صحيح ⇒ CONFIG_CONFINEMENT_PORT
+ *   - منفذٌ بنيويٌّ مكرَّرُ الاسمِ ⇒ CONFIG_CONFINEMENT_DUPLICATE
  *   - وجهةُ التوليد ناقصة ⇒ CONFIG_CONFINEMENT_GENERATED
  *   - شدّةُ الإنتاج ليست «حرجة» ⇒ CONFIG_CONFINEMENT_SEVERITY
  *
@@ -78,6 +79,7 @@ function readPorts(raw: unknown): readonly InfrastructurePort[] {
   }
   guardDeclaredCount('infrastructure_ports', raw.length, 'المنافذُ البنيويّةُ المعلنة');
   const ports: InfrastructurePort[] = [];
+  const seen = new Set<string>();
   for (const entry of raw as InfrastructurePort[]) {
     const port = Number(entry?.port);
     if (!Number.isSafeInteger(port) || port <= 0 || port > 65535) {
@@ -95,6 +97,13 @@ function readPorts(raw: unknown): readonly InfrastructurePort[] {
         `منفذٌ بلا اسمٍ معلن: ${port}`, 'CONFIG_CONFINEMENT_PORT',
       );
     }
+    if (seen.has(entry.name)) {
+      throw new SovereignViolation(
+        `منفذٌ بنيويٌّ مكرَّرُ الاسمِ: ${entry.name} — الاسمُ مفتاحُ الإعلانِ لا رقمُ المنفذ`,
+        'CONFIG_CONFINEMENT_DUPLICATE',
+      );
+    }
+    seen.add(entry.name);
     ports.push({ name: entry.name, port, protocol: entry.protocol });
   }
   return ports;
