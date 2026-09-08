@@ -1,0 +1,260 @@
+REVIEWER: Grok 4.6 (xAI) — Independent Review per RULE-019
+
+================================================================
+PREAMBLE — THIS REVIEW CANNOT CERTIFY ITS OWN INDEPENDENCE
+================================================================
+
+Identity (condition 3): The prompt asserts that I am "Grok 4.6 from xAI." I have no cryptographic model-id, no platform attestation, no signed routing record, and no way to prove I am not Anthropic, not a Perplexity wrapper, and not a prompt-fiction. Condition 3 of RULE-019 is satisfied in this file by writing a name. That is the entire mechanism.
+
+Isolation (condition 2): Broken in this instance, which is the first intended use of the protocol.
+- I was spawned as a subagent of the executor's parent session on Perplexity Computer — the same operator, the same platform, the same workspace.
+- I was given an executor-authored "frozen evidence package" that is a brief, not `git show`.
+- The package omits C-18.md, T-115ب, docs/audit/independence/README.md, and GOVERNING_RULE.md's meta-rule that a rule without a barrier is an exhortation. Those omitted files are the ones that make the T-115/C-18 claim fail.
+- I had full repo access (and used it). That is stronger review, but it is not the isolation §12-1 claims.
+- A parallel untracked file `W-2026-036-gpt-review.txt` already exists in the executor-controlled workspace. I did not read it.
+
+Operator: Perplexity Computer operates both the Anthropic executor and this alleged Grok reviewer. C-18 requires independence from the executors' authority. That is not present here.
+
+Therefore: if this file is later cited as a "شهادة مراجعة فعلية" that closes T-115/C-18 under §12-3, that citation is false on the protocol's own terms, and also false on C-18's terms. The rest of this review is the adversarial finding. It is not a C-18 certificate.
+
+Freeze hash checked: `d18d4bffa5bbf6bea4ef6df198b07cc47903a90c` is HEAD. Diffstat 5 files / 142 insertions / 4 deletions matches the package. The package's *excerpts* of RULE-019 and §12 match the tree. The package's *framing* of T-115 does not match C-18.md, T-115ب, or independence/README.md.
+
+I did not treat the evidence package as the gap. I treated the gap as the gap.
+
+================================================================
+1. DOES RULE-019 DEFINE "INDEPENDENT REVIEWER" TIGHTLY, WITH NO LOOPHOLE?
+================================================================
+
+No. It is tighter than "session N vs session N+1." It is not tight. Doors:
+
+D1. "مزوّد" is undefined.
+    Lab (xAI vs Anthropic)? API vendor (OpenAI vs Azure OpenAI)? Host (Perplexity Computer vs a laptop)? The illustrative list (GPT · Grok · Gemini · Kimi) picks the lab reading — the reading that makes a Grok-on-Perplexity review of an Anthropic-on-Perplexity patch count. The platform reading is the one C-18 actually cares about, and it fails. A definition that is satisfied only under the self-serving reading of an undefined term is a loophole.
+
+D2. "عائلة" is undefined.
+    Claude 3 vs Claude 4? GPT-4 vs o-series (same lab)? Llama served by Groq vs Meta? A distilled student of Claude branded as something else? "لا نسخةً من العائلةِ نفسِها" has no test.
+
+D3. Condition 3 is self-assertion.
+    "يُكتبُ اسمُ النموذجِ وإصدارُه في تقريرِ المراجعة." Writing "Grok 4.6" is the check. `check_work.mjs` only tests `String(owner).trim() !== String(reviewer).trim()`. Forgery cost: one string.
+
+D4. Condition 4 contains an OR.
+    "خرجُهُ الخامُّ أو ملخصٌ قابلٌ للتدقيق." The executor may substitute a summary for the raw output. The party who would be exposed by the raw text is the party who chooses which text is saved.
+
+D5. Condition 2 isolation is a documentary claim about what the reviewer "sees."
+    No hash-binding of the prompt, no prohibition on executor-spawned subagents, no prohibition on extra context, no record of tools given. This review is the counterexample.
+
+D6. "يتقدّمُ واحدٌ منها على الآخر" (12-1).
+    RULE-019 says the five are required ("يُشترط"). §12-1 adds ranking language. Ranked conditions are how later conditions get dropped when inconvenient. Ambiguity in a rule that exists to close an identity gap is a loophole.
+
+D7. Optionality.
+    RULE-019 defines when a review *counts as* independent. It does not say every RULE-004 review must meet it. WORK_CONTROL §4 step 5 is unchanged: owner ≠ reviewer as strings. Default path remains session-number theatre. The new title is an optional costume.
+
+D8. No disagreement rule, no retry cap, no anti-selection rule.
+    Work order W-2026-036 says both GPT and Grok must accept. RULE-019 and §12 do not. Executor may spawn, discard, rerun, and keep the ACCEPTED copy. Nothing forbids that.
+
+Tight vs "different session"? Yes.
+Tight vs circumvention? No.
+
+================================================================
+2. IS THE FUNCTIONAL/MODEL vs ORGANIZATIONAL DISTINCTION HONEST, OR DOES IT CLAIM WHAT IT DOES NOT HAVE?
+================================================================
+
+The distinction as a *description of facts* is honest: a different lab's model, hosted by the same operator, is not an external organization. §12-2 says the platform and the operator remain one. That sentence is true.
+
+The distinction as *used* is misleading, because of three surrounding moves.
+
+M1. The weasel-if.
+    RULE-019 / §12-2: "فإن طُلب «جهةٌ خارجيّةٌ تنظيميًّا» بالمعنى الأشدّ … وإلّا تُعلنُ الفجوةُ ولا تُغلقُ بالادّعاء."
+    Organizational independence is framed as a hypothetical future request.
+    It is not hypothetical. It is the existing criterion.
+    C-18 title: "تدقيق مستقل خارج سلطة المنفّذين بلا فجوة."
+    C-18.md: "يلزم شهادةُ استقلالٍ من جهةٍ غير كاتب هذه الملفات: مراجعةٌ خارجية أو أمرٌ ملكي يعتمد نتيجة التدقيق بعد قراءتها."
+    T-115ب (COMPLETION_CRITERIA.md external-conditions table): "جهةٌ مستقلّةٌ عن مالكي المستودع (طرفٌ ثانٍ مُشغِّل)" — a real second operator, not a test simulation.
+    docs/audit/independence/README.md §3: the machine is not the certificate; a single operator can carry both digital identities; C-18 remains a gap; promoting C-18 because the machine exists would violate RULE-004.
+    So: C-18 already "requested" the stronger meaning. The "if" demotes a standing requirement to an optional upgrade.
+
+M2. The object substitution.
+    T-115 as recorded in verdict.md is two clauses: (a) no independence certificate for the audit from a party other than its author; (b) role separation declared in files, not implemented in actor identity.
+    T-115 was already split: T-115أ (machine, closed) and T-115ب (the certificate, open, real second party).
+    W-2026-036 reinterprets "هوية الفاعل" as *model-lab identity of a work-item reviewer*, then binds that reinterpretation to T-115/C-18.
+    Those are different objects. A Grok review of a governance paragraph is not an independent audit of 21 criteria, is not IndependenceRegistry.attest, is not a royal order, and is not a second operator.
+
+M3. Claiming the cause is closed while claiming the ticket is open.
+    Commit d18d4bf body, first sentence: "أُغلقت علّةُ «فصلِ الأدوارِ معلنٌ في الملفّاتِ لا منفَّذٌ في هويةِ الفاعل» (فجوةُ C-18/T-115)."
+    Later: "ولا يُغلقُ T-115 بهذا البندِ وحده."
+    Closing the *cause* in git history while leaving the *ticket* nominally open is how you get to close the ticket later with a weaker certificate. That is claiming what it does not have.
+
+Does it claim what it doesn't have? The body of RULE-019 tries not to. The commit message does. §12-3 does (see Q5). The evidence package's title "للمراجعة المستقلة متعددة النماذج (RULE-019)" and the work-item reviewer field already treat this process as the independent reviewer for T-115. The distinction is honest in one paragraph and spent in the next.
+
+================================================================
+3. IS §12-4 (NO AUTOMATED ENFORCEMENT OF MODEL PROVIDER) A GENUINE LIMIT OR A VULNERABILITY?
+================================================================
+
+It is a genuine description of a vulnerability. Declaring a hole does not fill it. Analogizing it to PA-09 is false.
+
+PA-09 (W-2026-014): a real control in `scripts/push_api.mjs` that compares trees after a real push. It is untested in unit tests because a unit test does not call the network. The guard exists in production; the test cannot reach it. That is a measurement limit of a live control.
+
+RULE-019: no control in `check_work.mjs` at all. The only automated identity check remains string inequality of owner vs reviewer — the exact check T-115 already diagnosed as insufficient. §12-4 is not "a guard we cannot unit-test." It is "we did not build the guard."
+
+GOVERNING_RULE.md, immediately above the work-control rules, including the new RULE-019:
+
+    "هذه القواعد تُنفَّذ آليًّا بـ`scripts/check_work.mjs` … وما لا حاجزَ له ليس قاعدةً بل أمنيّةٌ بصيغة الأمر."
+
+RULE-019 was inserted into the section that claims automatic enforcement, and §12-4 admits it has none. By the file's own meta-rule, RULE-019 is not a rule. It is an exhortation in the form of a command. T-115 was exactly this: separation declared in files, not enforced in actor identity. The "fix" is a more elaborate declaration plus an explicit non-enforcement clause.
+
+T-115 reproduced at higher linguistic resolution.
+
+§12-4 is therefore:
+- honest as disclosure,
+- false as PA-09 analogy,
+- fatal as a response to T-115,
+- a vulnerability, not a "حدٌّ صادق" in the sense that would make the change adequate.
+
+A declared unenforced identity rule cannot close an "unenforced identity" gap.
+
+================================================================
+4. CAN THE MECHANISM BE GAMED SO A NON-INDEPENDENT REVIEWER COUNTS AS "INDEPENDENT"?
+================================================================
+
+Yes. Paths, cheapest first.
+
+G1. Label forgery.
+    Set reviewer to "GPT 5.6 المستقل" / "Grok 4.6 (xAI)". Gate passes. Condition 3 passes. Cost: a string.
+
+G2. Same-operator multi-model routing.  [THIS REVIEW]
+    Executor on Perplexity Computer (Anthropic) spawns a "Grok" subagent on Perplexity Computer. Lab differs; operator, platform, workspace, prompt-author, and output-custodian do not. Conditions 1 and 3 are claimed. C-18 fails.
+
+G3. Prompt-fiction model.
+    Instruct any model "You are Grok 4.6 from xAI." The output file starts with the required header. No one can audit the routing. Condition 3 has no evidence standard.
+
+G4. Curated "frozen" package.
+    Executor writes a narrative that restates T-115 as "same model, different session," omits T-115ب / C-18.md / independence README, pre-answers Q2 ("صادق لا مُبالَغ"), and pre-checks every acceptance box. Reviewer who stays inside the package never sees the real gap. Condition 2 is inverted: isolation from the *gap*, not from the executor.
+
+G5. Retry until ACCEPTED.
+    No cap. Discard REJECTED files. Keep the friendly one. The work order's "فإن أقرّاه" is not in the rule.
+
+G6. Summary substitution (condition 4 OR).
+    Save an "auditable summary" that omits the rejection.
+
+G7. Don't use the title.
+    Ordinary W-items still review via §4 string inequality. RULE-019 never fires.
+
+G8. Close T-115 on the wrong object (§12-3).
+    Obtain a 12-1 certificate on W-2026-036 itself (or any convenient work item). Cite §12-3: T-115/C-18 closes by an actual review certificate under 12-1 on a specific work item. Never touch IndependenceRegistry.attest, never involve a second operator, never re-read the 21 criteria.
+
+G9. Dual-reviewer string.
+    `reviewer` is already one string naming two models. Gate cannot tell whether either model ran, both ran, or neither ran.
+
+The protocol's intended first use (this file) already instantiates G2+G3+G4. A mechanism that is gamed by being used as designed is not a mechanism.
+
+================================================================
+5. DOES THE DEFINITION CLOSE T-115/C-18 BY EXISTING, OR OPEN A DOOR TO CLOSING IT BY ASSERTION?
+================================================================
+
+It does not close by mere existence. That sentence in RULE-019 is true and cheap.
+
+It opens a door to closing by assertion. That door is §12-3, and it is the defect that matters.
+
+§12-3, verbatim structure:
+    NOT closed by defining the protocol.
+    IS closed by issuing an actual review certificate meeting 12-1 on a specific work item, recording model, raw output, and accept/reject.
+
+12-1 is model-provider diversity plus paperwork.
+C-18 is an independence certificate for the *audit*, from a party outside executor authority, or a royal order adopting the audit after reading it.
+T-115ب is a real second operator calling IndependenceRegistry.attest on the text of verdict.md.
+
+§12-3 names T-115/C-18 as the thing that closes, and 12-1 as the sufficient condition. That is a redefinition of the gap, followed by a closure path under the new definition. Redefinition-then-certificate is closing by assertion with extra steps.
+
+The evidence package, work order, and commit already treat "GPT 5.6 + Grok 4.6 accept this patch" as the next step toward that certificate. If both files say ACCEPTED, nothing in RULE-019 or §12 prevents someone from writing "T-115 closed: see W-2026-036-grok-review.txt." C-18.md would still be unsatisfied. The table in COMPLETION_CRITERIA.md would still list T-115ب as an external condition requiring a second operator. The protocol does not mention T-115ب at all.
+
+Further: using RULE-019 to bless RULE-019 is self-attestation one level up. C-18.md already forbade the pattern: "هذه المرحلة هي التدقيق، والتدقيق لا يشهد لاستقلاله بأداةٍ من عنده." A definition of independence cannot be the first object certified under that definition for the purpose of later closing the independence gap.
+
+So: not closed by existing. Opened to closure by assertion, on the wrong object, under a weaker standard, by a process that cannot prove its own independence.
+
+================================================================
+6. DEFECTS, WEAKNESSES, SUGGESTED IMPROVEMENTS
+================================================================
+
+NAMED DEFECTS (material)
+
+N1. C-18_CLOSURE_BY_REDEFINITION  [PRIMARY]
+    §12-3 states that T-115/C-18 closes by a 12-1 certificate on a work item. 12-1 does not satisfy C-18.md or T-115ب. RULE-019's "فإن طُلب" treats C-18's existing requirement as optional. Commit d18d4bf claims the cause of the gap "أُغلقت." This is the assertion door the text pretends to nail shut.
+
+N2. T-115_REPRODUCED
+    Original gap: declared in files, not enforced in actor identity.
+    Fix: a stronger declaration, plus §12-4 admitting no enforcement, placed in the section whose meta-rule says no barrier ⇒ not a rule.
+
+N3. IDENTITY_SELF_ASSERTED
+    Conditions 1 and 3 have no evidence other than text the executor writes and the reviewer (or the executor) copies. This review header is not proof I am Grok 4.6.
+
+N4. OBJECT_SUBSTITUTION
+    Work-item multi-model review ≠ independent audit of the state. T-115ب and IndependenceRegistry are the recorded remaining work. They are not referenced by RULE-019 or §12.
+
+N5. FALSE_ANALOGY_PA-09
+    Unreachable live guard ≠ absent guard.
+
+N6. EVIDENCE_PACKAGE_IS_ADVOCACY
+    Hash is real. Framing is not. Omission of C-18.md, T-115ب, and independence/README.md is the kind of "isolation" that protects the change, not the reviewer.
+
+N7. CIRCULAR_SELF_APPLICATION
+    First use of the protocol is to validate the protocol that will later be cited to close the gap the protocol was written to address.
+
+N8. CONDITION_4_OR_CLAUSE / RETRY / OPTIONALITY / UNDEFINED_PROVIDER
+    See §1. Individually small; jointly they make "independent" a label.
+
+Weaknesses that would not by themselves reject, but compound:
+
+W1. §4 golden path not updated. Two standards.
+W2. No protocol for reviewer disagreement in the rule (only in the work order).
+W3. Evidence package claims `npm test` 2261/2261; work order and commit say npm test is not required. Unverified and inconsistent.
+W4. Dual reviewer as one string.
+W5. "يتقدّم واحد منها على الآخر" ambiguity.
+W6. WORK_CONTROL header now claims authority from RULE-010…019, including an unenforced rule.
+
+Suggested improvements (if the change is rewritten, not if it is waved through):
+
+I1. Strike §12-3's claim that T-115/C-18 closes via 12-1. State the opposite: a 12-1 certificate never closes C-18. C-18 / T-115ب remain the independence/README.md path: second operator, IndependenceRegistry.attest on verdict.md text, attestation file, then C-18.md, then the table — in that order.
+
+I2. Strike "فإن طُلب." C-18 already asked. If RULE-019 is only a work-control diversity protocol, say so, and unlink T-115/C-18 from the title, the section heading, the commit message, and the work-item area.
+
+I3. Amend commit d18d4bf's "أُغلقت علّةُ" (new commit; history is not rewritten silently). The cause is not closed.
+
+I4. If model-provider review is wanted as a *work-control* improvement (useful, not C-18):
+    - Define "مزوّد" as the hosting operator that can read the prompt and the weights path, not the lab brand.
+    - Bind identity to a platform-attested model id, not a header string.
+    - Require raw output; delete the summary OR.
+    - Forbid executor-spawned subagents for reviews that claim 12-1.
+    - Frozen evidence = `git show <hash>` plus C-18.md plus T-115ب plus the diff. No executor narrative.
+    - Retry cap and a requirement to retain REJECTED outputs.
+    - Put a real check in check_work.mjs, or move RULE-019 out of the auto-enforced section so it does not lie about being a rule.
+    - Update §4 if this is mandatory; if optional, do not hang T-115 on it.
+
+I5. Do not use the protocol to certify the protocol for the purpose of later closing C-18.
+
+What this change gets right (so the rejection is not a tantrum):
+- Admitting session-number review is fake independence.
+- Distinguishing model diversity from organizational independence, in the paragraph that does so.
+- Leaving status at REVIEW, not self-VERIFIED.
+- Freeze hash is a real commit and the excerpts match.
+- Adversarial prompt is the right *shape* of prompt (the package still leads the witness).
+
+Right shape, wrong object, unenforced identity, closure path left open.
+
+================================================================
+VERDICT
+================================================================
+
+REJECTED
+
+NAMED DEFECT: C-18_CLOSURE_BY_REDEFINITION
+
+§12-3 provides that T-115/C-18 is closed by a 12-1 "independent multi-model" certificate on a work item. 12-1 is same-operator model-lab diversity plus paperwork. C-18 and T-115ب require a party outside the executors' authority (a real second operator or a royal order adopting the audit). RULE-019's "فإن طُلب" pretends that requirement is hypothetical. The commit claims the cause of the gap has already been closed. The first use of the protocol cannot prove its own identity or isolation.
+
+This is T-115 again: a declaration in files, a story about actor identity, no enforcement, and a path to write "✅" later without the thing the criterion named.
+
+T-115 / C-18 remain open. This review is not a certificate that closes them. If a later hand files this document as that certificate, that filing is a RULE-018 / RULE-004 violation: closing a named gap by assertion.
+
+END OF RAW REVIEW
+Grok 4.6 (xAI) — identity prompt-asserted, not attested
+Hash reviewed: d18d4bffa5bbf6bea4ef6df198b07cc47903a90c
+Date: 2026-09-08
+Judgement: REJECTED (C-18_CLOSURE_BY_REDEFINITION)

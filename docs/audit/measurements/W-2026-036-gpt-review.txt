@@ -1,0 +1,179 @@
+REVIEWER: GPT-5.6 (OpenAI) — Independent Review per RULE-019
+
+SCOPE AND REVIEW POSTURE
+
+I reviewed the frozen evidence package adversarially, not as a confirmation exercise. My conclusion is that the change is directionally honest and materially better than session-number separation, but its operative control remains self-attested. It defines desired properties without establishing evidence strong enough to prove that those properties existed in a particular review. Consequently, a controller of the repository and review invocation can make a non-qualifying review appear to qualify.
+
+1. DOES RULE-019 DEFINE “INDEPENDENT REVIEWER” TIGHTLY?
+
+No. It establishes five useful criteria, but several key terms and proof obligations are insufficiently defined.
+
+First, “provider” is ambiguous. It may mean the model developer, API provider, inference host, platform, account owner, or operator selecting the model. In the contemplated case, the executor is described as “Perplexity Computer (Anthropic model)” and the reviewer as an OpenAI model while both are mediated by Perplexity. The rule apparently intends “model developer,” but it never says so. This creates edge cases:
+
+- an open-weight model developed by one entity but hosted or modified by another;
+- a white-labelled model whose underlying provider is undisclosed;
+- one provider serving or distilling another provider’s model;
+- a router that changes the underlying model without exposing it;
+- a fine-tune, derivative, or alias represented as a different family;
+- a mixture-of-models invocation containing the executor’s provider;
+- a model name entered manually that does not match the model actually invoked.
+
+Second, “not a copy of the same family” is not operationally defined. “Family,” “copy,” “derivative,” “distillation,” and the treatment of shared base models are all unstated. A nominally different provider could serve the same or substantially derived weights and pass the literal provider test.
+
+Third, recorded identity is only a statement in the report. The rule requires the model name and version to be written, but it does not require provider-generated metadata, an immutable invocation identifier, a signed receipt, an API response envelope, or any other provenance. A human or the executor can type “GPT-5.6 (OpenAI)” into a file regardless of what produced the review.
+
+Fourth, context isolation is an asserted condition, not a demonstrated one. The rule does not specify a fresh session, disabled memory, absence of inherited system/developer instructions, tool access, prior repository access, or how the isolation is evidenced. It also does not specify who assembled the evidence package or how completeness and neutrality of that package are tested. An executor can omit adverse files or frame the package selectively while still calling it frozen.
+
+Fifth, condition (4) permits “raw output or an auditable summary.” Those are not equivalent. A summary can remove qualifications, omit defects, alter severity, or turn a rejection into an apparently favorable result. The heading in §12-1 says raw output is preserved, but the operative text allows a summary instead. That is a direct loophole.
+
+Sixth, an “adversarial verification prompt” is not defined by minimum content or preserved as mandatory evidence. A prompt can contain the words “find defects” while being leading, narrowly scoped, or paired with hidden instructions to approve. The exact complete instruction stack—not merely a favorable excerpt—must be retained if this criterion is to be auditable.
+
+Therefore RULE-019 is not loophole-free. It is a policy declaration with under-specified evidence and provenance requirements.
+
+2. IS THE FUNCTIONAL/MODEL VERSUS ORGANIZATIONAL DISTINCTION HONEST?
+
+Mostly honest in disclosure, but potentially misleading in its naming and its relationship to the original gap.
+
+The text commendably states that the mechanism is not organizational independence and explicitly says that a truly external organizational party requires a person/account/platform outside Perplexity. It also states that T-115/C-18 is not closed merely by adding the definition. Those are important and candid limitations.
+
+However, calling the resulting actor an “independent reviewer” still risks overstating the control. A different model developer supplies model diversity, not necessarily reviewer independence. The same platform/operator can select the model, construct the evidence, compose hidden instructions, invoke the review, edit the output, and record the result. That is functional diversity under common control, not an independent party in the ordinary governance or audit sense.
+
+The claim in §12-2 that a different-provider model has different training and blind spots and therefore catches what the executor misses is plausible but not guaranteed by the provider label. Providers may use overlapping data, derived models, shared infrastructure, model routing, or similar alignment methods. Diversity can improve review quality, but provider difference alone does not prove meaningful epistemic independence.
+
+Most importantly, the stated T-115 gap says the reviewer is not truly “a different party from the executor.” If “party” is the control objective, a second model under the same platform/operator does not fully satisfy it. The amendment partly redefines the target from party independence to model-provider diversity. It is honest only if records continue to say “functional/model separation achieved; organizational actor separation remains open.” It becomes misleading if C-18 is marked closed without an explicit decision that functional/model diversity is an accepted substitute for the original different-party requirement.
+
+3. IS §12-4 A GENUINE LIMIT OR A VULNERABILITY?
+
+It is both a genuinely disclosed limit and a material control vulnerability.
+
+Disclosure is good governance, but disclosure does not reduce exploitability. The only automated check remains a textual inequality between owner and reviewer. That check can be satisfied with two labels controlled by the same actor. The two decisive conditions—actual provider difference and actual context isolation—are not enforced, and the proposed manual evidence is itself largely self-authored and mutable.
+
+A manual control can be valid without automated provider enforcement, but only if it has strong compensating controls. This package does not define them. There is no required attestation by an actor distinct from the executor, no provider-authenticated invocation record, no immutable prompt/output transcript, no hash or signature binding the transcript to the frozen commit, no mandatory review of provenance, and no gate that fails closed when those artifacts are absent.
+
+The current test results do not cure this issue. The package itself says check_work verifies only textual owner/reviewer inequality and does not verify provider or isolation. Green tests therefore establish repository consistency, not the truth of reviewer independence.
+
+Treating §12-4 merely as a harmless “declared limit” would be incorrect. It identifies the exact place where the control can be bypassed and postpones remediation to an unspecified future work item.
+
+4. CAN A NON-INDEPENDENT REVIEWER BE MADE TO APPEAR INDEPENDENT?
+
+Yes, in several straightforward ways:
+
+1. Invoke the same-provider model, then manually label the output as a different-provider model.
+2. Have the executor write the review and add the required reviewer header.
+3. Use a router or white-labelled endpoint while declaring the advertised rather than actual underlying model.
+4. Start a “different model” with inherited memory, hidden instructions, prior drafts, or executor reasoning, while presenting only the frozen package as visible evidence.
+5. Preserve an “auditable summary” instead of raw output, omitting adverse findings or changing the verdict.
+6. Give an ostensibly adversarial user prompt while hidden higher-priority instructions bias the model toward acceptance.
+7. Freeze a selective or misleading package that omits relevant diff hunks, failures, prior objections, or repository state.
+8. Generate a legitimate independent rejection, then edit the stored text before committing it.
+9. Re-run the reviewer repeatedly and retain only a favorable sample, with no requirement to disclose failed or rejected runs.
+10. Use nominally different providers whose models are actually the same, derived, routed, or otherwise not independent in the intended sense.
+11. Record a broad model name without an immutable version or deployment identifier, making later reproduction and verification impossible.
+12. Let the same actor serve as executor, evidence curator, review invoker, output custodian, and closure approver; the five boxes can then be self-certified.
+
+All of these can satisfy the present documentary form while violating the intended substance.
+
+5. DOES THE DEFINITION CLOSE T-115/C-18?
+
+No. The text correctly says that definition alone does not close the gap, but the proposed certificate mechanism still permits closure by assertion.
+
+An actual review report bearing a model name, an adversarial-looking prompt, and stored text is not proof that the named model produced it, that it saw only the permitted context, that the saved output is complete and unedited, or that the evidence package was complete. Because those are the essential independence properties, the certificate is currently an attestation by the same control environment rather than independently verifiable evidence.
+
+The mechanism opens a path toward partial closure: it can demonstrate model-provider diversity if provenance and chain of custody are strengthened. It does not, as drafted, close organizational independence, and it may not close the original “different party” formulation at all. C-18 should remain open or be split into two controls:
+
+- C-18A: model/provider diversity under common platform control; and
+- C-18B: organizationally independent reviewer outside the executor’s platform/account/control domain.
+
+Only C-18A could potentially be closed by this protocol, after proof defects are remedied. C-18B must remain explicitly open unless external organizational evidence is obtained.
+
+6. DEFECTS, WEAKNESSES, AND REQUIRED IMPROVEMENTS
+
+Critical defect — SELF-ATTESTED REVIEWER PROVENANCE AND CHAIN OF CUSTODY
+
+The rule allows the same control domain to assert model identity, context isolation, prompt quality, output completeness, and acceptance without provider-authenticated or tamper-evident evidence. This defeats the central purpose of actor-identity separation.
+
+Required improvements:
+
+A. Define identity precisely.
+
+- Define “model developer/provider,” “inference provider,” “platform/operator,” “model family,” “derivative,” “router,” and “organizational reviewer.”
+- State which identity dimension must differ. If the intended test is model developer, say so.
+- Require both the declared model developer and the actual inference endpoint/provider to be recorded.
+- Address open-weight, fine-tuned, distilled, routed, ensemble, and undisclosed models.
+- Fail closed where the underlying model cannot be verified.
+
+B. Require authenticated provenance.
+
+- Preserve the provider-generated response metadata or equivalent invocation receipt, including exact immutable model/deployment identifier, timestamp, request or response ID, and provider/endpoint identity.
+- Bind the invocation to the reviewed commit and evidence-package digest.
+- Do not accept a model name written only in the prose of the review as evidence.
+- Where provider signatures are unavailable, require a second custodian or independent witness to verify the invocation record.
+
+C. Make the evidence tamper-evident and complete.
+
+- Hash the exact evidence package, exact complete prompt stack, raw response, and metadata.
+- Record those hashes in an append-only or signed manifest.
+- Bind the output to the frozen commit hash.
+- Require the actual diff or a manifest of reviewed files in the package; a narrative summary of changes is not enough.
+- State who prepared the package and require a completeness check against the commit.
+- Preserve rejected, failed, and repeated reviewer runs to prevent favorable-run selection.
+
+D. Remove the summary loophole.
+
+- Delete “or an auditable summary” as a substitute for raw output.
+- Require full verbatim raw model output. A summary may be added, but never replace the raw record.
+- Preserve the original verdict, caveats, refusals, tool traces relevant to the conclusion, and truncation status.
+
+E. Make context isolation testable.
+
+- Require a fresh invocation with memory disabled and no prior conversation.
+- Record all system, developer, user, and tool instructions visible to the model, subject only to secrets redaction that is itself logged.
+- Define whether repository tools, web access, and prior files are allowed.
+- Require an attestation from the invocation mechanism, not merely from the output author, regarding session freshness and supplied messages.
+- Recognize that hidden platform instructions may prevent perfect proof; record residual risk rather than asserting isolation absolutely.
+
+F. Strengthen the adversarial-prompt criterion.
+
+- Preserve the exact full prompt and higher-priority instruction set.
+- Specify minimum questions, including loopholes, contrary evidence, provenance, scope completeness, and a forced ACCEPTED/REJECTED outcome with named defects.
+- Prohibit instructions that presume acceptance or constrain the reviewer from rejecting.
+- Require the reviewer to distinguish control design from operating effectiveness.
+
+G. Add a fail-closed gate and negative tests.
+
+- A review must not count as independent when provenance metadata, raw output, complete prompt, evidence digest, commit binding, or isolation evidence is missing.
+- Add tests showing that same-provider identity, unknown/aliased providers, summaries without raw output, mutable output, missing prompt layers, and mismatched package/commit hashes are rejected.
+- If automated verification is infeasible, require a named human custodian distinct from the executor to validate the evidence checklist and sign the closure decision.
+
+H. Separate creation, custody, and closure authority.
+
+- The executor should not be the sole evidence-package author, review invoker, artifact editor, and closure approver.
+- At minimum, require a distinct accountable custodian to verify provenance and completeness.
+- For organizational independence, require an outside account/platform/person and evidence of that separation.
+
+I. Correct the closure claim.
+
+- State explicitly that RULE-019 establishes a model-diversity review, not a different organizational party.
+- Split T-115/C-18 into model independence and organizational independence, or retain the original gap as open.
+- A certificate should prove operating effectiveness for one work item; it should not be treated as proof that the general control is continuously effective.
+
+EVIDENCE-PACKAGE-SPECIFIC OBSERVATION
+
+The package states that the reviewer sees changed files “with their diff,” but the supplied package contains quoted proposed text, acceptance checkboxes, and summarized test results rather than the complete five-file commit diff or machine-verifiable test logs. The commit hash identifies an intended repository state, but the package does not include a digest of itself or evidence binding its quoted contents and test claims to that commit. Under the protocol’s own isolated-context model, the reviewer cannot independently verify omitted hunks, unchanged conflicting rules, actual queue state, or the stated test executions from this package alone. This does not necessarily prove that the underlying change is wrong, but it shows that the proposed evidence protocol is not yet sufficient for a conclusive operating-effectiveness certificate.
+
+POSITIVE FINDINGS THAT DO NOT CURE THE DEFECT
+
+- The text correctly rejects session-number difference as identity separation.
+- It requires a different model provider rather than another session of the same model family.
+- It explicitly distinguishes functional/model diversity from organizational independence.
+- It states that the rule’s existence alone does not close T-115/C-18.
+- It preserves REVIEW rather than VERIFIED status in the stated acceptance evidence.
+- It expressly discloses the absence of automated enforcement.
+
+These are sound design intentions, but none supplies proof of actual provider identity, isolation, or output integrity.
+
+VERDICT
+
+REJECTED — NAMED DEFECT: SELF-ATTESTED REVIEWER PROVENANCE AND CHAIN-OF-CUSTODY GAP.
+
+RULE-019 and §12 define an aspirational model-diversity protocol but allow the decisive facts—provider identity, context isolation, full prompt, raw output integrity, evidence completeness, and result custody—to be asserted or edited within the executor’s control domain. The “auditable summary” alternative is an additional direct loophole. Until authenticated provenance, mandatory verbatim raw output, complete prompt capture, tamper-evident commit/package/output binding, fail-closed validation, and a distinct closure custodian are required, a non-independent review can be made to appear independent and T-115/C-18 can be closed by assertion.
