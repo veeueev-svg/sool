@@ -1,0 +1,228 @@
+REVIEWER: Grok 4.6 (xAI), writing under the assigned RULE-019 diversified-review role for work item W-2026-036, round two. This identity is self-declared, as required by §12-1 condition 3 of the text under review. This package contains no tamper-resistant provenance token, model-attestation signature, provider invoice, or out-of-band operator evidence that would independently prove that identity. The redesigned text itself admits that limit. I therefore record the assigned name and provider, and I do not treat that recording as proof of regulatory independence.
+
+ISOLATION COMPLIANCE: I read exactly one file, /home/user/workspace/sool/docs/audit/measurements/W-2026-036-evidence-package-v2.md, and I treated that file as the complete, self-contained review brief. I did not read, list, open, search, or explore any other file, directory, repository path, or workspace content. I did not run commands that inspect the repository. I did not attempt to verify the claimed integrity hash 9d118059f51570f94aed769c956dae9ce0773dee against any object outside this package. Where the package is insufficient to verify a claim that lives outside the two quoted texts, I record that as a named residual limitation instead of seeking more context.
+
+MANDATORY SCOPE LIMIT, STATED BEFORE THE QUESTIONS: This review is a model-diversity examination of the redesigned RULE-019 text and the redesigned §12 text as quoted in the frozen package. If the verdict below is acceptance, it is acceptance of work item W-2026-036 only: whether the redesign treated the round-one named defects without opening a new gap that restores a false independence or C-18-closure claim. This review does not close T-115. This review does not close C-18. This review does not certify the protocol as an independence mechanism. That limit is required by the package’s own §2, §12-2, §12-3, §12-5, and §9.
+
+EVIDENCE ACTUALLY BEFORE ME: the round-one named defects and the executor’s defect-treatment table (§3); the full quoted RULE-019 text (§4); the full quoted §12 text including 12-1 through 12-5 (§5); the pre-checked acceptance list (§6); the claimed test results (§7); the eight adversarial questions (§8); and the mandatory verdict format (§9). I do not have unified diffs of the changed files, raw verifier logs, the surrounding sections of GOVERNING_RULE.md that would independently show the destination heading, or any other repository file that might still assert C-18 closure.
+
+------------------------------------------------------------------------------
+QUESTION 1
+Did the redesign treat SELF-ATTESTED_REVIEWER_PROVENANCE_AND_CHAIN_OF_CUSTODY_GAP? Does any provenance or custody claim remain in the text that evidence does not support?
+------------------------------------------------------------------------------
+
+Yes, the redesign treated that defect as a claim-honesty defect. It did not, and does not pretend to, replace self-attestation with tamper-resistant provenance.
+
+Round one, as recorded in this package, objected that the rule defined desirable properties while still allowing the same control domain to assert model identity, context isolation, prompt quality, and output completeness without tamper-resistant evidence; that “or an auditable summary” could substitute for raw output; and that no automated gate rejected a missing provenance record.
+
+The redesigned RULE-019, as quoted, now states that the protocol is a documentary protocol with no automated barrier; that it improves review quality by different blind spots; and that it does not prove regulatory independence and does not close the C-18/T-115 gap. The redesigned §12 opening paragraph and §12-2 now state, in substance, that the platform and operator are the same in both roles, that identity is self-declared and not documented by tamper-resistant provenance, and that isolation is not automatically guarded. §12-4 states that check_work.mjs verifies owner ≠ reviewer as text, and does not automatically verify model provider or context isolation. Those sentences withdraw the overclaim. They are the treatment described in the package’s treatment table under “honesty instead of assertion.”
+
+The chain-of-custody half of the original gap, the summary substitute, is treated in the texts themselves: RULE-019 condition (4) and §12-1 condition 4 both require the complete raw output and both say a summary is not an accepted substitute. I address tightness of that closure under Question 3.
+
+What remains is not a hidden provenance claim. What remains is the residual fact that the protocol still asks the reviewer to write a model name and version (§12-1 condition 3; RULE-019 condition 3) and still asks that a frozen package be used (§12-1 condition 2), while also confessing that those writings are not tamper-resistant. Recording a name is still a self-written string. This package itself illustrates that residual: I can write “Grok 4.6 (xAI)” into this file, and nothing in the quoted protocol cryptographically binds that string to an xAI-operated model. Because the redesigned text now says that identity is self-declared and that the protocol does not prove independence, that residual is disclosed rather than asserted as proof.
+
+I find no remaining sentence in the quoted RULE-019 or quoted §12 that claims a provenance or custody property the protocol does not have, with one drafting caution that is debt rather than a revived claim: RULE-019 still says the model name and version “are recorded,” and §12-1 still says identity is “registered.” Those verbs could be misread as a registry with independent custody. In context of §12-2’s explicit “self-declared, not documented by tamper-resistant provenance,” I read them as “written into the review report,” not as a proven chain of custody. A later editor who quotes only 12-1/3 without 12-2 could revive the overclaim. That is a residual drafting risk, not a present overclaim in the combined text.
+
+I also cannot, from this package alone, verify that no other repository document still asserts reviewer provenance. That unverified exterior is a package limitation, not a defect in the quoted redesign sentences. Named residual, not a new closure path in the text under review: RESIDUAL_SELF_ATTESTATION_DISCLOSED_NOT_REMOVED.
+
+Answer to Question 1: the defect is treated by withdrawal of the overclaim and by deletion of the summary substitute. No unsupported provenance or custody claim remains in the quoted texts when they are read together. Self-attestation itself remains, and is now admitted.
+
+------------------------------------------------------------------------------
+QUESTION 2
+Did the redesign treat C-18_CLOSURE_BY_REDEFINITION? Does any path remain in RULE-019 or §12 that would allow T-115/C-18 to be closed by this protocol or by a claim of regulatory independence?
+------------------------------------------------------------------------------
+
+Yes, the redesign treated C-18_CLOSURE_BY_REDEFINITION.
+
+Round one, as recorded in this package, objected that old §12-3 allowed T-115/C-18 to be closed by a 12-1 certificate; that C-18 and T-115b require a party outside executor authority; that identity was self-declared; that isolation had been broken in the prior review; that circular self-certification was possible; that a “rule without an automated barrier” contradicted the repository’s rule principle; and that integrity message d18d4bf had wrongly claimed the C-18 defect closed.
+
+The quoted new §12-3 is unambiguous: T-115/C-18 are never closed by this protocol; a 12-1 review certificate proves that a diversified review occurred and is not a certificate of regulatory independence; C-18 requires a party outside executor authority, which this protocol does not provide; T-115b is an external condition requiring a real second operator and is not closed by this repository; and the d18d4bf integrity message that claimed the C-18 defect was closed was wrong, with the correction that the defect was not closed and that the proposed path was insufficient. RULE-019 ends with the same prohibition: C-18/T-115b are not closed by this protocol, but by a party that is regulatory-external (outside Perplexity) or by a royal order adopting the audit. §12-2 repeats that if a stricter external party is required, the C-18 gap is not closed by this protocol and is instead declared as an external condition with a named party and published satisfaction evidence under RULE-018. §12-5 forbids using the protocol to certify itself.
+
+I looked for a remaining closure path in the quoted words.
+
+There is no sentence that says a 12-1 certificate closes T-115 or C-18. There is no sentence that says diversified review is regulatory independence. The old closure language is not present in the quoted replacement.
+
+The royal-order clause in RULE-019 is not a path through this protocol. It names an alternative, extra-protocol closure route. It does not say that completing RULE-019 is itself a royal order, and it does not say that a 12-1 certificate may be treated as one.
+
+The RULE-018 cross-reference in §12-2 is likewise not a silent closure. It says the stricter gap is declared as an external condition. I cannot read RULE-018 from this package; I therefore cannot confirm how RULE-018 is worded in the repository. I do not treat that unread text as a remaining path inside RULE-019 or §12. If RULE-018 elsewhere still allowed documentary self-declaration to stand in for an external party, that would be outside the two texts I am permitted to see. Named package limitation: RULE-018_TEXT_NOT_IN_PACKAGE. It is not a remaining path in the texts under review.
+
+I also find no path that would let a later work item “close C-18 by completing 12-1” without contradicting the new §12-3. A later author could of course ignore the text, as d18d4bf is now said to have done. Ignoring a prohibition is not a path the text grants. The text now records that previous false closure as an error. There is still no automated barrier that would reject a future false-closure commit; §12-4 and the move of RULE-019 to documentary protocols admit that. That is the residual of “rule without automated barrier,” treated by recategorization and disclosure rather than by a new gate, which I address under Question 5.
+
+Answer to Question 2: the defect is treated. In the quoted RULE-019 and quoted §12, I find no remaining granted path to close T-115/C-18 by this protocol or to claim regulatory independence by satisfying 12-1.
+
+------------------------------------------------------------------------------
+QUESTION 3
+Is the “auditable summary” loophole tightly closed (condition 4 / 12-1/4)?
+------------------------------------------------------------------------------
+
+Yes, in the quoted normative text the loophole is tightly closed as a permitted substitute.
+
+RULE-019 condition (4): the complete raw output is mandatory; a summary is not accepted as a substitute for it.
+
+§12-1 condition 4: the complete raw output is stored at docs/audit/measurements/W-YYYY-NNN-<model>-review.txt; a summary is not accepted as a substitute; a summary, if it exists, is an addition, not a replacement.
+
+The round-one phrase “or an auditable summary” is not present in either quoted text. The new text affirms the negative twice (not accepted as a substitute) and, in §12-1/4, also states the residual case (a summary may exist only as an addition). That is tighter than a bare deletion.
+
+Residual weaknesses, which do not reopen a textual substitute:
+
+First, there is no automated check, in the quoted protocol, that the file at that path exists, is non-empty, is not itself a summary, or matches the reviewer’s actual raw bytes. §12-4 says the gateway does not automatically enforce this protocol. A party could write a short summary into a file named like a raw review and assert compliance. That is documentary evasion, not a granted textual alternative.
+
+Second, “raw complete output” is not defined with a minimum content test (for example: answers to every numbered question, the verdict line, and no instruction to an editor to replace the body with a précis). A later editor could store a “raw” file that is in fact a cleaned extract and still point at the path. That is a definitional residual. Suggested debt, not a remaining “or summary” clause: define “raw” as the reviewer’s first complete unedited instrument, including the identity declaration, isolation declaration, numbered answers, and verdict line, and forbid post-hoc substitution of that file.
+
+Third, this package itself is not the reviewer’s raw output; it is the brief. That is expected.
+
+Answer to Question 3: the granted loophole is closed in both RULE-019 condition (4) and §12-1 condition 4. Remaining risk is unenforced documentary compliance, which the redesign now classifies honestly as a non-gate.
+
+------------------------------------------------------------------------------
+QUESTION 4
+Is §12-5 (ban on circular application) tight? Does presenting this same work item (the amendment of RULE-019 and §12) to diversified review violate §12-5, or is it consistent so long as the judgment is on the redesign and not a certification of the protocol? If a violation, name the defect.
+------------------------------------------------------------------------------
+
+§12-5, as quoted, does two things. It forbids using the protocol to certify itself. It then specifies the operational meaning: amending RULE-019 or this section is not closed by diversified review alone, because in that case the reviewer is a sub-agent of the executor under the same platform. It ends with the honest correction that diversified review improves and does not close.
+
+Is that tight? It is tight against the round-one circularity, which was using a 12-1 certificate to close C-18 and to bless the protocol as the independence mechanism. It is less tight as a work-control sentence, because “closed by diversified review alone” does not define the other things that must exist before an amendment of RULE-019 or §12 may be closed as a work item. It does not say whether owner acceptance, ordinary RULE-004 owner ≠ reviewer text, verifier greenness, or a human operator decision are the required additional acts. A reader could still treat two diversified review files as the effective close of W-2026-036.
+
+Does presenting this work item to diversified review violate §12-5?
+
+I do not find a violation, provided the judgment is confined the way this package already confines it.
+
+§12-5 does not forbid diversified review of an amendment of RULE-019 or §12. It forbids closing that amendment by diversified review alone, and it forbids using the protocol as self-certification of independence. This package asks whether the redesign treated the round-one defects without opening a new gap. The mandatory verdict, if acceptance, is ACCEPTED_FOR_W-2026-036_ONLY, and the package states that such acceptance does not close T-115/C-18 and does not certify the protocol as an independence mechanism. That is an improvement review of documentary text, not a self-certification of independence.
+
+If I were to read §12-5 as banning any diversified review of the protocol’s own words, the protocol would become un-reviewable by the very method it describes, including this round-two review that the governing owner authorized. That reading is stronger than the text. The text’s vice is self-certification and sole closure, not examination.
+
+The consistency conditions I rely on, and which I record so they cannot be silently dropped later, are:
+
+(a) This review is an input to W-2026-036, not a certificate that RULE-019 or §12 is an independence mechanism.
+(b) Acceptance, if any, is scoped to whether the redesign treated the named defects without a new overclaim gap.
+(c) Diversified review is not sufficient alone to close the amendment; ordinary work-control remaining acts still apply. This package does not fully specify those remaining acts, which is the tightness residual above.
+(d) T-115/C-18 remain open, as §12-3 now requires.
+
+I do not name a violation defect. I name a residual drafting debt: §12-5 should state, in one sentence, that a work item whose payload is RULE-019 or §12 may be reviewed under 12-1 for quality of the documentary redesign, and that such a review is neither necessary-and-sufficient closure of that work item nor any closure of C-18/T-115. That would remove the ambiguity Question 4 is forced to ask.
+
+Answer to Question 4: §12-5 is tight enough against the round-one circular self-certification. Presenting W-2026-036 to diversified review is consistent with §12-5 so long as the judgment is on the redesign and is not protocol self-certification. I do not find a violation. Residual: “not closed by diversified review alone” should name the other required acts.
+
+------------------------------------------------------------------------------
+QUESTION 5
+Does moving RULE-019 into “documentary protocols” honestly treat the “rule without a barrier” contradiction, or does evasion remain possible?
+------------------------------------------------------------------------------
+
+The recategorization honestly treats the contradiction of calling something a governing automated rule while admitting it has no automated barrier.
+
+Round one objected that a rule without an automated barrier contradicted the repository principle that rules reject noncompliant commits. The quoted RULE-019 now says, in its own body, that it is a documentary protocol with no automated barrier. The quoted §12-4 says the protocol is not an automated barrier and is not used as a rule by which commits are rejected, and that this is why RULE-019 was moved from the automatically enforced rules section to the documentary-protocols section of GOVERNING_RULE.md. If later automated enforcement of model provider is wanted, that is a separate work item touching scripts/check_work.mjs.
+
+That is the honest treatment: stop listing it where automated rules live; say it does not reject commits; leave a future gate to a future work item.
+
+Evasion remains possible, and the text now says so rather than hiding it.
+
+Evasion of the documentary protocol: a work item can omit diversified review, or can store a same-provider review under a different-provider filename, and check_work.mjs as described will not fail for that reason. §12-4 admits this.
+
+Evasion of the old contradiction (appearing to have an automated independence rule): that form of evasion is reduced if and only if RULE-019 actually now lives only in the documentary-protocols section and is not still also listed among automated rules, and if no other file still treats RULE-019 as a rejecting gate or as C-18 closure. I cannot verify section placement or other files from this package. I therefore accept the quoted self-description as the object of this review, and I record PACKAGE_DOES_NOT_PROVE_SECTION_PLACEMENT as a limitation. If the heading move did not in fact occur, the honesty treatment would be false. That is not something I am permitted to check.
+
+Evasion by category shopping: a later author could move RULE-019 back to automated rules without adding a gate, or could cite it in a work-item close message as if it were a rejecting independence rule. The quoted §12-4 and §12-3 would then be contradicted. There is no automated prevention of that regression in this protocol, by design of the recategorization.
+
+Answer to Question 5: the move, as quoted, is an honest treatment of the category contradiction. Evasion of compliance remains possible because there is still no gate. Evasion of the original false appearance (a rule that pretends to be a barrier) is reduced by the recategorization and the explicit non-barrier sentences, subject to the unverified placement limitation.
+
+------------------------------------------------------------------------------
+QUESTION 6
+Is there a new gap in the redesign that was not named in round one? Is there a way to circumvent the new text so that the non-independent appears independent?
+------------------------------------------------------------------------------
+
+I distinguish three things: (i) residuals of round-one defects that are now disclosed rather than removed; (ii) new gaps in the redesigned text that restore a false independence appearance; (iii) gaps in this frozen package as an instance of 12-1.
+
+(i) Residuals, disclosed, not new closure paths.
+
+Self-attested identity remains. A same-family model on the same platform can write a review file whose filename and opening line claim a different provider. The new text says identity is self-declared and that the protocol does not prove independence, so this no longer makes the non-independent appear independent inside the protocol’s own claims. It can still make a directory listing look as if cross-provider review occurred. That is residual self-attestation, already named in round one, now admitted.
+
+Isolation remains documentary. A reviewer can ignore the package instruction and explore the repository. Round one already named the isolation break. The treatment is an instruction plus a required declaration, which this package implements as a documentary limit, not a gate.
+
+No automated provider or isolation check remains. Round one already named “rule without barrier.” Recategorized, not gated.
+
+(ii) New gaps in the redesigned text.
+
+I do not find a new granted path that would let a completed 12-1 review be presented as regulatory independence or as C-18/T-115 closure. The prohibitions in RULE-019, §12-2, §12-3, and §12-5 are repeated and specific. Circumvention of the new text, in the strong sense of “the text itself can be read to authorize a false independence appearance,” fails if the reader includes §12-2 and §12-3.
+
+Circumvention in the weak sense of “a later author ignores §12-3, as d18d4bf is now said to have ignored the truth,” remains possible. That is not a new gap in the wording; it is the absence of a gate, which the wording now classifies correctly.
+
+Two drafting openings are new relative to the round-one named list, but they do not restore an independence claim:
+
+UNSPECIFIED_DIVERSIFICATION_TRIGGER. RULE-019 begins “when reviewer diversification is requested.” I address this under Question 7. It allows the protocol to be idle. Idleness does not make the non-independent appear independent; it means the quality improvement does not run. Combined with the honest non-closure sentences, idle protocol cannot close C-18.
+
+HARD-CODED_EXECUTOR_FAMILY. §12-1 names GPT, Grok, Gemini, and Kimi, and says “not a copy from the same Claude family.” That exclusion is correct only while the executor is a Claude-family model. If a future executor is GPT, the Claude-family exclusion would be the wrong exclusion, and a Claude reviewer would be the diversified one. The operative rule is “provider different from the executor’s provider.” The Claude-family clause is an example that was over-specified into a standing exclusion. This is a maintenance defect, not a false-independence path. Suggested debt: keep the provider-difference rule; move the Claude-family clause to a non-normative example tied to the current executor.
+
+ROLEPLAY_SUBSTITUTION is the operational form of residual self-attestation: the same platform can instruct a model to write as another provider. The redesigned text does not create this; it confesses it. I do not treat it as a new gap that reopens C-18.
+
+(iii) Package-instance issues, not redesign-text issues.
+
+§12-1 condition 2 says the isolated reviewer sees the frozen package alone: the integrity hash, the changed files with their diffs, the acceptance conditions, and the test results; and does not see executor drafts, chain of thought, or justifications.
+
+This package includes the executor’s defect-treatment table (§3) and a fully pre-checked acceptance list (§6). The treatment table is executor justification. The pre-checked boxes are the executor’s claim that the work is already done. Both can bias an adversarial reviewer toward confirming a map instead of independently comparing old defects to new text. Named process weakness of this instance: EXECUTOR_RATIONALE_AND_PRECHECKED_ACCEPTANCE_IN_FROZEN_PACKAGE. I do not elevate it to a defect of the quoted RULE-019 or §12, because a redesign review targeting named defects must at least include the named defects, and because the questions in §8 still require independent judgment. Suggested debt: put prior reviewers’ named defects in the package; omit the executor’s treatment narrative; leave acceptance boxes unchecked for the reviewer.
+
+§12-1 condition 2 also asks for changed files with their diffs. This package quotes full replacement texts, not diffs, and offers a hash string without an object I am permitted to hash. Named package limitation: NO_DIFFS_AND_UNVERIFIABLE_HASH_IN_PACKAGE. Insufficient to verify that the quoted texts are the texts at 9d118059; sufficient to judge the quoted texts themselves.
+
+Answer to Question 6: no new gap in the redesigned wording restores a granted appearance of independence or a granted C-18 closure path. Weak circumvention by ignoring the new prohibitions remains possible because there is no gate. New drafting openings (optional trigger; Claude-family hard-code) are quality defects, not independence-laundering paths. This package includes executor rationale, which is a process weakness of the instance.
+
+------------------------------------------------------------------------------
+QUESTION 7
+Is the wording “when reviewer diversification is requested” in RULE-019 (how diversification is requested, and who owns the request) tight?
+------------------------------------------------------------------------------
+
+No. That clause is not tight.
+
+RULE-019’s operative lead-in is conditional: when reviewer diversification is requested in a work-item review, a model from a provider different from the executor’s model (not a copy of the same family) is used. The quoted text does not say:
+
+who may request (owner, reviewer field, monarch, auditor, any participant);
+who must request;
+when request is mandatory rather than optional (for example: amendments to governing rules; work items that touch C-18/T-115; work items whose contract says diversified REVIEW);
+how the request is recorded (work-item field, contract clause, commit message);
+what happens if a work item is closed without a request;
+who decides that a given model is from a different provider;
+whether the request can be refused, and by whom.
+
+§12 does not repair this. §12 defines what a diversified reviewer is and what the five conditions are when the protocol is used. It does not define the trigger.
+
+Consequences:
+
+Because the protocol is already recategorized as documentary and non-rejecting, an unspecified trigger means diversified review can be skipped on every work item except those where someone happens to ask. That is compatible with “improves, does not close,” but it makes RULE-019 a dormant paragraph unless work-control culture invokes it.
+
+Because this very work item is an amendment of RULE-019 and §12, one would expect the protocol’s own trigger to say that such amendments require diversified review as a quality input (not as sole closure). The quoted RULE-019 does not say that. This round-two review exists by owner authorization recorded in the package header, which is extra-textual relative to RULE-019.
+
+A bad-faith reading: never request diversification, then claim there is no RULE-019 breach because the “when requested” condition never fired. That reading is available. It does not close C-18, because §12-3 independently forbids that closure. It does hollow out the quality-improvement purpose.
+
+Answer to Question 7: the wording is not tight. Named weakness, as debt rather than a C-18-closure defect: UNSPECIFIED_DIVERSIFICATION_TRIGGER_AND_REQUEST_OWNER. Suggested repair: state the request owner (the work-item owner records the request in the work contract); state at least one mandatory class (amendments to GOVERNING_RULE.md documentary protocols or to WORK_CONTROL.md §12 shall be examined under 12-1 as a quality input and shall not be closed by that examination alone); state that absence of a request is absence of diversified review, not satisfaction of RULE-019.
+
+------------------------------------------------------------------------------
+QUESTION 8
+Any remaining defects, weaknesses, or suggested improvements?
+------------------------------------------------------------------------------
+
+Defects that would restore round-one failures: none found in the quoted texts.
+
+Weaknesses and suggested improvements, recorded as debt, not as barriers to W-2026-036 acceptance:
+
+1. RESIDUAL_SELF_ATTESTATION_DISCLOSED_NOT_REMOVED. Keep the honesty sentences in §12-2. If a later work item adds tamper-resistant provenance, that is new work, not this item. Do not let 12-1/3’s “registered identity” be quoted without 12-2.
+
+2. UNSPECIFIED_DIVERSIFICATION_TRIGGER_AND_REQUEST_OWNER. Repair as under Question 7.
+
+3. HARD-CODED_EXECUTOR_FAMILY. Keep “provider different from the executor’s provider.” Demote “not a copy of the same Claude family” to an example.
+
+4. RAW_OUTPUT_UNDEFINED. Define the raw file as the reviewer’s complete unedited instrument, including identity declaration, isolation declaration, numbered answers, and the verdict line. Forbid replacing it with an editor’s précis.
+
+5. SECTION_12-5_SHOULD_NAME_THE_OTHER_CLOSING_ACTS. State that diversified review of a RULE-019/§12 amendment is a quality input, is not sole work-item closure, and is not C-18/T-115 closure.
+
+6. EXECUTOR_RATIONALE_AND_PRECHECKED_ACCEPTANCE_IN_FROZEN_PACKAGE. Future frozen packages should include prior named defects, quoted new text, hash, diffs, tests, and adversarial questions, and should omit the executor’s treatment narrative and pre-checked satisfaction boxes.
+
+7. PACKAGE_DOES_NOT_PROVE_SECTION_PLACEMENT, NO_DIFFS_AND_UNVERIFIABLE_HASH_IN_PACKAGE, RULE-018_TEXT_NOT_IN_PACKAGE. These are limits of this brief. They do not, on their own, reintroduce a closure path in the quoted sentences. They mean this review cannot certify that the rest of the repository matches the quoted honesty.
+
+8. PROVIDER_LIST_AS_CLOSED_SET. “GPT · Grok · Gemini · Kimi” reads like an exhaustive list. A later provider would appear excluded. Draft it as a non-exhaustive example list.
+
+9. “Branch of RULE-004.” RULE-019’s closing parenthetical calls it a branch of RULE-004. RULE-004, as described in §12-4, does have an automated textual owner ≠ reviewer check. A reader could think the branch inherits automated-rule status. §12-4 already denies that. Suggested: say “related to RULE-004’s role-separation aim, but not an automated extension of RULE-004.”
+
+10. Isolation declaration is required by this package’s instructions, not by the quoted RULE-019 body. Adding “the reviewer shall declare whether they read only the frozen package” as a sixth documentary condition would match the treatment table’s isolation row.
+
+I do not convert items 1–10 into a rejection. Round one rejected overclaim: the protocol spoke as if it were independence, C-18 closure, proven provenance, or an automated rule. The redesign’s load-bearing change is that it no longer speaks that way. The remaining items are under-specification and unenforced documentary practice, which the text now admits rather than denies.
+
+ADVERSARIAL CONCLUSION
+
+I was instructed to impugn, not to rubber-stamp. I tried to find a remaining granted path to close T-115/C-18, a remaining granted substitute for raw output, a remaining claim of tamper-resistant provenance, a circular self-certification, or a new wording that makes the non-independent appear independent. In the two quoted texts, those granted paths are gone. The protocol is now a confessed quality-improvement documentary practice on a single platform, with self-declared identity, unguarded isolation, no rejecting gate, an optional trigger, and an explicit ban on treating itself as C-18 closure or as self-certification. That is a successful treatment of the round-one named defects for the scope of W-2026-036. It is not independence. It is not C-18 closure. It is not T-115 closure. Those remain external, as the new §12-3 requires.
+
+VERDICT: ACCEPTED_FOR_W-2026-036_ONLY

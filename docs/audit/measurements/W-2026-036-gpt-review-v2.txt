@@ -1,0 +1,101 @@
+REVIEWER: GPT-5.6, OpenAI
+ISOLATION COMPLIANCE: Yes. I read only the frozen evidence package at /home/user/workspace/sool/docs/audit/measurements/W-2026-036-evidence-package-v2.md and did not read, list, open, search, or inspect any other file, directory, or repository content.
+
+SCOPE OF REVIEW
+
+This is an adversarial textual review of the two redesigned texts and the evidence assertions contained in the frozen package. I did not independently verify commit 9d118059f51570f94aed769c956dae9ce0773dee, repository placement, test execution, file history, provider telemetry, operator identity, or the contents and integrity of any saved model output. Those matters are not independently provable from the package. The package is nevertheless sufficient to judge the internal wording and whether the named round-one defects have been removed from that wording.
+
+1. SELF-ATTESTED REVIEWER PROVENANCE AND CHAIN-OF-CUSTODY GAP
+
+The redesign addresses this defect only partially.
+
+It makes several material corrections. RULE-019 and section 12-2 now expressly state that the protocol does not prove organizational independence, that the platform and operator remain the same, that model identity is self-declared rather than supported by tamper-resistant provenance, and that isolation is not automatically guarded. Condition 4 also requires retention of the complete raw output and disallows a summary as a substitute. These changes remove the former implication that the protocol establishes organizational independence merely by recording a model label and a review artifact.
+
+However, section 12-3 still says that a certificate satisfying section 12-1 “proves that a diverse review occurred.” That is stronger than the stated evidence can support. Section 12-1 requires a written model name and version, a claimed different provider, claimed context isolation, and a saved output, while section 12-2 concedes that identity is self-declared and isolation is not automatically guarded. The text specifies no authenticated provider record, invocation record, immutable transcript, trusted timestamp, signature, output digest, or other binding between the declared reviewer, the supplied evidence package, the prompt, and the stored output. Consequently, a section 12-1 record can document an assertion that a diverse review occurred, but it cannot prove provider diversity or occurrence in the evidentiary sense claimed by section 12-3.
+
+The chain-of-custody portion is also not fully solved merely by requiring a file described as the complete raw output. The summary-substitution loophole is removed, but completeness, authenticity, and non-alteration of the purported raw output remain self-attested. The redesigned text is entitled to characterize this as a deliberately non-enforced documentary practice, but it must not then characterize the resulting certificate as proof.
+
+Named blocking defect: SELF_ATTESTED_DIVERSITY_OCCURRENCE_PROOF. Its location is section 12-3, in the sentence asserting that a certificate under section 12-1 proves that a diverse review occurred. The direct repair is to replace “proves” with language such as “records a self-attested assertion, and the associated review artifact, that a model-diverse review occurred; absent authenticated provenance it does not independently prove provider identity, isolation, occurrence, completeness, or chain of custody.”
+
+2. C-18 CLOSURE BY REDEFINITION
+
+Yes, the redesign resolves the specific C-18 closure-by-redefinition defect in the supplied normative text.
+
+RULE-019 states that the protocol neither proves organizational independence nor closes C-18 or T-115. Sections 12-2 and 12-3 repeat that limitation, identify organizationally external review as the unmet requirement, and state that T-115b requires a genuinely second operator. Section 12-5 also prohibits using the protocol to certify itself. I found no remaining route in RULE-019 or section 12 by which compliance with section 12-1 alone closes T-115 or C-18 or establishes organizational independence.
+
+The statement in RULE-019 that C-18 or T-115b may instead be closed by an organizationally external party or by a royal order approving the audit is outside what this package permits me to validate. It does not, however, create a path for closure by this model-diversity protocol itself.
+
+3. “AUDITABLE SUMMARY” LOOPHOLE
+
+Yes, the textual summary-substitution loophole is closed tightly. RULE-019 condition 4 and section 12-1 condition 4 both require the complete raw output, expressly say that a summary is not accepted as a substitute, and allow a summary only as an addition.
+
+This conclusion is limited to substitution. The text prevents a declared summary from replacing the raw output, but it does not establish that a file labeled “raw output” is actually complete, unedited, or bound to the declared invocation. That remaining authenticity and custody issue is part of the defect identified in answer 1, not a reopening of the summary loophole itself.
+
+4. SECTION 12-5 AND CIRCULAR APPLICATION
+
+Section 12-5 is directionally sound and materially clearer than the prior design. It expressly says that amendment of RULE-019 or section 12 cannot be closed by model-diverse review alone because the reviewer remains a sub-agent of the implementer under the same platform. It also limits the correction to the honest proposition that diverse review improves review rather than closes the independence gap.
+
+Submitting the redesign to a model-diverse reviewer is not by itself a violation. Such a review can test the wording, identify defects, and provide advisory evidence. It is consistent with section 12-5 only if this review is not treated as certification of RULE-019 as an independence mechanism and is not, by itself, treated as sufficient authority to close the amendment. The package repeatedly says that this verdict does not close T-115 or C-18 or certify the protocol, which is consistent with that limitation.
+
+There is nevertheless an ambiguity between section 12-5 and the mandatory verdict label “ACCEPTED_FOR_W-2026-036_ONLY.” W-2026-036 is the item that amends RULE-019 and section 12, while section 12-5 says that such an amendment is not closed by diverse review alone. Therefore an acceptance verdict could be evidence toward disposition of W-2026-036, but must not itself be treated as the sole closure act. If the workflow uses this verdict alone to close W-2026-036, the named defect would be CIRCULAR_WORK_ITEM_CLOSURE_DESPITE_SECTION_12_5. The act of conducting this review is not that violation; the downstream use of the review could be.
+
+Section 12-5 should state who or what may close the amendment after receiving the advisory review, or at minimum state explicitly that the review verdict is an input to, not the authorization for, work-item closure.
+
+5. RECLASSIFICATION AS A DOCUMENTARY PROTOCOL
+
+Moving RULE-019 from automatically enforced rules to a section explicitly labeled “documentary protocols without an automated gate” honestly resolves the former category contradiction. Section 12-4 identifies exactly what check_work.mjs does and does not verify and says the protocol is not a commit-rejection rule. On the supplied text, it no longer represents an unenforced convention as an automated barrier.
+
+Evasion remains possible because the protocol is documentary, identity and isolation are self-attested, and the trigger is undefined. That possibility is not concealed; therefore it is not the same contradiction as before. Nevertheless, reclassification cures the misleading enforcement claim, not the underlying susceptibility to nonperformance or false records. The implementation should not use words such as “verified,” “proved,” or “compliant” for provider identity, isolation, occurrence, or custody unless the evidence level supporting those terms is separately defined.
+
+6. NEW LOOPHOLES OR WAYS TO MAKE A NON-INDEPENDENT REVIEW APPEAR INDEPENDENT
+
+The redesigned normative text repeatedly denies organizational independence, so a faithful application of its labels should not make the reviewer appear organizationally independent. A report that calls a section 12-1 reviewer “organizationally independent” would contradict the text rather than exploit an authorized path in it.
+
+I nevertheless identify the following new or still-visible weaknesses:
+
+First, section 12-3 converts self-attested protocol records into purported proof that diversity occurred. This is the blocking SELF_ATTESTED_DIVERSITY_OCCURRENCE_PROOF defect described in answer 1. A non-diverse invocation, a relabeled model output, or an edited artifact could satisfy the documentary fields on their face, yet the certificate would be described as proof.
+
+Second, “when reviewer diversification is requested” has no defined trigger, requester, authority, record, or consequence. A party can avoid the protocol by never formally requesting it, or can dispute after the fact whether it was requested. This is an applicability loophole even though it does not directly create organizational independence.
+
+Third, “complete raw output” lacks a defined custody envelope. The protocol does not require retention of the exact review prompt, the exact evidence-package digest, an invocation timestamp, available provider or model metadata, the unmodified response bytes, or a digest linking those elements. Such records would not establish organizational independence and might still be produced within the same control domain, but they would make accidental loss and casual substitution more detectable.
+
+Fourth, the isolation rule is internally unclear about permitted package contents. Section 12-1 says the reviewer sees the frozen evidence package but not the implementer’s rationales. This package itself contains a defect-treatment table, checked acceptance assertions, and explanations of how the redesign addresses prior objections. Those may be legitimate review-brief metadata, but they also frame the intended conclusion and can function as implementer rationale. The protocol should distinguish permitted factual change descriptions and prior findings from prohibited private drafts, advocacy, or deliberative reasoning. Under the literal wording, the boundary is not tight.
+
+Fifth, the assertion that a different provider necessarily supplies different training and blind spots is not demonstrated by this package and is not guaranteed merely by a provider label. The safer claim is that provider diversity is intended to increase the chance of methodological diversity; it does not prove distinct training, independent failure modes, or improved quality in a particular review.
+
+Finally, all test results and acceptance checkmarks are assertions inside the frozen package. They are adequate inputs for this isolated textual review but cannot serve as independent verification that the repository at the stated commit contains the quoted text or that the tests ran as stated. This is a declared consequence of the frozen-evidence protocol and should be preserved as an explicit scope limitation in any use of the review.
+
+7. “WHEN REVIEWER DIVERSIFICATION IS REQUESTED”
+
+No, that formulation is not tight. It defines what to do after an unspecified request exists but does not define:
+
+- which work-item classes require a request;
+- who has authority to request or waive diversification;
+- where and when the request must be recorded;
+- whether the implementer may decide that no request exists;
+- what happens if a required review is omitted or performed late;
+- whether multiple reviewers are required and how conflicting verdicts are resolved; or
+- whether the request and its scope must be included in the frozen package.
+
+Because the protocol is expressly not an automated gate, these matters need not become commit checks. They should still be documentary governance rules. A tight formulation would identify the authoritative source of the requirement, require the work item to record requester, scope, selected provider, and any waiver before review begins, and state the consequence of nonperformance. Without that clarification, selective invocation is possible and protocol coverage is not auditable.
+
+I treat this as a material design weakness. It is independent of C-18: fixing the trigger would make the diversity protocol more consistently applied but would still not make it organizationally independent.
+
+8. OTHER DEFECTS, WEAKNESSES, AND RECOMMENDED IMPROVEMENTS
+
+The primary required correction is to remove the unsupported proof claim in section 12-3. The text must consistently describe section 12-1 artifacts as self-attested documentary records, not proof of provider diversity, isolation, occurrence, raw-output completeness, or custody.
+
+Recommended improvements are:
+
+1. Define the request trigger and authority, including the record of a request or waiver and the consequence of omission.
+2. Define the minimum review record: exact frozen-package identifier and digest, exact prompt, declared provider and model version, invocation time, complete response as returned, and digests linking the artifacts. State explicitly that these controls improve traceability but do not create tamper-resistant provenance while the same operator controls them.
+3. Replace categorical claims about different training, different blind spots, and improved quality with an objective statement of intent and a non-guarantee.
+4. Clarify what a frozen package may contain so that factual diffs, acceptance criteria, prior named defects, and test claims are distinguished from implementer advocacy or hidden rationale.
+5. Define “complete raw output,” including whether system-generated metadata, refusals, tool messages, retries, and post-processing are included. If only the visible assistant response is retained, call it that rather than implying a fuller execution transcript.
+6. State explicitly that the mandatory review verdict is advisory evidence for W-2026-036 and cannot alone close an amendment to RULE-019 or section 12.
+7. Use separate vocabulary for three evidence levels: “declared” for self-attested identity and isolation, “recorded” for stored artifacts, and “verified” or “proved” only for claims supported by an identified verification mechanism.
+8. Preserve the explicit statement that neither model diversity nor this review closes T-115 or C-18.
+
+Overall, the redesign successfully removes the C-18 closure-by-redefinition path, honestly reclassifies RULE-019 as documentary rather than automated, prohibits summary substitution, and adds a meaningful anti-circularity limitation. It does not fully cure the round-one provenance defect because section 12-3 still assigns proof value to records that the same text admits are self-attested and not provenance-secured. That contradiction is central rather than cosmetic and prevents acceptance under the stated criterion that the round-one defects be addressed without a new loophole.
+
+VERDICT: REJECTED_WITH_NAMED_DEFECT: SELF_ATTESTED_DIVERSITY_OCCURRENCE_PROOF
