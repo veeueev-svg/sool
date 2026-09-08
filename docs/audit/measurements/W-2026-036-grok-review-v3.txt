@@ -1,0 +1,296 @@
+REVIEWER: Grok 4.6 (xAI) — self-declared in the sense required by the frozen package (§12-1 condition 3 / RULE-019 condition 3): a self-written identity string, not provenance documentation, and not a tamper-resistant binding of this output to a particular model family or provider.
+
+ISOLATION COMPLIANCE: I read exactly one file: the frozen evidence package at /home/user/workspace/sool/docs/audit/measurements/W-2026-036-evidence-package-v3.md. I did not read, list, open, or explore any other file, directory, or repository content. I did not run any command that inspects the repository. I did not load external skill files, search tools, or any second source. This review is based solely on that package. Where the package is insufficient to verify a cited external rule or an implementer test claim, I treat that insufficiency as a limitation of the brief rather than as a license to seek more context.
+
+This review is an adversarial diversity review of the treated texts reproduced in the package’s §4 and §5, against the round-two named defect and the seven questions in the package’s §7. It is model-diversity review, not a certificate of organizational independence. An ACCEPT below, if issued, is an input to a closure decision for work item W-2026-036 only; it does not close T-115/C-18, does not certify the protocol as an independence mechanism, and is not itself the authority that closes the work item.
+
+Scope note. I treat the before/after table in the package’s §3 as a factual claim about what changed, and I treat the two full treated texts in §4 and §5 as the objects of review. I do not treat the implementer’s test-result claims in §6 as verified: the package itself states that those claims could not be reviewed from the package, and I did not independently re-run them. I do not treat the package’s framing narrative (round history, suggested treatment, owner-delegation assertion) as proof that the underlying events occurred.
+
+================================================================================
+QUESTION 1
+Does the treatment of the round-two named defect SELF_ATTESTED_DIVERSITY_OCCURRENCE_PROOF hold? Does any phrase remain in §12-3, RULE-019, or any other place in the two treated texts that grants a self-attested record the evidentiary value of proof (of occurrence, provider identity, isolation, output completeness, or chain of custody)?
+================================================================================
+
+The round-two named defect, as quoted in the package, was that §12-3 still said a certificate satisfying section 12-1 “proves that a diverse review occurred,” which is stronger than the evidence can support. A section 12-1 record can document an assertion that a diverse review occurred; it cannot prove provider diversity or occurrence in the evidentiary sense claimed by that sentence. The proposed treatment was to replace “proves” with a recorded self-attestation that does not claim proof, and to constrain “declared / recorded / verified” language.
+
+On the face of the treated §12-3 text reproduced in the package, that named overclaim is removed.
+
+The treated sentence no longer says that a 12-1 certificate proves that a diverse review occurred. It says, instead, that a review certificate according to 12-1 is “a documentary record with self-attestation that a diverse review occurred — not proof.” It then enumerates, in the negative, the things that record does not prove: provider identity, isolation, occurrence of the review, completeness of the output, and chain of custody. It states the reason: there is no tamper-resistant documented origin binding the declared reviewer to the package, the prompt, and the saved output. It then imposes a three-grade language restriction and states that this protocol supplies none of the third grade.
+
+That is the direct treatment that round two asked for. The epistemic downgrade is not a euphemism. The text names the artifact, immediately deflates it (“not proof”), lists the failure modes of proof, and forbids using the word “proven” except where a named verification mechanism establishes the claim.
+
+I then searched both treated texts for residual phrases that would re-grant a self-attested record the value of proof.
+
+In RULE-019 (package §4):
+- The protocol is labeled a documentary protocol with no automated barrier.
+- It “does not prove organizational independence and does not close the C-18/T-115 gap.”
+- Condition 3 is self-written identity, “not provenance documentation.”
+- Condition 4 requires full raw output; a summary is not accepted as a substitute.
+- Condition 6 is a reviewer declaration that they read only the package.
+- The closing sentence repeats that C-18/T-115b are not closed by this protocol.
+
+None of those sentences say that a saved review file proves occurrence, provider identity, isolation, completeness, or custody. The one remaining use of “prove” in RULE-019 is negative: it does not prove organizational independence.
+
+In §12 introduction (package §5):
+- Diversification is hoped to carry different training and blind spots; the intent is to raise the chance of catching what the implementer’s eye does not see, not to guarantee it.
+- The protocol “does not prove organizational independence.”
+- Identity is self-declared, not documented by tamper-resistant origin.
+
+In §12-1:
+- Condition 3: “declared identity” / “self-written declaration, not provenance documentation.”
+- Condition 4: recording the evidence-package hash (SHA-256) and the full prompt as directed to the reviewer is “an improvement of traceability, not proof of custody.”
+- Condition 6: isolation declaration is “a recorded self-attestation, not an automated barrier.”
+- Request source must be recorded in the work-item row before review starts.
+
+In §12-2:
+- Honest limit: platform and operator are the same in both cases; identity is self-declared; isolation is not automatically guarded.
+- Stronger “organizationally external party” meaning is outside this protocol.
+
+In §12-3:
+- T-115/C-18 are never closed by this protocol.
+- The 12-1 certificate is a self-attested documentary record, not proof.
+- Explicit non-proof of identity, isolation, occurrence, output completeness, and custody.
+- Three-grade language restriction.
+- It is not a certificate of organizational independence.
+- C-18 requires a party outside the implementers’ authority; this protocol does not provide one.
+- T-115b is an external condition requiring a real second operating party; it is not closed by this repository.
+- The d18d4bf integrity message that claimed “C-18’s defect was closed” is declared mistaken.
+
+In §12-4:
+- The work-control gateway checks owner ≠ reviewer as text (RULE-004) but does not automatically check model provider or context isolation.
+- This protocol is not an automated barrier and is not used as a commit-rejection rule.
+
+In §12-5:
+- The protocol shall not be used to certify itself.
+- Diverse-review judgment, accept or reject, is an input to the closure decision, not its authority.
+
+I find no remaining positive phrase in the two treated texts that says a 12-1 record proves occurrence, provider identity, isolation, output completeness, or chain of custody.
+
+Two residual linguistic points, neither of which restores the named overclaim:
+
+First, the artifact is still named “شهادة” (certificate / testimony) in §12-3. In Arabic administrative usage that word can carry evidentiary weight. The same sentence immediately redefines it as a documentary record with self-attestation, “not proof,” and later says it is not a certificate of organizational independence. The name is therefore deflated in place. A cleaner naming (“record” only) would reduce quote-mining risk; it does not re-create the round-two defect.
+
+Second, §12-3 still says the record is a self-attestation “that a diverse review occurred.” That clause states the content of the assertion, not the proof-value of the record. The hyphenated qualifier “not proof,” the explicit denial that occurrence is proven, and the assignment of “occurrence” to the “declared” grade rather than the “proven” grade keep the clause inside the requested treatment.
+
+Conclusion on question 1: the named defect SELF_ATTESTED_DIVERSITY_OCCURRENCE_PROOF is treated in the two texts. I do not find a remaining phrase that grants a self-attested record the evidentiary value of proof of occurrence, provider identity, isolation, output completeness, or custody.
+
+================================================================================
+QUESTION 2
+Is the three-grade language restriction (declared / preserved / proven) tight and consistent across both texts, or does a location remain that uses a proof-word without a named mechanism?
+================================================================================
+
+§12-3 is the only place that states the three-grade taxonomy as a binding restriction: “declared” for self-attestation (identity, isolation, occurrence); “preserved” for a stored file (the raw output); “proven” only for what a named verification mechanism establishes — and this protocol provides none of that. The grades “shall not be mixed.”
+
+Usage in the two texts, tested against that taxonomy:
+
+Positive uses of proof-family words. I find none that apply “proven” or “proves” or “proof” to a 12-1 record, to identity, to isolation, to occurrence, to output completeness, or to custody.
+
+Negative uses of proof-family words, which are consistent with the taxonomy because they deny the third grade:
+- RULE-019: “does not prove organizational independence.”
+- §12 introduction: “does not prove organizational independence.”
+- §12-1 condition 4: “not proof of custody.”
+- §12-3: “not proof”; “it does not prove provider identity, nor isolation, nor occurrence of the review, nor completeness of the output and its chain of custody”; “proven” shall not be said except where a named verification mechanism establishes the claim, and this protocol provides none of that.
+
+Declared-grade usage, consistent:
+- RULE-019 condition 3: name and version are written as a self-written declaration, not provenance documentation.
+- RULE-019 condition 6: the reviewer declares at the start of the output that they read only the package.
+- §12-1 condition 3: “declared identity.”
+- §12-1 condition 6: “recorded self-attestation, not an automated barrier.”
+- §12-3: identity, isolation, and occurrence are assigned to “declared.”
+
+Preserved-grade usage, consistent:
+- RULE-019 condition 4: the full raw output is saved; a summary is not accepted as a substitute.
+- §12-1 condition 4: full raw output is saved at a named path; a summary, if present, is an addition not a substitute; the hash and prompt are recorded with it.
+- §12-3: “preserved” is for a stored file (the raw output).
+
+The taxonomy is therefore consistent in usage. It is not, however, equally binding in both texts.
+
+RULE-019 does not restate the three-grade restriction. A later writer who followed RULE-019’s letter alone, without §12-3, would still be forbidden from claiming organizational independence and from substituting a summary for raw output, but would not be explicitly forbidden from writing that a saved review “proves” that a diverse review occurred. The round-two defect lived in that exact sentence, which was in §12-3, not in RULE-019. The treatment repaired the sentence that contained the defect. The repair’s preventive rule (do not mix the three grades; do not say “proven” without a named mechanism) lives only in §12-3.
+
+That is a completeness gap in the governing-rule text, not an active overclaim in the present wording. It is not a reintroduction of SELF_ATTESTED_DIVERSITY_OCCURRENCE_PROOF. It is a residual drafting weakness: the constraint that prevents recurrence of the named defect is not restated in RULE-019.
+
+One adjacent wording issue, not a proof-word without a mechanism: RULE-019 still states as a fact that the protocol “improves review quality with different blind spots.” §12’s introduction hedges the same idea as hoped, not guaranteed. “Improves” is a quality claim, not an evidentiary-proof claim about the record, so it does not violate the three-grade restriction as written. It is an inconsistency of strength between the two texts, addressed under questions 6 and 7.
+
+Conclusion on question 2: within the two treated texts I do not find a location that uses a proof-word positively of the self-attested record without a named mechanism. The three-grade restriction is tight where it is stated (§12-3) and is respected in usage in both texts. It is not restated in RULE-019, which is a residual completeness weakness, not a present overclaim.
+
+================================================================================
+QUESTION 3
+Does §12-5’s statement that the review judgment is “an input to the closure decision, not its authority” resolve the tension GPT-5.6 recorded in round two (risk of CIRCULAR_WORK_ITEM_CLOSURE_DESPITE_SECTION_12_5)? Are the named closure acts (RULE-014, RULE-016, authority of whoever appointed the reviewer) sufficient and consistent with the rest of the text?
+================================================================================
+
+The treated §12-5, as reproduced, contains two distinct prohibitions.
+
+First, self-certification is forbidden: this protocol shall not be used to certify itself; amending RULE-019 or this section is not closed by diverse review alone, because in that case the reviewer is a sub-agent of the implementer under the same platform.
+
+Second, the new sentence: diverse-review judgment, whether accept or reject, is an input to the closure decision, not its authority. The work item is closed by work-control rules (the RULE-014 seven-part contract; RULE-016 transfer to history) and by the authority of whoever appointed the reviewer as recorded in the work-item row, not by the review judgment alone. The correction here is an honest declaration that diverse review improves, it does not close.
+
+On the face of that text, the circular-closure path that GPT-5.6 flagged is blocked as a claim of authority. An ACCEPT from this review cannot, according to this section, be the thing that closes W-2026-036. The owner-side work-control machinery and the recorded appointing authority close it. That is the correct epistemic status for a documentary protocol, and it is consistent with the package’s own instruction that an ACCEPT is an input to the closure decision, not its sole authority, and does not close T-115/C-18.
+
+Consistency with the rest of the two treated texts:
+
+- RULE-019 says the protocol does not close C-18/T-115b and is a documentary protocol, not an automated barrier. It does not speak of work-item closure authority. No contradiction.
+- §12-2 and §12-3 say the protocol never closes T-115/C-18. §12-5 says diverse review does not close the amendment of RULE-019 or of §12. These are aligned: “improves, does not close.”
+- §12-4 says the protocol is not an automated barrier and is not used as a commit-rejection rule. That is consistent with review-as-input rather than review-as-authority.
+- The request-source paragraph in §12-1 (owner or owner’s delegate; recorded in the work-item row before review starts) supplies the recorded appointment that §12-5 then points to as part of closure authority. Those two passages are mutually consistent: the row is the place where request and chosen provider are recorded, and the same row is where appointing authority is later read.
+
+Sufficiency of naming RULE-014 and RULE-016:
+
+I cannot verify the content of RULE-014 or RULE-016 from this package. The package forbids me to read any other file. If those rules, unbeknownst to this brief, treated a diverse-review ACCEPT as sufficient closure of the item that created the protocol, a hidden circularity could survive the new sentence. That is a package insufficiency, not a defect visible in the treated wording of §12-5. I record it as a limitation: I can confirm that §12-5’s face language denies review-as-authority; I cannot confirm from this brief that RULE-014 and RULE-016 do not re-grant that authority.
+
+A remaining structural openness, honestly disclosed rather than hidden: once review is demoted to an input, the appointing authority can still close W-2026-036 after two ACCEPTs, using those ACCEPTs as practical justification while citing RULE-014/RULE-016 as the formal authority. §12-5 does not forbid the owner to be persuaded by the reviews. It forbids treating the reviews as the closing act. That is not circular self-certification of the protocol; it is ordinary owner closure of a work item. Round two’s tension was the former. The treated sentence addresses the former.
+
+A minor internal softness in the named closure set: “the authority of whoever appointed the reviewer as recorded in the work-item row” is not identical to “the owner or the owner’s delegate” in §12-1. If appointment and request were ever split across persons, §12-5 would point to the appointer while §12-1 points to the requester. In the ordinary case they are the same. The texts do not say they must be the same. This is a drafting looseness, not a restoration of review-as-authority.
+
+Conclusion on question 3: on the face of the two treated texts, the added §12-5 sentence resolves the named circular-closure tension by denying the review judgment the status of closing authority and by naming other closing acts. Naming RULE-014 and RULE-016 is sufficient as a face-language treatment; their actual content is outside this package and is therefore unverified here. Residual drafting looseness about appointer versus requester is not a blocking defect.
+
+================================================================================
+QUESTION 4
+Do the sixth condition (isolation declaration) and the diversification-request source (owner or owner’s delegate) close the “circumvention by not requesting” and “denial of isolation” gaps, or do they leave a door open? Is their wording tight?
+================================================================================
+
+These two additions are documentary controls. They record assertions. They do not close the underlying gaps in the sense of making isolation or request-integrity true. Under the treated three-grade language, they should not be described as closing those gaps evidentially. The right question is whether they close the documentary loopholes that previously let an implementer omit a request or omit an isolation statement while still looking protocol-compliant, and whether they overclaim in doing so.
+
+Isolation declaration (RULE-019 condition 6 / §12-1 condition 6).
+
+What it does: it makes a missing isolation statement a visible documentary defect. A review output that does not begin with a declaration that the reviewer read only the frozen package and did not explore the repository fails condition 6 on its face.
+
+What it does not do: it does not prevent a false declaration. A reviewer (or an implementer writing in the reviewer’s name) can declare isolation and then have read other files. The text itself says this is “a recorded self-attestation, not an automated barrier.” §12-2 says isolation is not automatically guarded. §12-4 says the gateway does not automatically check context isolation. That is honest. The “denial of isolation” gap is therefore not closed as a fact-gap; it is closed as a silence-gap. Silence is no longer compliant. False speech remains possible and is labeled as self-attestation.
+
+Wording tightness for condition 6: tight enough for a documentary protocol. It specifies where the declaration appears (the start of the output), what it must assert (read the frozen package only; did not explore the repository), and what it is not (not an automated barrier). It does not specify a required English or Arabic formula, so a vague opening sentence could be argued to satisfy it. That is a minor formula-gap, not a hole that restores proof-claims.
+
+Diversification-request source (§12-1 closing paragraph and RULE-019 opening).
+
+What it does: diversification under this protocol cannot be initiated by the implementer alone. The request must come from the owner or the owner’s delegate, and must be recorded (requesting party, scope, chosen provider) in the work-item row before review starts. “No diversification without a recorded request, and the implementer alone shall not decide that there is no request.”
+
+What it does not do: it does not make diverse review mandatory for work-item closure generally. RULE-019 still opens with “when diversification of the reviewer is requested.” §12-4 still says this protocol is not an automated barrier and is not used as a commit-rejection rule. If the owner never requests diversification, diverse review simply does not occur, and other work items can still close under ordinary work-control rules. That is the on-request design, now with a recorded-request precondition when the protocol is used.
+
+The phrase “the implementer alone shall not decide that there is no request” is the attempt to close “circumvention by not requesting.” Its wording is not fully tight:
+
+- It forbids a unilateral implementer determination that no request exists, but it does not require a positive recorded statement of “no diversification requested” when diversification is not used. Absence of a row entry is then observationally identical to “the owner did not request” and to “the implementer never asked and nobody recorded anything.” The implementer can still proceed without diverse review whenever the owner is silent. The text does not say the owner must actively record a waiver.
+- It does not define “delegate,” the form of delegation, or how a reader of the row distinguishes a valid delegate from an implementer-created proxy.
+- It does not say who is forbidden from starting a review if the row is empty. In practice the implementer is the party who would dispatch the review. The sentence constrains a decision about the absence of a request, not the dispatch action itself.
+
+So: when the protocol is invoked, a missing pre-recorded request is now a documentary non-compliance. When the protocol is not invoked, silence still means no diverse review, and that remains a lawful path under an on-request documentary protocol. The “circumvention by not requesting” gap is closed only for the case where someone wants to claim that a diverse review happened without a recorded owner request. It is not closed for the case where someone wants to avoid diverse review altogether. Given §12-4, the latter is not a violation of the protocol as designed.
+
+Do these additions overclaim? No. Condition 6 explicitly denies that the declaration is an automated barrier. The request-source paragraph claims a recording rule, not proof that the recorded requester is in fact the owner.
+
+Conclusion on question 4: the sixth condition closes the silence form of “denial of isolation” and leaves the false-declaration form open, with that openness disclosed. The request-source rule closes the “diverse review claimed without a recorded owner request” form of circumvention and leaves the “never request, therefore never diversify” form open, which is the on-request design. Wording is mostly tight; the “implementer alone shall not decide that there is no request” sentence is the weakest clause and does not require a recorded waiver. These remaining doors are inherent in a self-attested, on-request documentary protocol. They are not a restoration of occurrence-proof.
+
+================================================================================
+QUESTION 5
+Does a new gap remain that was not named in the prior two rounds — a way to circumvent the text so that the non-independent appears independent, or the undocumented appears proven?
+================================================================================
+
+I look for a new circumvention that would make the protocol’s own wording present the non-independent as independent, or the undocumented as proven. Residual risks that the protocol now honestly labels as declared-not-proven are not new defects; they are the subject matter of the treatment.
+
+New or newly visible points:
+
+(A) Three-grade restriction not restated in RULE-019. A later closure note or a later amendment could quote RULE-019 and say a review “proved” diversity, while RULE-019’s letter would not itself forbid that verb. This is a recurrence risk for the round-two defect, not a present overclaim. It does not make the current text present the undocumented as proven.
+
+(B) The artifact name “شهادة” remains. Quote-mining that word without the following deflation could make the undocumented appear certified. The deflation is in the same paragraph. This is a naming residual, not a new proof claim.
+
+(C) RULE-019’s factual claim that the protocol “improves review quality with different blind spots” is stronger than §12’s hedge. That could make a reader treat diversification as an achieved independence-of-sight rather than a hoped-for reduction of shared blind spots. It does not say the record proves independence. It is an overstrong quality claim, not an occurrence-proof claim.
+
+(D) §12-1’s provider list is “examples, not exhaustive,” still excluding the Claude family. Widening the list from a closed set to examples slightly increases the chance that a weakly different or wrapper-mediated provider is declared “diverse.” Combined with self-declared identity, that is a declared-grade risk. The text does not say such a declaration is proven. Round one’s defect was C-18 closure by redefinition; this change does not close C-18. It is not a new independence-appearance in the protocol’s claims.
+
+(E) Package-framing bias. This frozen package contains substantial implementer narrative: round history, the named defect, the proposed treatment, and an assertion of owner delegation. §12-1 condition 2 specifies package contents (integrity hash, changed files with their diffs, acceptance conditions, test results) and forbids implementer drafts, chain-of-thought, and justifications. The legal definition of what narrative and framing may be included is announced in §6 as debt outside this item. Framing can steer a reviewer without the protocol calling the result proven. That gap was already announced; it is not newly opened by this treatment.
+
+(F) This package’s own header hash is `7806cac37f412d9fb37dad6c3e5420b5e12091a5`, forty hexadecimal characters. §12-1 condition 4 specifies SHA-256 of the evidence package, which is sixty-four hexadecimal characters. Forty characters is the ordinary length of SHA-1 or of a Git commit name, not of SHA-256. I did not compute any hash and I did not inspect any other file. I note only the mismatch between the protocol’s specified algorithm length and the hash string printed on this brief. The treated text of §12-1 still says the recorded hash is “an improvement of traceability, not proof of custody,” so the protocol does not claim that this header hash proves custody. This is an instance-level documentary weakness of the present brief, not a new textual claim that the undocumented is proven.
+
+(G) Self-declared reviewer identity in this very review. Condition 3 requires me to write a model name and provider. Nothing in the package can bind that string to a particular origin. A non-independent actor can write an independent-looking name. That is the original C-18/T-115 gap. The treated text no longer says that writing the name proves diversity. Presenting this review as a Grok review is therefore a declared-grade event under the treated protocol, not a proven-grade event. If someone later described this file as proving that xAI reviewed the item, that later description would violate §12-3’s three-grade rule. The treated text itself does not authorize that later description.
+
+(H) Condition 2 still states isolated context as an operational requirement (“the reviewer sees a frozen evidence package alone”), while condition 6 and §12-2 admit that the only record of that requirement is a self-declaration and that isolation is not automatically guarded. A careless reader of condition 2 alone could think isolation is enforced. Reading the section as a whole, the protocol does not claim isolation is proven. This split existed in substance before; condition 6 makes it more visible rather than creating it.
+
+None of (A)–(H) is a new wording path by which the protocol itself presents the non-independent as independent or the undocumented as proven. The dangerous remaining paths are extra-textual: false self-declaration, owner silence, later over-description of a saved file, and package framing. The treated texts now refuse to underwrite those paths as proof.
+
+Conclusion on question 5: I do not find a new named gap of the kind that would require rejection — namely, a remaining phrase or structural trick in the treated texts that makes the non-independent appear independent or the undocumented appear proven. Residual circumvention remains at the level of false declaration and later overclaim, which the treated texts now forbid as a language act and do not claim to prevent as a physical act.
+
+================================================================================
+QUESTION 6
+Is there an internal contradiction or conflict between RULE-019 and §12 after this treatment (a condition that contradicts another, or a word in one that negates a constraint in the other)?
+================================================================================
+
+I compare the two treated texts.
+
+Alignment, which is most of the design:
+
+- Both say documentary protocol, not automated barrier.
+- Both say they do not prove organizational independence and do not close C-18 / T-115 (RULE-019 also writes T-115b).
+- Both require a different provider, not a version from the same family (see the family-wording difference below).
+- Both require isolated context in the sense that the reviewer is to see a frozen package, not implementer drafts or justifications.
+- Both require self-written identity, not provenance documentation.
+- Both require full raw output; a summary is not a substitute.
+- Both require an adversarial, defect-seeking prompt.
+- Both now require an isolation declaration at the start of the output.
+- Both now require that the request come from the owner or the owner’s delegate and be recorded in the work-item row before review starts.
+- RULE-019’s closing parenthetical, “companion of purpose to RULE-004 in role separation — not an automatic extension of it,” is consistent with §12-3’s refusal to close C-18 by this protocol and with the round-one defect C-18_CLOSURE_BY_REDEFINITION not being reintroduced.
+
+Conflicts or tensions:
+
+Tension 1 — strength of the quality claim.
+RULE-019: the protocol “improves review quality with different blind spots.”
+§12 introduction: a model from a different provider “is hoped to carry different training and different blind spots (the intent of diversification is to raise the chance of catching what the implementer’s eye does not see — not to guarantee it).”
+These do not logically contradict, but RULE-019 states as a property what §12 states as a hope without a guarantee. RULE-019 is the governing-rule entry. If a reader had to pick one strength level, the governing rule is the stronger, less hedged one. That is the wrong direction relative to the honesty program of this treatment. It does not reintroduce occurrence-proof. It is an internal inconsistency of claim-strength.
+
+Tension 2 — family exclusion.
+RULE-019: “not a version from the same family.”
+§12-1: “not a version from the Claude family itself,” and the provider list is examples, not exhaustive.
+If the implementer remains a Claude-family model, the two coincide. If the implementer later were not Claude-family, §12-1’s Claude-specific exclusion would be the wrong family test, while RULE-019’s “same family as the implementer” test would still be the right one. The before/after table shows the Claude-specific exclusion pre-existed this treatment; this round added “examples, not exhaustive.” The tension is therefore not created by the named-defect treatment, but it remains after the treatment.
+
+Tension 3 — three-grade taxonomy.
+Stated only in §12-3, not in RULE-019, as discussed under question 2. Not a contradiction; a missing restatement.
+
+Tension 4 — T-115 versus T-115b.
+RULE-019: “C-18/T-115b are not closed by this protocol.”
+§12-3: “T-115/C-18 are never closed by this protocol,” and separately “T-115b is an external condition requiring a real second operating party — it is not closed by this repository.”
+Both deny closure. The numbering is not identical. I cannot resolve from this package whether T-115 and T-115b are the same gap, a parent and a child, or two labels. This is a labeling inconsistency, not a case of one text closing what the other forbids closing.
+
+Tension 5 — isolation as requirement versus isolation as declaration.
+Both texts contain the same split (condition 2 operational requirement; condition 6 self-declaration). That is parallel drafting, not a cross-text contradiction.
+
+No case in which a word in one text negates a constraint in the other in the direction that would restore “a 12-1 record proves that a diverse review occurred,” or that would restore C-18 closure by this protocol, or that would restore review-as-closure-authority.
+
+Conclusion on question 6: there is no contradiction that undoes the treatment of the named defect or that re-closes C-18/T-115 by this protocol. There are real inconsistencies of claim-strength (quality improvement), family-exclusion wording, three-grade restatement, and T-115/T-115b labeling. Those belong under residual debt, not under a new blocking named defect.
+
+================================================================================
+QUESTION 7
+Any remaining defects, weaknesses, or suggested improvements?
+================================================================================
+
+I separate residual debt (improvements that do not block acceptance of this treatment) from anything that would require rejection. I do not find a remaining blocking defect in the two treated texts relative to the round-two named defect and relative to new overclaim.
+
+Residual debt and suggested improvements, none of which I treat as a named blocking defect:
+
+1. Restate the three-grade language restriction in RULE-019, not only in §12-3, so that the governing-rule entry itself forbids saying “proven” of identity, isolation, occurrence, output completeness, or custody without a named verification mechanism. This is the most useful preventive against recurrence of SELF_ATTESTED_DIVERSITY_OCCURRENCE_PROOF.
+
+2. Hedge RULE-019’s quality sentence to match §12: different blind spots are hoped for, not guaranteed; diversification raises a chance, it does not establish independence of sight.
+
+3. Align family-exclusion wording: §12-1 should say “not a version from the same family as the implementer,” with Claude named only as the present implementer’s family, not as a frozen exclusive.
+
+4. Replace or immediately gloss the artifact name “شهادة” as “سجل” (record) in the first instance, to reduce quote-mining of “certificate.”
+
+5. Tighten the request-source sentence: require the work-item row either to record a request (party, scope, chosen provider) before dispatch, or to record an explicit owner/delegate waiver that diversification is not requested for that item. Define “delegate” as a recorded designation, not an implementer assertion.
+
+6. Specify a required isolation-declaration formula (or a required pair of assertions: package-only reading, and no repository exploration) so that a vague opening sentence cannot be argued to satisfy condition 6.
+
+7. Align T-115 and T-115b labels across RULE-019 and §12-3, or state the relationship in one sentence.
+
+8. The announced out-of-scope debts in the package’s §6 remain real and should stay outside this item: the legal contents of a frozen package (what narrative and framing may be included), and a full custody envelope (timestamps, signatures). I agree they are outside the named-defect treatment. I also note that this very package contains framing beyond “hash, diffs, acceptance conditions, test results,” which is why that debt matters.
+
+9. Instance-level documentary weakness of this brief: the header “treatment integrity hash” is forty hex characters while §12-1 specifies SHA-256. If a later item records package hashes, the algorithm in the row should match the algorithm named in §12-1, or the header should not be labeled in a way that invites confusion with that hash. This does not falsify the treated wording, which already denies that a recorded hash proves custody.
+
+10. I do not rely on the implementer’s §6 test claims (`npm run verify` exit 0; `npm run check:work` green; no code change). The package says I could not review them from the package. They are irrelevant to whether the treated prose still overclaims proof.
+
+11. I cannot verify RULE-014 or RULE-016 from this package. Suggested improvement for a later documentary item, not for this treatment: when §12-5 names those rules as the actual closing authority, quote the closing-authority sentence from each, or state that those rules do not treat diverse-review ACCEPT as closing authority.
+
+What I am not recommending as a requirement of this item: converting this protocol into an automated barrier, adding tamper-resistant provenance, or closing T-115/C-18. Those would be a different work item, and the treated texts correctly refuse to pretend they have been done.
+
+Adversarial bottom line. The round-two defect was a specific overclaim: a 12-1 record “proves” that a diverse review occurred. The treated texts withdraw that overclaim, deny proof of the five evidentiary objects that matter (identity, isolation, occurrence, completeness, custody), restrict language to three grades, demote review judgment to an input, and keep C-18/T-115 unclosed. Remaining weaknesses are incompleteness of restatement, claim-strength mismatch, on-request silence, and the inherent hollowness of self-attestation. Those weaknesses are now largely labeled as such. They are not a new way for the text to present the undocumented as proven.
+
+This ACCEPT, if read later, is itself only a declared-grade event under the treated protocol: a self-declared reviewer, a self-declared isolation statement, a preserved file if someone stores this output, and no proven-grade fact about provider diversity or occurrence.
+
+================================================================================
+VERDICT
+================================================================================
+
+VERDICT: ACCEPTED_FOR_W-2026-036_ONLY

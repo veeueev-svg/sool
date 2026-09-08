@@ -1,0 +1,92 @@
+REVIEWER: GPT-5.6 (OpenAI), self-declared.
+ISOLATION COMPLIANCE: Compliant. I read only the frozen evidence package at /home/user/workspace/sool/docs/audit/measurements/W-2026-036-evidence-package-v3.md and did not read, list, open, or explore any other file, directory, or repository content.
+
+SCOPE OF REVIEW
+
+This is an adversarial textual review under the package's stated frozen-evidence limitations. It is a model-diversity review, not an attestation of organizational independence, reviewer provenance, provider identity, execution isolation, occurrence, output completeness, or chain of custody. My judgment is limited to whether the two supplied treated texts cure the round-two named defect and avoid introducing a new textual bypass. I did not independently verify the implementation's test-result claims, the repository state, the commitment hash, the work-item row, or the contents or operation of referenced rules not reproduced in the package.
+
+1. Treatment of SELF_ATTESTED_DIVERSITY_OCCURRENCE_PROOF
+
+Yes. The round-two defect is treated robustly in the supplied text.
+
+Section 12-3 no longer says that a section 12-1 certificate proves that a diverse review occurred. It now calls the certificate a documentary record containing a self-attestation and immediately states that it is not proof. It then expressly disclaims proof of every material fact identified by the earlier defect: provider identity, isolation, occurrence, output completeness, and chain of custody. It also supplies the reason for that limitation: there is no authenticated, tamper-resistant provenance binding the declared reviewer to the package, prompt, and stored output.
+
+The other relevant provisions are aligned with that correction. Rule 019 describes identity as self-declared rather than provenance-authenticated, labels the protocol documentary rather than an automated barrier, and denies that it proves organizational independence. Section 12-1 describes the identity and isolation declaration as self-attested, characterizes storing the package hash and prompt as a traceability improvement rather than proof of custody, and requires the full raw output without claiming that the requirement's satisfaction is verified. Sections 12-2 and 12-3 repeat the organizational-independence and provenance limitations.
+
+I find no residual statement in either supplied treated text that gives the self-attested record evidentiary proof value for occurrence, provider identity, isolation, output completeness, or custody. Statements that a different-provider model, isolated context, and complete raw output are required are normative conditions of the protocol; they are not represented as facts independently established by the resulting record. Section 12-3 makes that distinction explicit enough to prevent a reasonable reading that mere certification verifies compliance.
+
+2. Consistency of the declared, stored, and proven language levels
+
+The three-level vocabulary is materially sound and consistent across the two texts:
+
+- "Declared" is used for facts supplied through self-attestation, especially identity, isolation, and occurrence.
+- "Stored" is used for the raw output and for recording associated artifacts such as the package hash and prompt.
+- "Proven" is reserved for a fact supported by a named verification mechanism, and section 12-3 expressly says this protocol supplies no such mechanism.
+
+Uses of proof terminology elsewhere are negative limitations: the protocol does not prove organizational independence, and the certificate does not prove the listed facts. I do not identify a positive use of "proven" in the supplied texts without a named mechanism. Section 12-2's reference to a declared proof of satisfaction under Rule 018 concerns the separately required external route, not a claim that Rule 019 itself supplies proof.
+
+There is one nonblocking stylistic inconsistency. Rule 019 says the protocol "improves review quality through different blind spots" in categorical language, while the section 12 introduction more carefully says that a different-provider model is hoped to have different training and blind spots and that the goal is to increase the chance of detection, not guarantee it. This does not recreate an occurrence, identity, isolation, completeness, or custody proof claim, but Rule 019 should ideally say "is intended to improve" or "may improve" so that its efficacy claim is as calibrated as section 12.
+
+3. Circular work-item closure and section 12-5
+
+Within the supplied texts, the new section 12-5 language resolves the round-two tension identified as a risk of circular work-item closure despite section 12-5. It now distinguishes clearly between a review judgment and closure authority: acceptance or rejection is an input to the closure decision, not the act or authority that closes the work item. It also states that the protocol may not certify itself and identifies separate closure components: the seven-part Rule 014 work-control contract, the Rule 016 move to history, and the authority of the person who appointed the reviewer as recorded in the work-item row.
+
+That formulation is internally consistent with the rest of the supplied text. Rule 019 and sections 12-2 and 12-3 separately deny that the protocol closes C-18 or T-115, while section 12-5 denies that the diverse-review verdict alone closes even the protocol-editing work item. Therefore accepting this treatment for W-2026-036 does not amount to accepting the protocol as an independence mechanism, closing C-18 or T-115, or allowing this review to exercise closure authority by itself.
+
+Named evidence limitation: REFERENCED_CLOSURE_RULES_NOT_REPRODUCED. The package names Rules 014 and 016 but does not reproduce them, so I cannot independently determine whether their actual repository text supplies the stated seven-part contract, history transition, authorization semantics, or additional safeguards. I can judge only that section 12-5's supplied wording identifies closure acts and authority rather than assigning closure power to the review verdict. This limitation does not block the narrow textual treatment because the protocol's non-self-certifying boundary is explicit, but this review must not be cited as verification of Rules 014 or 016.
+
+A useful nonblocking hardening would be to say that the appointing authority's closure action remains subject to Rules 014 and 016 and cannot waive them. That relationship is already the natural reading of the conjunction in section 12-5, but making it explicit would prevent an argument that appointing authority is an alternative to work-control compliance.
+
+4. Isolation declaration and source of the diversity request
+
+The sixth condition closes the documentary form of an "isolation denial" loophole: a reviewer cannot produce a conforming report while remaining silent about whether only the frozen package was read. The required opening declaration creates a clear assertion that can later be compared against contrary evidence. It does not technically enforce isolation or prove the assertion, but the text states both limitations directly. It would be inaccurate to say the condition guarantees isolation; the treated text does not say that.
+
+The request-source provision closes the implementer's unilateral "no request was made" bypass to the extent a documentary protocol can do so. The owner or an authorized delegate is the source of the request; requester, scope, and selected provider must be recorded before review; and the implementer may not decide alone that no request exists. Rule 019 and section 12-1 state this consistently.
+
+The provision intentionally leaves the owner or authorized delegate with discretion not to request model diversity. It therefore does not make diverse review universally mandatory, nor does it prevent the owner from declining to request it. That is not a hidden bypass in the present wording because Rule 019 is expressly conditional on a request, and the text does not claim universal coverage. If the governance objective later becomes mandatory diversity for defined classes of work, the triggering classes, request deadline, delegation record, and consequence of omission must be specified in a separate enforceable rule. The present protocol should not be credited with that effect.
+
+The phrase "or an authorized delegate" also depends on the integrity of the delegation and work-item record. No authenticated authorization mechanism is supplied. This is a disclosed consequence of the documentary, non-automated design rather than a new claim of proof. As hardening, the text could require the delegation itself to be recorded before the request and could prohibit the implementer from acting as requester or closer unless a separately recorded rule expressly permits it.
+
+5. New bypass permitting false appearance of independence or proof
+
+I find no new substantive textual bypass that makes a non-independent review appear organizationally independent or makes an unverified fact appear proven. The texts repeatedly and prominently state that the platform and operator remain the same, identity is self-declared, isolation is not automatically guarded, the protocol is documentary, the certificate is not proof, C-18 and T-115 are not closed, and a genuinely external party or royal audit-acceptance order is required for the stronger condition.
+
+The labels "diverse reviewer" and "diverse review" could be quoted out of context by a later actor, but section 12 defines diversity narrowly as provider diversity and repeatedly denies organizational independence. That is a general risk of selective quotation, not a loophole created by the full text. The corrected certificate language substantially reduces that risk.
+
+The remaining ways to fabricate apparent compliance are operational rather than concealed by the wording: falsely declare the model or provider, falsely attest isolation, alter or selectively store output, fabricate the prior request, or tamper with the package, prompt, or report. Section 12-3 expressly says the protocol does not prove the relevant facts or chain of custody, and section 6 of the package identifies the custody envelope as separate debt. These risks therefore remain real but are no longer misrepresented as solved.
+
+6. Internal consistency between Rule 019 and section 12
+
+I find no material contradiction between Rule 019 and section 12 after treatment. Both require a different provider rather than another model from the implementer's provider family; a frozen isolated context; self-declared model identity; mandatory preservation of complete raw output rather than a substitute summary; an adversarial verification prompt; and an opening isolation declaration. Both make the owner or authorized delegate the request source and require a prior work-item record. Both describe the mechanism as documentary rather than automatically enforced and deny that it proves organizational independence or closes C-18 or T-115.
+
+Two minor drafting inconsistencies should be normalized but are not blockers:
+
+First, as noted in answer 2, Rule 019 categorically says the protocol improves quality through different blind spots, while section 12 presents different blind spots as an expectation and improvement as an increased chance rather than a guarantee. The probabilistic wording in section 12 is more defensible and should be copied into Rule 019.
+
+Second, the supplied Rule 019 text alternates between "C-18/T-115" and "C-18/T-115b," while section 12 likewise uses both the general T-115 identifier and a T-115b form. If T-115b is an intended subcondition, it should be defined and used consistently; if it is not, the suffix should be corrected. This identifier mismatch does not alter the repeated statement that neither C-18 nor the relevant T-115 gap is closed, but normalization would avoid later scope arguments.
+
+7. Defects, weaknesses, and proposed improvements
+
+No blocking defect remains in the supplied treatment. The named round-two defect, SELF_ATTESTED_DIVERSITY_OCCURRENCE_PROOF, has been removed rather than merely renamed: the certificate is now expressly a stored self-attestation and expressly not proof.
+
+The following are nonblocking weaknesses or improvement debt:
+
+1. TEST_CLAIMS_NOT_INDEPENDENTLY_VERIFIABLE_FROM_PACKAGE. Section 6 labels the command results as implementer claims that cannot be reviewed from the package. I therefore give no assurance that either command ran, returned the stated status, or tested the treated files. This does not block a narrow text-only acceptance because the package says there was no code change and supplies the full treated texts, but the test claims must not be represented as independently reviewed.
+
+2. REFERENCED_CLOSURE_RULES_NOT_REPRODUCED. As stated in answer 3, the actual content and operation of Rules 014 and 016 cannot be checked from the frozen package. This review accepts only the noncircular allocation expressed in section 12-5, not the adequacy of those external rules.
+
+3. Align Rule 019's categorical quality-improvement wording with section 12's probabilistic "intended to improve" formulation.
+
+4. Normalize T-115 versus T-115b and define the subcondition if the suffix is intentional.
+
+5. Make explicit that appointing authority is cumulative with, not an alternative to, Rules 014 and 016, and record the provenance of any delegation before the request.
+
+6. Preserve the already declared separate debt for the permissible content and framing of a frozen package. A frozen package can still bias a reviewer through selective inclusion or narrative framing even when the reviewer reads only that package.
+
+7. Preserve the already declared separate custody debt for authenticated timestamps, signatures, and tamper-evident binding of the reviewer, provider, package hash, full prompt, raw output, and storage event. Until such a mechanism exists, all relevant compliance facts must remain in the declared or stored categories, never the proven category.
+
+8. Keep any later certificate, work-item row, summary, dashboard, or closure message subject to the same vocabulary discipline. The correction would be undermined operationally if downstream artifacts described the review as "verified," "independent," or "proven" without a separately named verification mechanism.
+
+Subject to those explicit limitations and debts, the treatment removes the round-two named defect and does not open a new substantive textual loophole. Acceptance is for W-2026-036 only. It is not closure of W-2026-036 by itself, not closure of T-115 or C-18, not certification of Rule 019, and not proof that a diverse review actually occurred.
+
+VERDICT: ACCEPTED_FOR_W-2026-036_ONLY
