@@ -55,6 +55,8 @@ const f = verdict.facts;
 say(`uid=${f.uid} · CapEff=${f.effectiveCapabilities} · CapBnd=${f.boundingCapabilities}`);
 say(`NoNewPrivs=${f.noNewPrivileges} · Seccomp=${f.seccompMode} · readOnlyRoot=${f.readOnlyRoot}`);
 say(`interfaces=${f.interfaces.join(',')} · defaultRoutes=${f.defaultRoutes}`);
+say(`ipv6DefaultRoutes=${f.ipv6DefaultRoutes} · egressRoutes=${f.egressRoutes}`
+  + ` · ipv6StackPresent=${f.ipv6StackPresent}`);
 say(`networkNamespace=${f.networkNamespace}`);
 say(`confined=${verdict.confined} · شروطٌ غيرُ مستوفاة=${verdict.failures.length}`);
 for (const failure of verdict.failures) {

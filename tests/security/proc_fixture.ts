@@ -25,8 +25,19 @@ export interface FakeFacts {
   readonly seccomp: 0 | 1 | 2;
   /** واجهاتٌ غير الحلقة المحلية — المجالُ الفارغ لا شيء فيه غير `lo` */
   readonly interfaces: readonly string[];
-  /** مسارٌ افتراضي على واجهةٍ غير `lo` — وجودُه معناه بوابةُ خروج */
+  /** مسارٌ افتراضي IPv4 على واجهةٍ غير `lo` — وجودُه معناه بوابةُ خروج */
   readonly defaultRoute: boolean;
+  /** مسارٌ افتراضي **IPv6** (`::/0`) على واجهةٍ غير `lo` — البقعةُ العمياءُ في W-2026-039 */
+  readonly ipv6DefaultRoute?: boolean;
+  /** مسارُ IPv4 **غيرُ افتراضيٍّ** إلى شبكةٍ مجاورة (`192.168.0.0/24`) على واجهةٍ غير `lo` */
+  readonly localRoute?: boolean;
+  /** مسارُ IPv6 غيرُ افتراضيٍّ (`fe80::/64`) على واجهةٍ غير `lo` */
+  readonly ipv6LinkLocalRoute?: boolean;
+  /**
+   * أَيُكتب `net/ipv6_route` أصلًا؟ الافتراضُ نعم — ونواةٌ بلا مكدّسِ IPv6 لا ملفَّ لها،
+   * وهي حالةٌ تُقاس صراحةً لأنّ غيابَ الملفِّ حقيقةٌ لا عجزٌ عن القراءة (W-2026-039).
+   */
+  readonly ipv6Stack?: boolean;
   readonly readOnlyRoot: boolean;
 }
 
@@ -81,12 +92,39 @@ function devText(f: FakeFacts): string {
 function routeText(f: FakeFacts): string {
   const header = 'Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask';
   const rows: string[] = [];
+  const iface = f.interfaces[0] ?? 'eth0';
   if (f.defaultRoute) {
-    const iface = f.interfaces[0] ?? 'eth0';
     rows.push(`${iface}\t00000000\t0100FEA9\t0003\t0\t0\t0\t00000000`);
     rows.push(`${iface}\t0000FEA9\t00000000\t0001\t0\t0\t0\t0000FFFF`);
   }
+  // مسلكٌ غيرُ افتراضيٍّ إلى 192.168.0.0/24: لا وجهةَ صفريّةَ فيه، ومع ذلك هو طريقُ خروج
+  if (f.localRoute === true) {
+    rows.push(`${iface}\t0000A8C0\t00000000\t0001\t0\t0\t0\t00FFFFFF`);
+  }
+  // مسلكُ الحلقةِ المحليّةِ نفسِه: يُكتب دائمًا ولا يُعدّ خروجًا — مقياسُ عدمِ الضجيج
+  rows.push('lo\t0000007F\t00000000\t0001\t0\t0\t0\t000000FF');
   return `${header}\n${rows.join('\n')}\n`;
+}
+
+/**
+ * `net/ipv6_route` بصيغةِ النواة حرفًا: عشرةُ أعمدةٍ **بلا ترويسة**، الأوّلُ وجهةٌ من
+ * 32 خانةً ستّ عشرية، والثاني طولُ البادئةِ ست عشريًّا، والأخيرُ اسمُ الجهاز.
+ */
+function ipv6RouteText(f: FakeFacts): string {
+  const iface = f.interfaces[0] ?? 'eth0';
+  const zero = '0'.repeat(32);
+  const rows: string[] = [];
+  if (f.ipv6DefaultRoute === true) {
+    rows.push(`${zero} 00 ${zero} 00 fe80${'0'.repeat(27)}1 00000400 00000000 00000000 00000003     ${iface}`);
+  }
+  if (f.ipv6LinkLocalRoute === true) {
+    rows.push(`fe80${'0'.repeat(28)} 40 ${zero} 00 ${zero} 00000100 00000001 00000000 00000001     ${iface}`);
+  }
+  // مدخلانِ على `lo` يوجدان في كلِّ نواةٍ حتى في المجال الفارغ — ومنهما وجهةٌ صفريّة:
+  // فلو عُدَّت الوجهةُ الصفريّةُ بلا نظرٍ إلى الجهاز لَسقط المجالُ المحصورُ زورًا
+  rows.push(`${zero} 00 ${zero} 00 ${zero} ffffffff 00000001 00000000 00200200       lo`);
+  rows.push(`${'0'.repeat(31)}1 80 ${zero} 00 ${zero} 00000000 00000003 00000000 80200001       lo`);
+  return `${rows.join('\n')}\n`;
 }
 
 function mountinfoText(f: FakeFacts): string {
@@ -107,6 +145,10 @@ export function writeFakeProc(facts: FakeFacts): string {
   writeFileSync(join(root, 'self/mountinfo'), mountinfoText(facts), 'utf8');
   writeFileSync(join(root, 'net/dev'), devText(facts), 'utf8');
   writeFileSync(join(root, 'net/route'), routeText(facts), 'utf8');
+  // الافتراضُ نواةٌ ذاتُ مكدّسِ IPv6؛ و`ipv6Stack: false` يحاكي نواةً بلا ملفٍّ أصلًا
+  if (facts.ipv6Stack !== false) {
+    writeFileSync(join(root, 'net/ipv6_route'), ipv6RouteText(facts), 'utf8');
+  }
   // في `/proc` الحقيقي رابطٌ رمزي؛ وهنا ملفٌّ عادي يقرأه القارئُ بالبديل المعلن
   writeFileSync(join(root, 'self/ns/net'), 'net:[4026999999]', 'utf8');
   return root;

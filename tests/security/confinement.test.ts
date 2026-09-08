@@ -102,6 +102,94 @@ test('واجهةٌ إضافيةٌ بلا مسارٍ افتراضي لا تُسق
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
+// ── W-2026-039: البقعةُ العمياءُ عن IPv6 وعن المسالكِ غيرِ الافتراضيّة ──────────────
+// كلُّ اختبارٍ هنا كان **يمرُّ قبلَ العلاج بـ`confined=true`** — وهذا هو الخرقُ نفسُه.
+// القياسُ الخامُّ قبلَ وبعدَ: docs/test-reports/phase-39-W-2026-039-measurements.txt
+
+test('مسلكٌ افتراضيٌّ IPv6 على واجهةٍ غير lo يُسقط الحكم — ولا مسلكَ IPv4 البتّة', () => {
+  const root = writeFakeProc({
+    ...CONFINED, interfaces: ['eth0'], defaultRoute: false, ipv6DefaultRoute: true,
+  });
+  try {
+    const verdict = verifyConfinement(POLICY, readConfinementFacts(root));
+    assert.equal(verdict.facts.defaultRoutes, 0, 'لا مسلكَ IPv4 افتراضيًّا أصلًا');
+    assert.equal(verdict.facts.ipv6DefaultRoutes, 1);
+    assert.equal(verdict.confined, false, 'شاهدٌ يقول محصورٌ وطريقُ الخروجِ مفتوح');
+    assert.ok(verdict.failures.some((f) => f.requirement === 'default_deny_egress'));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('مسلكٌ IPv4 غيرُ افتراضيٍّ إلى شبكةٍ مجاورةٍ يُسقط الحكم — المجاورةُ خارجٌ', () => {
+  const root = writeFakeProc({
+    ...CONFINED, interfaces: ['eth0'], defaultRoute: false, localRoute: true,
+  });
+  try {
+    const verdict = verifyConfinement(POLICY, readConfinementFacts(root));
+    assert.equal(verdict.facts.defaultRoutes, 0);
+    assert.equal(verdict.facts.ipv6DefaultRoutes, 0);
+    assert.equal(verdict.facts.egressRoutes, 1);
+    assert.equal(verdict.confined, false);
+    assert.ok(verdict.failures.some((f) => f.requirement === 'default_deny_egress'));
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('مسلكٌ IPv6 غيرُ افتراضيٍّ (fe80::/64) على واجهةٍ غير lo يُسقط الحكم', () => {
+  const root = writeFakeProc({
+    ...CONFINED, interfaces: ['eth0'], defaultRoute: false, ipv6LinkLocalRoute: true,
+  });
+  try {
+    const verdict = verifyConfinement(POLICY, readConfinementFacts(root));
+    assert.equal(verdict.facts.ipv6DefaultRoutes, 0, 'طولُ البادئةِ 40 فليس افتراضيًّا');
+    assert.equal(verdict.facts.egressRoutes, 1);
+    assert.equal(verdict.confined, false);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('مجالٌ فارغٌ حقيقيٌّ: مسالكُ lo وحدَها — وفيها وجهةٌ صفريّةٌ — لا تُعدّ خروجًا', () => {
+  const root = writeFakeProc(CONFINED);
+  try {
+    const verdict = verifyConfinement(POLICY, readConfinementFacts(root));
+    assert.equal(verdict.facts.ipv6DefaultRoutes, 0);
+    assert.equal(verdict.facts.egressRoutes, 0);
+    assert.equal(verdict.facts.ipv6StackPresent, true);
+    // مقياسُ عدمِ الانحدار: علاجٌ يُسقط هذه الحالةَ استبدل العمى بالضجيج
+    assert.equal(verdict.confined, true);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('نواةٌ بلا مكدّسِ IPv6: غيابُ الملفّ يُقرأ صفرًا **ويُعلَن** ولا يُسكَت عنه', () => {
+  const root = writeFakeProc({ ...CONFINED, ipv6Stack: false });
+  try {
+    const facts = readConfinementFacts(root);
+    assert.equal(facts.ipv6StackPresent, false);
+    assert.equal(facts.ipv6DefaultRoutes, 0);
+    assert.equal(verifyConfinement(POLICY, facts).confined, true);
+    // ومصدرُ الصفرِ مقروءٌ في نصّ القياس حين يسقط الشرط لسببٍ آخر
+    const noisy = writeFakeProc({
+      ...CONFINED, ipv6Stack: false, interfaces: ['eth0'], defaultRoute: true,
+    });
+    try {
+      const failure = verifyConfinement(POLICY, readConfinementFacts(noisy)).failures
+        .find((f) => f.requirement === 'default_deny_egress');
+      assert.ok(failure?.measured.includes('مكدّس IPv6=غائب'), failure?.measured);
+    } finally { rmSync(noisy, { recursive: true, force: true }); }
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('نصُّ القياس يذكر التعدادَ الثلاثيَّ — فلا يُقرأ حكمٌ بلا معرفةِ ما قيس', () => {
+  const root = writeFakeProc({
+    ...CONFINED, interfaces: ['eth0'], defaultRoute: true, ipv6DefaultRoute: true,
+  });
+  try {
+    const failure = verifyConfinement(POLICY, readConfinementFacts(root)).failures
+      .find((f) => f.requirement === 'default_deny_egress');
+    assert.ok(failure, 'الشرطُ يجب أن يسقط');
+    for (const part of ['افتراضي v4=', 'افتراضي v6=', 'مسالكُ خروج=', 'مكدّس IPv6=']) {
+      assert.ok(failure.measured.includes(part), `${part} مفقودٌ من: ${failure.measured}`);
+    }
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
 test('جذرٌ غير موجود: عجزُ القراءة خرقٌ مغلق برمزه لا صمتٌ يُفسَّر حصرًا', () => {
   const missing = join(tmpdir(), 'sool-proc-لا-يوجد-abc123');
   assert.throws(() => readConfinementFacts(missing), (error: Error & { code?: string }) => {

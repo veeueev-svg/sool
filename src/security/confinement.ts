@@ -2,6 +2,7 @@
  * src/security/confinement.ts — شاهدُ الحصر على مستوى النواة (المرحلة 39 — البند T-16)
  * المالك: وزارة الأمن السيبراني | إكمالُ المعيار C-09
  * المدخلات: جذرُ `/proc` المعلن في `config/confinement.yaml`، وسياسةُ الشروط منه
+ *   (وتُقرأ منه `net/route` و`net/ipv6_route` معًا — W-2026-039)
  * المخرجات: `ConfinementFacts` (ما تقوله النواة) و`ConfinementVerdict` (ما ينقص منه)
  * التبعيات: نظامُ الملفات للقراءة فقط — ولا تنفيذَ أمرٍ خارجي ولا شبكة
  * الصلاحيات: **القراءةُ وحدها.** لا تُصلح هذه الوحدة حصرًا ولا تُنشئه ولا تُنزله؛
@@ -32,6 +33,12 @@ import { join } from 'node:path';
 import { SovereignViolation } from '../kernel/types';
 import { ConfinementConfig, ConfinementRequirement } from '../kernel/config';
 
+/**
+ * عددُ أعمدةِ `net/ipv6_route` كما تكتبها النواة. السطرُ الأقصرُ منه سطرٌ غيرُ مكتمل
+ * فيُتجاوز ولا يُفسَّر: تفسيرُ سطرٍ ناقصٍ اختراعُ حقيقةٍ لم تكتبها النواة.
+ */
+const IPV6_ROUTE_COLUMNS = 10;
+
 /** ما تقوله النواةُ عن العمليّة الجارية — لا رأيَ فيها ولا تفسير */
 export interface ConfinementFacts {
   readonly uid: number;
@@ -44,8 +51,21 @@ export interface ConfinementFacts {
   readonly seccompMode: number;
   /** الواجهاتُ الشبكية القائمة (بأسمائها) — الحلقةُ المحلية ليست خروجًا */
   readonly interfaces: readonly string[];
-  /** عددُ المسارات الافتراضية إلى خارج الحلقة المحلية — صفرٌ يعني لا طريقَ خروج */
+  /** عددُ المسارات الافتراضية **IPv4** إلى خارج الحلقة المحلية (`net/route`) */
   readonly defaultRoutes: number;
+  /** عددُ المسارات الافتراضية **IPv6** (`::/0`) من `net/ipv6_route` — W-2026-039 */
+  readonly ipv6DefaultRoutes: number;
+  /**
+   * **كلُّ مسلكٍ على جهازٍ غير `lo`**، افتراضيًّا كان أم لا، في IPv4 وIPv6 جميعًا.
+   * وهذا هو المقياسُ المطلقُ الذي يطابق نصَّ C-09: لا «صفرُ بوّاباتٍ افتراضيّة»
+   * بل «صفرُ أثرٍ شبكيٍّ خارجيٍّ غيرِ معلن» — وشبكةٌ مجاورةٌ في المتناول أثرٌ خارجي.
+   */
+  readonly egressRoutes: number;
+  /**
+   * أحاضرٌ `net/ipv6_route` في هذه النواة؟ غيابُ الملفِّ نفسِه معناه لا مكدّسَ IPv6
+   * أصلًا — وهي حقيقةٌ تُعلَن ولا تُسكَت عنها، لئلّا يُقرأ صفرٌ لا يُعرف مصدرُه.
+   */
+  readonly ipv6StackPresent: boolean;
   readonly readOnlyRoot: boolean;
   /** مُعرّفُ المجال الشبكي (inode) — يُدوَّن للقياس ولا يُشترط بذاته */
   readonly networkNamespace: string;
@@ -103,21 +123,98 @@ function readInterfaces(root: string): readonly string[] {
 }
 
 /**
- * يعدّ المسارات الافتراضية (الوجهة 00000000) على واجهةٍ ليست الحلقة المحلية.
- * سببُ القياس بهذه الصورة: مجالٌ شبكيٌّ فارغٌ فيه `lo` وحدها لا مسارَ افتراضي فيه،
- * فالنواةُ تردّ `ENETUNREACH` قبل أن تُنادى شيفرةُ الدولة. وهذا هو المقياس لا الدعوى.
+ * تعدادُ المسالك كما تكتبها النواة — ثلاثةُ أرقامٍ تُقرأ مجتمعةً لا رقمٌ واحد (W-2026-039).
  */
-function countDefaultRoutes(root: string): number {
+interface RouteCensus {
+  readonly ipv4Default: number;
+  readonly ipv6Default: number;
+  /** كلُّ مسلكٍ على جهازٍ غير `lo` في العائلتَين معًا */
+  readonly egress: number;
+  readonly ipv6StackPresent: boolean;
+}
+
+/** وجهةٌ أصفارٌ كلُّها — وهي صيغةُ المسلكِ الافتراضيّ في العائلتَين */
+function isZeroDestination(hex: string): boolean {
+  return /^0+$/.test(hex);
+}
+
+/**
+ * `net/route` (IPv4): ترويسةٌ ثمّ أسطرٌ أوّلُ خاناتها اسمُ الجهاز والثانيةُ الوجهة.
+ * يُعدّ منها شيءان: المسلكُ الافتراضيُّ، و**كلُّ مسلكٍ** على جهازٍ غير `lo`.
+ */
+function censusIpv4(root: string): { readonly def: number; readonly egress: number } {
   const text = readProc(root, 'net/route');
-  let count = 0;
+  let def = 0;
+  let egress = 0;
   for (const line of text.split('\n').slice(1)) {
     const cells = line.trim().split(/\s+/);
     if (cells.length < 3) continue;
     const [iface, destination] = cells as [string, string, ...string[]];
     if (iface === 'lo') continue;
-    if (/^0+$/.test(destination)) count += 1;
+    egress += 1;
+    if (isZeroDestination(destination)) def += 1;
   }
-  return count;
+  return { def, egress };
+}
+
+/**
+ * `net/ipv6_route`: **عشرةُ أعمدةٍ بلا ترويسة** — الأوّلُ وجهةٌ من 32 خانةً، والثاني
+ * طولُ البادئة، والأخيرُ اسمُ الجهاز. والمسلكُ الافتراضيُّ (`::/0`) وجهةٌ صفريّةٌ
+ * **وطولُ بادئةٍ صفر** معًا — والشرطان لازمان، فـ`::1/128` وجهتُه ليست صفرًا.
+ *
+ * **غيابُ الملفّ ليس عجزًا عن القراءة**: نواةٌ بُنيت بلا `CONFIG_IPV6` لا تكتب هذا
+ * الملفّ أصلًا، ولا مسلكَ IPv6 فيها بالضرورة. فيُقرأ صفرًا **ويُعلَن مصدرُ الصفر**
+ * في `ipv6StackPresent` وفي نصّ القياس، فلا يُقرأ صفرٌ لا يُعرف أمن قياسٍ هو أم من غياب.
+ * وما عدا الغيابِ من أسبابِ التعذّر (إذنٌ ممنوع مثلًا) يبقى خرقًا مغلقًا (الثابت 2).
+ */
+function censusIpv6(root: string): {
+  readonly def: number; readonly egress: number; readonly present: boolean;
+} {
+  let text: string;
+  try {
+    text = readFileSync(join(root, 'net/ipv6_route'), 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { def: 0, egress: 0, present: false };
+    }
+    throw new SovereignViolation(
+      `شاهدُ الحصر غير مقروء: ${join(root, 'net/ipv6_route')}`, 'CONFINEMENT_FACTS_UNREADABLE',
+    );
+  }
+  let def = 0;
+  let egress = 0;
+  for (const line of text.split('\n')) {
+    const cells = line.trim().split(/\s+/);
+    if (cells.length < IPV6_ROUTE_COLUMNS) continue;
+    const destination = cells[0]!;
+    const prefixLength = cells[1]!;
+    const device = cells[cells.length - 1]!;
+    if (device === 'lo') continue;
+    egress += 1;
+    if (isZeroDestination(destination) && isZeroDestination(prefixLength)) def += 1;
+  }
+  return { def, egress, present: true };
+}
+
+/**
+ * يعدّ طرقَ الخروج في العائلتَين معًا. سببُ القياس بهذه الصورة: مجالٌ شبكيٌّ فارغٌ
+ * فيه `lo` وحدها لا مسلكَ خروجٍ فيه بتاتًا، فالنواةُ تردّ `ENETUNREACH` قبل أن تُنادى
+ * شيفرةُ الدولة. وهذا هو المقياس لا الدعوى.
+ *
+ * **لماذا ثلاثةُ أرقامٍ لا رقمٌ واحد** (W-2026-039): كان الشاهدُ يعدّ المسلكَ
+ * الافتراضيَّ في IPv4 وحدَه، فكانت عمليّةٌ لها `::/0` على `eth0` تُعلَن «محصورة»،
+ * وكذلك من لها مسلكٌ إلى شبكةٍ مجاورةٍ بلا بوّابةٍ افتراضيّة. وقُيس ذلك قبل العلاج
+ * في docs/test-reports/phase-39-W-2026-039-measurements.txt §1.
+ */
+function censusRoutes(root: string): RouteCensus {
+  const v4 = censusIpv4(root);
+  const v6 = censusIpv6(root);
+  return {
+    ipv4Default: v4.def,
+    ipv6Default: v6.def,
+    egress: v4.egress + v6.egress,
+    ipv6StackPresent: v6.present,
+  };
 }
 
 function readReadOnlyRoot(root: string): boolean {
@@ -148,14 +245,25 @@ export function readConfinementFacts(witnessRoot: string): ConfinementFacts {
       }
     }
   })();
+  // تُقرأ حقولُ `status` أوّلًا ثمّ المسالك: بنيةٌ مشوّهةٌ تُرفض بـMALFORMED لا
+  // بـUNREADABLE، فترتيبُ القراءةِ هو الذي يُسمّي الخرقَ باسمه الصحيح.
+  const uid = Number(field(status, 'Uid').split(/\s+/)[0]);
+  const effectiveCapabilities = field(status, 'CapEff');
+  const boundingCapabilities = field(status, 'CapBnd');
+  const noNewPrivileges = field(status, 'NoNewPrivs') === '1';
+  const seccompMode = Number(field(status, 'Seccomp'));
+  const routes = censusRoutes(witnessRoot);
   return {
-    uid: Number(field(status, 'Uid').split(/\s+/)[0]),
-    effectiveCapabilities: field(status, 'CapEff'),
-    boundingCapabilities: field(status, 'CapBnd'),
-    noNewPrivileges: field(status, 'NoNewPrivs') === '1',
-    seccompMode: Number(field(status, 'Seccomp')),
+    uid,
+    effectiveCapabilities,
+    boundingCapabilities,
+    noNewPrivileges,
+    seccompMode,
     interfaces: readInterfaces(witnessRoot),
-    defaultRoutes: countDefaultRoutes(witnessRoot),
+    defaultRoutes: routes.ipv4Default,
+    ipv6DefaultRoutes: routes.ipv6Default,
+    egressRoutes: routes.egress,
+    ipv6StackPresent: routes.ipv6StackPresent,
     readOnlyRoot: readReadOnlyRoot(witnessRoot),
     networkNamespace: namespace,
   };
@@ -196,8 +304,14 @@ function evaluate(facts: ConfinementFacts): Readonly<Record<ConfinementRequireme
       reason: 'جذرُ نظام الملفات قابلٌ للكتابة — تُبدَّل الشيفرةُ في زمن التشغيل',
     },
     default_deny_egress: {
-      ok: facts.defaultRoutes === 0,
-      measured: `مسارات افتراضية=${facts.defaultRoutes} واجهات=${facts.interfaces.join('،')}`,
+      // ثلاثةُ شروطٍ لا واحد: لا بوّابةَ IPv4، ولا بوّابةَ IPv6، ولا مسلكَ خروجٍ أصلًا
+      ok: facts.defaultRoutes === 0
+        && facts.ipv6DefaultRoutes === 0
+        && facts.egressRoutes === 0,
+      measured: `افتراضي v4=${facts.defaultRoutes} · افتراضي v6=${facts.ipv6DefaultRoutes}`
+        + ` · مسالكُ خروج=${facts.egressRoutes}`
+        + ` · مكدّس IPv6=${facts.ipv6StackPresent ? 'حاضر' : 'غائب'}`
+        + ` · واجهات=${facts.interfaces.join('،')}`,
       reason: 'طريقُ خروجٍ قائم في النواة — فالمنعُ تطبيقيٌّ وحده وهو فجوةُ C-09',
     },
   };

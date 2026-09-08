@@ -49,6 +49,9 @@ const { readConfinementFacts } = require(${JSON.stringify(distSecurity)});
 const f = readConfinementFacts('/proc');
 console.log('interfaces=' + f.interfaces.join(','));
 console.log('defaultRoutes=' + f.defaultRoutes);
+console.log('ipv6DefaultRoutes=' + f.ipv6DefaultRoutes);
+console.log('egressRoutes=' + f.egressRoutes);
+console.log('ipv6StackPresent=' + f.ipv6StackPresent);
 console.log('networkNamespace=' + f.networkNamespace);
 `;
 
@@ -78,6 +81,8 @@ try {
   say(`uid=${f.uid} · CapEff=${f.effectiveCapabilities} · CapBnd=${f.boundingCapabilities}`);
   say(`NoNewPrivs=${f.noNewPrivileges} · Seccomp=${f.seccompMode} · readOnlyRoot=${f.readOnlyRoot}`);
   say(`interfaces=${f.interfaces.join(',')} · defaultRoutes=${f.defaultRoutes}`);
+  say(`ipv6DefaultRoutes=${f.ipv6DefaultRoutes} · egressRoutes=${f.egressRoutes}`
+    + ` · ipv6StackPresent=${f.ipv6StackPresent}`);
   say(`networkNamespace=${f.networkNamespace}`);
   say(`confined=${verdict.confined} · شروطٌ غيرُ مستوفاة=${verdict.failures.length}`);
   for (const failure of verdict.failures) {
@@ -102,7 +107,8 @@ say('');
 
 // ٥) حقائقُ الحصر داخل المجال — الشرطُ الشبكي مستوفًى قياسًا
 say('## ٥) حقائقُ الحصر داخل المجال نفسه — بالقارئ نفسه');
-say('# المتوقَّع: interfaces=lo و defaultRoutes=0 ⇒ default_deny_egress مستوفًى.');
+say('# المتوقَّع: interfaces=lo و defaultRoutes=0 و ipv6DefaultRoutes=0 و egressRoutes=0');
+say('# ⇒ default_deny_egress مستوفًى. والثلاثةُ تُقرأ معًا لا واحدًا منها (W-2026-039).');
 say(run('unshare', ['--net', '--map-root-user', 'node', '-e', FACTS_IN_NS]));
 say('');
 
