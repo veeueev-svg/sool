@@ -12,6 +12,7 @@
  *   - صفٌّ في جدول الدعاوى لصنفٍ ليس في `DURABLE_KINDS` ⇒ PERSISTENCE_REHYDRATE_CLAIM_STALE
  *   - صنفٌ مكرّرٌ في جدول الدعاوى ⇒ PERSISTENCE_REHYDRATE_CLAIM_DUPLICATE
  *   - إعفاءٌ بسببٍ خارج المُعجم المغلق ⇒ PERSISTENCE_REHYDRATE_EXEMPTION_UNKNOWN
+ *   - صفٌّ بمستهلكٍ وإعفاءٍ معًا، أو بلا واحدٍ منهما ⇒ PERSISTENCE_REHYDRATE_CLAIM_NOT_EXCLUSIVE
  * اختبارات الوحدة: tests/data/rehydrate_census.test.ts
  * اختبار القبول: tests/data/durable_rehydrate.test.ts
  * الوثيقة المرتبطة: docs/decisions/ADR-0048-rehydrate-census.md
@@ -106,7 +107,7 @@ export interface RehydrateCensusReport {
   readonly outOfScope: readonly DurableKind[];
 }
 
-/** فهرسُ الدعاوى بمفتاح الصنف — يُبنى مرّةً ويُحرس بثلاثة أبواب */
+/** فهرسُ الدعاوى بمفتاح الصنف — يُبنى مرّةً ويُحرس بأربعةِ أبواب */
 function claimIndex(claims: readonly RehydrateClaim[]): ReadonlyMap<DurableKind, RehydrateClaim> {
   const known = new Set<string>(DURABLE_KINDS);
   const index = new Map<DurableKind, RehydrateClaim>();
@@ -127,6 +128,18 @@ function claimIndex(claims: readonly RehydrateClaim[]): ReadonlyMap<DurableKind,
       throw new SovereignViolation(
         `سببُ إعفاءٍ خارجَ المُعجم المغلق: ${claim.exemption} (${claim.kind})`,
         'PERSISTENCE_REHYDRATE_EXEMPTION_UNKNOWN',
+      );
+    }
+    // **الحصرُ المتبادلُ يُنفَّذ لا يُوصَف**: الثابتُ (1) يقول «دعوى واحدةٌ مغلقة»، وكان
+    // الجدولُ يقبل صفًّا بمستهلكٍ وإعفاءٍ معًا فيُخفي أيَّهما حكَم — ورفعه المراجعُ (أ)
+    // بالرمز RC-CLAIM-XOR-NOT-RUNTIME-ENFORCED. فصار الحصرُ حرسًا يرمي، لا نصًّا يُقرأ.
+    if ((claim.consumer !== null) === (claim.exemption !== null)) {
+      throw new SovereignViolation(
+        `دعوى إرجاعٍ ليست واحدةً مغلقة: ${claim.kind} — `
+        + (claim.consumer !== null
+          ? 'مستهلكٌ وإعفاءٌ معًا، ولا يُعرف أيُّهما حكَم'
+          : 'لا مستهلكَ ولا إعفاء، وصفٌّ لا يقول شيئًا لا يُدَّعى به'),
+        'PERSISTENCE_REHYDRATE_CLAIM_NOT_EXCLUSIVE',
       );
     }
     index.set(claim.kind, claim);
@@ -151,8 +164,7 @@ export function censusRehydrate(
     const claim = index.get(kind);
     if (claim === undefined) unclaimed.push(kind);
     else if (claim.consumer !== null) claimed.push(kind);
-    else if (claim.exemption !== null) exempt.push(kind);
-    else unclaimed.push(kind);
+    else exempt.push(kind);
   }
   return {
     declared: DURABLE_KINDS.length,

@@ -57,6 +57,12 @@ export interface PassageBook {
 export interface DurableWitness {
   readonly file: string;
   verify(): { readonly valid: boolean; readonly length: number; readonly reason: string | null };
+  /**
+   * تفصيلُ ما أُسقط خارجَ نطاقِ التدوين المعلن (W-2026-040). ووجودُه في هذه الواجهةِ
+   * الضيّقةِ هو **القارئُ الإنتاجيُّ** للعدّاد: كان يُحصى في الذاكرةِ ولا يقرؤه أحد،
+   * فرفعه المراجعانِ عيبًا — ورقمٌ لا يُقرأ ليس قياسًا (RULE-001).
+   */
+  droppedByKind(): ReadonlyMap<string, number>;
 }
 
 /**
@@ -283,6 +289,35 @@ export function confinementProbe(deps: ProductionScannerDeps): WatchProbe {
   };
 }
 
+/**
+ * ماسحُ الإسقاط (W-2026-040): وحدةٌ دوّنت صنفًا خارجَ نطاقِ التدوين المعلن فأُسقط القيدُ
+ * وعاد `null`. والإسقاطُ **قرارُ تهيئةٍ مشروع**، فليس هو الحادث؛ الحادثُ أن يقع ولا يعلمه
+ * أحد. فهذا الماسحُ يقرأ العدّادَ في كل مسحةٍ ويرفع ما **زاد** منه، فيصير الرقمُ معلومةً
+ * تصل المراقبَ لا قيمةً تموت مع العمليّة.
+ *
+ * ولا يُصنّف شدّةً (ثابت 3): `journal_records_dropped` في `config/production.yaml` جسيمٌ لا
+ * حرج — **وهذا انحيازٌ مُعلَن**: تضييقُ النطاقِ قرارٌ مُعلَن يجوز، فلا يُسقط التشغيلَ وحدَه؛
+ * وإخفاؤه هو المحرَّم. ومن أراد إسقاطَ التشغيلِ به يرفعه في التهيئةِ لا في الشفرة (RULE-005).
+ */
+export function journalDropProbe(deps: ProductionScannerDeps): WatchProbe {
+  const reported = new Map<string, number>();
+  return (): readonly WatchFinding[] => {
+    if (deps.durable === null) return []; // غيابُ الوسيطِ يرفعه ماسحُ الثبات، فلا يُعدّ مرّتين
+    const findings: WatchFinding[] = [];
+    for (const [kind, count] of deps.durable.droppedByKind()) {
+      const seen = reported.get(kind) ?? 0;
+      if (count <= seen) continue; // ثابت 4: لا يُعدّ حادثٌ لا يتجدّد
+      reported.set(kind, count);
+      findings.push({
+        kind: 'journal_records_dropped' as IncidentKind,
+        detail: `قيودٌ أُسقطت خارج نطاق التدوين: ${kind} × ${count} في ${deps.durable.file}`
+          + ' — وحدةٌ تكتب حالةً لا تُدوَّن ولا تُستعاد',
+      });
+    }
+    return findings;
+  };
+}
+
 /** يبني كل الماسحات المعلنة — ماسحٌ معلن بلا بانٍ يُرفض عند بناء المراقب */
 export function buildProductionScanners(
   deps: ProductionScannerDeps,
@@ -298,5 +333,6 @@ export function buildProductionScanners(
   probes.set('passage', passageProbe(deps));
   probes.set('durable_state', durableStateProbe(deps));
   probes.set('confinement', confinementProbe(deps));
+  probes.set('journal_drop', journalDropProbe(deps));
   return probes;
 }

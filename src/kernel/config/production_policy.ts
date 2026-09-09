@@ -29,7 +29,9 @@ export type ScannerKind =
   // المرحلة 39 (T-120): ماسحُ الثبات — لا تشغيل اتحاديٌ بحالةٍ لا تنجو من موت العمليّة
   | 'durable_state'
   // المرحلة 39 (T-16): ماسحُ الحصر — يقرأ `/proc` في كل مسحة لا مرةً عند الإقلاع
-  | 'confinement';
+  | 'confinement'
+  // المرحلة 39 (W-2026-040): ماسحُ الإسقاط — يقرأ عدّادَ ما أُسقط خارج النطاق في كل مسحة
+  | 'journal_drop';
 
 export interface ProductionConfig {
   policy: {
@@ -72,7 +74,7 @@ export interface ProductionConfig {
 export const PRODUCTION_KNOWN_SCANNERS: readonly ScannerKind[] = Object.freeze([
   'regions', 'audit_chain', 'scope', 'termination', 'king',
   'loads', 'digital_unit', 'factories', 'hospitals', 'retention', 'passage',
-  'durable_state', 'confinement',
+  'durable_state', 'confinement', 'journal_drop',
 ]);
 
 /**
@@ -97,7 +99,7 @@ export const PRODUCTION_KNOWN_INCIDENTS: readonly IncidentKind[] = Object.freeze
   ...STAGING_KNOWN_INCIDENTS,
   'unit_ledger_mismatch', 'command_loss_over_limit', 'critical_service_unverified',
   'crown_passage_bypass', 'region_action_without_passage', 'state_not_durable',
-  'process_not_confined',
+  'process_not_confined', 'journal_records_dropped',
 ]);
 
 /**

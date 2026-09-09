@@ -39,7 +39,11 @@ function deps(confinement: ProductionScannerDeps['confinement']): ProductionScan
     passage: { active: true, wasOpenAt: () => true },
     policy: POLICY,
     retentionAuthority: OBSERVER,
-    durable: { file: '/tmp/x', verify: () => ({ valid: true, length: 1, reason: null }) },
+    durable: {
+      file: '/tmp/x',
+      verify: () => ({ valid: true, length: 1, reason: null }),
+      droppedByKind: () => new Map<string, number>(),
+    },
     confinement,
   };
 }

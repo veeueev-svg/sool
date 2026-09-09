@@ -53,6 +53,7 @@ test('يوميّة مُتحقَّقة ⇒ لا حادث؛ وانكسار سلس�
   const witness = {
     file: '/tmp/sool-test/state.jsonl',
     verify: () => ({ valid, length: 7, reason: valid ? null : 'PERSISTENCE_JOURNAL_TAMPERED' }),
+    droppedByKind: () => new Map<string, number>(),
   };
   const probe = durableStateProbe(deps(witness));
   assert.equal(probe(NOW).length, 0);
@@ -69,6 +70,7 @@ test('الحادث يُرفع مرةً أخرى بعد إصلاحٍ ثم انك�
   const probe = durableStateProbe(deps({
     file: '/tmp/sool-test/state.jsonl',
     verify: () => ({ valid, length: 3, reason: valid ? null : 'PERSISTENCE_JOURNAL_CORRUPT' }),
+    droppedByKind: () => new Map<string, number>(),
   }));
   assert.equal(probe(NOW).length, 1);
   valid = true;

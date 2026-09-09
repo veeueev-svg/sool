@@ -19,7 +19,7 @@
     "check:closed-enums": "bash scripts/check_closed_enums.sh",
     "check:boot-work": "bash scripts/check_boot_work.sh",
     "check:confinement": "npm run build && node dist/scripts/check_confinement.js",
-    "check:rehydrate-census": "bash scripts/check_rehydrate_census.sh",
+    "check:rehydrate-census": "node dist/scripts/check_rehydrate_census.js",
     "check:ci-gates": "bash scripts/check_ci_gates.sh",
     "check:work": "node scripts/check_work.mjs",
     "work:list": "node scripts/work.mjs list",

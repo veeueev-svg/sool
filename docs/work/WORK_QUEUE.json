@@ -199,7 +199,7 @@
       "reviewer": "مراجعان مستقلان: GPT (OpenAI) + Grok (xAI) — بتفويض المالك 2026-09-09 (RULE-019)",
       "area": "البيانات والديمومة",
       "phase": 39,
-      "status": "BLOCKED",
+      "status": "REVIEW",
       "progress_items": [
         "T-29"
       ],
@@ -224,7 +224,21 @@
         "tests/governance/generated_numbers.test.ts",
         "docs/test-reports/phase-39-W-2026-040-review-round-1.md",
         "docs/test-reports/phase-39-W-2026-040-review-gpt.md",
-        "docs/test-reports/phase-39-W-2026-040-review-grok.md"
+        "docs/test-reports/phase-39-W-2026-040-review-grok.md",
+        "scripts/check_rehydrate_census.ts",
+        "scripts/rehydrate_proof.ts",
+        "tests/data/rehydrate_roundtrip.test.ts",
+        "src/kernel/config/staging.ts",
+        "src/kernel/config/production_policy.ts",
+        "src/kernel/config/closed_enums.ts",
+        "src/production/production_scanners.ts",
+        "config/production.yaml",
+        "deploy/production/manifest.yaml",
+        "tests/production/production_scanners.test.ts",
+        "tests/production/durable_state_scanner.test.ts",
+        "tests/production/confinement_scanner.test.ts",
+        "docs/test-reports/phase-39-W-2026-040-remedy.md",
+        "docs/test-reports/phase-39-W-2026-040-remedy-measurements.txt"
       ],
       "excluded": [
         "config/persistence.yaml — لا يُوسَّع النطاقُ ولا يُضيَّق: البندُ يبني الحاجزَ لا مقاسَه",
@@ -249,10 +263,11 @@
         "docs/decisions/ADR-0048-rehydrate-census.md — القرارُ ومُعجمُ الإعفاء والبدائلُ المرفوضة",
         "خرجُ npm test بعددٍ صريح وخرجُ npm run verify برمزِ خروجه"
       ],
-      "next_step": "معالجةُ العيوبِ السبعةِ المتقاطعةِ والاثنين المنفردَين، ثمّ حزمةُ أدلّةٍ v2 وجولةٌ ثانية",
+      "next_step": "حزمةُ أدلّةٍ v2 تُضاف إليها الملفّاتُ الخمسةُ التي أُعلن عليها INSUFFICIENT_EVIDENCE، ثمّ جولةُ مراجعةٍ ثانيةٍ بالمراجعَين نفسِهما. والحكمُ ليس للمنفّذ (RULE-004).",
       "created_at": "2026-09-08",
       "updated_at": "2026-09-09",
       "verification": [
+        "العائقُ رُفع بالمعالجةِ لا بالانتظار (2026-09-09): العيبُ المُسمّى «برهانُ المستهلك تطابقُ سلسلة» عولج ببرهانٍ نحويٍّ على شجرةِ TypeScript وببرهانٍ سلوكيٍّ في tests/data/rehydrate_roundtrip.test.ts؛ وعُولجت معه تسعُ عللٍ أُخرى — والتفصيلُ في docs/test-reports/phase-39-W-2026-040-remedy.md §2. وبقيت علّةُ PROBE_BEFORE_IS_SIMULATION دَينًا مُعلَنًا لا مُغلقًا (§4).",
         "قياسٌ قبل/بعد في جريانٍ واحدٍ محفوظٌ خامًّا في docs/test-reports/phase-39-W-2026-040-measurements.txt: قبلَ العلاج 23 صنفًا في نطاقِ التدوين · 21 بمستهلكِ إرجاع · 2 بلا · صفرُ حواجزَ تقرأ هذا السطرَ · ولا عدّادَ للمُسقَط. وبعده: 23 مُدَّعاةٌ كلُّها · 21 بمستهلكٍ يُبرهَنُ اسمُ الصنفِ في شفرتِه · 2 بإعفاءٍ من مُعجمٍ مغلقٍ قائمِ الموجب · وثلاثُ محاولاتِ تدوينٍ خارجَ النطاق تُقاس 3 بحسب الصنف بعد أن كانت null بلا أثر.",
         "سقوطُ الحاجزِ يُرى لا يُدّعى: أربعُ تطفيراتٍ على جذرٍ منسوخ (SOOL_CHECK_ROOT) تُسقط [RC-01] و[RC-03] و[RC-04] و[RC-07]، والإقلاعُ يرفض برمز PERSISTENCE_REHYDRATE_KIND_UNCLAIMED قبلَ إرجاعِ أوّلِ قيد.",
         "خطأٌ حقيقيٌّ أمسكه البندُ في حاجزِ نفسِه: الصيغةُ الأولى طبعت أخضرَ وهي تقرأ 5 أصنافٍ من 23 (تعليقٌ مُزاحٌ ينهي مُحلِّلَ كتلةِ الـYAML)؛ ضُبط النمطُ وأُضيف [RC-10] يقابل عدَّ المُحلِّلِ بعدِّ الملفِّ كلِّه (23=23).",
@@ -261,9 +276,9 @@
         "انحرافٌ مُعلَنٌ في المُراجَعِ لا في المراجع: حزمةُ أدلّةِ W-2026-038 كانت ناقصةً (ينقصها src/data/rehydrate_state.ts وملفاتُ قياسٍ موجودةٌ في المستودع) فقال المراجعُ (ب) أربعةَ أصنافٍ والقياسُ 21، وأصاب (أ) بردِّ INSUFFICIENT_EVIDENCE. وحزمةُ هذا البندِ تُبنى من شجرةِ العملِ ببيانِ بصماتٍ SHA-256 لكلِّ ملفّ.",
         "حدُّ البندِ مُعلَنٌ نصًّا: لا يُغلق C-08 ولا C-21 — واجهةُ DigitalState 111 حقلًا والمُدوَّنُ 21 صنفًا من 16 وحدة؛ الفجواتُ 7 والإكمالُ 97.00% بلا تغيير. أُزيل الصمتُ لا النطاق.",
         "حالُ البند REVIEW لا VERIFIED: المنفِّذُ لا يُصادق على عملِ نفسِه (RULE-004 · RULE-016)، وهذا الحقلُ دليلُ تشغيلٍ لا إقرارُ قبول.",
-        "الجولةُ الأولى من المراجعةِ المستقلّة (2026-09-09): رُفض البندُ من المراجعَين معًا بعيبٍ متطابقِ الجوهر. الخرجُ الخامُّ الكاملُ محفوظٌ في docs/test-reports/phase-39-W-2026-040-review-{gpt,grok}.md والسجلُّ في ...-review-round-1.md."
-      ],
-      "blocked_reason": "رُفض في الجولةِ الأولى من المراجعةِ المستقلّة (2026-09-09) من المراجعَين معًا بعيبٍ واحدٍ في جوهرِه: «برهانُ المستهلك» تطابقُ سلسلةٍ نصّيّةٍ لا برهانُ سلوك (RC-CONSUMER-TOKEN-NOT-PROOF · CONSUMER_PROOF_IS_SUBSTRING)، ومعه ستّةُ عيوبٍ متقاطعة. يُرفع العائقُ بمعالجةِ العيوبِ المسمّاةِ في docs/test-reports/phase-39-W-2026-040-review-round-1.md ثمّ حزمةِ أدلّةٍ v2 وجولةٍ ثانية."
+        "الجولةُ الأولى من المراجعةِ المستقلّة (2026-09-09): رُفض البندُ من المراجعَين معًا بعيبٍ متطابقِ الجوهر. الخرجُ الخامُّ الكاملُ محفوظٌ في docs/test-reports/phase-39-W-2026-040-review-{gpt,grok}.md والسجلُّ في ...-review-round-1.md.",
+        "معالجةُ الجولةِ الأولى مقيسةٌ في جريانٍ واحدٍ محفوظٍ خامًّا في docs/test-reports/phase-39-W-2026-040-remedy-measurements.txt: الحاجزُ الجديدُ node dist/scripts/check_rehydrate_census.js يخرج بـ0 ويُعلن 23 صنفًا · 21 بموضعِ توزيعٍ في شجرةِ نحوِ الملفِّ المُسمّى · 2 بإعفاءٍ قائمِ الموجب · وقارئَ عدّادِ الإسقاطِ في الإنتاج. و**عشرُ** تطفيراتٍ تُسقطه برموزها (RC-01 · RC-03 ثلاثًا · RC-04 · RC-05 · RC-07 · RC-10 · RC-11 · RC-12) منها ثلاثٌ كانت تنجو من الصيغةِ المعجميّةِ الأولى، و**ثلاثُ** إضافاتِ تعليقٍ لا تُسقطه ولا تُخضِرّه زورًا. والبرهانُ السلوكيّ: نزعُ قيودِ كلِّ صنفٍ من الواحدِ والعشرين يُبدّل المُلاحَظَ من مسلكِه. npm test 2278 ⇒ 2281 بصفرِ سقوط · npm run verify EXIT=0."
+      ]
     }
   ]
 }
