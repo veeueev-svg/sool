@@ -23,6 +23,7 @@
  */
 import { AuditStore } from './audit/store';
 import { rehydrateFromJournal } from './data/persistence';
+import { assertRehydrateCensus } from './data/rehydrate_census';
 import { rehydrateStateFromJournal } from './data/rehydrate_state';
 import { rehydrateFiscalFromJournal } from './data/rehydrate_fiscal';
 import { rehydrateGovernanceFromJournal } from './data/rehydrate_governance';
@@ -120,6 +121,13 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
     productionConfig, productionManifest, passage, continuousSupervisor, productionLedger,
     federatedOperation,
   } = operations;
+
+  // 8.4) حاجزُ حصرِ الإرجاع (W-2026-040): **قبل** قراءةِ قيدٍ واحد. صنفٌ في نطاق التدوين
+  //      بلا مستهلكِ إرجاعٍ ولا إعفاءٍ مُعلَن يُسقط الإقلاعَ برمز
+  //      PERSISTENCE_REHYDRATE_KIND_UNCLAIMED، ولا يُدوَّن على القرص ثمّ يُسقَط صمتًا.
+  //      والقياسُ الذي أوجب الحاجزَ في docs/test-reports/phase-39-W-2026-040-measurements.txt:
+  //      23 صنفًا في النطاق · 21 لها مستهلك · 2 بلا مستهلك · **صفرُ حواجزَ تكشف ذلك**.
+  if (journal) assertRehydrateCensus(persistenceConfig.policy.scope);
 
   // 8.5) الإرجاع من اليوميّة الدائمة (المرحلة 39، البند T-27): آخر خطوةٍ قبل الخاتمة، لأن
   //      الإرجاع يستبدل سلسلة السجل ويستورد الذاكرة والمعرفة، فلا يجوز أن تكتب طبقةٌ بعده

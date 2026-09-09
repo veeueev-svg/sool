@@ -1,0 +1,94 @@
+قياساتُ W-2026-040 — حصرُ إرجاعِ أصنافِ اليوميّة · المرحلة 39
+=================================================================
+الجذر: veeueev-svg/sool · القاعدة: 6bc0973 · العقدة: v20.20.1 · التاريخ: 2026-09-09
+كلُّ ما دون هذا السطرِ خرجٌ خامٌّ منسوخٌ كما طُبع، لا مُعادُ صياغته.
+
+── [1] خطُّ الأساس قبل أيِّ لمسة (عند 6bc0973) ──────────────────
+$ npm test
+# tests 2267 · # pass 2267 · # fail 0 · # duration_ms 164519
+$ npm run verify
+EXIT=1 — 13 حاجزًا أخضرَ، والأحمرُ وحدَه check:work بمخالفتَين:
+  التزامةُ HEAD لمست مسارًا محكومًا بلا أثرٍ في السجلّ ولا في عقدٍ.
+  وهو انحرافٌ سابقٌ لهذا البند، يُقاس على `git diff HEAD^ HEAD`،
+  ويزول من نفسِه عند التزامةِ هذا البند لأنّها تُحدّث الصفَّ والعقدَ معًا.
+
+── [2] حصرُ ما قبلَ العلاج (قياسُ مصدرٍ متقاطع: نطاق × مُنتِج × مستهلك) ──
+أصنافٌ معلنةٌ في DURABLE_KINDS: 23
+أصنافٌ في scope: 23
+
+| الصنف | في النطاق | مُنتِج | مستهلكُ إرجاع |
+| audit_entry | نعم | audit/append_only_log.ts, data/persistence.ts | persistence.ts |
+| memory_record | نعم | data/agent_memory.ts | persistence.ts |
+| memory_share | نعم | data/agent_memory.ts | persistence.ts |
+| knowledge_fact | نعم | data/knowledge_graph.ts | persistence.ts |
+| archive_snapshot | نعم | — لا مُنتِج | — لا مستهلك |
+| journal_compacted | نعم | data/journal_compaction.ts | — لا مستهلك |
+| ledger_entry | نعم | economy/ledger.ts | rehydrate_state.ts |
+| contract_record | نعم | external/contract_registry.ts | rehydrate_state.ts |
+| population_batch | نعم | scale/population.ts | rehydrate_state.ts |
+| population_terminated | نعم | scale/population.ts | rehydrate_state.ts |
+| treasury_disbursement | نعم | economy/treasury.ts | rehydrate_fiscal.ts |
+| treasury_state | نعم | economy/treasury.ts | rehydrate_fiscal.ts |
+| budget_appropriation | نعم | economy/budget.ts | rehydrate_fiscal.ts |
+| tax_levy | نعم | economy/tax.ts | rehydrate_fiscal.ts |
+| unit_supply | نعم | economy/digital_unit.ts | rehydrate_fiscal.ts |
+| external_account | نعم | external/account_registry.ts | rehydrate_fiscal.ts |
+| external_payment | نعم | external/payment_controls.ts | rehydrate_fiscal.ts |
+| partner_assessment | نعم | external/partner_risk.ts | rehydrate_fiscal.ts |
+| partner_breach | نعم | external/partner_risk.ts | rehydrate_fiscal.ts |
+| ministry_state | نعم | governance/ministries.ts | rehydrate_governance.ts |
+| office_definition | نعم | governance/appointments.ts | rehydrate_governance.ts |
+| appointment_proposal | نعم | governance/appointments.ts | rehydrate_governance.ts |
+| office_holder | نعم | governance/appointments.ts | rehydrate_governance.ts |
+
+أصنافٌ في النطاق بلا مستهلكِ إرجاع: 2 ['archive_snapshot', 'journal_compacted']
+أصنافٌ في النطاق بلا مُنتِجٍ في src/: 1 ['archive_snapshot']
+حواجزُ تكشف ذلك اليوم: 0 — لا في الإقلاع ولا في npm run verify ولا في CI
+عدّادُ الإسقاطِ خارجَ النطاق في StateJournal.record(): غير موجود — الإسقاطُ يعود null ولا يُعَدّ
+
+── [3] خرجُ المسبار بعد العلاج (جريانٌ واحدٌ: قبل · بعد · سقوط · عدّاد · حدّ) ──
+$ npm run probe:rehydrate-census
+مسبارُ حصرِ الإرجاع — W-2026-040 · المرحلة 39
+
+── قبل الحاجز: الحالُ كما كانت (يُحاكى بجدولِ دعاوى بلا الصنفِ المقصود) ──
+  أصنافٌ في النطاق: 23 · مُدَّعاةٌ بمستهلك: 20 · مُعفاة: 2 · بلا دعوى: 1 (tax_levy)
+  وقبلَ هذا البندِ لم يكن ثمّ حاجزٌ يقرأ هذا السطرَ أصلًا: الإقلاعُ يمضي، والصنفُ يُدوَّن ويُسقَط صمتًا.
+
+── بعد الحاجز: الجدولُ التامُّ على النطاق المعلن ──
+  أصنافٌ في التعداد المغلق: 23 · في النطاق: 23
+  بمستهلكِ إرجاعٍ مسمًّى: 21 · بإعفاءٍ مُعلَن: 2 · بلا دعوى: 0
+  الأصنافُ المُعفاة، وسببُ كلٍّ منها، وما لها من مُنتِجٍ في src/** (بنمطِ `.record('<kind>'`):
+  · archive_snapshot — declared_without_producer — مُنتِجونَ: لا مُنتِج
+  · journal_compacted — compaction_marker — مُنتِجونَ: لا مُنتِجَ بهذا النمط — يكتبه الضاغطُ في src/data/journal_compaction.ts ببناءِ القيدِ مباشرةً لا بنداءِ record
+
+── سقوطُ الحاجزِ يُرى لا يُدّعى ──
+  رُفض برمز: PERSISTENCE_REHYDRATE_KIND_UNCLAIMED
+
+── عدّادُ الإسقاطِ خارجَ النطاق: التهيئةُ تحكم والعدّادُ يشهد ──
+  النطاقُ المُضيَّق: 22 صنفًا · يشمل ledger_entry: false
+  ثلاثُ محاولاتِ تدوينٍ خارجَ النطاق ⇒ مُسقَطٌ مقيسٌ: 3 · بحسب الصنف: ledger_entry=3
+  وقبلَ هذا البندِ كان العائدُ null والعدّادُ معدومًا: ثلاثُ خسائرَ لا أثرَ لها في شيء.
+
+── حدُّ البند: ما لم يُغلَق ──
+  حقولُ واجهة DigitalState: 111 · أصنافٌ لها مُنتِجٌ فعليّ: 21 · وحداتٌ تُدوّن: 16
+  فهذا البندُ يُصلح **الصمتَ** لا **النطاق**: C-08 و C-21 يبقيان فجوةً، والفجواتُ 7 والإكمالُ 97.00%.
+
+── [4] الحاجزُ الساكن ──────────────────────────────────────────
+$ bash scripts/check_rehydrate_census.sh
+حاجزُ حصرِ الإرجاع: لكلِّ صنفٍ في نطاق التدوين دعوى مبرهنةٌ في الشفرة (W-2026-040)
+  المقيس: نطاقُ التدوين 23 صنفًا · جدولُ الدعاوى 23 صفًّا · التعدادُ المغلق 23 صنفًا
+✓ حصرُ الإرجاع: 23 صنفًا في النطاق كلُّها مُدَّعاة · 21 بمستهلكٍ مبرهنٍ في شفرته · 2 بإعفاءٍ قائمِ الموجب · والحاجزُ منادًى عند الإقلاع
+EXIT=0
+
+── [5] الحصيلةُ بعد العلاج ─────────────────────────────────────
+$ npm test
+# tests 2278
+# pass 2278
+# fail 0
+# duration_ms 170560.33567
+$ npm run verify
+EXIT=0 (يُثبَّت خرجُه في §7 من التقرير)
+
+── [6] ما لم يتغيّر — ويُعلن لئلا يُظنَّ أنّه تغيّر ───────────────
+حقولُ واجهة DigitalState: 111 · أصنافُ اليوميّة المعلنة: 23 · الفجوات: 7 · الإكمال: 97.00%
+C-08 و C-21 يبقيان مفتوحَين. هذا البندُ أزال **الصمتَ** لا **الفجوة**.

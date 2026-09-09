@@ -61,6 +61,8 @@ jobs:
         run: bash scripts/check_boot_work.sh
       - name: حاجزُ الحصر على مستوى النواة (T-16)
         run: node dist/scripts/check_confinement.js
+      - name: حاجزُ حصرِ الإرجاع — لا صنفَ في نطاق التدوين بلا مستهلكِ إرجاعٍ مُعلَن (W-2026-040)
+        run: bash scripts/check_rehydrate_census.sh
       - name: بوابةُ الدمجِ مقابلَ سلسلةِ التحقّق — لا حاجزَ يُقاس عليه محلّيًّا ولا يُشغَّل هنا (T-148 · T-146)
         run: bash scripts/check_ci_gates.sh
       - name: مدقّق التوثيق (يفشل إذا تغيّر src بلا PROGRESS.md وتقرير اختبار)

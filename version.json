@@ -46,11 +46,11 @@
     39
   ],
   "tests": {
-    "total": 2267,
-    "passing": 2267,
+    "total": 2278,
+    "passing": 2278,
     "command": "npm test"
   },
   "declared_by": "القيّم على المستودع",
-  "declared_at": "2026-09-08",
+  "declared_at": "2026-09-09",
   "royal_approval": "pending"
 }

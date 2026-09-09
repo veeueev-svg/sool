@@ -20,7 +20,9 @@
  *   1) **الإضافة فقط**: لا سطر يُحدَّث ولا يُحذف. التصحيح قيدٌ لاحق يعلو سابقه عند الإرجاع.
  *   2) **البصمة متسلسلة**: كل قيد يحمل بصمة سابقه، فحذف سطرٍ من الوسط يُكتشف لا يُبتلع.
  *   3) **المزامنة قبل الإقرار**: `fsync` بعد كل قيد؛ فوعد النجاة لا يُوفى بذاكرة نظام الملفات.
- *   4) **النطاق يُنفَّذ**: صنفٌ خارج `scope` لا يُدوَّن أصلًا — التهيئة تحكم لا الشفرة.
+ *   4) **النطاق يُنفَّذ ولا يُسكَت عنه**: صنفٌ خارج `scope` لا يُدوَّن أصلًا — التهيئة تحكم لا
+ *      الشفرة، فلا رميَ. لكنّ الإسقاط **يُعَدّ بحسب الصنف** ويُقرأ من `droppedByKind()`
+ *      (W-2026-040): عائدُ `null` يُهمله المنادونَ، فلولا العدّاد لظنّت الوحدةُ أنّها دوّنت.
  *   5) **الإرجاع لا يُدوَّن مرتين**: يُختصر إلى لقطةٍ ثم يُسلَّم لـ`importAll` الذرّي القائم.
  */
 import { createHash } from 'node:crypto';
@@ -91,6 +93,8 @@ export function hashDurableRecord(base: Omit<DurableRecord, 'hash'>): string {
 export class StateJournal implements DurableSink {
   private readonly path: string;
   private readonly scope: ReadonlySet<DurableKind>;
+  /** ما أُسقط لخروجه عن النطاق، بحسب الصنف (الثابت 4 · W-2026-040) */
+  private readonly dropped = new Map<DurableKind, number>();
   private fd: number | null = null;
   private seq = 0;
   private lastHash = GENESIS;
@@ -120,8 +124,23 @@ export class StateJournal implements DurableSink {
     return this.scope.has(kind);
   }
 
+  /** مجموعُ ما أُسقط خارج النطاق منذ فتح اليوميّة — رقمٌ يُقاس لا دعوى تُروى */
+  get droppedOutOfScope(): number {
+    let total = 0;
+    for (const n of this.dropped.values()) total += n;
+    return total;
+  }
+
+  /** تفصيلُ المُسقَط بحسب الصنف: نسخةٌ للقراءة، فلا يُصلح الخارجُ عدّادًا */
+  droppedByKind(): ReadonlyMap<DurableKind, number> {
+    return new Map(this.dropped);
+  }
+
   record(kind: DurableKind, payload: unknown, at = Date.now()): DurableRecord | null {
-    if (!this.scope.has(kind)) return null;
+    if (!this.scope.has(kind)) {
+      this.dropped.set(kind, (this.dropped.get(kind) ?? 0) + 1);
+      return null;
+    }
     if (this.seq >= this.policy.maxRecords) {
       throw new SovereignViolation(
         `تجاوز حدّ قيود اليوميّة المعلن (${this.policy.maxRecords})`,
