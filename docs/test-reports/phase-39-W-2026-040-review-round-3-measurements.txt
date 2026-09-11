@@ -1,0 +1,100 @@
+قياساتُ الجولةِ الثالثة — W-2026-040 · المرحلة 39
+المُنشئ: المنفّذ · الزمن: 2026-09-11T05:59:16Z · العُقدة: v20.20.1
+
+## 1) حزمةُ الأدلّةِ v3 — مُجمَّدةٌ ومبصومة
+المسار (خارج المستودع، مؤقّت): /tmp/w040r3/bundle/
+عددُ الملفّات: 20
+sha256(MANIFEST.sha256) = 8b522c15fcce37b33ef7e184fb67ae31b8dd819df4fb98fc2c89bc3f19adea89
+زمنُ التجميد: 2026-09-11T05:09:42Z
+sha256(REVIEW-PROMPT.md) = f222149fa47796879639fb1c629064a699a9b84b1af18afbf25a403df4ca2943
+طابق المراجعان البيانَ بـsha256sum -c: 63/63 لكلٍّ منهما
+
+## 2) ما قبلَ العلاج — أحدَ عشرَ شكلًا كلُّها تُخضِرّ الحاجزَ (العيبُ مُثبَتٌ لا مَرويّ)
+=== R3 BEFORE (at working tree, gate as reviewed) 2026-09-11T05:31:39Z
+r3_bare_array EXIT=0
+r3_bare_member EXIT=0
+r3_fn_decl EXIT=0
+r3_handler_empty_arrow EXIT=0
+r3_if_false_body EXIT=0
+r3_labeled_break EXIT=0
+r3_predicate_filter EXIT=0
+r3_rc07_while_false EXIT=0
+r3_rc12_if_false_call EXIT=0
+r3_try_finally EXIT=0
+r3_while_false EXIT=0
+
+## 3) ما بعدَ العلاج — كلُّها تسقط برموزها، ولا صحيحٌ يُرفَض
+=== R3 AFTER — remedy applied 2026-09-11T05:38:41Z
+--- الصيغُ الجديدةُ التي سمّاها المراجعانِ في الجولةِ الثالثة (كلُّها كانت EXIT=0 قبل العلاج):
+r3_bare_array EXIT=1
+    code=[RC-03]
+r3_bare_member EXIT=1
+    code=[RC-03]
+r3_fn_decl EXIT=1
+    code=[RC-03]
+r3_handler_empty_arrow EXIT=1
+    code=[RC-03]
+r3_if_false_body EXIT=1
+    code=[RC-03]
+r3_labeled_break EXIT=1
+    code=[RC-03]
+r3_predicate_filter EXIT=1
+    code=[RC-03]
+r3_rc07_while_false EXIT=1
+    code=[RC-07]
+r3_rc12_if_false_call EXIT=1
+    code=[RC-12]
+r3_try_finally EXIT=1
+    code=[RC-03]
+r3_while_false EXIT=1
+    code=[RC-03]
+--- عدمُ انحدار: صيغُ الجولةِ الثانيةِ والحالاتُ الصحيحة:
+boot_guard_if_false EXIT=1
+compare_if_void_body EXIT=1
+compare_in_log_line EXIT=1
+compare_unrelated_literals EXIT=1
+compare_unused_const EXIT=1
+control_delete_case EXIT=1
+noop EXIT=0
+rc12_dead_access EXIT=1
+vacuous_case_break EXIT=1
+vacuous_case_empty_block EXIT=1
+vacuous_case_log_only EXIT=1
+vacuous_case_return EXIT=1
+vacuous_case_void0 EXIT=1
+valid_object_map EXIT=0
+
+## 4) الحدُّ المُعلَنُ المقيس: الحاجزُ الساكنُ لا يرفض 'state.levySequence += 0'
+(الإسنادُ أثرٌ بنيويًّا، فلا يُميّزه محلِّلٌ ساكنٌ عن إسنادٍ مُفيد. والوجهُ السلوكيُّ يكشفه.)
+  الحاجزُ الساكنُ على التطفير: EXIT=0  ← حدٌّ مُعلَن، لا دعوى نجاح
+  اختبارُ الرحلةِ الكاملةِ على التطفيرِ نفسِه:
+    not ok 2 - نزعُ قيودِ صنفٍ يُغيّر التقريرَ
+    not ok 3 - الإقلاعُ الثاني يُعيد الحالةَ لا عددَها
+    # pass 1 · # fail 2   ⇐ العقدُ الواحدُ بوجهَيه: ما فات الساكنَ أسقطه السلوكيّ
+
+## 5) الشجرةُ الحيّةُ والبواباتُ
+أحجامُ الوحداتِ المسّوسة (السقف 400، الاستثناءات []):
+  229 scripts/rehydrate_effect.ts
+  359 scripts/rehydrate_dispatch.ts
+  380 scripts/check_rehydrate_census.ts
+  275 tests/data/rehydrate_census_mutations.test.ts
+  161 tests/data/rehydrate_census_mutations_r3.test.ts
+
+npm test:
+# tests 2285
+# pass 2285
+# fail 0
+
+npm run verify:
+  EXIT=1
+  حواجزُ خضراء: 9
+
+node scripts/check_work.mjs:
+    ℹ مصدرُ الفَرق: `git diff --name-only HEAD^ HEAD` — فَرقُ المراجعةِ الحقيقيّ (29 مسارًا)
+  ✓ كلُّ عملٍ محجوزٌ ومملوكٌ ومراجَعٌ بلا تداخل — RULE-010..017 مستوفاة
+  EXIT=0
+  حواجزُ خضراء: 15
+
+node scripts/check_work.mjs:
+    ℹ مصدرُ الفَرق: `git diff --name-only HEAD^ HEAD` — فَرقُ المراجعةِ الحقيقيّ (29 مسارًا)
+  ✓ كلُّ عملٍ محجوزٌ ومملوكٌ ومراجَعٌ بلا تداخل — RULE-010..017 مستوفاة

@@ -31,6 +31,7 @@ import { join } from 'node:path';
 import { SovereignViolation } from '../kernel/types';
 import type { AuditEntry, EntityId } from '../kernel/types';
 import type { DurableKind, PersistenceConfig } from '../kernel/config/persistence';
+import { JournalDropLedger } from './journal_drops';
 import type { AppendOnlyLog } from '../audit/append_only_log';
 import type { AgentMemory, MemoryRecord } from './agent_memory';
 import type { Fact, KnowledgeGraph } from './knowledge_graph';
@@ -93,14 +94,22 @@ export function hashDurableRecord(base: Omit<DurableRecord, 'hash'>): string {
 export class StateJournal implements DurableSink {
   private readonly path: string;
   private readonly scope: ReadonlySet<DurableKind>;
-  /** ما أُسقط لخروجه عن النطاق، بحسب الصنف (الثابت 4 · W-2026-040) */
-  private readonly dropped = new Map<DurableKind, number>();
+  /**
+   * دفترُ ما أُسقط لخروجه عن النطاق (الثابت 4 · W-2026-040).
+   *
+   * **وحدةٌ مُستقلّةٌ لا حقلٌ هنا** لأنّ سلطتَها غيرُ سلطةِ اليوميّة: اليوميّةُ تُدوّن
+   * ما دخلَ النطاقَ في سلسلةٍ مبصومة، والدفترُ يعدُّ ما رُدَّ على البابِ في ملفٍّ
+   * لا بصمةَ له. ودمجُهما كان يُقرِّب رقمًا غيرَ محروسٍ من سلسلةٍ محروسة.
+   * انظر `src/data/journal_drops.ts` لعيبِ المراجعةِ الذي أوجبَه وحدِّه المُعلَن.
+   */
+  private readonly drops: JournalDropLedger;
   private fd: number | null = null;
   private seq = 0;
   private lastHash = GENESIS;
 
   constructor(private readonly policy: JournalPolicy) {
     this.path = join(policy.directory, policy.file);
+    this.drops = new JournalDropLedger(`${this.path}.drops.json`);
     this.scope = new Set(policy.scope);
     mkdirSync(policy.directory, { recursive: true });
     if (existsSync(this.path)) {
@@ -124,21 +133,25 @@ export class StateJournal implements DurableSink {
     return this.scope.has(kind);
   }
 
-  /** مجموعُ ما أُسقط خارج النطاق منذ فتح اليوميّة — رقمٌ يُقاس لا دعوى تُروى */
+  /** مجموعُ ما أُسقط خارج النطاق — عبرَ الإقلاعاتِ لا في إقلاعٍ واحد */
   get droppedOutOfScope(): number {
-    let total = 0;
-    for (const n of this.dropped.values()) total += n;
-    return total;
+    return this.drops.total;
   }
 
   /** تفصيلُ المُسقَط بحسب الصنف: نسخةٌ للقراءة، فلا يُصلح الخارجُ عدّادًا */
   droppedByKind(): ReadonlyMap<DurableKind, number> {
-    return new Map(this.dropped);
+    return this.drops.byKind();
+  }
+
+  /** مسارُ دفترِ الإسقاطِ المعلن — للقياس لا للكتابة من الخارج */
+  get dropLedgerFile(): string {
+    return this.drops.file;
   }
 
   record(kind: DurableKind, payload: unknown, at = Date.now()): DurableRecord | null {
     if (!this.scope.has(kind)) {
-      this.dropped.set(kind, (this.dropped.get(kind) ?? 0) + 1);
+      // العدُّ والتثبيتُ فعلٌ واحدٌ في الدفتر لا مؤجَّلٌ إلى ماسحٍ قد لا يُشغَل (RULE-007)
+      this.drops.count(kind);
       return null;
     }
     if (this.seq >= this.policy.maxRecords) {

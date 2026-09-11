@@ -25,8 +25,8 @@
  * إلى بندٍ له عبارات)، أو مقارنةُ `=== / !==` في شرطٍ فرعُه يعمل. والتعليقاتُ ليست عُقَدًا في
  * الشجرة فلا تُرى أصلًا، والسلسلةُ في نداءِ سجلٍّ ليست موضعَ توزيعٍ فتُرفض.
  *
- * **وحدُّ هذا البرهانِ مُعلَن**: بنيةٌ لا سلوك — يشهد أنّ للصنفِ فرعَ توزيعٍ غيرَ فارغ، ولا يشهد
- * أنّ ما في الفرعِ يُعيد الحالةَ صحيحةً. ذاك يشهد به اختبارُ الرحلةِ الكاملةِ في
+ * **وحدُّ هذا البرهانِ مُعلَن**: يشهد أنّ للصنفِ فرعَ توزيعٍ داخلَه عبارةٌ ذاتُ أثرٍ، ولا يشهد أنّ
+ * الفرعَ يُنفَّذُ في تشغيلٍ ولا أنّ ما فيه يُعيد الحالةَ صحيحةً. ذاك يشهد به اختبارُ الرحلةِ الكاملةِ في
  * `tests/data/rehydrate_roundtrip.test.ts` — وهما معًا لا أحدُهما.
  *
  * ## ثوابتُ هذا الفحص
@@ -47,10 +47,11 @@ import { join, relative } from 'node:path';
 import ts from 'typescript';
 import { parseSimpleYaml } from '../src/kernel/config/yaml';
 import {
-  argumentSites, constructionSites, dispatchSites, lineOf, parseFile, producerSites,
-  readClaims, readDeclared, readReasons, sourceFiles, walk,
+  argumentSites, constructionSites, lineOf, parseFile, producerSites,
+  readClaims, readDeclared, readReasons, readStringArray, sourceFiles, walk,
 } from './rehydrate_proof';
 import type { Claim } from './rehydrate_proof';
+import { dispatchSites } from './rehydrate_dispatch';
 
 const ROOT = process.env.SOOL_CHECK_ROOT ?? '.';
 const CFG = join(ROOT, 'config/persistence.yaml');
@@ -212,40 +213,168 @@ walk(bootSf, (n) => {
   if (name === 'assertRehydrateCensus') { censusCall ??= n; return; }
   if (/^rehydrate[A-Z]/.test(name)) rehydrateCalls.push(n);
 });
+/**
+ * سلسلةُ الشروطِ الحاكمةِ على عقدةٍ حتّى أقربِ دالّةٍ تحويها — مع النفيِ إن كانت في الفرعِ الآخر.
+ *
+ * **لِمَ لا يكفي الترتيب**: مراجعةُ الجولةِ الثانيةِ أقامت أنّ `if (false) assertRehydrateCensus(scope);`
+ * كان يُخضِرُّ `[RC-07]`: المقيسُ كان إزاحةَ المصدرِ وحدَها لا **سيادةَ** النداء
+ * (`BOOT_GUARD_ORDER_WITHOUT_DOMINANCE`). فالمطلوب أن يكون كلُّ شرطٍ يحرس الحاجزَ
+ * حارسًا للإرجاعِ كذلك — وإلّا فثمّةَ مسلكٌ يُرجِع ولا يمرُّ بالحاجز.
+ */
+function guardsOf(sf: ts.SourceFile, node: ts.Node): {
+  readonly texts: readonly string[]; readonly unsatisfiable: boolean; readonly fn: ts.Node | null;
+} {
+  const texts: string[] = [];
+  let unsatisfiable = false;
+  const constantFalse = (expr: ts.Expression, negated: boolean): boolean => {
+    let e: ts.Expression = expr;
+    while (ts.isParenthesizedExpression(e)) e = e.expression;
+    if (ts.isPrefixUnaryExpression(e) && e.operator === ts.SyntaxKind.ExclamationToken) {
+      return constantFalse(e.operand, !negated);
+    }
+    const isTrue = e.kind === ts.SyntaxKind.TrueKeyword
+      || (ts.isNumericLiteral(e) && Number(e.text) === 1);
+    const isFalse = e.kind === ts.SyntaxKind.FalseKeyword
+      || e.kind === ts.SyntaxKind.NullKeyword
+      || (ts.isNumericLiteral(e) && Number(e.text) === 0)
+      || (ts.isIdentifier(e) && e.text === 'undefined')
+      || (ts.isStringLiteralLike(e) && e.text === '');
+    return negated ? isTrue : isFalse;
+  };
+  let cur: ts.Node = node;
+  for (;;) {
+    const p: ts.Node | undefined = cur.parent;
+    if (p === undefined) return { texts: [...texts].sort(), unsatisfiable, fn: null };
+    if (ts.isFunctionDeclaration(p) || ts.isFunctionExpression(p)
+      || ts.isArrowFunction(p) || ts.isMethodDeclaration(p)) {
+      return { texts: [...texts].sort(), unsatisfiable, fn: p };
+    }
+    if (ts.isIfStatement(p) && p.expression !== cur) {
+      const negated = p.elseStatement === cur;
+      texts.push((negated ? '!' : '') + p.expression.getText(sf).replace(/\s+/g, ''));
+      if (constantFalse(p.expression, negated)) unsatisfiable = true;
+    }
+    if (ts.isConditionalExpression(p) && p.condition !== cur) {
+      const negated = p.whenFalse === cur;
+      texts.push((negated ? '!' : '') + p.condition.getText(sf).replace(/\s+/g, ''));
+      if (constantFalse(p.condition, negated)) unsatisfiable = true;
+    }
+    // **عيبُ الجولةِ الثالثة** `RC07_LOOP_GUARD_NOT_MODELED`: كان جامعُ الحراسِ يقرأ
+    // `if` والشرطيَّ وحدَهما ويصعدُ فوقَ الحلقاتِ بلا تسجيل، فنجا منه
+    // `if (journal) { while (false) assertRehydrateCensus(…); }`: شرطُ الحاجزِ النصيُّ
+    // مساوٍ لشرطِ أوّلِ إرجاع، والنداءُ لا يُنفَّذ أبدًا. فحارسُ الحلقةِ شرطٌ
+    // كشرطِ `if`، وثابتُ الكذبِ منه يُبطِل النداءَ إبطالًا.
+    if ((ts.isWhileStatement(p) || ts.isForStatement(p) || ts.isDoStatement(p))
+      && p.statement === cur) {
+      const cond = ts.isForStatement(p) ? p.condition : p.expression;
+      if (cond !== undefined) {
+        texts.push(cond.getText(sf).replace(/\s+/g, ''));
+        // `do … while (false)` يُنفَّذ مرّةً، فلا يُبطِلُه ثابتُ الكذب
+        if (!ts.isDoStatement(p) && constantFalse(cond, false)) unsatisfiable = true;
+      }
+    }
+    if (ts.isForOfStatement(p) && p.statement === cur) {
+      texts.push(`for-of:${p.expression.getText(sf).replace(/\s+/g, '')}`);
+    }
+    cur = p;
+  }
+}
+
 if (censusCall === undefined) {
   bad('✗ [RC-07] حاجزُ الحصر غيرُ منادًى نداءً في مسار الإقلاع (src/index.ts) — والاسمُ في تعليقٍ ليس نداءً (RULE-001).');
 } else if (rehydrateCalls.length === 0) {
   bad('✗ [RC-07] لا نداءَ إرجاعٍ واحدٌ في مسار الإقلاع — فالحاجزُ يحرس بابًا لا يُدخَل منه (RULE-001).');
 } else {
-  const first = Math.min(...rehydrateCalls.map((c) => c.getStart(bootSf)));
-  if (censusCall.getStart(bootSf) > first) {
+  const ordered = [...rehydrateCalls].sort((a, b) => a.getStart(bootSf) - b.getStart(bootSf));
+  const firstCall = ordered[0] as ts.CallExpression;
+  if (censusCall.getStart(bootSf) > firstCall.getStart(bootSf)) {
     bad(`✗ [RC-07] الحاجزُ منادًى بعدَ أوّلِ إرجاع (السطر ${lineOf(bootSf, censusCall)} بعد `
-      + `${lineOf(bootSf, rehydrateCalls[0] as ts.CallExpression)}) — حكمٌ بعد الفعلِ لا يمنعه.`);
+      + `${lineOf(bootSf, firstCall)}) — حكمٌ بعد الفعلِ لا يمنعه.`);
+  }
+  // والترتيبُ وحدَه ليس سيادةً: تُقاس **الشروطُ الحارسةُ** لا موضعُ السطر
+  const gCensus = guardsOf(bootSf, censusCall);
+  const gFirst = guardsOf(bootSf, firstCall);
+  if (gCensus.unsatisfiable) {
+    bad(`✗ [RC-07] نداءُ الحاجزِ تحت شرطٍ لا يصدُق أبدًا (السطر ${lineOf(bootSf, censusCall)}: `
+      + `${gCensus.texts.join(' · ')}) — نداءٌ لا يُنفَّذ ليس حاجزًا (RULE-001).`);
+  }
+  if (gCensus.fn !== gFirst.fn) {
+    bad('✗ [RC-07] نداءُ الحاجزِ وأوّلُ إرجاعٍ في دالّتَينِ مختلفتَين — فلا يُقاس ترتيبٌ بينهما (RULE-001).');
+  }
+  const narrower = gCensus.texts.filter((t) => !gFirst.texts.includes(t));
+  if (narrower.length > 0) {
+    bad(`✗ [RC-07] الحاجزُ محروسٌ بشرطٍ لا يحرس الإرجاع: ${narrower.join(' · ')} — `
+      + 'فمسلكٌ يُرجِع ولا يمرُّ بالحاجزِ قائمٌ — والمطلوبُ سيادةٌ لا مجرّدُ ترتيب.');
+  } else {
+    say(`  سيادةُ نداءِ الحاجزِ مقيسةٌ: شروطُه {${gCensus.texts.join(' · ') || 'لا شرط'}} `
+      + `مُحتواةٌ في شروطِ أوّلِ إرجاع {${gFirst.texts.join(' · ') || 'لا شرط'}}`);
   }
 }
 
 // ── [RC-12] عدّادُ الإسقاطِ يقرؤه مسارُ إنتاج، لا مسبارٌ ولا اختبار ─────────────────────
+/**
+ * **قراءةٌ حيّةٌ لا وصولٌ مَيّت**: مراجعةُ الجولةِ الثانيةِ أقامت أنّ هذا الفحصَ كان يخضَرُّ
+ * بمُجرّدِ وجودِ خاصّيّةِ وصولٍ بالاسمِ ولو لم تُنادَى (`RC12_IS_PROPERTY_ACCESS_NOT_LIVE_READER`
+ * · `DROP_READER_GATE_ACCEPTS_DEAD_ACCESS`). فالمطلوب **نداءٌ** لـ`droppedByKind()`، أو قراءةُ
+ * `droppedOutOfScope` داخلَ تعبيرٍ يُستعمَل لا عبارةً مُهمَلةً وحدَها.
+ *
+ * **وعيبُ الجولةِ الثالثة** `RC12_CALL_IS_NOT_LIVE_READER`: كان النداءُ يُقبل حيثما وقع
+ * ولو كان **تحت شرطٍ لا يصدُق أبدًا** — فـ`if (false) deps.durable.droppedByKind();`
+ * كان يُجزِئ الفحصَ وقد نُزِع القارئُ الحقيقيُّ. فصار يُشترط أن يكون النداءُ
+ * **قابلًا للوصول**: لا حارسَ فوقَه ثابتُ الكذب، بالجامعِ نفسِه الذي يقيس سيادةَ `[RC-07]`.
+ */
 const readers = files.filter((f) => {
   const rel = relative(ROOT, f);
-  if (rel === 'src/data/persistence.ts') return false;
+  if (rel === 'src/data/persistence.ts' || rel.startsWith('src/data/rehydrate')) return false;
   const sf = parseFile(f);
   let found = false;
   walk(sf, (n) => {
-    if (ts.isPropertyAccessExpression(n) && (n.name.text === 'droppedByKind' || n.name.text === 'droppedOutOfScope')) found = true;
+    if (found) return;
+    if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression)
+      && n.expression.name.text === 'droppedByKind') {
+      if (!guardsOf(sf, n).unsatisfiable) found = true;
+      return;
+    }
+    if (ts.isPropertyAccessExpression(n) && n.name.text === 'droppedOutOfScope'
+      && n.parent !== undefined
+      && !ts.isExpressionStatement(n.parent) && !ts.isVoidExpression(n.parent)
+      && !guardsOf(sf, n).unsatisfiable) found = true;
   });
   return found;
 });
 if (readers.length === 0) {
-  bad('✗ [RC-12] عدّادُ الإسقاطِ لا يقرؤه مسارُ إنتاجٍ واحد: `droppedByKind`/`droppedOutOfScope` مُحصًى ولا يصل أحدًا.');
+  bad('✗ [RC-12] عدّادُ الإسقاطِ لا يقرؤه مسارُ إنتاجٍ واحد قراءةً حيّةً: `droppedByKind()` غيرُ منادًى ولا `droppedOutOfScope` مقروءٌ في تعبير.');
   say('         خسارةٌ تُعَدُّ في الذاكرةِ ولا تُقرأ ليست معلومةً بل رقمٌ يموت مع العملية (RULE-001).');
+  say('         ووصولٌ بالاسمِ لا يُنادَى ليس قارئًا — وهو ما رفضته الجولةُ الثانيةُ من المراجعة.');
 } else {
   say(`  قارئو عدّادِ الإسقاطِ في الإنتاج: ${readers.map((f) => relative(ROOT, f)).join(' · ')}`);
+}
+
+// ── [RC-13] ماسحُ الإسقاطِ **مشترَطٌ** في السياسة، فرفعُه من التهيئةِ يُسقِط الإقلاع ────
+const POLICY = join(ROOT, 'src/kernel/config/production_policy.ts');
+if (!existsSync(POLICY)) {
+  bad(`✗ [RC-13] ملفُ سياسةِ الإنتاجِ غيرُ موجود: ${relative(ROOT, POLICY)}`);
+} else {
+  const required = readStringArray(parseFile(POLICY), 'PRODUCTION_REQUIRED_SCANNERS');
+  if (required.length === 0) {
+    bad('✗ [RC-13] حصرٌ أعمى: PRODUCTION_REQUIRED_SCANNERS لم تُقرأ من الشجرة — تغيرّتِ الصيغةُ فعَمِي الفحص.');
+  } else if (!required.includes('journal_drop')) {
+    bad('✗ [RC-13] ماسحُ `journal_drop` غيرُ مشترَطٍ في PRODUCTION_REQUIRED_SCANNERS — فرفعُه من التهيئةِ لا يُسقِط شيئًا.');
+    say('         قارئٌ يُرفَع من التهيئةِ بلا حرسٍ يعيد الرقمَ إلى الصمت (RULE-007).');
+  } else {
+    say(`  ماسحُ الإسقاطِ مشترَطٌ: journal_drop في PRODUCTION_REQUIRED_SCANNERS (${required.length} ماسحًا مشترَطًا)`);
+  }
 }
 
 if (fail === 0) {
   say(`✓ حصرُ الإرجاع: ${scope.length} صنفًا في النطاق كلُّها مُدَّعاة · ${provenConsumers} بمستهلكٍ`
     + ` له موضعُ توزيعٍ في شجرةِ نحوِه · ${provenExempt} بإعفاءٍ قائمِ الموجب · والحاجزُ منادًى قبل أوّلِ إرجاع`);
-  say('  وحدُّ هذا البرهانِ مُعلَن: بنيةٌ لا سلوك — يشهد بوجودِ فرعِ توزيعٍ يعمل، لا بصحّةِ ما فيه.');
+  say('  وحدُّ هذا البرهانِ مُعلَن: يشهد أنّ للصنفِ **فرعًا في شجرةِ النحوِ داخلَه أثرٌ قابلٌ للوصول**');
+  say('  من أربعةٍ تُسمّى وحدَها — **إسنادٌ أو نداءٌ لغيرِ أداةِ تسجيلٍ أو رميٌ أو إنشاءٌ** —');
+  say('  وما عداها فلا أثرَ له (قائمةُ إثباتٍ لا قائمةُ نفي)، وشرطٌ ثابتُ الكذبِ يُبطِل ما تحتَه.');
+  say('  **ولا يشهد أنّ الفرعَ يُنفَّذُ في تشغيلٍ ولا أنّه يُعيد الحالةَ صحيحةً**؛');
+  say('  وإسنادٌ لا يُغيّر قيمةً (`x += 0`) أثرٌ بنيويًّا ولا يُرجِع شيئًا — **حدٌّ مُعلَنٌ مقيسٌ**');
+  say('  يكشفُه الوجهُ السلوكيُّ لا الساكن؛ فذاك موقِعُ الاختبارِ لا موقِعُ المُحلّل.');
   say('  صحّةُ ما في الفرعِ يشهد بها اختبارُ الرحلةِ الكاملة: tests/data/rehydrate_roundtrip.test.ts');
 }
 process.exit(fail);

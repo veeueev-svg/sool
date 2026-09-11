@@ -46,74 +46,11 @@ export function literalsOf(sf: ts.SourceFile, kind: string): ts.StringLiteralLik
   return out;
 }
 
-/** فرعٌ «غيرُ فارغ»: ليس بندًا بلا عبارات، ولا كتلةً فارغة، ولا عبارةً فارغة */
-export function nonEmptyBranch(stmt: ts.Statement | undefined): boolean {
-  if (stmt === undefined) return false;
-  if (ts.isEmptyStatement(stmt)) return false;
-  if (ts.isBlock(stmt)) return stmt.statements.length > 0;
-  return true;
-}
-
-/** بندُ `case` يُقبل إن كانت له عباراتٌ أو سقط إلى بندٍ لاحقٍ له عبارات */
-export function caseReaches(clause: ts.CaseClause): boolean {
-  if (clause.statements.length > 0) return true;
-  const block = clause.parent;
-  if (!ts.isCaseBlock(block)) return false;
-  let seen = false;
-  for (const c of block.clauses) {
-    if (c === clause) { seen = true; continue; }
-    if (!seen) continue;
-    if (c.statements.length > 0) return true;
-  }
-  return false;
-}
-
-/** يصعد من المقارنةِ إلى الشرطِ الحاكمِ ويسأل: هل لهذا الشرطِ فرعٌ يعمل؟ */
-export function comparisonReaches(node: ts.Node): boolean {
-  let cur: ts.Node = node;
-  for (let i = 0; i < 12 && cur.parent !== undefined; i += 1) {
-    const p: ts.Node = cur.parent;
-    if (ts.isIfStatement(p) && p.expression === cur) {
-      return nonEmptyBranch(p.thenStatement) || nonEmptyBranch(p.elseStatement);
-    }
-    if (ts.isConditionalExpression(p) && p.condition === cur) return true;
-    if (ts.isReturnStatement(p) || ts.isArrowFunction(p)) return true;
-    if (ts.isCallExpression(p) && p.arguments.some((a) => a === cur)) return true;
-    if (ts.isVariableDeclaration(p) || ts.isPropertyAssignment(p)) return true;
-    cur = p;
-  }
-  return false;
-}
-
-/**
- * مواضعُ **التوزيع** على الصنفِ في ملفٍّ: بندُ `case` له فرع، أو مقارنةُ هُويّةٍ في شرطٍ
- * له فرع. وما عدا ذلك — تعليقٌ، سطرُ سجلٍّ، ثابتٌ لا يُقرأ، بندٌ فارغ — **ليس برهانًا**.
- */
-export function dispatchSites(sf: ts.SourceFile, kind: string): Site[] {
-  const out: Site[] = [];
-  for (const lit of literalsOf(sf, kind)) {
-    const p = lit.parent;
-    if (p !== undefined && ts.isCaseClause(p) && p.expression === lit && caseReaches(p)) {
-      out.push({ line: lineOf(sf, lit), form: 'case' });
-      continue;
-    }
-    if (
-      p !== undefined && ts.isBinaryExpression(p)
-      && (p.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken
-        || p.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsEqualsToken)
-      && comparisonReaches(p)
-    ) {
-      out.push({ line: lineOf(sf, lit), form: 'compare' });
-    }
-  }
-  return out;
-}
-
 /** يقشر `as const` والأقواسَ عن عقدةٍ لتُقرأ سلسلتُها إن كانت سلسلة */
-function unwrap(node: ts.Node): ts.Node {
+export function unwrap(node: ts.Node): ts.Node {
   let cur = node;
   while (ts.isAsExpression(cur) || ts.isParenthesizedExpression(cur)
-    || ts.isSatisfiesExpression(cur)) cur = cur.expression;
+    || ts.isSatisfiesExpression(cur) || ts.isNonNullExpression(cur)) cur = cur.expression;
   return cur;
 }
 
@@ -242,27 +179,15 @@ export function readClaims(sf: ts.SourceFile): Claim[] {
   return out;
 }
 
-/** التعدادُ المغلقُ يُقرأ من مصفوفةِ `DURABLE_KINDS` في الشجرة */
-export function readDeclared(sf: ts.SourceFile): string[] {
+/**
+ * أعضاءُ مصفوفةِ سلاسلَ مُسمَّاةٍ كما تُقرأ من الشجرة — لا بنمطٍ نصّيٍّ ولا بالاستيراد.
+ * ويُقشَر `Object.freeze([…])` و`as const` لأنّ `walk` ينزل إلى كلِّ مصفوفةٍ داخلَ التصريح.
+ */
+export function readStringArray(sf: ts.SourceFile, name: string): string[] {
   const out: string[] = [];
   walk(sf, (n) => {
     if (!ts.isVariableDeclaration(n)) return;
-    if (!ts.isIdentifier(n.name) || n.name.text !== 'DURABLE_KINDS') return;
-    walk(n, (m) => {
-      if (ts.isArrayLiteralExpression(m)) {
-        for (const e of m.elements) if (ts.isStringLiteral(e)) out.push(e.text);
-      }
-    });
-  });
-  return [...new Set(out)];
-}
-
-/** مُعجمُ أسبابِ الإعفاءِ المغلقُ يُقرأ من الشجرةِ كذلك — لا يُكتب هنا ثانيًا */
-export function readReasons(sf: ts.SourceFile): string[] {
-  const out: string[] = [];
-  walk(sf, (n) => {
-    if (!ts.isVariableDeclaration(n)) return;
-    if (!ts.isIdentifier(n.name) || n.name.text !== 'REHYDRATE_EXEMPTION_REASONS') return;
+    if (!ts.isIdentifier(n.name) || n.name.text !== name) return;
     walk(n, (m) => {
       if (ts.isArrayLiteralExpression(m)) {
         for (const e of m.elements) if (ts.isStringLiteral(e)) out.push(e.text);
@@ -270,4 +195,14 @@ export function readReasons(sf: ts.SourceFile): string[] {
     });
   });
   return out;
+}
+
+/** التعدادُ المغلقُ يُقرأ من مصفوفةِ `DURABLE_KINDS` في الشجرة */
+export function readDeclared(sf: ts.SourceFile): string[] {
+  return [...new Set(readStringArray(sf, 'DURABLE_KINDS'))];
+}
+
+/** مُعجمُ أسبابِ الإعفاءِ المغلقُ يُقرأ من الشجرةِ كذلك — لا يُكتب هنا ثانيًا */
+export function readReasons(sf: ts.SourceFile): string[] {
+  return readStringArray(sf, 'REHYDRATE_EXEMPTION_REASONS');
 }

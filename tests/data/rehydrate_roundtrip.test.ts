@@ -249,12 +249,31 @@ test('الإرجاعُ سلوكيًّا: البذرُ بالأبوابِ الم�
 });
 
 /**
+ * حقولٌ تقيس **حجمَ المُدخَل** لا أثرَ الإرجاع، فتُستبعد من الملحوظ.
+ *
+ * **العيبُ الذي أوجب هذا**: مراجعةُ الجولةِ الثانيةِ أقامت مجتمعةً
+ * (`ROUNDTRIP_CORE_COUNT_CONFUNDS_RESTORE` · `ROUNDTRIP_CORE_COUNTS_JOURNAL_LENGTH_NOT_RESTORE`)
+ * أنّ `RehydrateReport.records = entries.length` (`src/data/persistence.ts`) يجعل الملحوظَ
+ * يتبدّل حتمًا عند نزعِ أيِّ قيدٍ — فيمرُّ الاختبارُ ولو كان منطقُ الإرجاعِ
+ * محذوفًا بأكملِه. فما كان يُقاس طولُ اليوميّةِ لا أثرُ قراءتِها.
+ *
+ * وما يبقى مقيسًا هو ما يكتبُه فرعُ التوزيعِ وحدَه: `auditEntries` · `memoryRecords`
+ * · `memoryShares` · `facts` · `terminations` — و`silent` في المسالكِ الأخرى لأنّه يُرفعُ
+ * من داخلِ الفرعِ نفسِه (`…Seen = true`) فتبدُّلُه شهادةُ تنفيذٍ لا شهادةُ مُدخَل.
+ */
+const INPUT_SIZE_FIELDS: readonly string[] = Object.freeze(['records']);
+
+/**
  * والرفضُ فرقٌ كذلك: نزعُ صنفٍ قد يقطع شرطَ إرجاعٍ لصنفٍ آخرَ فيسقط المسلكُ برمزه —
- * وهو أقوى شهادةٍ على الاستهلاك من عددٍ يتبدّل. فيُقاس **الملحوظُ** لا التقريرُ وحدَه.
+ * وهو أقوى شهادةٍ على الاستهلاك من عددٍ يتبدّل. فيُقاس **الملحوظُ** لا التقريرُ وحدَه،
+ * ويُنزَع من الملحوظِ ما يقيس حجمَ المُدخَلِ حتّى يكون التبدُّلُ أثرَ إرجاعٍ لا أثرَ حذف.
  */
 function observe(family: Family, entries: readonly DurableRecord[], s: State): string {
   try {
-    return JSON.stringify(reportOf(family, entries, s));
+    return JSON.stringify(
+      reportOf(family, entries, s),
+      (key, value) => (INPUT_SIZE_FIELDS.includes(key) ? undefined : value),
+    );
   } catch (error) {
     return `رفض:${error instanceof SovereignViolation ? error.code : String(error)}`;
   }

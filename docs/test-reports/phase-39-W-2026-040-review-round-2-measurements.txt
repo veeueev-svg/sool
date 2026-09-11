@@ -1,0 +1,116 @@
+==============================================================================
+ قياسُ الجولةِ الثانيةِ وعلاجِها — W-2026-040 · المرحلة 39 · 2026-09-11
+ خرجٌ خامٌّ محفوظٌ كما قِيس (RULE-001: لا أخضرَ بلا قياسٍ يسقط قبلَه ويقوم بعدَه)
+==============================================================================
+
+--- [1] بصمةُ حزمةِ الأدلّةِ v2 (مجمَّدةً 2026-09-11T03:29:51Z) ---
+عددُ الملفّات: 56 — والبيانُ نفسُه لا يُحصى في نفسه
+sha256(MANIFEST.sha256) = 86a8daa0193f6e88a66c3a27ef22f3a306a721c2909822dedf1a44be44d77f04
+sha256(REVIEW-PROMPT.md) = 7cc70e46abdfd9dc24c440942076edfc31cd1ff5c64efaa38648e3191e617854
+
+--- [2] صيغُ التجاوزِ التي رفعها المراجعان: قياسٌ قبلَ العلاج (على القاعدة 96abd1b) ---
+== قياسُ ما قبلَ العلاج (جولة 3 · W-2026-040) ==
+الجذر: /home/user/workspace/sool · الالتزام المقيس:
+96abd1b256724188cc22c9132c128e3217601813
+الأداة: SOOL_CHECK_ROOT=<جذرٌ منسوخٌ مُطفَّر> node dist/scripts/check_rehydrate_census.js
+الصنفُ المُطفَّر: tax_levy (مستهلكُه src/data/rehydrate_fiscal.ts)
+vacuous_case_break             EXIT=0
+vacuous_case_empty_block       EXIT=0
+vacuous_case_return            EXIT=0
+vacuous_case_void0             EXIT=0
+vacuous_case_log_only          EXIT=0
+compare_in_log_line            EXIT=0
+compare_unused_const           EXIT=0
+compare_unrelated_literals     EXIT=0
+compare_if_void_body           EXIT=0
+boot_guard_if_false            EXIT=0
+rc12_dead_access               EXIT=0
+control_delete_case            EXIT=1
+valid_object_map               EXIT=1
+
+--- [3] الصيغُ نفسُها بعدَ العلاج ---
+boot_guard_if_false            EXIT=1
+compare_if_void_body           EXIT=1
+compare_in_log_line            EXIT=1
+compare_unrelated_literals     EXIT=1
+compare_unused_const           EXIT=1
+control_delete_case            EXIT=1
+rc12_dead_access               EXIT=1
+vacuous_case_break             EXIT=1
+vacuous_case_empty_block       EXIT=1
+vacuous_case_log_only          EXIT=1
+vacuous_case_return            EXIT=1
+vacuous_case_void0             EXIT=1
+valid_object_map               EXIT=0
+
+--- [4] رموزُ الرفضِ المقيسةُ بعدَ العلاج (لا رمزٌ واحدٌ يبلع الكلَّ) ---
+=== vacuous_case_break
+✗ [RC-03] مستهلكٌ مُدَّعًى بلا موضعِ توزيعٍ في شجرةِ نحوِه: tax_levy ⇐ src/data/rehydrate_fiscal.ts
+=== vacuous_case_log_only
+✗ [RC-03] مستهلكٌ مُدَّعًى بلا موضعِ توزيعٍ في شجرةِ نحوِه: tax_levy ⇐ src/data/rehydrate_fiscal.ts
+=== compare_in_log_line
+✗ [RC-03] مستهلكٌ مُدَّعًى بلا موضعِ توزيعٍ في شجرةِ نحوِه: tax_levy ⇐ src/data/rehydrate_fiscal.ts
+=== compare_unrelated_literals
+✗ [RC-03] مستهلكٌ مُدَّعًى بلا موضعِ توزيعٍ في شجرةِ نحوِه: tax_levy ⇐ src/data/rehydrate_fiscal.ts
+=== compare_unused_const
+✗ [RC-03] مستهلكٌ مُدَّعًى بلا موضعِ توزيعٍ في شجرةِ نحوِه: tax_levy ⇐ src/data/rehydrate_fiscal.ts
+=== compare_if_void_body
+✗ [RC-03] مستهلكٌ مُدَّعًى بلا موضعِ توزيعٍ في شجرةِ نحوِه: tax_levy ⇐ src/data/rehydrate_fiscal.ts
+=== vacuous_case_empty_block
+✗ [RC-03] مستهلكٌ مُدَّعًى بلا موضعِ توزيعٍ في شجرةِ نحوِه: tax_levy ⇐ src/data/rehydrate_fiscal.ts
+=== vacuous_case_return
+✗ [RC-03] مستهلكٌ مُدَّعًى بلا موضعِ توزيعٍ في شجرةِ نحوِه: tax_levy ⇐ src/data/rehydrate_fiscal.ts
+=== vacuous_case_void0
+✗ [RC-03] مستهلكٌ مُدَّعًى بلا موضعِ توزيعٍ في شجرةِ نحوِه: tax_levy ⇐ src/data/rehydrate_fiscal.ts
+=== boot_guard_if_false
+✗ [RC-07] نداءُ الحاجزِ تحت شرطٍ لا يصدُق أبدًا (السطر 130: false) — نداءٌ لا يُنفَّذ ليس حاجزًا (RULE-001).
+✗ [RC-07] الحاجزُ محروسٌ بشرطٍ لا يحرس الإرجاع: false — فمسلكٌ يُرجِع ولا يمرُّ بالحاجزِ قائمٌ — والمطلوبُ سيادةٌ لا مجرّدُ ترتيب.
+=== rc12_dead_access
+✗ [RC-12] عدّادُ الإسقاطِ لا يقرؤه مسارُ إنتاجٍ واحد قراءةً حيّةً: `droppedByKind()` غيرُ منادًى ولا `droppedOutOfScope` مقروءٌ في تعبير.
+=== control_delete_case
+✗ [RC-03] مستهلكٌ مُدَّعًى بلا موضعِ توزيعٍ في شجرةِ نحوِه: tax_levy ⇐ src/data/rehydrate_fiscal.ts
+
+--- [5] اختبارُ الرحلةِ الكاملة: كان يعُدّ طولَ اليوميّةِ لا الإرجاع ---
+== قياسُ عيبِ ROUNDTRIP_CORE_COUNTS_JOURNAL_LENGTH_NOT_RESTORE (جولة 3 · W-2026-040) ==
+التطفير: حذفُ منطقِ إرجاع knowledge_fact من src/data/persistence.ts مع إبقاءِ الفرع
+الاختبار: tests/data/rehydrate_roundtrip.test.ts «نزعُ قيودِ صنفٍ يُغيّر التقريرَ»
+
+--- قبلَ العلاج (الملحوظُ يشمل records = entries.length):
+ok 1 - الإرجاعُ سلوكيًّا: البذرُ بالأبوابِ المعلنةِ يُنتِج قيودًا لأصنافِ الحصرِ المُدَّعاة
+ok 2 - الإرجاعُ سلوكيًّا: نزعُ قيودِ صنفٍ يُغيّر التقريرَ — وتقريرٌ لا يتغيّر يفضح منطقًا ميّتًا
+not ok 3 - الإرجاعُ سلوكيًّا: الإقلاعُ الثاني يُعيد الحالةَ لا عددَها — أربعةُ مسالكَ تشهد
+--- بعدَ العلاج (الملحوظُ يستبعد records):
+ok 1 - الإرجاعُ سلوكيًّا: البذرُ بالأبوابِ المعلنةِ يُنتِج قيودًا لأصنافِ الحصرِ المُدَّعاة
+not ok 2 - الإرجاعُ سلوكيًّا: نزعُ قيودِ صنفٍ يُغيّر التقريرَ — وتقريرٌ لا يتغيّر يفضح منطقًا ميّتًا
+not ok 3 - الإرجاعُ سلوكيًّا: الإقلاعُ الثاني يُعيد الحالةَ لا عددَها — أربعةُ مسالكَ تشهد
+    أصنافٌ نُزعت قيودُها فلم يتغيّر تقريرُ مسلكِها — منطقُ إرجاعِها ميّتٌ أو غيرُ مقيس: knowledge_fact
+
+--- [6] عدّادُ الإسقاط: قياسٌ في عمليتَينِ منفصلتَين ---
+== BEFORE (عدّادٌ في الذاكرةِ وحدَها)
+عمليّة 1: droppedOutOfScope = 2
+ملفُّ العدّادِ موجود؟ false 
+عمليّة 2 (بعد موتِ الأولى): droppedOutOfScope = 0
+تفصيلًا: []
+== AFTER (دفترٌ مُثبَتٌ على القُرص)
+عمليّة 1: droppedOutOfScope = 2
+ملفُّ العدّادِ موجود؟ true {"tax_levy":2}
+عمليّة 2 (بعد موتِ الأولى): droppedOutOfScope = 2
+تفصيلًا: [["tax_levy",2]]
+
+--- [7] الاختبارُ الذي يحرس [6] يسقط إذا رُفع التثبيت ---
+== BEFORE (العدُّ في الذاكرةِ وحدَها: this.persist() محذوفٌ من count())
+not ok 22 - عدّادُ الإسقاطِ ينجو من موتِ العملية: يوميّةٌ ثانيةٌ تقرأ ما أسقطته الأولى
+  error: 'الدفترُ مُثبَتٌ على القُرصِ لا في الذاكرة'
+  name: 'AssertionError'
+# pass 22
+# fail 1
+
+== AFTER (التثبيتُ متزامنٌ مع العدّ)
+# pass 23
+# fail 0
+
+--- [8] خطُّ الأساسِ بعدَ العلاجِ كلِّه ---
+npm run verify EXIT=0 (خمسةَ عشرَ حاجزًا) — والخرجُ الكاملُ في /tmp/verify_after.txt
+npm test = 2283 اختبارًا · حاجزُ check:numbers يقيس 2283/2283 بصفرِ سقوط
+انحرافٌ مُعلَن: T-136 في tests/governance/closed_enums_gate.test.ts متقلّبٌ في الجريانِ المتوازي
+  (يمرّ 12/12 منفردًا) — دَينٌ مُعلَنٌ لا مقفولٌ، وليس من هذا البند.

@@ -308,3 +308,65 @@ test('الإغلاق المتكرر لا يرفع ولا يفقد قيدًا', (
     assert.equal(journal.read().length, 2);
   } finally { journal.close(); rmSync(dir, { recursive: true, force: true }); }
 });
+
+/**
+ * دفترُ الإسقاطِ الدائم — العيبُ الذي أوجبه رفعته المراجعةُ المستقلّةُ في جولتها الثانية
+ * (`DROP_SIGNAL_VOLATILE_BEFORE_SUPERVISION` · `JOURNAL_DROP_PROBE_NEVER_TICKS_ON_BOOTSTRAP`):
+ * كان العدُّ في الذاكرةِ وحدَها، فإن مات المسارُ قبل أن يقرأه ماسحٌ — والمراقبةُ المستمرّةُ
+ * **مبنيّةٌ لا مُشغَّلة** — ضاعت الخسارةُ بلا أثر. والقياسُ هنا: عمليّةٌ ثانيةٌ تقرأ رقمَ الأولى.
+ */
+test('عدّادُ الإسقاطِ ينجو من موتِ العملية: يوميّةٌ ثانيةٌ تقرأ ما أسقطته الأولى', () => {
+  const dir = root();
+  try {
+    const first = new StateJournal(policy(dir));
+    assert.equal(first.record('ledger_entry', { a: 1 }, T0), null, 'خارجُ النطاقِ لا يُدوَّن');
+    assert.equal(first.record('ledger_entry', { a: 2 }, T0 + 1), null);
+    assert.equal(first.droppedOutOfScope, 2, 'العدُّ في العمليةِ الأولى');
+    assert.ok(existsSync(first.dropLedgerFile), 'الدفترُ مُثبَتٌ على القُرصِ لا في الذاكرة');
+    // وسيطٌ جديدٌ تمامًا: لا حالةَ مشتركةً بينه وبين الأول إلا الملفّ
+    const second = new StateJournal(policy(dir));
+    assert.equal(second.droppedOutOfScope, 2, 'الرقمُ نجا: عمليةٌ ثانيةٌ تقرأ خسارةَ الأولى');
+    assert.equal(second.droppedByKind().get('ledger_entry'), 2, 'والتفصيلُ بحسبِ الصنفِ نجا معه');
+    second.record('ledger_entry', { a: 3 }, T0 + 2);
+    assert.equal(new StateJournal(policy(dir)).droppedOutOfScope, 3, 'العدُّ تراكميٌّ عبرَ الإقلاعات');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('دفترُ إسقاطٍ فاسدٌ يُرفَض برمزه: رقمٌ يُقرأ خطأً أسوأُ من رقمٍ لا يُقرأ', () => {
+  const dir = root();
+  try {
+    const j = new StateJournal(policy(dir));
+    const ledger = j.dropLedgerFile;
+    j.record('ledger_entry', { a: 1 }, T0);
+    writeFileSync(ledger, '{ليست جيسون', 'utf8');
+    assert.equal(
+      code(() => new StateJournal(policy(dir))),
+      'PERSISTENCE_DROP_COUNTER_UNREADABLE',
+      'ملفٌّ لا يُحلَّل يُرفَض لا يُبلَع',
+    );
+    writeFileSync(ledger, '["ledger_entry", 2]', 'utf8');
+    assert.equal(
+      code(() => new StateJournal(policy(dir))),
+      'PERSISTENCE_DROP_COUNTER_MALFORMED',
+      'صيغةٌ غير معلنةٍ — مصفوفةٌ لا سجلّ',
+    );
+    writeFileSync(ledger, '{"ledger_entry":"2"}', 'utf8');
+    assert.equal(
+      code(() => new StateJournal(policy(dir))),
+      'PERSISTENCE_DROP_COUNTER_MALFORMED',
+      'قيمةٌ غير عدديّة',
+    );
+    writeFileSync(ledger, '{"ledger_entry":-1}', 'utf8');
+    assert.equal(
+      code(() => new StateJournal(policy(dir))),
+      'PERSISTENCE_DROP_COUNTER_MALFORMED',
+      'عدٌّ سالبٌ: العدُّ يزيد ولا ينقص',
+    );
+    writeFileSync(ledger, '{"ledger_entry":2}', 'utf8');
+    assert.equal(new StateJournal(policy(dir)).droppedOutOfScope, 2, 'والسليمُ يُقرأ');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
