@@ -52,6 +52,7 @@ import {
 } from './rehydrate_proof';
 import type { Claim } from './rehydrate_proof';
 import { dispatchSites } from './rehydrate_dispatch';
+import { guardsOf } from './rehydrate_reachability';
 
 const ROOT = process.env.SOOL_CHECK_ROOT ?? '.';
 const CFG = join(ROOT, 'config/persistence.yaml');
@@ -213,72 +214,6 @@ walk(bootSf, (n) => {
   if (name === 'assertRehydrateCensus') { censusCall ??= n; return; }
   if (/^rehydrate[A-Z]/.test(name)) rehydrateCalls.push(n);
 });
-/**
- * سلسلةُ الشروطِ الحاكمةِ على عقدةٍ حتّى أقربِ دالّةٍ تحويها — مع النفيِ إن كانت في الفرعِ الآخر.
- *
- * **لِمَ لا يكفي الترتيب**: مراجعةُ الجولةِ الثانيةِ أقامت أنّ `if (false) assertRehydrateCensus(scope);`
- * كان يُخضِرُّ `[RC-07]`: المقيسُ كان إزاحةَ المصدرِ وحدَها لا **سيادةَ** النداء
- * (`BOOT_GUARD_ORDER_WITHOUT_DOMINANCE`). فالمطلوب أن يكون كلُّ شرطٍ يحرس الحاجزَ
- * حارسًا للإرجاعِ كذلك — وإلّا فثمّةَ مسلكٌ يُرجِع ولا يمرُّ بالحاجز.
- */
-function guardsOf(sf: ts.SourceFile, node: ts.Node): {
-  readonly texts: readonly string[]; readonly unsatisfiable: boolean; readonly fn: ts.Node | null;
-} {
-  const texts: string[] = [];
-  let unsatisfiable = false;
-  const constantFalse = (expr: ts.Expression, negated: boolean): boolean => {
-    let e: ts.Expression = expr;
-    while (ts.isParenthesizedExpression(e)) e = e.expression;
-    if (ts.isPrefixUnaryExpression(e) && e.operator === ts.SyntaxKind.ExclamationToken) {
-      return constantFalse(e.operand, !negated);
-    }
-    const isTrue = e.kind === ts.SyntaxKind.TrueKeyword
-      || (ts.isNumericLiteral(e) && Number(e.text) === 1);
-    const isFalse = e.kind === ts.SyntaxKind.FalseKeyword
-      || e.kind === ts.SyntaxKind.NullKeyword
-      || (ts.isNumericLiteral(e) && Number(e.text) === 0)
-      || (ts.isIdentifier(e) && e.text === 'undefined')
-      || (ts.isStringLiteralLike(e) && e.text === '');
-    return negated ? isTrue : isFalse;
-  };
-  let cur: ts.Node = node;
-  for (;;) {
-    const p: ts.Node | undefined = cur.parent;
-    if (p === undefined) return { texts: [...texts].sort(), unsatisfiable, fn: null };
-    if (ts.isFunctionDeclaration(p) || ts.isFunctionExpression(p)
-      || ts.isArrowFunction(p) || ts.isMethodDeclaration(p)) {
-      return { texts: [...texts].sort(), unsatisfiable, fn: p };
-    }
-    if (ts.isIfStatement(p) && p.expression !== cur) {
-      const negated = p.elseStatement === cur;
-      texts.push((negated ? '!' : '') + p.expression.getText(sf).replace(/\s+/g, ''));
-      if (constantFalse(p.expression, negated)) unsatisfiable = true;
-    }
-    if (ts.isConditionalExpression(p) && p.condition !== cur) {
-      const negated = p.whenFalse === cur;
-      texts.push((negated ? '!' : '') + p.condition.getText(sf).replace(/\s+/g, ''));
-      if (constantFalse(p.condition, negated)) unsatisfiable = true;
-    }
-    // **عيبُ الجولةِ الثالثة** `RC07_LOOP_GUARD_NOT_MODELED`: كان جامعُ الحراسِ يقرأ
-    // `if` والشرطيَّ وحدَهما ويصعدُ فوقَ الحلقاتِ بلا تسجيل، فنجا منه
-    // `if (journal) { while (false) assertRehydrateCensus(…); }`: شرطُ الحاجزِ النصيُّ
-    // مساوٍ لشرطِ أوّلِ إرجاع، والنداءُ لا يُنفَّذ أبدًا. فحارسُ الحلقةِ شرطٌ
-    // كشرطِ `if`، وثابتُ الكذبِ منه يُبطِل النداءَ إبطالًا.
-    if ((ts.isWhileStatement(p) || ts.isForStatement(p) || ts.isDoStatement(p))
-      && p.statement === cur) {
-      const cond = ts.isForStatement(p) ? p.condition : p.expression;
-      if (cond !== undefined) {
-        texts.push(cond.getText(sf).replace(/\s+/g, ''));
-        // `do … while (false)` يُنفَّذ مرّةً، فلا يُبطِلُه ثابتُ الكذب
-        if (!ts.isDoStatement(p) && constantFalse(cond, false)) unsatisfiable = true;
-      }
-    }
-    if (ts.isForOfStatement(p) && p.statement === cur) {
-      texts.push(`for-of:${p.expression.getText(sf).replace(/\s+/g, '')}`);
-    }
-    cur = p;
-  }
-}
 
 if (censusCall === undefined) {
   bad('✗ [RC-07] حاجزُ الحصر غيرُ منادًى نداءً في مسار الإقلاع (src/index.ts) — والاسمُ في تعليقٍ ليس نداءً (RULE-001).');
@@ -371,7 +306,10 @@ if (fail === 0) {
     + ` له موضعُ توزيعٍ في شجرةِ نحوِه · ${provenExempt} بإعفاءٍ قائمِ الموجب · والحاجزُ منادًى قبل أوّلِ إرجاع`);
   say('  وحدُّ هذا البرهانِ مُعلَن: يشهد أنّ للصنفِ **فرعًا في شجرةِ النحوِ داخلَه أثرٌ قابلٌ للوصول**');
   say('  من أربعةٍ تُسمّى وحدَها — **إسنادٌ أو نداءٌ لغيرِ أداةِ تسجيلٍ أو رميٌ أو إنشاءٌ** —');
-  say('  وما عداها فلا أثرَ له (قائمةُ إثباتٍ لا قائمةُ نفي)، وشرطٌ ثابتُ الكذبِ يُبطِل ما تحتَه.');
+  say('  وما عداها فلا أثرَ له (قائمةُ إثباتٍ لا قائمةُ نفي)، والأثرُ مقيَّدٌ بالوصولِ: ثابتُ الكذبِ مركّبًا');
+  say('  كان (روابطُ المنطق بقصرِ الدارةِ) يُبطِل ما تحته، وكذلك بندُ التبديلِ الذي لا يوافقُ مُميّزَه الحرفيَّ،');
+  say('  وجسمُ المرورِ على مصفوفةٍ فارغةٍ حرفيًّا، وcatch لكتلةٍ خاويةٍ من try — والأصلُ في');
+  say('  scripts/rehydrate_reachability.ts (جولةُ 4، عيب EFFECT_REACHABILITY_IS_SYNTAX_UNION).');
   say('  **ولا يشهد أنّ الفرعَ يُنفَّذُ في تشغيلٍ ولا أنّه يُعيد الحالةَ صحيحةً**؛');
   say('  وإسنادٌ لا يُغيّر قيمةً (`x += 0`) أثرٌ بنيويًّا ولا يُرجِع شيئًا — **حدٌّ مُعلَنٌ مقيسٌ**');
   say('  يكشفُه الوجهُ السلوكيُّ لا الساكن؛ فذاك موقِعُ الاختبارِ لا موقِعُ المُحلّل.');

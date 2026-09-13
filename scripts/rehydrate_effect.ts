@@ -8,9 +8,10 @@
  * الصلاحيات (RULE-004): تقرأ وتُقيس؛ لا تُصلح ملفًّا ولا تكتب واحدًا
  * السجلات: لا تكتب شيئًا — الحكمُ لمن يستدعيها
  * حالات الفشل: لا ترمي؛ ما لا يُعرَف أثرُه **يُرَدُّ لا أثرَ له** (الافتراضُ الرافض)
- * اختبار القبول: tests/data/rehydrate_census_mutations.test.ts
+ * اختبار القبول: tests/data/rehydrate_census_mutations.test.ts + …_r3.test.ts + …_r4.test.ts
  * الوثيقة المرتبطة: docs/decisions/ADR-0048-rehydrate-census.md
  *   · سجلُّ المراجعةِ التي أوجبت هذا الملف: docs/test-reports/phase-39-W-2026-040-review-round-3.md
+ *   · وجولةُ الرابع: docs/test-reports/phase-39-W-2026-040-review-round-4.md
  *
  * ## العيبُ الذي أوجب هذا الملف — الصيغةُ الثالثة
  *
@@ -45,9 +46,21 @@
  * لا يُنكَر**: يكشفه الوجهُ السلوكيُّ في `tests/data/rehydrate_roundtrip.test.ts` لأنّ
  * المُلاحَظَ لا يتبدّل، وقياسُه محفوظٌ بالرقمِ في تقريرِ الجولةِ الثالثة. فالحاجزانِ
  * عقدٌ واحدٌ بوجهَين: الساكنُ يمنع الحذف، والسلوكيُّ يمنع الإفراغ.
+ *
+ * ## امتدادُ الجولةِ الرابعة — **الوصولُ جزءٌ من عقدِ الأثر**
+ *
+ * أقامت جولةُ الرابع أنّ حكمَ الأثرِ بلا حكمِ **قابليةِ التنفيذ** نقصٌ في العقدِ نفسِه
+ * (عيوب `EFFECT_CROSSES_COMPOUND_CONSTANT_FALSY` · `VOID_ENVELOPE_HIDES_EFFECT` ·
+ * `POSITIVE_LIST_DROPS_NESTED_ASSIGNMENT` · `EFFECT_REACHABILITY_IS_SYNTAX_UNION`):
+ * فثابتُ الكذبِ صار **مركّبًا** (`false && true`)، والأثرُ يُقرأ عبرَ غلافِ `void` وعناصرِ
+ * المصفوفةِ والكائنِ الحرفيَّين، والروابطُ المنطقيّةُ تُقرأ بقصرِ الدارةِ — فأثرُ الطرفِ
+ * الذي لا يُنفَّذ أبدًا ليس أثرًا — وبندُ `switch` الذي لا يوافقُ مُميّزَه الحرفيَّ،
+ * وجسمُ `for-of` على مصفوفةٍ فارغةٍ، و`catch` لكتلةِ `try` خاويةٍ — كلُّها غيرُ قابلةٍ
+ * للوصول. والقياسُ في …_review-round-4-measurements.txt.
  */
 import ts from 'typescript';
 import { unwrap } from './rehydrate_proof';
+import { definitelyFalsy, definitelyTruthy, literalValue } from './rehydrate_reachability';
 
 /** أسماءُ أدواتِ التسجيلِ التي لا يُعدُّ نداءُها عملًا يُرجِع حالًا */
 export const LOG_ROOTS: ReadonlySet<string> = new Set([
@@ -64,32 +77,18 @@ const MAX_DEPTH = 16;
  *
  * **لِمَ هذا**: علّةُ `RC07_LOOP_GUARD_NOT_MODELED` و`if (false) { … }` كلتاهما
  * فرعٌ لا يُنفَّذ أبدًا يُحسَب أثرًا.
+ *
+ * **وامتدادُ الجولةِ الرابعة** `EFFECT_CROSSES_COMPOUND_CONSTANT_FALSY`: كان الثابتُ
+ * حرفيًّا لا يغوصُ في الروابطِ، فنجا `if (false && true) { … }` و`false && (x += 1);`.
+ * فصار الحكمُ **مركّبًا** بقصرِ الدارة، والأصلُ في `scripts/rehydrate_reachability.ts`.
  */
 export function constantFalsy(expr: ts.Expression | undefined): boolean {
-  if (expr === undefined) return false;
-  const e = unwrap(expr) as ts.Expression;
-  if (e.kind === ts.SyntaxKind.FalseKeyword || e.kind === ts.SyntaxKind.NullKeyword) return true;
-  if (ts.isNumericLiteral(e)) return Number(e.text) === 0;
-  if (ts.isStringLiteralLike(e)) return e.text === '';
-  if (ts.isIdentifier(e)) return e.text === 'undefined' || e.text === 'NaN';
-  if (ts.isVoidExpression(e)) return true;
-  if (ts.isPrefixUnaryExpression(e) && e.operator === ts.SyntaxKind.ExclamationToken) {
-    return constantTruthy(e.operand);
-  }
-  return false;
+  return definitelyFalsy(expr);
 }
 
-/** تعبيرٌ **ثابتُ الصدق**: `true` أو حرفٌ غيرُ خالٍ أو رقمٌ غيرُ صفر */
+/** تعبيرٌ **ثابتُ الصدق** — مركّبًا كذلك (`true || x` · `x || true`)؛ الأصلُ في وحدةِ الوصول */
 export function constantTruthy(expr: ts.Expression | undefined): boolean {
-  if (expr === undefined) return false;
-  const e = unwrap(expr) as ts.Expression;
-  if (e.kind === ts.SyntaxKind.TrueKeyword) return true;
-  if (ts.isNumericLiteral(e)) return Number(e.text) !== 0;
-  if (ts.isStringLiteralLike(e)) return e.text !== '';
-  if (ts.isPrefixUnaryExpression(e) && e.operator === ts.SyntaxKind.ExclamationToken) {
-    return constantFalsy(e.operand);
-  }
-  return false;
+  return definitelyTruthy(expr);
 }
 
 /**
@@ -101,10 +100,20 @@ function isAssignmentKind(kind: ts.SyntaxKind): boolean {
   return kind >= ts.SyntaxKind.FirstAssignment && kind <= ts.SyntaxKind.LastAssignment;
 }
 
-/** نداءُ أداةِ تسجيل — `console.log(…)` وما جرى مجراه: لا يُرجِع حالًا */
+/**
+ * نداءُ أداةِ تسجيل — `console.log(…)` وما جرى مجراه: لا يُرجِع حالًا.
+ * **وعيبُ الجولةِ الرابعة** `LOGGING_CALL_ELEMENT_ACCESS_GREENS_RC03`: كان النداءُ
+ * بوضعِ الوصولِ (`console['log']`) يفلتُ من القائمةِ فيُعَدُّ أثرًا مُرجِعًا — فصار
+ * الوصولُ بالفهرسِ الحرفيِّ يُقرأ كالوصولِ بالنقطة.
+ */
 function isLogCall(e: ts.Expression): boolean {
   if (!ts.isCallExpression(e)) return false;
   const callee = unwrap(e.expression);
+  if (ts.isElementAccessExpression(callee)
+    && ts.isStringLiteralLike(callee.argumentExpression)) {
+    const root = unwrap(callee.expression);
+    return ts.isIdentifier(root) && LOG_ROOTS.has(root.text);
+  }
   if (!ts.isPropertyAccessExpression(callee)) return false;
   const root = unwrap(callee.expression);
   return ts.isIdentifier(root) && LOG_ROOTS.has(root.text);
@@ -136,11 +145,35 @@ export function effectfulExpression(expr: ts.Expression | undefined, depth = 0):
   if (ts.isAwaitExpression(e) || ts.isYieldExpression(e)) {
     return effectfulExpression(e.expression, depth + 1);
   }
+  // **عيبُ الجولةِ الرابعة** `VOID_ENVELOPE_HIDES_EFFECT`: `void (x += 1);` غلافٌ لا
+  // يُبطل الأثر — فالتجريحُ بالـ`void` لا يجعلُ الإسنادَ عدمًا (سلبٌ كاذبٌ كان).
+  if (ts.isVoidExpression(e)) return effectfulExpression(e.expression, depth + 1);
+  // **عيبُ الجولةِ الرابعة** `POSITIVE_LIST_DROPS_NESTED_ASSIGNMENT`: عناصرُ المصفوفةِ
+  // والكائنِ الحرفيَّينِ تُقيَّم للوصولِ إليها — فإسنادٌ فيها إسنادٌ يُنفَّذ.
+  if (ts.isArrayLiteralExpression(e)) {
+    return e.elements.some((el) => effectfulExpression(el, depth + 1));
+  }
+  if (ts.isObjectLiteralExpression(e)) {
+    return e.properties.some((p) => ts.isPropertyAssignment(p)
+      && effectfulExpression(p.initializer, depth + 1));
+  }
   if (ts.isBinaryExpression(e)) {
-    // الفاصلةُ والروابطُ المنطقيّةُ تُمرِّرُ أثرَ أحدِ طرفَيها
+    // الفاصلةُ تُقيّمُ الطرفينِ، والروابطُ المنطقيّةُ بقصرِ الدارة (أدناه)
     const k = e.operatorToken.kind;
-    if (k === ts.SyntaxKind.CommaToken || k === ts.SyntaxKind.AmpersandAmpersandToken
-      || k === ts.SyntaxKind.BarBarToken || k === ts.SyntaxKind.QuestionQuestionToken) {
+    // **عيبُ الجولةِ الرابعة** `EFFECT_CROSSES_COMPOUND_CONSTANT_FALSY` (وجهُ القصرِ في
+    // الأثر): روابطُ المنطقِ بقصرِ الدارة — فأثرُ الطرفِ الذي لا يُنفَّذ أبدًا ليس أثرًا.
+    if (k === ts.SyntaxKind.CommaToken) {
+      return effectfulExpression(e.left, depth + 1) || effectfulExpression(e.right, depth + 1);
+    }
+    if (k === ts.SyntaxKind.AmpersandAmpersandToken) {
+      if (constantFalsy(e.left)) return effectfulExpression(e.left, depth + 1);
+      return effectfulExpression(e.left, depth + 1) || effectfulExpression(e.right, depth + 1);
+    }
+    if (k === ts.SyntaxKind.BarBarToken) {
+      if (constantTruthy(e.left)) return effectfulExpression(e.left, depth + 1);
+      return effectfulExpression(e.left, depth + 1) || effectfulExpression(e.right, depth + 1);
+    }
+    if (k === ts.SyntaxKind.QuestionQuestionToken) {
       return effectfulExpression(e.left, depth + 1) || effectfulExpression(e.right, depth + 1);
     }
     return false;
@@ -196,16 +229,35 @@ export function effectful(stmt: ts.Statement | undefined, depth = 0): boolean {
         && effectfulExpression(stmt.initializer, depth + 1));
   }
   if (ts.isForOfStatement(stmt) || ts.isForInStatement(stmt)) {
+    // **عيبُ الجولةِ الرابعة** `EFFECT_REACHABILITY_IS_SYNTAX_UNION` (وجهُ الحلقة):
+    // `for (const x of [])` — جسمٌ لا يدور؛ والمصفوفةُ الفارغةُ حرفيًّا تُقطَع بها الدارة.
+    if (ts.isForOfStatement(stmt) && ts.isArrayLiteralExpression(stmt.expression)
+      && stmt.expression.elements.length === 0) {
+      return false;
+    }
     return effectful(stmt.statement, depth + 1);
   }
   if (ts.isTryStatement(stmt)) {
+    // **عيبُ الجولةِ الرابعة** (وجهُ الالتقاط): `catch` لكتلةِ `try` خاويةٍ لا يمكن أن
+    // ترميَ شيئًا — فما في `catch` غيرُ قابلٍ للوصول. وحدٌّ مُعلَن: الخواءُ وحدَه يُقطَع به.
+    const catchReachable = stmt.catchClause !== undefined
+      && stmt.tryBlock.statements.length > 0;
     return effectful(stmt.tryBlock, depth + 1)
-      || effectful(stmt.catchClause?.block, depth + 1)
+      || (catchReachable && effectful(stmt.catchClause?.block, depth + 1))
       || effectful(stmt.finallyBlock, depth + 1);
   }
   if (ts.isSwitchStatement(stmt)) {
+    // **عيبُ الجولةِ الرابعة** `RC07_SWITCH_GUARD_NOT_MODELED` (وجهُ الأثر): بندٌ لا
+    // يوافقُ مُميّزَ الـ`switch` الحرفيَّ لا يُنفَّذ — فأثرُ جسمِه ليس أثرًا.
+    const d = literalValue(stmt.expression);
     return stmt.caseBlock.clauses.some(
-      (c) => c.statements.some((s) => effectful(s, depth + 1)),
+      (c) => {
+        if (d !== null && ts.isCaseClause(c)) {
+          const cv = literalValue(c.expression);
+          if (cv !== null && cv !== d) return false;
+        }
+        return c.statements.some((s) => effectful(s, depth + 1));
+      },
     );
   }
   if (ts.isLabeledStatement(stmt)) return effectful(stmt.statement, depth + 1);

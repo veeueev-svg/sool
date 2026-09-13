@@ -17,6 +17,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import ts from 'typescript';
+import { resolveVariable } from './rehydrate_reachability';
 
 /** موضعُ توزيعٍ مقيس: سطرُه وشكلُه */
 export type Site = { readonly line: number; readonly form: string };
@@ -102,7 +103,9 @@ export function sourceFiles(dir: string): string[] {
  * مُنتِجو الصنف: نداءُ `x.record('kind', …)` **عقدةَ نداءٍ** لا نصًّا، ومعه شكلُ
  * `record({ kind: 'kind', … })` — فالتعليقُ لا يُعَدُّ مُنتِجًا، والاقتباسُ المزدوجُ يُرى
  * كالمفرد لأنّ المقارنةَ على متنِ العقدةِ لا على بايتِ السطر.
- * **حدٌّ مُعلَن**: نداءٌ يمرِّر الصنفَ في متغيّرٍ لا يُرى هنا — تلك خطوةُ استدلالِ أنواعٍ لا نحو.
+ * **وامتدادُ الجولةِ الرابعة** `RC04_PRODUCER_ALIAS_UNSEEN`: كان المنتِجُ يُقبل الصنفَ حرفًا مباشرًا فقط، فنُزِع
+ * المنتِجُ الحقيقيُّ وأُبقي مُعرَّفًا يحمل الصنفَ ثمّ يمرِّطُ المُعرَّفَ — ومُدَّ الحدُّ القديمُ إعلانُه عند رفضِ الجولةِ. فصار المُعرَّفُ يُحَلُّ
+ * إلى تعريفِه في نطاقِه (`resolveVariable`) — فأن كان ابتداؤُه حرفًا يوافقُ الصنفَ فهو منتِجٌ قائمٌ بالموجبِ.
  */
 export function producerSites(root: string, files: readonly string[], kind: string): string[] {
   const out: string[] = [];
@@ -122,6 +125,21 @@ export function producerSites(root: string, files: readonly string[], kind: stri
       ) {
         out.push(`${relative(root, file)}:${lineOf(sf, n)}`);
         return;
+      }
+      // **عيبُ الجولةِ الرابعة** `RC04_PRODUCER_ALIAS_UNSEEN`: الصنفُ مُمرَّطٌ في مُعرَّف — يُحَلُّ إلى
+      // تعريفِه في نطاقِه، فأن كان ابتداؤُه حرفًا يوافقُ الصنفَ فهو منتِجٌ قائمٌ بالموجبِ
+      if (first !== undefined && ts.isIdentifier(first)) {
+        const d = resolveVariable(sf, first);
+        if (d !== null && d.initializer !== undefined) {
+          const init = ts.isParenthesizedExpression(d.initializer)
+            ? d.initializer.expression
+            : d.initializer;
+          if ((ts.isStringLiteral(init) || ts.isNoSubstitutionTemplateLiteral(init))
+            && init.text === kind) {
+            out.push(`${relative(root, file)}:${lineOf(sf, n)}`);
+            return;
+          }
+        }
       }
       for (const arg of n.arguments) {
         if (!ts.isObjectLiteralExpression(arg)) continue;
