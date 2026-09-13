@@ -29,10 +29,21 @@
  * على حقلِ الصنف (`isKindBearing`) وحكمٌ على فرعٍ يعمل. **وحدُّه مُعلَنٌ كما كان**: بنيةٌ
  * لا سلوك — يشهد أنّ للصنفِ فرعَ توزيعٍ ذا أثرٍ في الشفرة، **ولا يشهد أنّ ما في الفرعِ
  * يُعيد الحالةَ صحيحةً**؛ ذاك يشهد به `tests/data/rehydrate_roundtrip.test.ts`.
+
+ *
+ * ## امتدادُ الجولةِ الرابعة — **ربطٌ بالتعريفِ ووصولٌ بالنداء**
+ *
+ * عيبا `HANDLER_MAP_BINDING_IS_FILE_GLOBAL_NAME` و`HANDLER_MAP_DEAD_CALL_ACCEPTED`:
+ * كان ربطُ الجدولِ المفتوحِ بجدولِ التعريفِ **اسمًا على مستوى الملفِّ** — فجدولانِ
+ * باسمٍ واحدٍ: الحقيقيُّ لم يُفتح والفارغُ هو الذي نُودي — أخضرّا. وكان نداءُ القيمةِ
+ * المنتقاةِ يُقبل حيثما وقع ولو كان تحت شرطٍ لا يصدُق أبدًا. فصار الجدولُ **تعريفًا بعينِه**
+ * (حلُّ الاسمِ إلى تعريفِه في نطاقِه لا مطابقةُ النصِّ)، وصار النداءُ **قابلًا
+ * للوصول** شرطًا — بحكمِ `scripts/rehydrate_reachability.ts`.
  */
 import ts from 'typescript';
 import { lineOf, literalsOf, unwrap, walk } from './rehydrate_proof';
 import type { Site } from './rehydrate_proof';
+import { guardsOf, resolveVariable } from './rehydrate_reachability';
 import {
   constantFalsy, effectful, effectfulExpression, functionBodyEffectful,
 } from './rehydrate_effect';
@@ -196,11 +207,11 @@ export function comparisonReaches(node: ts.Node): boolean {
  * والقيمةُ المُنتقاةُ **تُنادى**، وجسمُ المُعالِجِ **ذو أثرٍ** بحكمِ `rehydrate_effect`.
  */
 
-/** اسمُ الكائنِ المُعرَّفِ في `const NAME = { … }` — وبه تُربَط الخريطةُ بفتحِها */
-function boundName(obj: ts.ObjectLiteralExpression): string | null {
+/** تعريفُ الكائنِ في `const NAME = { … }` — وبه تُربط الخريطةُ بفتحِها **عقدةً لا اسمًا** */
+function boundDeclaration(obj: ts.ObjectLiteralExpression): ts.VariableDeclaration | null {
   let cur: ts.Node | undefined = obj.parent;
   for (let i = 0; i < 4 && cur !== undefined; i += 1) {
-    if (ts.isVariableDeclaration(cur) && ts.isIdentifier(cur.name)) return cur.name.text;
+    if (ts.isVariableDeclaration(cur) && ts.isIdentifier(cur.name)) return cur;
     if (ts.isPropertyAssignment(cur) || ts.isAsExpression(cur)
       || ts.isParenthesizedExpression(cur)) { cur = cur.parent; continue; }
     return null;
@@ -208,11 +219,11 @@ function boundName(obj: ts.ObjectLiteralExpression): string | null {
   return null;
 }
 
-/** جذرُ التعبيرِ: `a.b[c]` ⇒ `a` — لمقابلةِ جدولِ الفتحِ بجدولِ التعريف */
-function rootName(node: ts.Node): string | null {
+/** جذرُ التعبيرِ عُقدةً: `a.b[c]` ⇒ مُعرّفُ `a` — لحلِّ اسمِ جدولِ الفتحِ إلى تعريفِه في نطاقِه */
+function rootIdentifier(node: ts.Node): ts.Identifier | null {
   let e = unwrap(node);
   for (let i = 0; i < 8; i += 1) {
-    if (ts.isIdentifier(e)) return e.text;
+    if (ts.isIdentifier(e)) return e;
     if (ts.isPropertyAccessExpression(e) || ts.isElementAccessExpression(e)) {
       e = unwrap(e.expression); continue;
     }
@@ -223,48 +234,59 @@ function rootName(node: ts.Node): string | null {
 }
 
 /**
- * أسماءُ الجداولِ التي **تُفتح بمفتاحٍ يحمل الصنفَ ثمّ تُنادى قيمتُها**.
+ * تعريفُو الجداولِ التي **تُفتح بمفتاحٍ يحمل الصنفَ ثمَّ تُنادى قيمتُها نداءً قابلًا للوصول**.
  *
- * والنداءُ يُقبل بصورتَيه: نداءٌ مباشرٌ على الفتح (`map[e.kind](…)`)، أو انتقاءٌ إلى
- * مُتغيّرٍ ثمّ نداؤه (`const h = map[e.kind]; if (h) h(…);`) — والثانيةُ هي الصورةُ
+ * والنداءُ يُقبل بصورتيه: نداءٌ مباشرٌ على الفتحِ (`map[e.kind](…)`)، أو انتقاءٌ إلى
+ * مُتغيّرٍ ثمَّ نداؤه (`const h = map[e.kind]; if (h) h(…);`) — والثانيةُ هي الصورةُ
  * المُستعملةُ في الشفرةِ الحقيقيّة، فرفضُها يدفع إلى التزوير.
+ *
+ * **وعيبُ الجولةِ الرابعة**: كان الجدولُ **اسمًا** — فتعريفانِ باسمٍ واحدٍ في الملفِّ
+ * يُربطانِ كأنّهما واحدٌ (`HANDLER_MAP_BINDING_IS_FILE_GLOBAL_NAME`)، ونداءٌ تحت شرطٍ
+ * لا يصدُق أبدًا كان يُحسَب نداءً (`HANDLER_MAP_DEAD_CALL_ACCEPTED`). فصار الجدولُ
+ * **تعريفًا** يُحَلُّ الاسمُ إليه في نطاقِه (`resolveVariable`)، والنداءُ **قابلًا
+ * للوصول** (`guardsOf`).
  */
-function openedAndCalled(sf: ts.SourceFile): ReadonlySet<string> {
-  const openedInto = new Map<string, string>(); // اسمُ المُتغيّرِ المُنتقى ⇒ اسمُ الجدول
-  const opened: { table: string; node: ts.Node }[] = [];
+function openedAndCalled(sf: ts.SourceFile): ReadonlySet<ts.VariableDeclaration> {
+  // تعريفُ المُتغيّرِ المُنتقى ⇒ تعريفُ الجدولِ
+  const openedInto = new Map<ts.VariableDeclaration, ts.VariableDeclaration>();
+  const opened: { table: ts.VariableDeclaration | null; node: ts.Node }[] = [];
   walk(sf, (n) => {
-    let table: string | null = null;
+    let root: ts.Identifier | null = null;
     if (ts.isElementAccessExpression(n) && isKindBearing(n.argumentExpression)) {
-      table = rootName(n.expression);
+      root = rootIdentifier(n.expression);
     } else if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(unwrap(n.expression))) {
       const callee = unwrap(n.expression) as ts.PropertyAccessExpression;
       const first = n.arguments[0];
       if (callee.name.text === 'get' && first !== undefined && isKindBearing(first)) {
-        table = rootName(callee.expression);
+        root = rootIdentifier(callee.expression);
       }
     }
-    if (table === null) return;
+    if (root === null) return;
+    const table = resolveVariable(sf, root);
     opened.push({ table, node: n });
     const par = n.parent;
     if (par !== undefined && ts.isVariableDeclaration(par) && ts.isIdentifier(par.name)) {
-      openedInto.set(par.name.text, table);
+      if (table !== null) openedInto.set(par, table);
     }
   });
-  const called = new Set<string>();
-  // (أ) نداءٌ مباشرٌ على موضعِ الفتح
+  const called = new Set<ts.VariableDeclaration>();
+  // (أ) نداءٌ مباشرٌ على موضعِ الفتحِ — إن كان قابلًا للوصول
   for (const o of opened) {
     const par = o.node.parent;
-    if (par !== undefined && ts.isCallExpression(par) && unwrap(par.expression) === o.node) {
+    if (par !== undefined && ts.isCallExpression(par) && unwrap(par.expression) === o.node
+      && o.table !== null && !guardsOf(sf, par).unsatisfiable) {
       called.add(o.table);
     }
   }
-  // (ب) نداءُ المُتغيّرِ الذي انتُقي إليه
+  // (ب) نداءُ المُتغيّرِ الذي انتُقي إليه — حلًّا لاسمِه إلى تعريفِه لا مطابقةَ نصًّا
   walk(sf, (n) => {
     if (!ts.isCallExpression(n)) return;
     const callee = unwrap(n.expression);
     if (!ts.isIdentifier(callee)) return;
-    const table = openedInto.get(callee.text);
-    if (table !== undefined) called.add(table);
+    const picked = resolveVariable(sf, callee);
+    if (picked === null) return;
+    const table = openedInto.get(picked);
+    if (table !== undefined && !guardsOf(sf, n).unsatisfiable) called.add(table);
   });
   return called;
 }
@@ -281,8 +303,10 @@ export function handlerMapSites(sf: ts.SourceFile, kind: string): Site[] {
     const obj = n.parent;
     if (!ts.isObjectLiteralExpression(obj)) return;
     // (1) الجدولُ المُعرَّفُ هو الجدولُ المفتوحُ المُنادى — لا عَلَمٌ عامٌّ على الملفّ
-    const name = boundName(obj);
-    if (name === null || !live.has(name)) return;
+    // (1) الجدولُ المُعرَّفُ هو الجدولُ المفتوحُ المُنادى — **تعريفًا بعينِه** لا
+    // اسمًا على مستوى الملفِّ (عيبُ الجولةِ الرابعة `HANDLER_MAP_BINDING_IS_FILE_GLOBAL_NAME`)
+    const decl = boundDeclaration(obj);
+    if (decl === null || !live.has(decl)) return;
     // (3) جسمُ المُعالِجِ ذو أثرٍ — والمُعرّفُ يُتبَّع إلى تعريفِه في الملفِّ نفسِه
     const v = unwrap(n.initializer);
     if (ts.isArrowFunction(v) || ts.isFunctionExpression(v)) {
