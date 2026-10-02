@@ -37,7 +37,7 @@ import { KillSwitch } from '../security/kill_switch';
 import { ChaosFault } from '../kernel/config';
 import { ChaosPolicy, FaultInjector, FaultSeam } from './fault_injector';
 import {
-  ContinuityAfterCut, CutObservation, SafeStopLedger, SafeStopReport,
+  ContinuityAfterCut, CutObservation, SafeStopLedger, SafeStopReport, breachesOf,
 } from './safe_stop_ledger';
 import { EffectMatchReport } from './effect_matcher';
 
@@ -75,6 +75,20 @@ export interface ChaosDrillDeps {
   readonly policy: ChaosPolicy;
   /** وضع الدولة كما تراه البوابة — التمرين يقرؤه ولا يغيّره */
   readonly mode: () => StateMode;
+}
+
+/**
+ * T-94 (W-2026-051): مشاهدةُ قطعٍ مركّب — **عقدُ الإسناد**: التوقفُ تحت زوجٍ يُسند إلى الزوج معًا
+ * (`attribution: 'joint'`)، ولكلِّ طرفٍ مشاهدتُه وخروقُه بشروطِ القطعِ المنفرد نفسِها. ولا تُدوَّن في
+ * دفتر القطوع المنفردة: نجاحُ الزوج لا يشهد لأحدِ طرفيه بأنّه يكفي وحده.
+ */
+export interface CompoundObservation {
+  readonly kinds: readonly ChaosFault[];
+  readonly attribution: 'joint';
+  readonly parts: readonly { readonly kind: ChaosFault; readonly observation: CutObservation; readonly breaches: readonly string[] }[];
+  readonly stopMs: number;
+  readonly breaches: readonly string[];
+  readonly verdict: 'pass' | 'fail';
 }
 
 export type ChaosOutcome<T> =
@@ -176,6 +190,43 @@ export class ChaosDrill {
       stopMs: Number(stopMs.toFixed(3)), restored: restore.ok,
     });
     return { ok: true, report: observation };
+  }
+
+  /**
+   * T-94: قطعٌ مركّب — زوجٌ معلنٌ في `compound_faults` يُحقن معًا، ويُجرَّب تحته فعلُ كلِّ طرفٍ ويُقاس،
+   * ثمّ يعود كلُّ قطعٍ بإثبات. الزمنُ واحدٌ للزوج (من الحقن إلى تمام آخر قياس) لأنّ التوقفَ واحد.
+   */
+  cutCompound(by: EntityId, kinds: readonly ChaosFault[], now = Date.now()): ChaosOutcome<CompoundObservation> {
+    const label = kinds.join('+') as ChaosFault;
+    const denial = this.admit(by, label);
+    if (denial) return { ok: false, code: denial };
+    const probes = kinds.map((k) => this.probes.get(k));
+    if (probes.some((p) => !p)) return { ok: false, code: this.refuse(by, label, 'CHAOS_PROBE_MISSING') };
+    const injected = this.deps.injector.injectCompound(by, kinds, now);
+    if (!injected.ok) return { ok: false, code: this.refuse(by, label, injected.code) };
+    const n = this.deps.policy.probe_commands;
+    const startedAt = performance.now();
+    const attempts = probes.map((p) => p!.attempt(n));
+    const measured = probes.map((p) => p!.measure(n));
+    const stopMs = performance.now() - startedAt;
+    const restored = kinds.map((k) => this.deps.injector.restore(by, k).ok);
+    const parts = kinds.map((kind, i) => {
+      const observation: CutObservation = {
+        proceeded: attempts[i]!.proceeded, refusalCode: attempts[i]!.refusalCode, ...measured[i]!,
+        stopMs, restored: restored[i]!,
+      };
+      return { kind, observation, breaches: breachesOf(observation, this.deps.policy) };
+    });
+    const breaches = parts.flatMap((p) => p.breaches.map((code) => `${p.kind}:${code}`));
+    const verdict: 'pass' | 'fail' = breaches.length === 0 ? 'pass' : 'fail';
+    this.deps.audit.append(by, 'chaos_compound_measured', {
+      kinds: [...kinds], attribution: 'joint', stopMs: Number(stopMs.toFixed(3)), verdict, breaches,
+      refusalCodes: parts.map((p) => p.observation.refusalCode),
+    });
+    if (verdict === 'fail' && this.deps.policy.escalate_on_breach) {
+      this.deps.audit.append(by, 'escalated_to_king', { reason: 'خرق في توقف آمن تحت قطعٍ مركّب', breaches });
+    }
+    return { ok: true, report: { kinds: [...kinds], attribution: 'joint', parts, stopMs, breaches, verdict } };
   }
 
   /**
