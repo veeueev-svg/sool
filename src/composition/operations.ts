@@ -43,7 +43,7 @@ export function composeOperations(
   const {
     audit, gateway, killSwitch, heartbeat, terminationRoll, permissions,
     unit, factories, hospitals, retention, regions, governors, regionMonitor, loadLedger,
-    journal,
+    journal, budget, payments, contractTermination, humanResearch,
   } = parts;
 
   // 1) التشغيل المحدود (المرحلة 36) — نطاق مُنفَّذ عند البوابة، ومراقب بمؤقّت حقيقي،
@@ -87,6 +87,11 @@ export function composeOperations(
       // الحصرُ ناقصًا: حكمُه يُرفع حادثًا حرجًا في أول مسحة لا يُسقط الإقلاع، فدولةٌ
       // لا تُقلع لا ترفع حادثًا ولا تُوقف نفسها — والشاهدُ يقرأ `/proc` في كل مسحة.
       confinement: confinementWitness(loadConfinement(configDir).policy),
+      // W-2026-047: حكمُ الوقتِ في خمس وحدات يُطبَّق بمؤقّت المراقب لا بنداءِ سائل
+      deadlines: {
+        budget, payments, settlements: contractTermination, services: hospitals,
+        research: humanResearch, observer: productionConfig.policy.observer_authority,
+      },
     },
     buildWatchProbes({
       audit, regionMonitor, scope: operationScope, terminationRoll, permissions,

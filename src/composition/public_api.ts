@@ -358,6 +358,7 @@ export type {
   ProductionScannerDeps, DurableWitness, ConfinementWitnessLike, ConfinementVerdictLike,
   ConfinementFailureLike,
 } from '../production/production_scanners';
+export { deadlinesProbe, type DeadlineDeps } from '../production/deadline_probes'; // W-2026-047
 export { ContinuousSupervisor, PRODUCTION_GUARD } from '../production/continuous_supervisor';
 export type {
   ContinuousSupervisorDeps, SupervisionReport, SupervisionGap,

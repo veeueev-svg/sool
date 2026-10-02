@@ -34,6 +34,8 @@ manifest:
     - confinement
     # W-2026-040: قارئُ عدّادِ إسقاطِ اليوميّة — عددٌ يُحصى ولا يصل أحدًا ليس قياسًا
     - journal_drop
+    # W-2026-047: ماسحُ المواعيد — حكمُ الوقتِ في خمس وحدات بمؤقّت لا بنداء
+    - deadlines
   # الكتب المطلوب تنفيذها — لكل كتاب ملف خطوات في deploy/production/runbooks/
   runbooks:
     - federated-operation

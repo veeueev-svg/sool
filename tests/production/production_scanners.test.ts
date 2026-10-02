@@ -17,7 +17,7 @@ import {
   buildProductionScanners, ProductionScannerDeps, PRODUCTION_KNOWN_SCANNERS,
 } from '../../src/index';
 import { AppendOnlyLog } from '../../src/audit/append_only_log';
-import { OBSERVER, repoPolicy, silentProbes } from './helpers';
+import { OBSERVER, quietDeadlines, repoPolicy, silentProbes } from './helpers';
 
 const POLICY = repoPolicy();
 const NOW = 1_700_000_000_000;
@@ -43,6 +43,7 @@ function deps(patch: Partial<ProductionScannerDeps> = {}): ProductionScannerDeps
     },
     // T-16: كذلك الحصرُ يُثبَّت محصورًا لتبقى الماسحات الأخرى مقيسةً وحدها.
     confinement: { witnessRoot: '/proc(مُصطنع)', verify: () => ({ confined: true, failures: [] }) },
+    deadlines: quietDeadlines(),
     ...patch,
   };
 }

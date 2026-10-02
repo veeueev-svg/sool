@@ -30,7 +30,7 @@ import {
   RunbookRunner, ContinuousSupervisor, FederatedOperation, WatchProbe, ScannerKind,
   CheckpointStore, resolveCheckpointPath, buildDeclaredProductionRunbooks,
   buildProductionScanners, buildWatchProbes, loadProduction, resolveProductionDeployDir,
-  confinementWitness, loadConfinement,
+  confinementWitness, loadConfinement, ProductionScannerDeps,
   GOVERNOR_EXECUTOR, GOVERNOR_PROPOSER, ROYAL_COURT,
   PRODUCTION_KNOWN_RUNBOOKS, PRODUCTION_OPERATORS,
 } from '../../src/index';
@@ -143,6 +143,10 @@ export function productionHarness(options: {
         ...loadConfinement().policy,
         witness_root: confinedWitnessRoot(),
       }),
+      deadlines: {
+        budget: state.budget, payments: state.payments, settlements: state.contractTermination,
+        services: state.hospitals, research: state.humanResearch, observer: OBSERVER,
+      },
     },
     buildWatchProbes({
       audit: state.audit, regionMonitor: state.regionMonitor, scope: state.operationScope,
@@ -236,3 +240,13 @@ export function repoPolicy(): ProductionConfig['policy'] {
 }
 
 export const sleep = (ms: number): Promise<void> => new Promise((r) => { setTimeout(r, ms); });
+
+/** W-2026-047: ماسحُ المواعيد صامتًا — ليبقى المقيسُ في كل اختبارٍ ماسحَه وحده */
+export function quietDeadlines(): ProductionScannerDeps['deadlines'] {
+  return {
+    budget: { active: () => [], lapse: () => ({ ok: true }) },
+    payments: { raiseOverdue: () => [] }, settlements: { raiseUnsettled: () => [] },
+    services: { activeServices: () => [], reconcile: () => ({ ok: true }) },
+    research: { lapsed: () => ({ researches: [], lessons: [] }) }, observer: OBSERVER,
+  };
+}

@@ -16,7 +16,7 @@ import {
   PRODUCTION_MUST_BE_CRITICAL, PRODUCTION_KNOWN_SCANNERS, loadProduction,
 } from '../../src/index';
 import { AppendOnlyLog } from '../../src/audit/append_only_log';
-import { OBSERVER, repoPolicy } from './helpers';
+import { OBSERVER, quietDeadlines, repoPolicy } from './helpers';
 
 const POLICY = repoPolicy();
 const NOW = 1_700_000_000_000;
@@ -36,6 +36,7 @@ function deps(durable: ProductionScannerDeps['durable']): ProductionScannerDeps 
     // يُقاس في tests/production/confinement_scanner.test.ts لا هنا.
     confinement: { witnessRoot: '/proc(مُصطنع)', verify: () => ({ confined: true, failures: [] }) },
     durable,
+    deadlines: quietDeadlines(),
   };
 }
 

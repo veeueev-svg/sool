@@ -31,7 +31,9 @@ export type ScannerKind =
   // المرحلة 39 (T-16): ماسحُ الحصر — يقرأ `/proc` في كل مسحة لا مرةً عند الإقلاع
   | 'confinement'
   // المرحلة 39 (W-2026-040): ماسحُ الإسقاط — يقرأ عدّادَ ما أُسقط خارج النطاق في كل مسحة
-  | 'journal_drop';
+  | 'journal_drop'
+  // W-2026-047: ماسحُ المواعيد — ما ينقضي بالوقت يُمسح بمؤقّت لا بنداء (T-50 · T-57 · T-64 · T-78 · T-81)
+  | 'deadlines';
 
 export interface ProductionConfig {
   policy: {
@@ -74,7 +76,7 @@ export interface ProductionConfig {
 export const PRODUCTION_KNOWN_SCANNERS: readonly ScannerKind[] = Object.freeze([
   'regions', 'audit_chain', 'scope', 'termination', 'king',
   'loads', 'digital_unit', 'factories', 'hospitals', 'retention', 'passage',
-  'durable_state', 'confinement', 'journal_drop',
+  'durable_state', 'confinement', 'journal_drop', 'deadlines',
 ]);
 
 /**
@@ -92,6 +94,8 @@ export const PRODUCTION_REQUIRED_SCANNERS: readonly ScannerKind[] = Object.freez
   // خارجيٍّ غير معلن»، ومنعٌ داخلَ العمليّة وحده يسقط بأول ثغرةٍ في الشيفرة
   // نفسها. ومن لا يمسح الحصرَ لا يعلم أقائمٌ هو أم سقط بعد الإقلاع (RULE-006).
   'confinement',
+  // W-2026-047: ماسحُ المواعيد مشترطٌ — فلو رُفع من التهيئة عادت الخمسةُ إلى انتظارِ نداءٍ صامتًا
+  'deadlines',
   // المرحلة 39 (W-2026-040 · جولة 2): مراجعةٌ مستقلّةٌ أقامت أنّ قارئًا **غيرَ**
   // مشترَطٍ ليس حرسًا: عدّادُ الإسقاطِ كان يُقرَأ بماسحٍ يُرفَع من التهيئةِ
   // فيعود الرقمُ إلى الصمتِ بلا إسقاطٍ (RULE-007). ومتى وجب أن تُرى الخسارةُ
@@ -106,6 +110,7 @@ export const PRODUCTION_KNOWN_INCIDENTS: readonly IncidentKind[] = Object.freeze
   'unit_ledger_mismatch', 'command_loss_over_limit', 'critical_service_unverified',
   'crown_passage_bypass', 'region_action_without_passage', 'state_not_durable',
   'process_not_confined', 'journal_records_dropped',
+  'payment_confirmation_overdue', 'settlement_overdue', 'critical_service_degraded', 'research_lapsed',
 ]);
 
 /**
