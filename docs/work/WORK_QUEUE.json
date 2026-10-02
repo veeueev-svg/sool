@@ -425,6 +425,52 @@
         "version.json",
         "ARCHITECTURE.md"
       ]
+    },
+    {
+      "id": "W-2026-043",
+      "title": "بوابةُ التعداداتِ المغلقةِ تسقط بالاحتمال: printf متعدّدُ الوسائطِ إلى grep -q تحت pipefail يموت بـSIGPIPE (T-167)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 80)",
+      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلٌّ وفق RULE-019",
+      "area": "الحوكمة وبوابات CI",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-167"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "scripts/check_closed_enums.sh",
+        "tests/governance/closed_enums_gate.test.ts",
+        "docs/test-reports/phase-40-W-2026-043.md",
+        "docs/test-reports/phase-40-W-2026-043-measurements.txt"
+      ],
+      "excluded": [
+        "scripts/check_ci_gates.sh · check_declaration.sh · check_config_readers.sh · push_guard.sh — أنابيبُها إلى grep -q تكتب وسيطًا واحدًا مقتبسًا (كتابةٌ واحدة) فلا سباق؛ قيس 0/3000",
+        "docs/audit/** — محجوزٌ لـW-2026-038"
+      ],
+      "acceptance": [
+        "لا أنبوبَ إلى grep -q في الفحص خارجَ التعليقات",
+        "التشغيلُ المتزامنُ تحت الحمل: القديمُ يسقط والجديدُ 0",
+        "أحكامُ CE-01..CE-09 كلُّها كما كانت (12 حكمًا قائمًا خضراء)",
+        "npm test صفرُ سقوط و npm run verify EXIT=0",
+        "سيرَا العملِ أخضرانِ على الفرع"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-W-2026-043.md",
+        "docs/test-reports/phase-40-W-2026-043-measurements.txt",
+        "tests/governance/closed_enums_gate.test.ts"
+      ],
+      "next_step": "المراجع: الإقرارُ أو الرفضُ بعيوبٍ مسمّاة، ثمّ النقلُ إلى WORK_LOG.md (RULE-004).",
+      "created_at": "2026-10-02",
+      "updated_at": "2026-10-02",
+      "verification": "2026-10-02: الفحصُ القديمُ تحت حملِ أربعِ نوى و12 تشغيلًا متزامنًا × 25 ⇒ 13/300 سقوطًا كاذبًا؛ الجديد ⇒ 0/300. npm test 2296/2296 · verify EXIT=0. والحكمُ للمراجع.",
+      "documentation_impact": [
+        "PROGRESS.md",
+        "CHANGELOG.md",
+        "version.json"
+      ]
     }
   ]
 }

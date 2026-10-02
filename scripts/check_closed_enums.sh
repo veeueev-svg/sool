@@ -62,6 +62,19 @@ set -euo pipefail
 ROOT="${SOOL_CHECK_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 cd "$ROOT" || exit 1
 
+# ثابت 8 (T-167 · W-2026-043): **العضويّةُ تُقاس في الصدفةِ نفسِها لا بأنبوبٍ إلى `grep -q`**.
+# كان `printf '%s\n' $list | grep -qx "$name"` تحت `pipefail`: `printf` متعدّدُ الوسائطِ يكتب
+# دفعاتٍ، و`grep -q` يخرج عند أوّلِ تطابقٍ فيموت `printf` بـSIGPIPE (141) ويصير رمزُ الأنبوبِ
+# غيرَ صفرٍ — فيُقرأ «موجودٌ» «غيرَ موجود». قيس: 4–12 سقوطًا كاذبًا من 3000 تحت حملِ أربعِ نوى
+# (docs/test-reports/phase-40-W-2026-043-measurements.txt)، وهو عينُ [CE-06] على
+# `CHAOS_REQUIRED_FAULTS` — أوّلِ صفٍّ في جدولِ الاستثناء — في T-167.
+in_list() {
+  local needle="$1" x
+  shift
+  for x in "$@"; do [ "$x" = "$needle" ] && return 0; done
+  return 1
+}
+
 REGISTRY="src/kernel/config/closed_enums.ts"
 SOURCES="src/kernel/types.ts $(ls src/kernel/config/*.ts 2>/dev/null | grep -v 'closed_enums.ts' | tr '\n' ' ')"
 # ثابت 2: التعداداتُ التي لا تحمل النمط `_KNOWN_` ويُسمَّيان صريحًا — بابُ الاسم القائم
@@ -180,18 +193,19 @@ while IFS= read -r row; do
     fail=1
     continue
   fi
-  if ! printf '%s\n' $candidates | grep -qx "$name"; then
+  if ! in_list "$name" $candidates; then
     echo "✗ [CE-03] استثناءٌ لا وجودَ لاسمه في الشفرة: $name — حرسٌ على معدومٍ يُوهم بحماية (RULE-001)"
     fail=1
     continue
   fi
   case " $EXTRA_ENUMS " in *" $name "*) is_extra=1 ;; *) is_extra=0 ;; esac
-  if [ "$is_extra" -eq 1 ] || printf '%s' "$name" | grep -q '_KNOWN_'; then
+  case "$name" in *_KNOWN_*) has_known=1 ;; *) has_known=0 ;; esac
+  if [ "$is_extra" -eq 1 ] || [ "$has_known" -eq 1 ]; then
     echo "✗ [CE-05] استثناءٌ يحمل اصطلاحَ الاسم المغلق: $name — لا يُفلت تعدادٌ من بابِ التجميدِ بسطرٍ في جدول"
     fail=1
     continue
   fi
-  if printf '%s\n' $registered | grep -qx "$name"; then
+  if in_list "$name" $registered; then
     echo "✗ [CE-04] اسمٌ مُسجَّلٌ ومستثنًى معًا: $name — حالٌ مزدوجةٌ تُخفي أيُّهما حكَم (T-136)"
     fail=1
     continue
@@ -206,8 +220,8 @@ echo "  المرشَّحون: $count_candidates (بنيةً $count_shape · اس
 
 # ــــ 6) مرشَّحٌ بلا صفٍّ ولا سببٍ: بابٌ يُفتح في صمت ــــ
 for name in $candidates; do
-  if printf '%s\n' $registered | grep -qx "$name"; then continue; fi
-  if printf '%s\n' $excepted | grep -qx "$name"; then continue; fi
+  if in_list "$name" $registered; then continue; fi
+  if in_list "$name" $excepted; then continue; fi
   echo "✗ [CE-06] تعدادٌ مرشَّحٌ بلا صفٍّ في السجل ولا سببٍ في جدول الاستثناء: $name"
   echo "  سجِّله في $REGISTRY بعددِ أعضائه ومواضعِ استعماله، أو اكتب سببَ استثنائه في"
   echo "  جدول EXCEPTIONS من هذا الفحص — فتعدادٌ لا يُحرس ولا يُعلَّل قائمةٌ بلا سقف (T-131 · T-136)"
@@ -216,7 +230,7 @@ done
 
 # ــــ 7) صفٌّ في السجل بلا تعدادٍ في الشفرة: حرسٌ على معدوم (RULE-001) ــــ
 for name in $registered; do
-  if ! printf '%s\n' $candidates | grep -qx "$name"; then
+  if ! in_list "$name" $candidates; then
     echo "✗ [CE-07] صفٌّ في السجل لا تعدادَ له في الشفرة: $name — حرسٌ على معدومٍ يُوهم بحماية"
     fail=1
   fi
@@ -225,7 +239,8 @@ done
 # ــــ 8) التجميدُ في إعلانِ كلِّ مُسجَّل (ثابت 5) ــــ
 for name in $registered; do
   decl="$(grep -h -A1 "export const $name" $SOURCES | head -2 || true)"
-  if ! printf '%s' "$decl" | grep -q 'Object.freeze'; then
+  case "$decl" in *Object.freeze*) frozen=1 ;; *) frozen=0 ;; esac
+  if [ "$frozen" -eq 0 ]; then
     echo "✗ [CE-08] تعدادٌ مغلقٌ بلا تجميدٍ في التشغيل: $name"
     echo '  readonly كلامُ الترجمة، وpush يعمل في التشغيل — لُفَّ الإعلانَ بـObject.freeze'
     fail=1

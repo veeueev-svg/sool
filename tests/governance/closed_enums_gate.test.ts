@@ -226,3 +226,24 @@ test('T-136: حصرٌ أعمى يسقط برمزه **ومعه سطرُ بيان�
     },
   );
 });
+
+test('T-167: لا عضويّةَ بأنبوبٍ إلى grep -q تحت pipefail — فالسقوطُ لا يكون بالاحتمال (الثابت 8)', () => {
+  const body = readFileSync(join(ROOT, SCRIPT), 'utf8').split('\n').filter((l) => !/^\s*#/.test(l));
+  const piped = body.filter((l) => /\|\s*grep\s+-[A-Za-z]*q/.test(l));
+  assert.deepEqual(piped, [], `أنبوبٌ إلى grep -q يموت كاتبُه بـSIGPIPE فيُقرأ الموجودُ معدومًا:\n${piped.join('\n')}`);
+  assert.match(body.join('\n'), /set -euo pipefail/, 'والحكمُ قائمٌ لأنّ pipefail قائم');
+});
+
+test('T-167: عشرون تشغيلًا متزامنًا على المستودع كما هو — كلُّها تمرّ، لا واحدٌ يسقط بالحمل', async () => {
+  const { spawn } = await import('node:child_process');
+  const runs = Array.from({ length: 20 }, () => new Promise<{ code: number; out: string }>((done) => {
+    const p = spawn('bash', [join(ROOT, SCRIPT)], { cwd: ROOT, env: { ...process.env, SOOL_CHECK_ROOT: ROOT } });
+    let out = '';
+    p.stdout.on('data', (d) => { out += String(d); });
+    p.stderr.on('data', (d) => { out += String(d); });
+    p.on('close', (code) => done({ code: code ?? -1, out }));
+  }));
+  const results = await Promise.all(runs);
+  const failed = results.filter((r) => r.code !== 0);
+  assert.equal(failed.length, 0, failed.map((r) => r.out).join('\n---\n'));
+});
