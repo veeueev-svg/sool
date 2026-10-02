@@ -327,6 +327,21 @@ export class HumanResearchRegistry {
     return usable;
   }
 
+  /**
+   * T-81 (W-2026-047): ما انتهى من بحثٍ قائم وما بلي من درسٍ معتمد — قيدُ مسحٍ واحدٌ لا قيدُ قراءةٍ
+   * لكلِّ عنصر. يناديه ماسحُ المواعيد بمؤقّت، فيُرفع الانتهاءُ وإن لم يصل طلبُ قراءةٍ أو توصية.
+   */
+  lapsed(now = Date.now()): { readonly researches: readonly string[]; readonly lessons: readonly string[] } {
+    const researches = [...this.research.values()]
+      .filter((r) => r.status === 'active' && r.expiresAt <= now).map((r) => r.researchId);
+    const lessons = [...this.lessons.values()].filter((l) => l.status === 'approved'
+      && !(l.reviewedAt !== null && l.reviewedAt + this.deps.reviewIntervalMs > now)).map((l) => l.lessonId);
+    this.deps.audit.append(this.deps.researchOperator, 'human_research_lapse_swept', {
+      researches: researches.length, lessons: lessons.length, at: now,
+    });
+    return { researches, lessons };
+  }
+
   get(researchId: string): HumanResearch | null {
     const research = this.research.get(researchId) ?? null;
     this.deps.audit.append(this.deps.researchOperator, 'human_research_read', { researchId, found: research !== null });

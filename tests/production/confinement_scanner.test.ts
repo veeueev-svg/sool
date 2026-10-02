@@ -22,7 +22,7 @@ import {
   PRODUCTION_REQUIRED_SCANNERS, PRODUCTION_KNOWN_SCANNERS,
   confinementWitness, loadConfinement,
 } from '../../src/index';
-import { OBSERVER, repoPolicy } from './helpers';
+import { OBSERVER, quietDeadlines, repoPolicy } from './helpers';
 import { writeFakeProc, CONFINED, UNCONFINED } from '../security/proc_fixture';
 
 const POLICY = repoPolicy();
@@ -45,6 +45,7 @@ function deps(confinement: ProductionScannerDeps['confinement']): ProductionScan
       droppedByKind: () => new Map<string, number>(),
     },
     confinement,
+    deadlines: quietDeadlines(),
   };
 }
 

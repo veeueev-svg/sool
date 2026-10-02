@@ -29,6 +29,7 @@ import { EntityId } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { IncidentKind, ProductionConfig, ScannerKind } from '../kernel/config';
 import { WatchFinding, WatchProbe } from '../staging/incident_monitor';
+import { DeadlineDeps, deadlinesProbe } from './deadline_probes';
 
 /** ثابت 5: واجهات قراءة ضيّقة — الماسح لا يرى من الوحدة إلا ما يقيس به */
 export interface LoadBook {
@@ -98,6 +99,8 @@ export interface ProductionScannerDeps {
   readonly durable: DurableWitness | null;
   /** شاهدُ الحصر (T-16) — `null` معناه لا شاهد أصلًا، وهو أولى حالتي الخرق */
   readonly confinement: ConfinementWitnessLike | null;
+  /** W-2026-047: الوحداتُ التي حكمُ وقتِها كان ينتظر نداءً — `deadline_probes.ts` */
+  readonly deadlines: DeadlineDeps;
 }
 
 /** ماسح الأحمال: أمرٌ أُدرج ولم يُثبت مصيره بعد المدة المعلنة فقدٌ يُرفع (ثابت 1) */
@@ -334,5 +337,6 @@ export function buildProductionScanners(
   probes.set('durable_state', durableStateProbe(deps));
   probes.set('confinement', confinementProbe(deps));
   probes.set('journal_drop', journalDropProbe(deps));
+  probes.set('deadlines', deadlinesProbe(deps.deadlines));
   return probes;
 }

@@ -225,15 +225,6 @@
         "scripts/check_rehydrate_census.ts",
         "scripts/rehydrate_proof.ts",
         "tests/data/rehydrate_roundtrip.test.ts",
-        "src/kernel/config/staging.ts",
-        "src/kernel/config/production_policy.ts",
-        "src/kernel/config/closed_enums.ts",
-        "src/production/production_scanners.ts",
-        "config/production.yaml",
-        "deploy/production/manifest.yaml",
-        "tests/production/production_scanners.test.ts",
-        "tests/production/durable_state_scanner.test.ts",
-        "tests/production/confinement_scanner.test.ts",
         "docs/test-reports/phase-39-W-2026-040-remedy.md",
         "docs/test-reports/phase-39-W-2026-040-remedy-measurements.txt",
         "docs/test-reports/phase-39-W-2026-040-review-round-2.md",
@@ -619,6 +610,74 @@
       "created_at": "2026-10-02",
       "updated_at": "2026-10-02",
       "verification": "2026-10-02: npm test 2303/2303 · verify EXIT=0 · الحارسُ القديمُ ⇒ 19/20 · نزعُ مدةِ load_drill ⇒ 0/2.",
+      "documentation_impact": [
+        "PROGRESS.md",
+        "CHANGELOG.md",
+        "version.json",
+        "ARCHITECTURE.md"
+      ]
+    },
+    {
+      "id": "W-2026-047",
+      "title": "ماسحُ المواعيد: حكمُ الوقتِ في خمس وحداتٍ بمؤقّتِ المراقب لا بنداء (T-50 · T-57 · T-64 · T-78 · T-81 · T-70)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 80)",
+      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلٌّ وفق RULE-019",
+      "area": "التشغيل الاتحادي والوحدات",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-50",
+        "T-57",
+        "T-64",
+        "T-78",
+        "T-81",
+        "T-70"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "src/production/deadline_probes.ts",
+        "src/production/production_scanners.ts",
+        "src/kernel/config/production_policy.ts",
+        "src/kernel/config/staging.ts",
+        "src/kernel/config/closed_enums.ts",
+        "src/services/human_research.ts",
+        "src/composition/operations.ts",
+        "src/composition/public_api.ts",
+        "config/production.yaml",
+        "deploy/production/manifest.yaml",
+        "tests/production/helpers.ts",
+        "tests/production/production_scanners.test.ts",
+        "tests/production/confinement_scanner.test.ts",
+        "tests/production/durable_state_scanner.test.ts",
+        "tests/production/deadline_probes.test.ts",
+        "docs/test-reports/phase-40-W-2026-047.md"
+      ],
+      "excluded": [
+        "T-109 — بدءُ المراقبةِ مع الإقلاع نفسِه لا مع `FederatedOperation.begin`: يمسّ تأكيداتِ عدِّ السجلّاتِ في نحو 1400 اختبار، فهو بندٌ مستقلّ؛ وماسحُ المواعيد يجري متى جرى المراقب",
+        "تعديلُ `budget.ts` · `payment_controls.ts` · `contract_termination.ts` · `hospital_runtime.ts` — الماسحُ ينادي أحكامَها القائمة ولا يلمسها",
+        "`PRODUCTION_MUST_BE_CRITICAL` — الحوادثُ الأربعُ جسيمةٌ لا حرجة (الوحداتُ ترفع ولا تعاقب)"
+      ],
+      "acceptance": [
+        "ماسحٌ مشترطٌ `deadlines` في `PRODUCTION_REQUIRED_SCANNERS` والتهيئة والبيان؛ حذفُه يُسقط الإقلاع بـ`CONFIG_PRODUCTION_REQUIRED_SCANNER_MISSING`",
+        "بندٌ منقضٍ يسقط بالمسحة واجبًا لا حادثًا، وما لم ينقضِ لا يُمسّ",
+        "الدفعةُ والتسويةُ المتأخرتان تُرفعان حادثَين جسيمَين من حكمِ الوحدةِ نفسِه",
+        "هبوطُ خدمةٍ حرجةٍ يُطبَّق بالمسحة ويُرفع مرّةً",
+        "بحثٌ منتهٍ ودرسٌ بالٍ يُسجَّلان (`human_research_lapse_swept`) ويُرفعان مرّةً واحدة",
+        "في الدولة المُقامة تنادي مسحةُ المراقبِ الوحداتِ الحقيقية",
+        "نزعُ الماسحِ من البناء يُسقط اختبارًا",
+        "`npm test` صفرُ سقوط و`npm run verify` EXIT=0"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-W-2026-047.md",
+        "tests/production/deadline_probes.test.ts",
+        "tests/production/production_scanners.test.ts"
+      ],
+      "next_step": "المراجع: الإقرارُ أو الرفضُ بعيوبٍ مسمّاة. ويبقى T-109 مفتوحًا: المراقبُ — ومعه ماسحُ المواعيد — يبدأ مع التشغيل الاتحادي لا مع الإقلاع.",
+      "created_at": "2026-10-02",
+      "updated_at": "2026-10-02",
+      "verification": "2026-10-02: npm test 2309/2309 · verify EXIT=0 · نزعُ `probes.set('deadlines')` ⇒ fail 1.",
       "documentation_impact": [
         "PROGRESS.md",
         "CHANGELOG.md",

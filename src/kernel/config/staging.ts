@@ -39,7 +39,12 @@ export type IncidentKind =
   | 'journal_records_dropped'
   // المرحلة 39 (T-16): عمليّةٌ غيرُ محصورة في النواة — «صفر أثرٍ خارجيٍّ غير معلن»
   // دعوى لا يحملها إلا حاجزٌ خارج الشيفرة، فمن خرج من البوابة لم يخرج من النواة
-  | 'process_not_confined';
+  | 'process_not_confined'
+  // W-2026-047 (T-57 · T-64 · T-78 · T-81): مواعيدُ فاتت ولم يسأل عنها أحد — يرفعها ماسحُ `deadlines`
+  | 'payment_confirmation_overdue'
+  | 'settlement_overdue'
+  | 'critical_service_degraded'
+  | 'research_lapsed';
 
 /** الحرّاس المعروفون: كل واحد ماسحٌ حقيقي في وحدة قائمة */
 export type WatchKind = 'regions' | 'audit_chain' | 'scope' | 'termination' | 'king';
