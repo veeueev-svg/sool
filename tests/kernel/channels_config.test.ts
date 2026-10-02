@@ -200,7 +200,7 @@ test('قناةٌ مكرَّرةُ المعرِّف تُرفض — التكرار
     anchor: "ministry:interior"
 production_severity: "critical"`,
   );
-  assert.equal(codeOf(duplicated), 'CONFIG_CHANNEL_SPEC');
+  assert.equal(codeOf(duplicated), 'CONFIG_CHANNEL_DUPLICATE'); // T-159: الرمزُ يُسمّي العلّة
 });
 
 test('تخفيفُ شدّةِ الإنتاج عن «حرج» يُسقط الإقلاع', () => {

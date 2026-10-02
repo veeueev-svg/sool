@@ -14,14 +14,19 @@
  *      فلا تصير إعادةُ التشغيل بابًا لمسح الزمن (RULE-006 و RULE-007)
  *   3) **الحالة ليست وثيقة**: تُكتب في `.state/` المستثنى من الإصدار، فلا يُدفع تشغيلٌ
  *      إلى المستودع بدلًا من توثيقه
+ *   4) **جذرُ الدولةِ يُستنبط أو يُرفض** (T-157 · W-2026-042): المسارُ النسبيُّ يُحلّ من الجذرِ
+ *      الذي فيه `package.json` بالمصعدِ الواحدِ `ascendToDeclaredDir`؛ ومن لم يجده في المدى
+ *      **يُرفض بـ`SUPERVISION_STATE_ROOT_MISSING`** — وكان يسقط صامتًا إلى `process.cwd()`
+ *      فتُكتب نقطةُ التفتيشِ في جذرٍ ليس جذرَها بلا رمزٍ ولا سجلّ.
  * حالات الفشل (كلها مغلقة): مجلد غير موجود ⇒ يُنشأ؛ ملف تالف/معدَّل ⇒ رفض صريح؛
- *   قراءة بلا كتابة سابقة ⇒ null
+ *   قراءة بلا كتابة سابقة ⇒ null؛ جذرُ الدولةِ غيرُ موجودٍ في المدى ⇒ SUPERVISION_STATE_ROOT_MISSING
  * اختبار القبول: tests/production/continuous_supervisor.test.ts
  * الوثيقة المرتبطة: docs/decisions/ADR-0021-federated-operation.md
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, isAbsolute, join, resolve } from 'path';
 import { SovereignViolation } from '../kernel/types';
+import { ascendToDeclaredDir } from '../kernel/config/paths';
 import { canonicalize, sha256 } from '../identity/keys';
 
 export interface SupervisionCheckpoint {
@@ -45,15 +50,14 @@ export function resolveCheckpointPath(directory: string, root?: string): string 
   return join(base, 'supervision.json');
 }
 
-function resolveStateRoot(startDir = __dirname): string {
-  let dir = resolve(startDir);
-  for (let i = 0; i < 8; i++) {
-    if (existsSync(join(dir, 'package.json'))) return dir;
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return process.cwd();
+/** ثابت 4 (T-157): جذرُ الدولةِ بالمصعدِ الواحد — أو رفضٌ مغلق، ولا `process.cwd()` بديلًا صامتًا */
+export function resolveStateRoot(startDir = __dirname): string {
+  return ascendToDeclaredDir({
+    sentinel: ['package.json'],
+    result: [],
+    code: 'SUPERVISION_STATE_ROOT_MISSING',
+    message: 'جذر الدولة غير موجود — لا تُكتب نقطة التفتيش في مجلد التشغيل الحالي (فشل مغلق · T-157)',
+  }, startDir);
 }
 
 export class CheckpointStore {

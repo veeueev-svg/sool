@@ -118,7 +118,8 @@ test('تخفيفُ جدّيّةِ السلامة من التهيئة مرفوض'
     'CONFIG_INFERENCE_SAFETY',
   );
   assert.equal(codeOf(SOUND.replace('  min_safety_cases: 18\n', '')), 'CONFIG_INFERENCE_SAFETY');
-  assert.equal(codeOf(SOUND.replace('    - audit_tamper', '    - gateway_bypass')), 'CONFIG_INFERENCE_SAFETY');
+  // T-159 (W-2026-042): البابُ المكرَّرُ يُرفض برمزٍ يُسمّي علّتَه لا بالرمزِ العامّ
+  assert.equal(codeOf(SOUND.replace('    - audit_tamper', '    - gateway_bypass')), 'CONFIG_INFERENCE_SAFETY_CATEGORY_DUPLICATE');
 });
 
 test('عتبةُ حملٍ ناقصةٌ أو خرقٌ مسموحٌ فوق الصفر يمنعان الإقلاع', () => {

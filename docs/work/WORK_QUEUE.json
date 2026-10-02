@@ -359,6 +359,72 @@
         "CHANGELOG.md",
         "version.json"
       ]
+    },
+    {
+      "id": "W-2026-042",
+      "title": "ثلاثةُ أبوابٍ تفشل مفتوحةً: جذرُ الدولةِ يسقط إلى cwd (T-157) · رمزا تكرارٍ عامّان (T-159) · قيدٌ مباشرٌ إلى مالِ النظراء (T-165)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 80)",
+      "reviewer": "ديوان التدقيق ووزارة المالية (غيرُ المنفِّذ — RULE-004)",
+      "area": "الأمن المالي والإقلاع",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-157",
+        "T-159",
+        "T-165"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "src/production/supervision_checkpoint.ts",
+        "src/kernel/config/paths.ts",
+        "src/kernel/config/channels.ts",
+        "src/kernel/config/inference.ts",
+        "src/economy/ledger.ts",
+        "src/economy/ledger_types.ts",
+        "src/external/payment_controls.ts",
+        "src/composition/economy.ts",
+        "tests/kernel/declared_dir_ascent.test.ts",
+        "tests/kernel/channels_config.test.ts",
+        "tests/kernel/config_duplicate_census.test.ts",
+        "tests/models/inference_config.test.ts",
+        "tests/economy/ledger_entry_guard.test.ts",
+        "tests/external/payment_injection.test.ts",
+        "docs/decisions/ADR-0050-fail-closed-remedies.md",
+        "docs/test-reports/phase-40-W-2026-042.md"
+      ],
+      "excluded": [
+        "ledger.reverse — العكسُ لا يُسأل عنه حرسُ النطاق (حدٌّ مُعلَن · ADR-0050)",
+        "scripts/limits/module_limits.yaml — لا سقفَ يُرفع: أُخرجت الأشكالُ بدلَ رفعِه",
+        "docs/audit/** و COMPLETION_CRITERIA.md — محجوزةٌ لـW-2026-038 ولا يُرقّى معيار",
+        "نطاقُ W-2026-039 (confinement) ونطاقُ W-2026-040 (rehydrate) — لا يُلمسان"
+      ],
+      "acceptance": [
+        "resolveStateRoot يرفض بـSUPERVISION_STATE_ROOT_MISSING ولا يسقط إلى process.cwd()",
+        "حصرُ المصاعدِ في src/ بلا مستثنى",
+        "قناةٌ مكرَّرة ⇒ CONFIG_CHANNEL_DUPLICATE · بابُ سلامةٍ مكرَّر ⇒ CONFIG_INFERENCE_SAFETY_CATEGORY_DUPLICATE",
+        "ledger.post مباشرٌ يمسّ external:ledger:* يُرفض ويُسجَّل، وpay() نافذ",
+        "طفرةُ فكِّ ربطِ الحرسِ تُسقط أحكامَ T-165",
+        "لا سقفَ وحدةٍ يُرفع",
+        "npm test صفرُ سقوطٍ و npm run verify EXIT=0",
+        "سيرَا العملِ أخضرانِ على الفرع"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-W-2026-042.md",
+        "docs/decisions/ADR-0050-fail-closed-remedies.md",
+        "tests/economy/ledger_entry_guard.test.ts"
+      ],
+      "next_step": "ديوان التدقيق ووزارة المالية: الإقرارُ أو الرفضُ بعيوبٍ مسمّاة، ثمّ النقلُ إلى WORK_LOG.md (RULE-004 · RULE-016).",
+      "created_at": "2026-10-02",
+      "updated_at": "2026-10-02",
+      "verification": "2026-10-02: npm test 2294/2294 (+6) · npm run verify EXIT=0 · طفرةُ فكِّ bindEntryGuard ⇒ 0/5 · واختباراتُ T-60 وT-56 خضراءُ بلا تعديلِ حكم. والحكمُ للمراجع (RULE-004).",
+      "documentation_impact": [
+        "PROGRESS.md",
+        "CHANGELOG.md",
+        "version.json",
+        "ARCHITECTURE.md"
+      ]
     }
   ]
 }

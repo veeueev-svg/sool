@@ -14,7 +14,8 @@
  *      المقيسُ به (خريطةٌ يتلاشى فيها التكرار). والانتفاخُ الصامتُ خرقٌ يسقط باسمِ سقفِه.
  *   4) **الاستثناءُ يُغلَق لا يُتركَ مُثبَتًا**: `infrastructure_ports` كانت تنتفخُ صامتةً
  *      والدَّينُ `T-158` مُعلنٌ — فلمّا سُدَّ الحرسُ نُقلَ الصفُّ إلى `REJECTS` برمزِه،
- *      وأُغلقَ الدَّينُ في `PROGRESS.md`. وحدَهُ `channels` و`safety_categories` رمزانِ عامّانِ
+ *      وأُغلقَ الدَّينُ في `PROGRESS.md`. وكان `channels` و`safety_categories` رمزَين عامّين
+ *      (T-159) فسُمّيا في W-2026-042 — ولم يبقَ رمزٌ عامّ.
  *   5) **لا رمزَ رفضٍ يُعاد استعمالُه** بين حرسَي تكرارٍ مختلفَين في محمّلات النواة.
  */
 import test from 'node:test';
@@ -99,14 +100,14 @@ const CENSUS: readonly CensusRow[] = [
     ceiling: 'channel_participants', file: 'channels.yaml', key: 'participants',
     load: loadChannels, verdict: 'REJECTS', code: 'CONFIG_CHANNEL_PARTICIPANT_DUPLICATE',
   },
-  // رمزان عامّان: الحرسُ قائمٌ والعلّةُ لا تُسمّى — دَينٌ مُعلَنٌ T-159 (تبديلُ رمزٍ عقدُ فشل)
+  // أُغلق T-159 في W-2026-042 بقضاءِ المالك: الرمزان العامّان صارا يُسمّيان التكرارَ علّةً
   {
     ceiling: 'channels', file: 'channels.yaml', key: 'channels', load: loadChannels,
-    verdict: 'REJECTS', code: 'CONFIG_CHANNEL_SPEC', generic: true,
+    verdict: 'REJECTS', code: 'CONFIG_CHANNEL_DUPLICATE',
   },
   {
     ceiling: 'safety_categories', file: 'inference.yaml', key: 'required_categories',
-    load: loadInference, verdict: 'REJECTS', code: 'CONFIG_INFERENCE_SAFETY', generic: true,
+    load: loadInference, verdict: 'REJECTS', code: 'CONFIG_INFERENCE_SAFETY_CATEGORY_DUPLICATE',
   },
   // خرائطُ يتلاشى فيها التكرارُ في طبقةِ YAML: لا انتفاخَ فلا حاجةَ إلى حرسٍ صوريّ
   {
@@ -226,8 +227,8 @@ test('T-135/DC-03: رمزُ حرسِ التكرارِ يُسمّي علّتَه 
     }
   }
   const generics = CENSUS.filter((r) => r.generic === true).map((r) => String(r.ceiling));
-  assert.deepEqual(generics.sort(), ['channels', 'safety_categories'],
-    'الرموزُ العامّةُ المُعلَنةُ دَينًا T-159 اثنان لا غير — من زاد عليهما أعلن دَينَه');
+  assert.deepEqual(generics, [],
+    'لا رمزَ عامًّا بعد إغلاقِ T-159 (W-2026-042) — من أضاف واحدًا أعلن دَينَه');
 });
 
 test('T-135/DC-04: لا رمزَ تكرارٍ يُعاد استعمالُه بين محمّلَين — العلّةُ تُقرأ من الرمز', () => {
