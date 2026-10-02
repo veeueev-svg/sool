@@ -15,6 +15,10 @@
  *      فالحمايةُ اليوم تذكرةٌ يُصدرها السجلُّ لحظةَ الدفع لا مجردُ أدبٍ في النداء. وكل دفعة
  *      تمرّ بـ`treasury.disburse` فتلزمها كل ثوابت المرحلة 25 (موازنة، رصيد، وضع
  *      الدولة، تجميد، حدّ الأمر الملكي). إضافة قناة خارجية لا تفتح بابًا يتخطّى الخزانة.
+ *      **وبابٌ ثالثٌ أُغلق (T-165 · W-2026-042)**: `ledger.post` بقيدٍ متوازنٍ مباشرٍ إلى
+ *      `external:ledger:*` كان يتخطّى الخزانةَ والتذكرةَ معًا. فصار مرورُ حرسِ الخزانةِ يُصدر
+ *      **إذنَ قيدٍ** واحدًا يستهلكه حرسُ الدفترِ (`reservedEntryRefusal`) — وما لم يمرّ بالخزانةِ
+ *      لحظتَه يُرفض في الدفترِ نفسِه، قيدًا كان أو عكسًا.
  *   2) **الطالب ليس الدافع** (RULE-004): وزارة الخارجية تطلب، والخزانة تنفّذ بوزارة المالية
  *   3) **ثلاثة سقوف لا سقف واحد**: الدفعة الواحدة، ومجموع اليوم، والمجموع الكلي للنظير —
  *      وتجاوز أيٍّ منها رفضٌ مسجَّل باسمه. والسقوف من الإعلان لا من الطلب
@@ -36,7 +40,7 @@
 import { EntityId, SignedRoyalCommand } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { Treasury } from '../economy/treasury';
-import { FINANCE_MINISTRY } from '../economy/ledger';
+import { FINANCE_MINISTRY, EntryInput } from '../economy/ledger';
 import type { DurableSink } from '../data/persistence';
 import {
   ExternalAccountRegistry, FOREIGN_MINISTRY, EgressProbe, EXTERNAL_LEDGER_PREFIX,
@@ -90,6 +94,8 @@ export class PaymentControls {
   private sink: DurableSink | null = null;
   /** ثابت 1 (T-60): تذكرةُ قيدٍ واحدةٌ لا تعبر أكثرَ من فحص، ولا توجد خارج نداءِ `pay` */
   private ticket: { to: string; amount: number; at: number } | null = null;
+  /** T-165: إذنُ القيدِ — يُصدَر بمرورِ حرسِ الخزانة ويُستهلك في حرسِ الدفتر، ولا يعبر `pay` */
+  private entryPass: { to: string; amount: number; at: number } | null = null;
 
   constructor(private readonly deps: PaymentControlsDeps) {
     this.ministryId = deps.ministryId ?? FOREIGN_MINISTRY;
@@ -139,6 +145,26 @@ export class PaymentControls {
     if (!ticket) return 'لا تذكرةَ دفعٍ من ضوابط الدفع الخارجيّ';
     if (ticket.to !== to || ticket.amount !== amount || ticket.at !== now) {
       return 'تذكرةُ الدفع لا تطابق القيد: حسابٌ أو مبلغٌ أو زمنٌ مختلف';
+    }
+    this.entryPass = ticket;
+    return null;
+  }
+
+  /**
+   * حرسُ الدفتر (T-165): يُربط بـ`ledger.bindEntryGuard` في التركيب. قيدٌ لا يمسّ النطاقَ ⇒ `null`؛
+   * وما مسّه لزمه إذنُ قيدٍ صادرٌ عن حرسِ الخزانةِ في النداءِ نفسِه، يطابقه طرفًا مدينًا واحدًا
+   * حسابًا ومبلغًا وزمنًا — ويُستهلك بأوّلِ فحصٍ فلا يُستعمل مرّتين.
+   */
+  reservedEntryRefusal(input: EntryInput, now: number): string | null {
+    const touched = input.lines.filter((l) => l.account.startsWith(EXTERNAL_LEDGER_PREFIX));
+    if (touched.length === 0) return null;
+    const pass = this.entryPass;
+    this.entryPass = null;
+    if (!pass) return 'لا قيدَ على حسابِ نظيرٍ خارجيٍّ إلا عبر ضوابط الدفع والخزانة (T-165)';
+    const line = touched[0];
+    if (touched.length !== 1 || !line || line.account !== pass.to || line.debit !== pass.amount
+      || pass.at !== now) {
+      return 'إذنُ القيدِ لا يطابق القيد: حسابٌ أو مبلغٌ أو زمنٌ أو طرفٌ مختلف (T-165)';
     }
     return null;
   }
@@ -209,6 +235,7 @@ export class PaymentControls {
       }, now, command);
     } finally {
       this.ticket = null;
+      this.entryPass = null;
     }
     if (!disbursed.ok) {
       // ثابت 6: لا سقف يُستهلك بلا دفعة — لم يُسجَّل شيء، والرفض يحمل سبب الخزانة نفسه

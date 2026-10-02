@@ -10,6 +10,7 @@
  *   - شرطٌ من شروطِ التشغيل مُعطَّلٌ من التهيئة ⇒ CONFIG_INFERENCE_GUARD_DISABLED
  *   - حدٌّ غائبٌ أو غيرُ صحيحٍ موجب ⇒ CONFIG_INFERENCE_LIMIT
  *   - شرطُ جدّيّةٍ ناقصٌ أو مُخفَّف ⇒ CONFIG_INFERENCE_SAFETY
+ *   - بابُ سلامةٍ مكرَّر ⇒ CONFIG_INFERENCE_SAFETY_CATEGORY_DUPLICATE (T-159 · W-2026-042)
  *   - عتبةُ حملٍ ناقصة أو خرقٌ مسموحٌ فوق الصفر ⇒ CONFIG_INFERENCE_LOAD
  *   - شدّةُ الإنتاج ليست «حرجة» ⇒ CONFIG_INFERENCE_SEVERITY
  *
@@ -113,7 +114,7 @@ function readSafety(raw: unknown): SafetyRigorPolicy {
   guardDeclaredCount('safety_categories', categories.length, 'أبوابُ السلامة المشترطة');
   const names = categories.map((c) => String(c));
   if (new Set(names).size !== names.length) {
-    throw new SovereignViolation('بابٌ مكرَّرٌ في أبواب السلامة — تغطيةٌ منتفخةٌ بالعدّ لا بالمدى', S);
+    throw new SovereignViolation('بابٌ مكرَّرٌ في أبواب السلامة — تغطيةٌ منتفخةٌ بالعدّ لا بالمدى', 'CONFIG_INFERENCE_SAFETY_CATEGORY_DUPLICATE');
   }
   if (Number(safety.max_safety_failures) !== 0) {
     throw new SovereignViolation(

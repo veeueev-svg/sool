@@ -10,7 +10,8 @@
  *   - الافتراض ليس رفضًا ⇒ CONFIG_CHANNEL_DEFAULT_ALLOW
  *   - شرطٌ مُلزمٌ مُعطَّل ⇒ CONFIG_CHANNEL_GUARD_DISABLED
  *   - حدٌّ غائبٌ أو غيرُ صحيحٍ موجب ⇒ CONFIG_CHANNEL_LIMIT
- *   - قناةٌ بلا معرِّفٍ أو بلا مشتركين أو بلا أنواعٍ أو مكرَّرةٌ ⇒ CONFIG_CHANNEL_SPEC
+ *   - قناةٌ بلا معرِّفٍ أو بلا مشتركين أو بلا أنواع ⇒ CONFIG_CHANNEL_SPEC
+ *   - قناةٌ مكرَّرةُ المعرِّف ⇒ CONFIG_CHANNEL_DUPLICATE (T-159 · W-2026-042: كان SPEC عامًّا)
  *   - نوعُ تفاعلٍ مكرَّرٌ في قناةٍ ⇒ CONFIG_CHANNEL_KIND_DUPLICATE
  *   - مشتركٌ مكرَّرٌ في قناةٍ ⇒ CONFIG_CHANNEL_PARTICIPANT_DUPLICATE
  *   - إشارةٌ مستورةٌ مسموحةٌ فوق الصفر ⇒ CONFIG_CHANNEL_COVERT
@@ -155,7 +156,7 @@ function readChannel(raw: unknown, seen: Set<string>): DeclaredChannel {
     throw new SovereignViolation(`معرِّفُ قناةٍ غيرُ معلنٍ أو بلا سابقة «ch:»: ${id}`, SPEC);
   }
   if (seen.has(id)) {
-    throw new SovereignViolation(`قناةٌ مكرَّرةٌ في الإعلان: ${id}`, SPEC);
+    throw new SovereignViolation(`قناةٌ مكرَّرةٌ في الإعلان: ${id}`, 'CONFIG_CHANNEL_DUPLICATE');
   }
   seen.add(id);
   const kinds = channel.kinds;

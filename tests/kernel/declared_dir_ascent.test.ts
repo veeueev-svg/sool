@@ -25,9 +25,10 @@
  *    في المدى سقط الحكم**. وهذا هو عينُ البرهانِ الذي أظهر الاستقلالَ قبل الإصلاح (§3 من
  *    القياس الخامّ)، مقلوبًا ليُثبت الوحدة.
  *
- * 3) **حرَسُ التكرارِ يقرأ `src/` كلَّه ويستثني باسمٍ مُعلَن**: المستثنى الوحيدُ
- *    `src/production/supervision_checkpoint.ts` (يسقط صامتًا إلى `process.cwd()` — دَينٌ
- *    مُعلَنٌ `T-157`). فمن كتب مصعدًا ثالثًا سقط عليه هذا الحكمُ بلا تعديلٍ فيه.
+ * 3) **حرَسُ التكرارِ يقرأ `src/` كلَّه ولا مستثنى**: كان المستثنى الوحيدُ
+ *    `src/production/supervision_checkpoint.ts` (يسقط صامتًا إلى `process.cwd()` — `T-157`)،
+ *    فلمّا صار يصعد بالآلةِ الواحدةِ ويرفض بـ`SUPERVISION_STATE_ROOT_MISSING` (W-2026-042)
+ *    فرغت القائمة. فمن كتب مصعدًا ثانيًا سقط عليه هذا الحكمُ بلا تعديلٍ فيه.
  *
  * 4) **عدمُ التناسقِ يُقاس ولا يُسوّى**: جذرٌ فيه `deploy/production` بلا `deploy/staging`
  *    يُقبَل في مُستنبِطِ الإنتاجِ ويُرفَض في الآخرَين. **والحكمُ فيه للمراجع** (RULE-004)،
@@ -46,13 +47,14 @@ import {
 import { resolveDeployDir } from '../../src/staging/manifest';
 import { resolveProductionDeployDir } from '../../src/production/production_manifest';
 import { resolveDeployRoot } from '../../src/composition/deploy_declaration';
+import { resolveCheckpointPath, resolveStateRoot } from '../../src/production/supervision_checkpoint';
 import { SovereignViolation } from '../../src/kernel/types';
 
 /** جذرُ المستودعِ يُستنبط بالآلةِ المفحوصةِ نفسِها — فلا مسارَ مطلقٌ يُكتب (RULE-006) */
 const REPO = dirname(resolveConfigDir());
 
-/** المستثنى المُعلَنُ من حصرِ المصاعد (الثابت 3) — يُسمّى ولا يُعمَّم */
-const DECLARED_ASCENT_EXCEPTIONS = ['src/production/supervision_checkpoint.ts'];
+/** المستثنى المُعلَنُ من حصرِ المصاعد (الثابت 3) — فرغ بإغلاقِ T-157 في W-2026-042 */
+const DECLARED_ASCENT_EXCEPTIONS: string[] = [];
 
 /** موضعُ الآلةِ الوحيدة */
 const ASCENT_HOME = 'src/kernel/config/paths.ts';
@@ -108,7 +110,7 @@ test('حدُّ الصعودِ ثابتٌ واحدٌ مُعلَنٌ باسمه، 
   assert.match(loops.join('\n'), /DECLARED_DIR_ASCENT_LIMIT/);
 });
 
-test('حصرُ المصاعدِ في src/: آلةٌ واحدةٌ ومستثنًى مُعلَنٌ واحد، ولا ثالثَ لهما', () => {
+test('حصرُ المصاعدِ في src/: آلةٌ واحدةٌ ولا مستثنى (T-157 أُغلق)', () => {
   const measured: string[] = [];
   for (const file of sourceFiles()) {
     const text = readFileSync(join(REPO, file), 'utf8');
@@ -215,5 +217,18 @@ test('عدمُ التناسقِ المقيسُ يُثبَّت ولا يُسوّ�
     assert.equal(refusalCode(() => resolveDeployDir(start)), 'MANIFEST_DEPLOY_DIR_MISSING');
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('T-157: جذرُ الدولةِ يُرفض برمزٍ مسمّى ولا يسقط صامتًا إلى process.cwd()', () => {
+  assert.equal(resolveStateRoot(), REPO);
+  assert.equal(resolveCheckpointPath('.state/x'), join(REPO, '.state', 'x', 'supervision.json'));
+  const orphan = mkdtempSync(join(tmpdir(), 'sool-stateroot-'));
+  try {
+    assert.equal(refusalCode(() => resolveStateRoot(orphan)), 'SUPERVISION_STATE_ROOT_MISSING');
+    writeFileSync(join(orphan, 'package.json'), '{}');
+    assert.equal(resolveStateRoot(join(orphan)), orphan);
+  } finally {
+    rmSync(orphan, { recursive: true, force: true });
   }
 });

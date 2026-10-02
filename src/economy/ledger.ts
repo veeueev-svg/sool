@@ -20,6 +20,10 @@
  *   8) **القيدُ يُدوّن لحظةَ إثباته لا عند لقطة** (المرحلة 39 — T-122): إن رُبط وسيطٌ
  *      دائم، دُوّن كلُّ ما يُغيّر الدفتر (فتحُ حساب، قيدٌ، إغلاقُ فترة) قيدًا دائمًا
  *      قبل أن تعود الدالّة. والرفضُ لا يُدوّن هنا: شاهدُه قيدُ التدقيق وهو مُدوَّن أصلًا.
+ *   9) **النطاقُ المحجوزُ يُسأل عنه مالكُه في الدفترِ نفسِه** (T-165 · W-2026-042): حرسٌ يُربط
+ *      مرّةً بـ`bindEntryGuard` ويُنادى على كلِّ **قيدٍ جديد** بعد فحوصِ الشكلِ والتوازن — فلا
+ *      بابَ إلى `external:ledger:*` يتخطّى الخزانةَ وضوابطَ الدفعِ بقيدٍ مباشرٍ متوازن. والعكسُ
+ *      لا يُسأل عنه: لا يُنشئ مالًا، بل يردّ قيدًا قائمًا مرّ بالحرسِ مرّةً ولا يُعكس مرّتين (ثابت 3).
  * حالات الفشل (كلها مغلقة): قيد غير متوازن ⇒ رفض؛ مبلغ كسري أو سالب أو صفر ⇒ رفض؛
  *   حساب غير مفتوح ⇒ رفض؛ فترة مغلقة ⇒ رفض؛ معرّف قيد مكرَّر ⇒ رفض
  * اختبار القبول: tests/economy/economy_lifecycle.test.ts
@@ -36,55 +40,15 @@ export { ACCOUNT_KINDS, accountAdmissionFault } from './account_admission';
 /** وزارة المالية: الجهة الوحيدة التي تفتح حسابًا وتُثبت قيدًا */
 export const FINANCE_MINISTRY: EntityId = 'ministry:finance';
 
-/** أنواع الحسابات — الأصول والمصروف مدينة بطبعها، والبقية دائنة */
-export type AccountKind = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
-
-export const DEBIT_NATURED: readonly AccountKind[] = ['asset', 'expense'];
-
-export interface Account {
-  readonly accountId: string;
-  readonly kind: AccountKind;
-  readonly name: string;
-  readonly openedAt: number;
-}
-
-/** طرف واحد من القيد: مدين أو دائن، لا الاثنين ولا لا شيء */
-export interface EntryLine {
-  readonly account: string;
-  readonly debit?: number;
-  readonly credit?: number;
-}
-
-export interface EntryInput {
-  readonly entryId: string;
-  readonly memo: string;
-  readonly lines: readonly EntryLine[];
-  readonly by: EntityId;
-}
-
-export interface LedgerEntry {
-  readonly entryId: string;
-  readonly memo: string;
-  readonly lines: readonly EntryLine[];
-  readonly by: EntityId;
-  readonly at: number;
-  readonly total: number;
-  /** معرّف القيد الذي يعكسه هذا القيد — إن كان تصحيحًا */
-  readonly reverses: string | null;
-  readonly auditId: string;
-}
-
-export type LedgerResult =
-  | { readonly ok: true; readonly entry: LedgerEntry; readonly auditId: string }
-  | { readonly ok: false; readonly reason: string; readonly auditId: string };
-
-export interface TrialBalance {
-  readonly debits: number;
-  readonly credits: number;
-  readonly balanced: boolean;
-  readonly accounts: number;
-  readonly entries: number;
-}
+// W-2026-042: الأشكالُ في وحدتِها، ويُعاد تصديرُها من هنا فلا يتغيّر مُنادٍ
+export {
+  AccountKind, DEBIT_NATURED, Account, EntryLine, EntryInput, LedgerEntry, LedgerResult,
+  TrialBalance, EntryGuard,
+} from './ledger_types';
+import {
+  AccountKind, DEBIT_NATURED, Account, EntryLine, EntryInput, LedgerEntry, LedgerResult, TrialBalance,
+  EntryGuard,
+} from './ledger_types';
 
 export interface LedgerDeps {
   readonly audit: AppendOnlyLog;
@@ -126,10 +90,17 @@ export class Ledger {
 
   /** وسيطُ الثبات — يُربط بعد الإرجاع فلا تُدوَّن الاستعادةُ نفسها قيودًا مكرّرة (T-122) */
   private sink: DurableSink | null;
+  private entryGuard: EntryGuard | null = null;
 
   constructor(private readonly deps: LedgerDeps) {
     this.actorId = deps.actorId ?? FINANCE_MINISTRY;
     this.sink = deps.journal ?? null;
+  }
+
+  /** ثابت 9 (T-165): يُربط مرّةً واحدةً من التركيب — فحرسٌ يُستبدَل حرسٌ يُلتفّ عليه */
+  bindEntryGuard(guard: EntryGuard): void {
+    if (this.entryGuard !== null) throw new Error('LEDGER_ENTRY_GUARD_ALREADY_BOUND');
+    this.entryGuard = guard;
   }
 
   /** ربطُ الوسيط بعد الإقلاع والإرجاع — ترتيبٌ مُلزم كترتيب سجل التدقيق */
@@ -333,6 +304,8 @@ export class Ledger {
     if (debits !== credits) {
       return refuse('قيد غير متوازن: المدين لا يساوي الدائن (ثابت 1)', { debits, credits });
     }
+    const guarded = reverses === null ? this.entryGuard?.(input, now) ?? null : null;
+    if (guarded !== null) return refuse(`نطاقٌ محجوزٌ لبابِه المعلن (ثابت 9): ${guarded}`);
 
     const entry: LedgerEntry = {
       entryId: input.entryId, memo: input.memo.trim(), lines: [...input.lines],
