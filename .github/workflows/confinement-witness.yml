@@ -64,7 +64,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: رفع القياس الخام كأثر
         if: always()
-        uses: actions/upload-artifact@v4
+        # W-2026-045 (T-149): v4 يُعلن node20 مقيسًا من action.yml — وv6 أدنى وسمٍ يُعلن node24
+        uses: actions/upload-artifact@v6
         with:
           name: confinement-witness
           path: confinement-witness.txt

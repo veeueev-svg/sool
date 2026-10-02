@@ -31,9 +31,9 @@
  * 4) **رمزُ الخروجِ لا يُقرأ معزولًا عن خرجِه**: الانهيارُ يُنتج رمزًا غيرَ الصفر بلا حكم،
  *    فحالتا الحصرِ الأعمى تشترطان **سطرَ البيان** مع الرمز وإلّا كان الاختبارُ يقبل انهيارًا.
  *
- * 5) **حدُّ الفحصِ يُختبَر كحدٍّ لا كحرس**: إجراءٌ غيرُ مذكورٍ في جدولِ زمنِ التشغيل لا يراه
- *    البابُ [CI-07]، وهذا **مُعلَنٌ في عقد W-2026-009 §8**. فالحالةُ الأخيرةُ تؤكّد أنّ الفحصَ
- *    **يُعلن جهلَه بسطرِ `ℹ` ولا يدّعي حراسةً** — لا أنّه يحرس ما لا يستطيع قراءتَه بلا شبكة.
+ * 5) **ما كان حدًّا صار حرسًا** (T-149 · W-2026-045): إجراءٌ غيرُ مُدرَجٍ في جدولِ زمنِ التشغيل
+ *    يُسقط الفحصَ بـ[CI-10] بدلَ سطرِ `ℹ`، و`uses:` يُقرأ من كلِّ بيانٍ في `.github/workflows/`.
+ *    والحاجزُ نفسُه بمُعامِلٍ مختلفٍ مُعرَّفٌ آخرُ (T-150) فلا يُقرأ مطابقًا.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -210,10 +210,38 @@ test('[CI-05] حصرٌ أعمى في الإجراءات: بيانٌ بلا `uses
   assert.match(out, /\[CI-05\][\s\S]*uses:/, out);
 });
 
-test('حدُّ الفحصِ يُعلَن ولا يُدَّعى: إجراءٌ خارجَ جدولِ زمنِ التشغيل يُذكَر بـ`ℹ` ولا يُحرَس', () => {
+test('[CI-10] إجراءٌ خارجَ جدولِ زمنِ التشغيل يُسقط ولا يمرّ بسطرِ ℹ (T-149)', () => {
   const { code, out } = inRoot((root) => {
     write(root, CI, read(root, CI).replace('      - uses: actions/checkout@v5', '      - uses: third/party@v1\n      - uses: actions/checkout@v5'));
   });
-  assert.equal(code, 0, `الحدُّ يُعلَن ولا يُسقِط — وإلّا كان الفحصُ يدّعي قراءةَ ما لا يقرأ:\n${out}`);
-  assert.match(out, /ℹ[\s\S]*third\/party@v1/, out);
+  assert.equal(code, 1, out);
+  assert.match(out, /\[CI-10\][\s\S]*third\/party@v1/, out);
+});
+
+test('[CI-07] يُقرأ من كلِّ بيانٍ في .github/workflows لا من ci.yml وحدَه (T-149)', () => {
+  const { code, out } = inRoot((root) => {
+    write(root, '.github/workflows/other.yml',
+      'jobs:\n  x:\n    steps:\n      - uses: actions/upload-artifact@v4\n');
+  });
+  assert.equal(code, 1, out);
+  assert.match(out, /\[CI-07\][\s\S]*actions\/upload-artifact@v4/, out);
+});
+
+test('[CI-01·CI-02] الحاجزُ نفسُه بمُعامِلٍ مختلفٍ لا يُقرأ مطابقًا (T-150)', () => {
+  const { code, out } = inRoot((root) => {
+    write(root, CI, read(root, CI).replace('run: bash scripts/check_module_size.sh',
+      'run: bash scripts/check_module_size.sh --report-only'));
+  });
+  assert.equal(code, 1, out);
+  assert.match(out, /\[CI-01\][^\n]*scripts\/check_module_size\.sh/, out);
+  assert.match(out, /\[CI-02\][^\n]*scripts\/check_module_size\.sh --report-only/, out);
+});
+
+test('[CI-02] متغيّرُ بيئةٍ قبل الحاجزِ مُعامِلٌ مؤثّرٌ يُقرأ (T-150)', () => {
+  const { code, out } = inRoot((root) => {
+    write(root, CI, read(root, CI).replace('run: bash scripts/check_closed_enums.sh',
+      'run: SOOL_CHECK_ROOT=/tmp bash scripts/check_closed_enums.sh'));
+  });
+  assert.equal(code, 1, out);
+  assert.match(out, /\[CI-02\][^\n]*SOOL_CHECK_ROOT=\/tmp scripts\/check_closed_enums\.sh/, out);
 });

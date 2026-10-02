@@ -1,0 +1,19 @@
+# شاهدُ الحصر داخل الحاوية — T-16 · T-124 (إكمالُ C-09)
+# التاريخ: 2026-10-02T19:26:02.788Z · العقدة: v20.20.0
+# هذا الملف خرجٌ خامٌ لـ`node dist/scripts/confinement_witness.js` داخل الحاوية. لا يُحرَّر يدًا.
+
+## ١) السياسةُ المعلنة (config/confinement.yaml)
+الافتراض: deny · جذرُ الشاهد: /proc
+الشروطُ المُلزمة: non_root · no_effective_capabilities · empty_bounding_set · no_new_privileges · seccomp_filter · read_only_root · default_deny_egress
+
+## ٢) شهادةُ النواة على هذه العمليّة (من /proc)
+uid=10001 · CapEff=0000000000000000 · CapBnd=0000000000000000
+NoNewPrivs=true · Seccomp=2 · readOnlyRoot=true
+interfaces=lo · defaultRoutes=0
+ipv6DefaultRoutes=0 · egressRoutes=0 · ipv6StackPresent=true
+networkNamespace=net:[4026532255]
+confined=true · شروطٌ غيرُ مستوفاة=0
+
+## ٣) حكمُ الشاهد
+✓ الحاويةُ محصورة: كلُّ الشروطِ المُعلنةِ مستوفاةٌ من `/proc` — الحصرُ على
+  مستوى النواةِ والحاويةِ قائمٌ لا تطبيقيٌّ وحده. فجوةُ C-09 (T-16) مُسدَّةٌ قياسًا.
