@@ -57,7 +57,7 @@ test('سلامة السجل تبقى بعد سيناريو مختلط طويل',
   }
   s.veto.place(s.king.kingId, 'open_external_account', 'مؤقت');
   s.guard.emergencyHalt('اختبار ضغط');
-  s.killSwitch.release(s.king.kingId, 'انتهى');
+  s.killSwitch.release(s.king.kingId, 'انتهى', { cause: 'اختبار ضغط', evidence: 'انتهى الضغط' });
   assert.equal(s.audit.verifyIntegrity().valid, true);
   assert.equal(s.gateway.decisionCount, 100);
 });

@@ -37,6 +37,11 @@ export interface TerminationReport {
   readonly complete: boolean;
   readonly resourcesReclaimed: number;
   readonly auditId: string;
+  /**
+   * T-101 (W-2026-048): الزمنُ المقيسُ (ms · ساعةٌ رتيبة) من اعتمادِ الأمر إلى تأكيدِ توقّفِ كلِّ
+   * كيانٍ توقّف. مَن لم يتوقّف لا زمنَ له — والغيابُ يُحكم عليه خرقًا لا صفرًا.
+   */
+  readonly stopMs: Readonly<Record<EntityId, number>>;
 }
 
 export class TerminationOrder {
@@ -61,7 +66,7 @@ export class TerminationOrder {
       });
       return {
         executed: false, reason: decision.reason, targeted: [], stopped: [], failed: [],
-        complete: false, resourcesReclaimed: 0, auditId: entry.hash,
+        complete: false, resourcesReclaimed: 0, auditId: entry.hash, stopMs: {},
       };
     }
 
@@ -72,6 +77,8 @@ export class TerminationOrder {
 
     const stopped: EntityId[] = [];
     const failed: EntityId[] = [];
+    const stopMs: Record<EntityId, number> = {};
+    const startedAt = performance.now();
     let reclaimed = 0;
 
     for (const entity of targeted) {
@@ -84,6 +91,7 @@ export class TerminationOrder {
       }
       if (ok) {
         this.killSwitch.confirmStopped(entity);
+        stopMs[entity] = Number((performance.now() - startedAt).toFixed(3));
         stopped.push(entity);
         reclaimed += this.resources?.releaseAllFor(entity) ?? 0;
       } else {
@@ -106,6 +114,7 @@ export class TerminationOrder {
     const entry = this.audit.append(this.guardId, complete ? 'mass_termination_complete' : 'mass_termination_incomplete', {
       commandId: command.payload.commandId,
       stopped: stopped.length, failed: failed.length, resourcesReclaimed: reclaimed,
+      maxStopMs: Math.max(0, ...Object.values(stopMs)),
     });
 
     return {
@@ -113,7 +122,7 @@ export class TerminationOrder {
       reason: complete
         ? 'تم إنهاء كل الكيانات المستهدَفة وتأكيد توقفها'
         : `إنهاء غير مكتمل: ${failed.length} كيانًا لم يتوقف — تم الاحتواء والتصعيد`,
-      targeted, stopped, failed, complete, resourcesReclaimed: reclaimed, auditId: entry.hash,
+      targeted, stopped, failed, complete, resourcesReclaimed: reclaimed, auditId: entry.hash, stopMs,
     };
   }
 
