@@ -33,6 +33,7 @@
  *      أنّ سقفَ هذا الملف لا يُرفع بعد اليوم — والصفُّ محذوفٌ من `scripts/limits/module_limits.yaml`.
  */
 import { EntityId, SignedRoyalCommand } from '../kernel/types';
+import { SYNC_CALL_LEASE_SECONDS } from '../kernel/resource_registry';
 import { CommandChannel, CommandExecutor } from '../crown/command_channel';
 import { FairScheduler } from '../scale/scheduler';
 import { LoadFate } from './load_ledger';
@@ -222,7 +223,7 @@ export class LoadDrill {
     let peakAllocated = baseline;
     for (let index = 0; index < attempts; index += 1) {
       const entity: EntityId = `agent:load-quota-${index}`;
-      const result = this.deps.resources.lease(entity, resource, amount, now);
+      const result = this.deps.resources.lease(entity, resource, amount, now, SYNC_CALL_LEASE_SECONDS);
       if (result.granted) {
         granted += 1;
         entities.push(entity);

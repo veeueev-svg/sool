@@ -22,7 +22,7 @@
  */
 import { EntityId, SovereignViolation } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
-import { ResourceRegistry } from '../kernel/resource_registry';
+import { ResourceRegistry, SYNC_CALL_LEASE_SECONDS } from '../kernel/resource_registry';
 import { KillSwitch } from '../security/kill_switch';
 import { NetworkEgressGuard } from '../external/network_egress';
 
@@ -190,7 +190,8 @@ export class ToolRegistry {
 
     let leaseId: string | null = null;
     if (spec.cost && this.deps.resources) {
-      const lease = this.deps.resources.lease(entity, spec.cost.resource, spec.cost.amount, now);
+      const lease = this.deps.resources.lease(
+        entity, spec.cost.resource, spec.cost.amount, now, SYNC_CALL_LEASE_SECONDS); // T-161
       if (!lease.granted) return deny(`حصة غير كافية: ${lease.reason}`, 'tool_quota_exceeded');
       leaseId = lease.lease.leaseId;
     }

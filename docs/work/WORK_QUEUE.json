@@ -217,7 +217,6 @@
         "docs/test-reports/phase-39-W-2026-040.md",
         "docs/test-reports/phase-39-W-2026-040-measurements.txt",
         "docs/work/TRIAGE-2026-09-09-post-W-2026-039.md",
-        "package.json",
         ".github/workflows/ci.yml",
         "tests/governance/generated_numbers.test.ts",
         "docs/test-reports/phase-39-W-2026-040-review-round-1.md",
@@ -569,6 +568,62 @@
         "PROGRESS.md",
         "CHANGELOG.md",
         "version.json"
+      ]
+    },
+    {
+      "id": "W-2026-046",
+      "title": "طريقُ الدفعِ وحصصُ النداءِ المتزامن: سلسلةٌ إلى main بلا حكم (T-156) · حارسٌ لا يُرى في npm run (T-152) · ثلاثةُ مواضعِ تأجيرٍ تحجز ساعةً (T-161)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 80)",
+      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلٌّ وفق RULE-019",
+      "area": "الحوكمة والنواة",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-156",
+        "T-152",
+        "T-161"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "scripts/push_guard.sh",
+        "tests/governance/push_guard_gate.test.ts",
+        "package.json",
+        "src/kernel/resource_registry.ts",
+        "src/agents/tools.ts",
+        "src/external/network_egress.ts",
+        "src/load/load_drill.ts",
+        "tests/kernel/lease_call_sites.test.ts",
+        "docs/test-reports/phase-40-W-2026-046.md"
+      ],
+      "excluded": [
+        "`scripts/push_api.mjs` — يدفع التزامةً واحدةً فوق البعيدِ بحكمِه (PA-03 · PA-05)، فلا سلسلةَ تمرّ منه؛ ولم يُلمس",
+        "سقفُ `lease_seconds` في `config/quotas.yaml` — لم يُلمس",
+        "`.github/workflows/ci.yml` — محجوزٌ لـW-2026-040"
+      ],
+      "acceptance": [
+        "`[PG-08]` يردّ في الخطّافِ سلسلةً من التزامتَين فوق main قائم، والتزامةٌ واحدةٌ تمضي",
+        "الحارسُ القديمُ يُسقط حكمَ PG-08 (19/20)",
+        "`npm run guard:push` و`hooks:install` و`push:api` معلنةٌ في package.json",
+        "لا نداءَ `.lease(` في src/ بلا وسيطِ مدة (حصر)، وتمرينُ الحصصِ يمنح ثانيةً لا 3600",
+        "نزعُ المدةِ من موضعٍ واحدٍ يُسقط الحكمَين",
+        "`npm test` صفرُ سقوط و`npm run verify` EXIT=0 وسيرَا العملِ أخضران"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-W-2026-046.md",
+        "tests/governance/push_guard_gate.test.ts",
+        "tests/kernel/lease_call_sites.test.ts"
+      ],
+      "next_step": "المراجع: الإقرارُ أو الرفضُ بعيوبٍ مسمّاة، ثمّ النقلُ إلى WORK_LOG.md (RULE-004).",
+      "created_at": "2026-10-02",
+      "updated_at": "2026-10-02",
+      "verification": "2026-10-02: npm test 2303/2303 · verify EXIT=0 · الحارسُ القديمُ ⇒ 19/20 · نزعُ مدةِ load_drill ⇒ 0/2.",
+      "documentation_impact": [
+        "PROGRESS.md",
+        "CHANGELOG.md",
+        "version.json",
+        "ARCHITECTURE.md"
       ]
     }
   ]

@@ -313,3 +313,30 @@ test('الخطّافُ المثبَّت: يأذن بدفعٍ حقيقيٍّ حي
   const remote = spawnSync('git', ['--git-dir', bare, 'rev-parse', '--verify', 'refs/heads/main'], { encoding: 'utf8' });
   assert.equal(remote.status, 0, `البعيدُ يجب أن يحمل المرجعَ بعد إذنٍ:\n${out}`);
 });
+
+test('[PG-08] سلسلةٌ إلى main تُردّ في الخطّاف، والتزامةٌ واحدةٌ تمضي (T-156)', () => {
+  const root = makeRepo();
+  spawnSync('bash', [join(root, INSTALLER)], {
+    cwd: root, encoding: 'utf8', env: { ...process.env, SOOL_GUARD_ROOT: root } as Record<string, string>,
+  });
+  const bare = mkdtempSync(join(tmpdir(), 'sool-bare-chain-'));
+  spawnSync('git', ['init', '-q', '--bare', bare], { encoding: 'utf8' });
+  const env = { ...process.env, SOOL_GUARD_GATES: PASSING_GATES } as Record<string, string>;
+  const push = () => spawnSync('git', ['-C', root, 'push', bare, 'main'], { encoding: 'utf8', env });
+  const commit = (name: string) => {
+    writeFileSync(join(root, `${name}.txt`), `${name}\n`);
+    git(root, ['add', '-A']);
+    git(root, ['-c', 'user.email=t@t', '-c', 'user.name=اختبار', 'commit', '-q', '-m', MSG_OK]);
+  };
+  assert.equal(push().status, 0, 'المرجعُ الجديدُ لا سلسلةَ فوقه تُقاس');
+  commit('ثالث');
+  commit('رابع');
+  const chain = push();
+  const out = `${chain.stdout ?? ''}${chain.stderr ?? ''}`;
+  assert.notEqual(chain.status, 0, out);
+  assert.match(out, /\[PG-08\][^\n]*2/, out);
+  git(root, ['reset', '-q', '--soft', 'HEAD~2']);
+  git(root, ['-c', 'user.email=t@t', '-c', 'user.name=اختبار', 'commit', '-q', '-m', MSG_OK]);
+  const one = push();
+  assert.equal(one.status, 0, `${one.stdout ?? ''}${one.stderr ?? ''}`);
+});
