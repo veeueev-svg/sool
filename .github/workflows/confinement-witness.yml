@@ -36,7 +36,12 @@ jobs:
       - name: بناء صورة الحاوية المحصورة
         run: docker build -f infra/docker/Dockerfile -t sool-confinement-witness .
       - name: شاهد الحصر داخل الحاوية (T-16 · T-124)
+        # W-2026-041: `shell: bash` صراحةً لأنّ الصدفةَ غيرَ المُسمّاةِ على GitHub هي `bash -e {0}`
+        # **بلا pipefail** — فكان رمزُ خروجِ الشاهدِ (1 حين لا حصر) يضيع في `| tee` وتخضرّ الخطوة.
+        # وتسميةُ bash تُشغّلها `bash --noprofile --norc -eo pipefail {0}`، و`set -o pipefail` توكيدٌ مقروء.
+        shell: bash
         run: |
+          set -o pipefail
           docker run --rm \
             --network=none \
             --cap-drop=ALL \
@@ -47,7 +52,7 @@ jobs:
             sool-confinement-witness \
             dist/scripts/confinement_witness.js \
             | tee confinement-witness.txt
-          # الشاهدُ يخرجُ برمز 1 إن لم يكن محصورًا؛ pipefail يُمرّرُه فتسقطُ الخطوة.
+          # الشاهدُ يخرجُ برمز 1 إن لم يكن محصورًا؛ pipefail (أعلاه صراحةً) يُمرّرُه فتسقطُ الخطوة.
       - name: إخراج القياس إلى ملخّص التشغيل
         if: always()
         run: |

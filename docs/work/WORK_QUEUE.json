@@ -5,7 +5,7 @@
   "gate": "scripts/check_work.mjs",
   "history": "docs/work/WORK_LOG.md",
   "id_pattern": "W-YYYY-NNN",
-  "updated_at": "2026-09-11",
+  "updated_at": "2026-10-02",
   "statuses": [
     "PROPOSED",
     "CLAIMED",
@@ -178,9 +178,9 @@
         "docs/test-reports/phase-39-W-2026-039.md",
         "docs/work/TRIAGE-2026-09-08-post-W-2026-038.md"
       ],
-      "next_step": "المنفِّذ: تنفيذُ العلاجِ في src/security/confinement.ts ثم كتابةُ الاختباراتِ الساقطةِ قبلَه، ثم npm run verify، ثم الدفعُ ونقلُ الحالِ إلى REVIEW لعرضِه على المراجع.",
+      "next_step": "حكمُ المراجع (ديوان التدقيق ووزارة الأمن السيبراني — RULE-004): العلاجُ نُفِّذ والتزم (2065607) وشهادةُ الحاوية سُجِّلت (6bc0973)، والمنفّذُ لا يُقرّ عملَه. صُحّح هذا الحقلُ في W-2026-041 (2026-10-02): كان ينصّ على خطوةِ التنفيذِ وقد مضت.",
       "created_at": "2026-09-08",
-      "updated_at": "2026-09-09",
+      "updated_at": "2026-10-02",
       "documentation_impact": [
         "PROGRESS.md",
         "ROADMAP.md",
@@ -219,7 +219,6 @@
         "docs/work/TRIAGE-2026-09-09-post-W-2026-039.md",
         "package.json",
         ".github/workflows/ci.yml",
-        "ARCHITECTURE.md",
         "tests/governance/generated_numbers.test.ts",
         "docs/test-reports/phase-39-W-2026-040-review-round-1.md",
         "docs/test-reports/phase-39-W-2026-040-review-gpt.md",
@@ -308,6 +307,58 @@
         "[دمجُ المعالجةِ الرابعة · 2026-09-13] دُمج علاجُ العيوبِ الأربعةَ عشرَ إلى main بطلبِ الدمجِ #4 (الدمجُ المدمَجُ f709e7f — التزامةُ المؤلِّفُ 14b6102) بعد خضرةِ سيرَي العملِ على الفرعِ، وخضرَ سيرَا العملِ على main بعد الدمجِ مباشرةً (التزامةُ الدامجةُ تحملُ مِذيالَ العملِ بالإجراءِ الدائمِ المُسنِّ في الجولةِ الرابعة). ويبقى الحالُ REVIEW — الحكمُ للجولةِ الخامسةِ (RULE-004 · RULE-019)."
       ],
       "blocked_reason": "سجلٌّ تاريخيٌّ لا وصفٌ للحالِ الراهن — عولجت العيوبُ الأربعةَ عشرَ في المعالجةِ الرابعةِ (2026-09-13 · docs/test-reports/phase-39-W-2026-040-remedy-4.md · القياسُ §6–§9 من ملفِّ قياساتِ الجولةِ الرابعة): الجولةُ الرابعةُ من المراجعةِ المستقلّة (2026-09-13) رفضت البندَ رابعةً بأربعةَ عشرَ عيبًا مسمًّى مدارُها واحد: حكمُ الوصولِ غائبٌ عن عقدِ الحاجز — فالشرطُ المركّبُ ثابتُ الكذبِ (EFFECT_CROSSES_COMPOU…"
+    },
+    {
+      "id": "W-2026-041",
+      "title": "قفلُ ARCHITECTURE.md يجمّد كلَّ عملٍ في src/ (T-166) · وشاهدُ الحصرِ في CI يبتلعُ رمزَ سقوطِه عبرَ tee",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 79)",
+      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلٌّ وفق RULE-019",
+      "area": "الحوكمة وضبط العمل",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-166"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "scripts/check_work.mjs",
+        "tests/governance/work_control.test.ts",
+        "docs/work/WORK_CONTROL.md",
+        ".github/workflows/confinement-witness.yml",
+        "docs/decisions/ADR-0049-shared-architecture-doc.md",
+        "docs/test-reports/phase-40-W-2026-041.md"
+      ],
+      "excluded": [
+        "scripts/check_generated_numbers.sh — البوابةُ لا تُليَّن: تغيّر الحجزُ لا الحكم",
+        "src/ — لا شفرةَ دولةٍ هنا: T-157 · T-159 · T-165 في W-2026-042",
+        "نطاقا W-2026-039 وW-2026-040 — لم يُلمس منهما إلا صفّاهما في WORK_QUEUE.json",
+        "docs/audit/** و COMPLETION_CRITERIA.md — محجوزةٌ لـW-2026-038",
+        "‎.github/workflows/ci.yml — محجوزٌ لـW-2026-040"
+      ],
+      "acceptance": [
+        "SHARED_DOCS خمسٌ مسمّاةٌ بإضافةِ ARCHITECTURE.md",
+        "إدراجُ ARCHITECTURE.md في scope يُسقط البوابة",
+        "بندان حيّان يلمسانها بإعلانٍ في §6 يمرّان",
+        "لمسُها بلا إعلانٍ في §6 يُسقط البوابة",
+        "خطوةُ شاهدِ الحصرِ في CI بـshell: bash وset -o pipefail",
+        "npm test صفرُ سقوطٍ و npm run verify EXIT=0",
+        "سيرَا العملِ أخضرانِ على الفرع"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-W-2026-041.md",
+        "docs/decisions/ADR-0049-shared-architecture-doc.md"
+      ],
+      "next_step": "المالكُ أو مراجعٌ مستقلٌّ: الإقرارُ ثمّ النقلُ إلى WORK_LOG.md (RULE-004 · RULE-016).",
+      "created_at": "2026-10-02",
+      "updated_at": "2026-10-02",
+      "verification": "2026-10-02: npm test 2288/2288 (+1 حكمُ T-166) · npm run verify EXIT=0 · قياسُ pipefail: bash -e ⇒ 0 · bash -eo pipefail ⇒ 1. والحكمُ للمراجع لا للمنفّذ (RULE-004).",
+      "documentation_impact": [
+        "PROGRESS.md",
+        "CHANGELOG.md",
+        "version.json"
+      ]
     }
   ]
 }

@@ -320,9 +320,14 @@ test('تغييرٌ محكومٌ بلا أثرٍ في السجل يُسقط ال�
 
 // ── T-144: وثائقُ الحالِ مشتركةٌ بإعلان، والحجزُ يُقاس بالهويّة لا بالوجود ──────
 test('T-144: بندٌ يحجز وثيقةَ حالٍ في scope يُسقط البوابة — فالحجزُ المانعُ يُجمّد المستودعَ على بندٍ واحد', () => {
-  for (const doc of ['PROGRESS.md', 'ROADMAP.md', 'CHANGELOG.md', 'version.json']) {
-    assert.equal(run(fixture([item({ scope: ['src/alpha/', doc] })])), 1, doc);
-  }
+  for (const doc of ['PROGRESS.md', 'ROADMAP.md', 'CHANGELOG.md', 'version.json', 'ARCHITECTURE.md']) assert.equal(run(fixture([item({ scope: ['src/alpha/', doc] })])), 1, doc);
+});
+
+test('T-166: ARCHITECTURE.md مشتركةٌ بإعلانٍ — بندان يلمسانها بإعلانٍ يمرّان، وبلا إعلانٍ تسقط', () => {
+  const [a, b] = [item({ scope: ['src/alpha/'], progress_items: ['T-900'] }), item({ id: 'W-2026-002', scope: ['src/beta/'], owner: 'جهةُ هـ', progress_items: ['T-901'] })];
+  const root = fixture([a, b], [], { impact: { 'W-2026-001': '`ARCHITECTURE.md`', 'W-2026-002': '`ARCHITECTURE.md`' } });
+  for (const [id, dir] of [['W-2026-001', 'alpha'], ['W-2026-002', 'beta']]) assert.equal(run(root, `src/${dir}/x.ts,ARCHITECTURE.md,docs/work/WORK_QUEUE.json,docs/work/orders/${id}.md`, id), 0, id);
+  assert.equal(run(fixture([item()], [], { impact: { 'W-2026-001': '`PROGRESS.md`' } }), 'src/alpha/x.ts,ARCHITECTURE.md,docs/work/WORK_QUEUE.json,docs/work/orders/W-2026-001.md'), 1);
 });
 
 test('T-144: لمسُ وثيقةِ حالٍ يذكرها §6 من العقد يمرّ بلا حجزٍ لها — وهو ما كان مستحيلًا قبل البند', () => {
