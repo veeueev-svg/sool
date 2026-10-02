@@ -8,9 +8,9 @@
  *   LD-03 مدةٌ أطولُ تُقصَّر إلى السقفِ **ويُسجَّل** التقصيرُ بمطلوبِه وممنوحِه وفارقِه.
  *   LD-04 مدةٌ غيرُ صالحةٍ تُرفض ولا تُحمل على الافتراض، ولا إيجارَ يُنشأ بها.
  *   LD-05 استعادةُ إيجارٍ سبق أن استُعيد بانتهاءِ وقتِه حدثٌ مسمّى لا `false` صامتة.
- *   LD-06 **تثبيتُ دَينٍ مقيس** (T-160): إعلانُ مدةِ الدفعةِ 86400 ثانيةً فوق سقفِ حصتِها 3600،
- *         فالفارقُ 82800 ثانيةً عاطلة — ومن حرّك أحدَ الرقمَين يسقط عنده هذا التأكيدُ فيُحدِّث
- *         الدَّينَ والجدولَ معًا. **الأرقامُ تُقرأ من الإعلانِ لا تُكتب هنا.**
+ *   LD-06 **اتّساقُ الإعلانَين** (T-160 · W-2026-044): مدةُ الدفعةِ المعلنةُ لا تتجاوز سقفَ حصةِ
+ *         أيِّ موردٍ يستأجره نوعٌ معلن — وكانت 86400 فوق 3600 (82800 ثانيةً عاطلة). **الأرقامُ
+ *         تُقرأ من الإعلانِ لا تُكتب هنا**، والتركيبُ يرفض التناقضَ (`ENTERPRISE_RUN_EXCEEDS_LEASE`).
  *
  * لا تأكيدَ على نصٍّ عربيٍّ مشكول: الأحكامُ على أرقامٍ وأسماءِ أحداثٍ ورموزٍ.
  */
@@ -127,29 +127,25 @@ test('LD-05: استعادةٌ لإيجارٍ انتهى وقتُه حدثٌ مس
   assert.equal(audit.find(MISSED).length, 2, 'كلُّ استعادةٍ فائتةٍ تُقرأ بنفسِها');
 });
 
-/* ————— LD-06: تثبيتُ الدَّينِ المقيس (T-160) ————— */
+/* ————— LD-06: اتّساقُ الإعلانَين (T-160 · W-2026-044) ————— */
 
-test('LD-06: الفارقُ بين مدةِ الدفعةِ المعلنةِ وسقفِ حصتِها مقيسٌ ومثبَّتٌ دَينًا (T-160)', () => {
+test('LD-06: مدةُ الدفعةِ المعلنةُ لا تتجاوز سقفَ حصةِ أيِّ موردٍ يستأجره نوعٌ معلن (T-160)', () => {
   const quotas = loadQuotas();
   const enterprises = loadEnterprises();
-  const compute = quotas.resources.compute_units;
-  assert.notEqual(compute, undefined, 'موردُ الحوسبةِ معلنٌ في config/quotas.yaml');
-  const ceiling = compute!.lease_seconds;
   const runSeconds = enterprises.policy.max_run_duration_hours * 3600;
-  assert.equal(ceiling, 3600, 'سقفُ إيجارِ الحوسبةِ المعلنُ في config/quotas.yaml');
-  assert.equal(runSeconds, 86_400, 'مدةُ الدفعةِ المعلنةُ في config/enterprises.yaml');
-  assert.equal(runSeconds - ceiling, 82_800,
-    'دَينٌ معلنٌ T-160: 82800 ثانيةً من المدةِ المعلنةِ لا تغطّيها حصتُها — '
-    + 'ومن حرّك أحدَ الرقمَين فليُحدِّث الدَّينَ في PROGRESS.md ولا يُخفِض هذا التأكيد');
-  assert.equal(runSeconds > ceiling, true);
+  assert.equal(enterprises.kinds.length > 0, true, 'حصرٌ لا يرى نوعًا حصرٌ أعمى');
+  for (const kind of enterprises.kinds) {
+    const spec = quotas.resources[kind.resource_cost.resource];
+    assert.notEqual(spec, undefined, `موردُ ${kind.id} معلنٌ في config/quotas.yaml`);
+    assert.equal(runSeconds <= spec!.lease_seconds, true,
+      `${kind.id}: مدةُ الدفعة ${runSeconds}ث فوق سقفِ حصتِها ${spec!.lease_seconds}ث — عاد دَينُ T-160`);
+  }
 });
 
-test('LD-06ب: التقصيرُ مقيسٌ بالأرقامِ المعلنةِ نفسِها لا بأرقامِ الاختبار', () => {
+test('LD-06ب: آليّةُ التقصيرِ باقيةٌ لمن طلب فوق السقف — بمدةٍ مصطنعةٍ لا بالإعلان', () => {
   const quotas = loadQuotas();
-  const enterprises = loadEnterprises();
-  const compute = quotas.resources.compute_units;
-  const ceiling = compute!.lease_seconds;
-  const runSeconds = enterprises.policy.max_run_duration_hours * 3600;
+  const ceiling = quotas.resources.compute_units!.lease_seconds;
+  const runSeconds = ceiling * 24;
   const { audit, registry } = reg();
   const specs = { compute_units: { total: 100, per_agent_max: 10, lease_seconds: ceiling } };
   const live = new ResourceRegistry(audit, specs);

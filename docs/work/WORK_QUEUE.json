@@ -471,6 +471,55 @@
         "CHANGELOG.md",
         "version.json"
       ]
+    },
+    {
+      "id": "W-2026-044",
+      "title": "مدةُ الدفعةِ المعلنةُ تتجاوز سقفَ حصتِها: 23 ساعةً من 24 غيرُ قابلةٍ للاستعمال (T-160)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 80)",
+      "reviewer": "وزارة البنية وديوان التدقيق (غيرُ المنفِّذ — RULE-004)",
+      "area": "الاقتصاد والمنشآت",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-160"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "config/enterprises.yaml",
+        "src/composition/enterprises.ts",
+        "tests/kernel/resource_lease_duration.test.ts",
+        "tests/services/factory_lease_duration.test.ts",
+        "docs/decisions/ADR-0051-run-duration-within-lease.md",
+        "docs/test-reports/phase-40-W-2026-044.md"
+      ],
+      "excluded": [
+        "config/quotas.yaml — سقفُ الحصةِ 3600 لا يُرفع: الرفعُ يُرخي حصةً عامّةً لكلِّ الوكلاء، والإنزالُ أضيقُ أثرًا وأقربُ إلى الفشلِ المغلق (ADR-0051)",
+        "src/kernel/resource_registry.ts — آليّةُ التقصيرِ والتسجيلِ باقيةٌ كما هي (LD-03 · LD-06ب)",
+        "السجلاتُ التاريخيّة (phase-28.md · ADR-0046 · W-2026-018) — تبقى بأرقامِ زمنِها"
+      ],
+      "acceptance": [
+        "max_run_duration_hours × 3600 ≤ lease_seconds لكلِّ موردٍ يستأجره نوعٌ معلن (LD-06)",
+        "دفعةٌ تُفتَّش قبيلَ نهايةِ مدتِها حصتُها قائمةٌ وإقفالُها مقبول (LF-03)",
+        "تركيبٌ بإعلانٍ متناقضٍ يُرفض بـENTERPRISE_RUN_EXCEEDS_LEASE (LF-04)",
+        "طفرةُ نزعِ الحرسِ تُسقط LF-04، وإرجاعُ 24 يُسقط 4 أحكام",
+        "npm test صفرُ سقوط و npm run verify EXIT=0"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-W-2026-044.md",
+        "docs/decisions/ADR-0051-run-duration-within-lease.md"
+      ],
+      "next_step": "وزارة البنية وديوان التدقيق: الإقرارُ أو الرفضُ بعيوبٍ مسمّاة (RULE-004).",
+      "created_at": "2026-10-02",
+      "updated_at": "2026-10-02",
+      "verification": "2026-10-02: npm test 2297/2297 · verify EXIT=0 · طفرتان: نزعُ الحرس ⇒ LF-04 يسقط؛ إرجاعُ 24 ⇒ 4/12 تسقط والإقلاعُ يُرفض.",
+      "documentation_impact": [
+        "PROGRESS.md",
+        "CHANGELOG.md",
+        "version.json",
+        "ARCHITECTURE.md"
+      ]
     }
   ]
 }
