@@ -33,6 +33,8 @@ export interface PaymentDeadlines {
 }
 export interface SettlementDeadlines {
   raiseUnsettled(now?: number): readonly { readonly contractId: string }[];
+  /** T-65 (W-2026-050) */
+  raiseUndisposed(now?: number): readonly { readonly contractId: string; readonly counterparty: string }[];
 }
 export interface ServiceSources {
   activeServices(now?: number): readonly { readonly serviceId: string; readonly mode: string }[];
@@ -70,6 +72,9 @@ export function deadlinesProbe(deps: DeadlineDeps): WatchProbe {
     }
     for (const s of deps.settlements.raiseUnsettled(now)) {
       findings.push(finding('settlement_overdue', `تسويةُ عقدٍ مُنهى فات موعدُها: ${s.contractId}`));
+    }
+    for (const s of deps.settlements.raiseUndisposed(now)) {
+      findings.push(finding('channel_undisposed', `قناةٌ معلَّقةٌ بعد تسويةِ ${s.contractId} لم تُغلق ولم تُستأنف: ${s.counterparty}`));
     }
     // T-78 — الهبوطُ وحدَه حادث؛ و`reconcile` لا يرفع خدمةً (صعودُها بتحقّقٍ مستقل)
     for (const svc of deps.services.activeServices(now)) {

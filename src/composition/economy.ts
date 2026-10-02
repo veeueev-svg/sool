@@ -130,6 +130,7 @@ export function composeEconomy(
     capability: contracts.grantTerminationCapability(ROYAL_COURT),
     terminationAuthorities: externalConfig.policy.suspend_authorities,
     settlementWindowMs: contractsConfig.policy.settlement_window_hours * 60 * 60 * 1000,
+    dispositionWindowMs: contractsConfig.policy.channel_disposition_hours * 60 * 60 * 1000,
     suspendsAccount: contractsConfig.policy.termination_suspends_account,
     settlerId: contractsConfig.policy.settler,
   });

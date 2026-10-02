@@ -76,6 +76,7 @@ export function composeEnterprises(
     qualityChecks: enterprisesConfig.quality_checks,
     minQualityScore: enterprisesConfig.policy.min_quality_score,
     wasteTolerancePerMille: enterprisesConfig.policy.waste_tolerance_per_mille,
+    wasteBreachesToSuspend: enterprisesConfig.policy.waste_breaches_to_suspend,
     maxConcurrentRuns: enterprisesConfig.policy.max_concurrent_runs,
     maxRunDurationHours: enterprisesConfig.policy.max_run_duration_hours,
     inspectorId: enterprisesConfig.policy.inspector,

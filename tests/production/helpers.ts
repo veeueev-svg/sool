@@ -245,7 +245,7 @@ export const sleep = (ms: number): Promise<void> => new Promise((r) => { setTime
 export function quietDeadlines(): ProductionScannerDeps['deadlines'] {
   return {
     budget: { active: () => [], lapse: () => ({ ok: true }) },
-    payments: { raiseOverdue: () => [] }, settlements: { raiseUnsettled: () => [] },
+    payments: { raiseOverdue: () => [] }, settlements: { raiseUnsettled: () => [], raiseUndisposed: () => [] },
     services: { activeServices: () => [], reconcile: () => ({ ok: true }) },
     research: { lapsed: () => ({ researches: [], lessons: [] }) }, observer: OBSERVER,
   };

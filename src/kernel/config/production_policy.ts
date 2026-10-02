@@ -111,6 +111,7 @@ export const PRODUCTION_KNOWN_INCIDENTS: readonly IncidentKind[] = Object.freeze
   'crown_passage_bypass', 'region_action_without_passage', 'state_not_durable',
   'process_not_confined', 'journal_records_dropped',
   'payment_confirmation_overdue', 'settlement_overdue', 'critical_service_degraded', 'research_lapsed',
+  'channel_undisposed',
 ]);
 
 /**

@@ -44,7 +44,9 @@ export type IncidentKind =
   | 'payment_confirmation_overdue'
   | 'settlement_overdue'
   | 'critical_service_degraded'
-  | 'research_lapsed';
+  | 'research_lapsed'
+  // W-2026-050 (T-65): قناةٌ معلَّقةٌ بعد التسوية لم تُحسم
+  | 'channel_undisposed';
 
 /** الحرّاس المعروفون: كل واحد ماسحٌ حقيقي في وحدة قائمة */
 export type WatchKind = 'regions' | 'audit_chain' | 'scope' | 'termination' | 'king';

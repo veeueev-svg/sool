@@ -75,6 +75,8 @@ export interface FactoryRuntimeDeps {
   readonly qualityChecks: Readonly<Record<string, number>>;
   readonly minQualityScore: number;
   readonly wasteTolerancePerMille: number;
+  /** T-72: عددُ الدفعاتِ فوق التسامح الذي يعلّق المنشأةَ آليًّا — من `config/enterprises.yaml` */
+  readonly wasteBreachesToSuspend: number;
   readonly maxConcurrentRuns: number;
   readonly maxRunDurationHours: number;
   readonly inspectorId?: EntityId;
