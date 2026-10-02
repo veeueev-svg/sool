@@ -46,6 +46,13 @@ export interface ResourceRegistrySnapshot {
   readonly counter: number;
 }
 
+/**
+ * مدةُ عملِ النداءِ المتزامن (T-161 · W-2026-046): أداةٌ ونداءُ خروجٍ وتمرينُ حصصٍ تُستأجَر
+ * حصتُها وتُستعاد **في النداءِ نفسِه** — فمدةُ عملِها المعلنةُ داخلَ النداء، وأصغرُ منحٍ يقبله
+ * السجلّ ثانيةٌ واحدة. فإن فاتت الاستعادةُ لم تُحجز الحصةُ اسمًا ساعةً كاملةً بل ثانية.
+ */
+export const SYNC_CALL_LEASE_SECONDS = 1;
+
 export class ResourceRegistry {
   private readonly specs = new Map<string, ResourceSpec>();
   private readonly leases = new Map<string, Lease>();

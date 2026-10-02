@@ -22,7 +22,7 @@ import { EntityId, SignedRoyalCommand, Decision } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
 import { KillSwitch } from '../security/kill_switch';
-import { ResourceRegistry } from '../kernel/resource_registry';
+import { ResourceRegistry, SYNC_CALL_LEASE_SECONDS } from '../kernel/resource_registry';
 
 /** إذن خروج معلن — لا خروج إلا بمطابقة كاملة لأحد هذه الأذونات */
 export interface EgressAllowance {
@@ -179,7 +179,7 @@ export class NetworkEgressGuard {
     // حصة الخروج من سجل الموارد — بالتهيئة الافتراضية سقفها صفر فتُرفض دائمًا
     let leaseId: string | null = null;
     if (this.options.resources) {
-      const lease = this.options.resources.lease(entity, 'egress_calls', 1, now);
+      const lease = this.options.resources.lease(entity, 'egress_calls', 1, now, SYNC_CALL_LEASE_SECONDS);
       if (!lease.granted) return deny(`حصة الخروج غير متاحة: ${lease.reason}`);
       leaseId = lease.lease.leaseId;
       this.options.resources.release(leaseId);
