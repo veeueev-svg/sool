@@ -29,7 +29,7 @@
 import { EntityId } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { StopProbeKind, TERMINATION_EXECUTORS } from '../kernel/config';
-import { ProbeEvidence, TerminationPolicy } from './stop_witness';
+import { PROBE_ASYNC, PROBE_THREW, ProbeEvidence, TerminationPolicy } from './stop_witness';
 
 /** قياسات ما بعد الأمر لكيان واحد — كلها مقروءة من الوحدات الحقيقية */
 export interface EntityObservation {
@@ -131,6 +131,11 @@ export class TerminationLedger {
       if (item.actedAfter) {
         breaches.push('TERM_ACTED_AFTER_STOP');
         actedAfter.push(kind);
+        continue;
+      }
+      // T-100 (W-2026-051): انهيارُ المسلك أو خروجُه عن الجولة المتزامنة ليس رفضًا معلنًا
+      if (item.refusalCodeAfter === PROBE_THREW || item.refusalCodeAfter === PROBE_ASYNC) {
+        breaches.push(item.refusalCodeAfter === PROBE_THREW ? 'TERM_PROBE_THREW' : 'TERM_PROBE_ASYNC');
         continue;
       }
       if (this.deps.policy.require_declared_stop && !item.refusalCodeAfter) {

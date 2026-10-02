@@ -30,7 +30,7 @@
  */
 import { EntityId } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
-import { ChaosConfig, ChaosFault } from '../kernel/config';
+import { ChaosConfig, ChaosFault, compoundPair } from '../kernel/config';
 
 export type ChaosPolicy = ChaosConfig['policy'];
 
@@ -112,6 +112,26 @@ export class FaultInjector {
     this.active.set(kind, now);
     this.deps.audit.append(by, 'fault_injected', { kind, at: now });
     return { ok: true, kind, at: now };
+  }
+
+  /**
+   * T-94: حقنُ زوجٍ معلنٍ في `compound_faults` معًا — التراكبُ المعلنُ وحده يُقبل، والحاقنُ يقطع
+   * الاثنين في اللحظة نفسِها أو لا يقطع شيئًا. وكلُّ قطعٍ يعود بعدها بـ`restore` كالمنفرد.
+   */
+  injectCompound(by: EntityId, kinds: readonly ChaosFault[], now = Date.now()): InjectOutcome {
+    const key = kinds.length === 2 ? compoundPair(kinds.join('+'))?.join('+') : undefined;
+    const declared = (this.deps.policy.compound_faults ?? [])
+      .map((e) => compoundPair(e)?.join('+'));
+    const head = kinds[0] ?? 'network';
+    if (by !== this.deps.policy.drill_authority) return this.refuse(by, head, 'CHAOS_INJECT_UNAUTHORIZED');
+    if (!key || !declared.includes(key)) return this.refuse(by, head, 'CHAOS_COMPOUND_NOT_DECLARED');
+    const seams = kinds.map((k) => this.seams.get(k));
+    if (seams.some((s) => !s)) return this.refuse(by, head, 'CHAOS_SEAM_MISSING');
+    if (this.active.size > 0) return this.refuse(by, head, 'CHAOS_FAULT_OVERLAP');
+    for (const seam of seams) seam!.cut();
+    for (const k of kinds) this.active.set(k, now);
+    this.deps.audit.append(by, 'fault_injected', { kind: key, kinds: [...kinds], compound: true, at: now });
+    return { ok: true, kind: head, at: now };
   }
 
   /**

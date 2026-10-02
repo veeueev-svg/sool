@@ -33,7 +33,20 @@ export interface ChaosConfig {
     safe_stop_deadline_ms: number;
     fallback_mode: 'limited' | 'halted';
     escalate_on_breach: boolean;
+    /**
+     * T-94 (W-2026-051): قطوعٌ متراكبةٌ معلنةٌ أزواجًا `a+b` — تُحقن معًا بعقدِ إسنادٍ مشترك
+     * (التوقفُ يُسند إلى الزوج لا إلى أحدهما). غيابُ المفتاح = لا تمرينَ مركّب، والتراكبُ غيرُ المعلن
+     * يبقى مرفوضًا بـ`CHAOS_FAULT_OVERLAP`.
+     */
+    compound_faults?: readonly string[];
   };
+}
+
+/** يفكّ زوجًا معلنًا `a+b` إلى قطعين مرتّبين — `null` إن لم يكن زوجًا صالحًا */
+export function compoundPair(entry: string): readonly [ChaosFault, ChaosFault] | null {
+  const parts = String(entry).split('+').map((p) => p.trim());
+  if (parts.length !== 2 || parts[0] === parts[1]) return null;
+  return [...parts].sort() as unknown as readonly [ChaosFault, ChaosFault];
 }
 
 /** القطوع المعروفة للنظام. ما ليس منها لا يُحقَن: القطع المجهول لا يُقاس أثره. */
@@ -130,6 +143,25 @@ export function loadChaos(configDir = resolveConfigDir()): ChaosConfig {
       'خرق توقف آمن لا يمرّ بلا تصعيد — لا سياسة تُسكته',
       'CONFIG_CHAOS_BREACH_SILENT',
     );
+  }
+  if (policy.compound_faults !== undefined) {
+    if (!Array.isArray(policy.compound_faults)) {
+      throw new SovereignViolation('compound_faults قائمةُ أزواجٍ لا قيمةٌ مفردة', 'CONFIG_CHAOS_COMPOUND_INVALID');
+    }
+    const seen = new Set<string>();
+    for (const entry of policy.compound_faults) {
+      const pair = compoundPair(entry);
+      if (!pair || !pair.every((k) => policy.faults.includes(k))) {
+        throw new SovereignViolation(
+          `قطعٌ مركّبٌ غيرُ صالح: ${String(entry)} — زوجٌ من قطعين معلنين مختلفين`, 'CONFIG_CHAOS_COMPOUND_INVALID',
+        );
+      }
+      const key = pair.join('+');
+      if (seen.has(key)) {
+        throw new SovereignViolation(`قطعٌ مركّبٌ معلنٌ مرتين: ${key}`, 'CONFIG_CHAOS_COMPOUND_INVALID');
+      }
+      seen.add(key);
+    }
   }
   const load = loadLoad(configDir).policy;
   if (policy.probe_commands > load.burst_commands) {

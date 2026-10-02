@@ -635,7 +635,6 @@
       "scope": [
         "src/production/production_scanners.ts",
         "src/services/human_research.ts",
-        "src/composition/public_api.ts",
         "deploy/production/manifest.yaml",
         "tests/production/production_scanners.test.ts",
         "tests/production/confinement_scanner.test.ts",
@@ -838,6 +837,63 @@
       "created_at": "2026-10-02",
       "updated_at": "2026-10-02",
       "verification": "2026-10-02: npm test 2325/2325 · verify EXIT=0.",
+      "documentation_impact": [
+        "PROGRESS.md",
+        "CHANGELOG.md",
+        "version.json",
+        "ARCHITECTURE.md"
+      ]
+    },
+    {
+      "id": "W-2026-051",
+      "title": "قطوعٌ متراكبةٌ بعقدِ إسناد وجولةُ شاهدٍ متزامنة (T-94 · T-100)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 80)",
+      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلٌّ وفق RULE-019",
+      "area": "الانقطاع والإنهاء",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-94",
+        "T-100"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "config/chaos.yaml",
+        "src/chaos/chaos_drill.ts",
+        "src/chaos/fault_injector.ts",
+        "src/chaos/safe_stop_ledger.ts",
+        "src/composition/public_api.ts",
+        "src/kernel/config/chaos.ts",
+        "src/termination/stop_witness.ts",
+        "src/termination/termination_ledger.ts",
+        "tests/chaos/compound_faults.test.ts",
+        "tests/security/stop_witness_sweep.test.ts",
+        "docs/decisions/ADR-0053-compound-faults-and-atomic-sweep.md",
+        "docs/test-reports/phase-40-W-2026-051.md"
+      ],
+      "excluded": [
+        "أكثرُ من قطعين معًا — الأزواجُ وحدها معلنة",
+        "تمرينٌ مركّبٌ داخل `run` الجامع — قياسٌ مستقلٌّ يُستدعى باسمه"
+      ],
+      "acceptance": [
+        "زوجٌ معلنٌ يُحقن معًا ويُحكم على كلِّ طرفٍ بشروط المنفرد وبإسنادٍ مشترك",
+        "التراكبُ غيرُ المعلن مرفوضٌ كما كان",
+        "مسلكٌ وعديٌّ `PROBE_ASYNC` وجولةٌ مقيَّدةٌ ذرّيّة",
+        "`PROBE_THREW`/`PROBE_ASYNC` بعد الأمر خرقٌ باسمه",
+        "`npm test` صفرُ سقوط و`npm run verify` EXIT=0"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-W-2026-051.md",
+        "tests/chaos/compound_faults.test.ts",
+        "tests/security/stop_witness_sweep.test.ts",
+        "docs/decisions/ADR-0053-compound-faults-and-atomic-sweep.md"
+      ],
+      "next_step": "المراجع: الإقرارُ أو الرفضُ بعيوبٍ مسمّاة (RULE-004).",
+      "created_at": "2026-10-02",
+      "updated_at": "2026-10-02",
+      "verification": "2026-10-02: npm test 2333/2333 · verify EXIT=0.",
       "documentation_impact": [
         "PROGRESS.md",
         "CHANGELOG.md",

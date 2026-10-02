@@ -63,6 +63,11 @@ export interface ProbeEvidence {
 
 /** رمز استثناء مسلك — يُميَّز عن الرفض المؤدَّب */
 export const PROBE_THREW = 'PROBE_THREW';
+/**
+ * T-100 (W-2026-051): مسلكٌ أعاد وعدًا (Promise) يفتح نافذةً بين مسلكٍ ومسلك يتصرّف فيها الكيان —
+ * فالجولةُ متزامنةٌ بعقد: كلُّ المسالك في دورةٍ واحدةٍ لا تُسلِّم الحلقة، وما خرج عنه يُسمّى ولا يُحتسب.
+ */
+export const PROBE_ASYNC = 'PROBE_ASYNC';
 
 export interface StopWitnessDeps {
   readonly audit: AppendOnlyLog;
@@ -113,6 +118,9 @@ export class StopWitness {
   private run(probe: StopProbe, entity: EntityId): ProbeAttempt {
     try {
       const outcome = probe.attempt(entity);
+      if (typeof (outcome as unknown as { then?: unknown })?.then === 'function') {
+        return { acted: false, refusalCode: PROBE_ASYNC };
+      }
       return { acted: outcome.acted === true, refusalCode: outcome.refusalCode ?? null };
     } catch {
       // ثابت 5: الانهيار ليس رفضًا مؤدَّبًا، ويُسمّى باسمه
@@ -126,6 +134,7 @@ export class StopWitness {
    */
   proveBefore(entity: EntityId): readonly ProbeEvidence[] {
     if (this.sealed.has(entity)) return this.evidenceFor(entity);
+    const sweepStart = performance.now();
     for (const probe of this.deps.probes) {
       const attempt = this.run(probe, entity);
       const cell = this.cell(entity, probe.kind);
@@ -142,12 +151,14 @@ export class StopWitness {
         });
       }
     }
+    this.sweep(entity, 'pre', sweepStart);
     return this.evidenceFor(entity);
   }
 
   /** الشهادة البعدية: تُجرَّب المسالك نفسها بعد الأمر، ويُطلب رفضٌ برمز معلن */
   proveAfter(entity: EntityId): readonly ProbeEvidence[] {
     if (this.sealed.has(entity)) return this.evidenceFor(entity);
+    const sweepStart = performance.now();
     for (const probe of this.deps.probes) {
       const attempt = this.run(probe, entity);
       const cell = this.cell(entity, probe.kind);
@@ -158,7 +169,16 @@ export class StopWitness {
         entity, probe: probe.kind, acted: attempt.acted, refusalCode: attempt.refusalCode,
       });
     }
+    this.sweep(entity, 'post', sweepStart);
     return this.evidenceFor(entity);
+  }
+
+  /** T-100: الجولةُ كلُّها في دورةٍ متزامنةٍ واحدة — يُقيَّد زمنُها وعددُ مسالكها شاهدًا على أنّ لا نافذة */
+  private sweep(entity: EntityId, phase: 'pre' | 'post', startedAt: number): void {
+    this.deps.audit.append(this.witnessId, 'stop_probe_sweep', {
+      entity, phase, probes: this.deps.probes.length, atomic: true,
+      sweepMs: Number((performance.now() - startedAt).toFixed(3)),
+    });
   }
 
   evidenceFor(entity: EntityId): readonly ProbeEvidence[] {

@@ -283,7 +283,7 @@ export type { ChaosConfig, ChaosFault } from '../kernel/config';
 // المرحلة 35: الإنهاء المُثبَت. الرموز تُصدَّر لتُؤكّد الاختبارات عليها لا على نص مشكول
 export { TerminationRoll } from '../kernel/termination_roll';
 export type { TerminationRecord } from '../kernel/termination_roll';
-export { StopWitness, PROBE_THREW } from '../termination/stop_witness';
+export { StopWitness, PROBE_THREW, PROBE_ASYNC } from '../termination/stop_witness';
 export type {
   ProbeAttempt, ProbeEvidence, StopProbe, StopWitnessDeps, TerminationPolicy,
 } from '../termination/stop_witness';

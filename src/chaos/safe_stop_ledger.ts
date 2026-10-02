@@ -125,18 +125,7 @@ export class SafeStopLedger {
     if (!observation) {
       return { kind, observation: null, breaches: ['CHAOS_CUT_NOT_OBSERVED'], verdict: 'fail' };
     }
-    const breaches: string[] = [];
-    if (observation.proceeded) breaches.push('CHAOS_SILENT_CONTINUATION');
-    if (!observation.proceeded && !observation.refusalCode) breaches.push('CHAOS_REFUSAL_WITHOUT_CODE');
-    if (observation.effects.halfExecuted > policy.max_half_executed) breaches.push('CHAOS_HALF_EXECUTED');
-    if (observation.effects.doubleExecuted.length > 0) breaches.push('CHAOS_DOUBLE_EXECUTED');
-    if (observation.danglingLeases > policy.max_dangling_lease) breaches.push('CHAOS_DANGLING_LEASE');
-    if (policy.require_audit_intact && !observation.auditIntact) breaches.push('CHAOS_AUDIT_CHAIN_BROKEN');
-    if (policy.require_declared_stop && !observation.declaredStop) breaches.push('CHAOS_STOP_UNDECLARED');
-    if (observation.stopMs > policy.safe_stop_deadline_ms) breaches.push('CHAOS_STOP_TOO_SLOW');
-    if (observation.modeAfter === 'full') breaches.push('CHAOS_MODE_STILL_FULL');
-    if (observation.modeAfter !== policy.fallback_mode) breaches.push('CHAOS_MODE_NOT_DECLARED_FALLBACK');
-    if (!observation.restored) breaches.push('CHAOS_CUT_NOT_RESTORED');
+    const breaches = breachesOf(observation, policy);
     return {
       kind, observation, breaches, verdict: breaches.length === 0 ? 'pass' : 'fail',
     };
@@ -170,4 +159,24 @@ export class SafeStopLedger {
     });
     return report;
   }
+}
+
+/**
+ * شروطُ التوقف الآمن على مشاهدةٍ واحدة — كلُّ شرطٍ برمزه. مستخرجةٌ (T-94 · W-2026-051) كي يحكم بها
+ * التمرينُ المركّبُ على كلِّ طرفٍ بالشروط نفسِها حرفًا، لا بنسخةٍ تفترق عنها.
+ */
+export function breachesOf(observation: CutObservation, policy: ChaosPolicy): string[] {
+  const breaches: string[] = [];
+  if (observation.proceeded) breaches.push('CHAOS_SILENT_CONTINUATION');
+  if (!observation.proceeded && !observation.refusalCode) breaches.push('CHAOS_REFUSAL_WITHOUT_CODE');
+  if (observation.effects.halfExecuted > policy.max_half_executed) breaches.push('CHAOS_HALF_EXECUTED');
+  if (observation.effects.doubleExecuted.length > 0) breaches.push('CHAOS_DOUBLE_EXECUTED');
+  if (observation.danglingLeases > policy.max_dangling_lease) breaches.push('CHAOS_DANGLING_LEASE');
+  if (policy.require_audit_intact && !observation.auditIntact) breaches.push('CHAOS_AUDIT_CHAIN_BROKEN');
+  if (policy.require_declared_stop && !observation.declaredStop) breaches.push('CHAOS_STOP_UNDECLARED');
+  if (observation.stopMs > policy.safe_stop_deadline_ms) breaches.push('CHAOS_STOP_TOO_SLOW');
+  if (observation.modeAfter === 'full') breaches.push('CHAOS_MODE_STILL_FULL');
+  if (observation.modeAfter !== policy.fallback_mode) breaches.push('CHAOS_MODE_NOT_DECLARED_FALLBACK');
+  if (!observation.restored) breaches.push('CHAOS_CUT_NOT_RESTORED');
+  return breaches;
 }
