@@ -45,11 +45,15 @@ TABLE
 
 # ── جدولُ زمنِ التشغيلِ المُعلَن للإجراءات (T-146) ────────────────────────────────
 # الصيغة: الإجراء|أدنى وسمٍ يُعلن node24|السببُ المقيس
-# وهو جدولٌ ساكنٌ يُقرأ بلا شبكة — وحدُّه مُعلَنٌ في عقد W-2026-009 §8: إجراءٌ غيرُ مذكورٍ
-# فيه لا يراه بابُ [CI-07]، ولا يُغلق ذلك إلّا بقراءةِ action.yml من الشبكة وهو ما لا يجوز هنا.
+# وهو جدولٌ ساكنٌ يُقرأ بلا شبكة. **وإجراءٌ غيرُ مُدرَجٍ فيه يُسقط الفحصَ** بـ[CI-10] (T-149 ·
+# W-2026-045) — كان يُذكر بسطرِ `ℹ` ويمرّ، فمرّ `actions/upload-artifact@v4` (node20) في شاهدِ
+# الحصرِ مقيسًا. فالإدراجُ بأدنى وسمٍ وسببٍ مقيسٍ من action.yml شرطٌ لدخولِ إجراءٍ جديد، والقياسُ
+# بالشبكة يقع مرّةً عند الإدراجِ لا عند كلِّ فحص. ويُقرأ `uses:` من **كلِّ** بيانٍ في
+# `.github/workflows/` لا من ci.yml وحدَه.
 ACTION_RUNTIMES=$(cat <<'TABLE'
 actions/checkout|5|قيس من action.yml على الأوسمة: v4 يقول runs.using = node20 · v5 وv7 يقولان node24
 actions/setup-node|5|قيس من action.yml على الأوسمة: v4 يقول runs.using = node20 · v5 وv7 يقولان node24
+actions/upload-artifact|6|قيس من action.yml على الأوسمة في 2026-10-02 (W-2026-045): v4 وv5 يقولان node20 · v6 وv7 يقولان node24
 TABLE
 )
 
@@ -64,7 +68,22 @@ gate_id() {
   esac
   local p
   p="$(printf '%s' "$c" | grep -oE '(dist/)?scripts/[A-Za-z0-9_./-]+\.(sh|mjs|js)' | head -n1)"
-  if [ -n "$p" ]; then printf '%s' "$p"; return 0; fi
+  if [ -n "$p" ]; then
+    # T-150 (W-2026-045): المُعرَّفُ **مسارُ الحاجزِ ومُعامِلاتُه** — يُنزع المُفسِّرُ وحدَه
+    # (`bash`/`sh`/`node` قبل المسار) فيبقى `npm run check:size` و`bash scripts/check_module_size.sh`
+    # حاجزًا واحدًا، ويصير الحاجزُ نفسُه بمُعامِلٍ مختلفٍ (أو متغيّرِ بيئةٍ قبله) مُعرَّفًا آخر.
+    printf '%s' "$c" | awk -v p="$p" '{
+      out = ""
+      for (i = 1; i <= NF; i++) {
+        t = $i
+        if ((t == "bash" || t == "sh" || t == "node") && i < NF && index($(i + 1), p) > 0) continue
+        if (index(t, p) > 0) t = p
+        out = (out == "" ? t : out " " t)
+      }
+      printf "%s", out
+    }'
+    return 0
+  fi
   printf 'خامّ:%s' "$c"
 }
 
@@ -203,8 +222,9 @@ while IFS= read -r u; do
   major="$(printf '%s' "$tag" | sed -e 's/^v//' -e 's/[^0-9].*$//')"
   row="$(printf '%s\n' "$ACTION_RUNTIMES" | grep -F "$action|" | head -n1 || true)"
   if [ -z "$row" ]; then
-    echo "  ℹ إجراءٌ غيرُ مذكورٍ في جدولِ زمنِ التشغيل: $u — لا يراه بابُ [CI-07]، وهو حدٌّ مُعلَنٌ في عقد W-2026-009 §8"
-    continue
+    echo "✗ [CI-10] إجراءٌ غيرُ مُدرَجٍ في جدولِ زمنِ التشغيل: $u — لا يُعرف زمنُه فلا يدخل بلا إدراج (T-149)."
+    echo "         أدرجه في ACTION_RUNTIMES من هذا الفحص بأدنى وسمٍ يُعلن node24 وسببٍ مقيسٍ من action.yml."
+    fail=1; continue
   fi
   min="$(printf '%s' "$row" | cut -d'|' -f2)"
   why="$(printf '%s' "$row" | cut -d'|' -f3)"
@@ -214,7 +234,8 @@ while IFS= read -r u; do
     echo "         فالعارضُ يرفعه قسرًا، واختلافُ سلوكٍ بين المحلّيِّ والدمجِ يصير غيرَ قابلٍ للنسبة إلى سببٍ واحد (T-146)."
     fail=1
   fi
-done < <(grep -oE 'uses:[[:space:]]*[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+' "$CI_FILE" | sed -E 's/^uses:[[:space:]]*//' | sort -u)
+done < <(cat "$CI_FILE" "$ROOT"/.github/workflows/*.yml 2>/dev/null \
+  | grep -oE 'uses:[[:space:]]*[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+' | sed -E 's/^uses:[[:space:]]*//' | sort -u)
 
 # ── [CI-05ب] حصرٌ أعمى على الإجراءات: بيانٌ بلا `uses:` واحدٍ ────────────────────
 if [ "$uses_count" -eq 0 ]; then
