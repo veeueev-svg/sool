@@ -209,7 +209,6 @@
       "scope": [
         "src/data/rehydrate_census.ts",
         "src/data/persistence.ts",
-        "src/index.ts",
         "tests/data/rehydrate_census.test.ts",
         "tests/data/persistence.test.ts",
         "scripts/rehydrate_census_probe.ts",
@@ -643,7 +642,6 @@
         "src/kernel/config/staging.ts",
         "src/kernel/config/closed_enums.ts",
         "src/services/human_research.ts",
-        "src/composition/operations.ts",
         "src/composition/public_api.ts",
         "config/production.yaml",
         "deploy/production/manifest.yaml",
@@ -738,6 +736,59 @@
         "version.json",
         "ARCHITECTURE.md",
         "docs/runbooks/halt-and-recover.md"
+      ]
+    },
+    {
+      "id": "W-2026-049",
+      "title": "المراقبةُ من الإقلاع نفسِه ونقطةُ دخولٍ تُقلع الدولة (T-109)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 80)",
+      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلٌّ وفق RULE-019",
+      "area": "التشغيل الاتحادي",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-109"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "src/main.ts",
+        "src/index.ts",
+        "src/composition/state.ts",
+        "src/composition/operations.ts",
+        "infra/docker/Dockerfile",
+        "tests/production/boot_supervision.test.ts",
+        "docs/decisions/ADR-0052-supervision-from-boot.md",
+        "docs/test-reports/phase-40-W-2026-049.md"
+      ],
+      "excluded": [
+        "جعلُ `bootstrapState()` يبدأ المراقبةَ دائمًا — مرفوضٌ بقرارٍ معلن (ADR-0052 §2-3): مؤقّتٌ كلَّ 120ms في كلِّ دولةٍ تُبنى، وحكمٌ بالإيقاف في كلِّ بيئةٍ غيرِ محصورة",
+        "`config/production.yaml` — `checkpoint_directory` كما هو للمكتبة؛ ونقطةُ الدخولِ تمرّر مجلدَها"
+      ],
+      "acceptance": [
+        "`superviseAtBoot` ⇒ المراقبُ جارٍ بعد `state_online` مباشرةً، وأولُ مسحةٍ في لحظة الإقلاع (`firstSweepAt == bootAt`) بلا `federated_operation_started`",
+        "دولةٌ محصورةٌ تبقى `normal`، وغيرُ المحصورةِ توقفها المسحةُ الأولى بـ`process_not_confined`",
+        "فتحُ التشغيلِ الاتحاديِّ بعدها لا يبدأ مراقبةً ثانية",
+        "بلا الخيار لا مراقبةَ جارية والتأسيسُ مختومٌ بـ`state_online`",
+        "`dist/src/main.js` عمليّةٌ حيّةٌ تراقب من إقلاعها، ونقطةُ تفتيشِها تحت مجلدِ اليوميّة، وتقف بـSIGTERM وقفًا معلنًا برمز 0",
+        "`ENTRYPOINT` يشير إلى `main.js`",
+        "`npm test` صفرُ سقوط و`npm run verify` EXIT=0"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-W-2026-049.md",
+        "tests/production/boot_supervision.test.ts",
+        "docs/decisions/ADR-0052-supervision-from-boot.md"
+      ],
+      "next_step": "المراجع: الإقرارُ أو الرفضُ بعيوبٍ مسمّاة (RULE-004). وشاهدُ الحاوية (`confinement-witness.yml`) يتجاوز `ENTRYPOINT` فلم يتغيّر؛ وتشغيلُ الصورةِ بـ`main.js` داخل الحاوية المحصورة قياسٌ يُضاف إليه لاحقًا.",
+      "created_at": "2026-10-02",
+      "updated_at": "2026-10-02",
+      "verification": "2026-10-02: npm test 2320/2320 · verify EXIT=0.",
+      "documentation_impact": [
+        "PROGRESS.md",
+        "CHANGELOG.md",
+        "version.json",
+        "ARCHITECTURE.md"
       ]
     }
   ]

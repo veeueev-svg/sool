@@ -114,7 +114,7 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
       ...sovereignty, ...population, ...economy, ...enterprises,
       ...institutions, ...resilience,
     },
-    configDir, now,
+    configDir, now, options.checkpointDir,
   );
   const {
     stagingConfig, stagingManifest, operationScope, incidentMonitor, runbookRunner, stagingLedger,
@@ -196,6 +196,9 @@ export function bootstrapState(options: BootstrapOptions = {}): DigitalState {
 
   // 9) خاتمة التأسيس: سجلٌّ واحد لا يكتبه غير هذا الملف
   audit.append('authority:bootstrap', 'state_online', { phase: 37, mode: 'normal' });
+  // 9.1) T-109 (ADR-0052): المراقبةُ من الإقلاع حين تُطلب — بعد الخاتمة لا قبلها، فالتأسيسُ يبقى
+  //      مختومًا بـ`state_online` والمسحةُ الأولى في لحظة الإقلاع نفسِها (فارقُها عن `bootAt` صفر).
+  if (options.superviseAtBoot === true) continuousSupervisor.start(now);
 
   return {
     config, quotas, audit, ca, registry, king, veto, killSwitch, heartbeat, monitor,
