@@ -34,7 +34,7 @@ test('T-50: بندٌ انقضت فترتُه يسقط بالمسحة — وسق�
 test('T-57 · T-64: الدفعةُ بلا إثباتٍ والتسويةُ المتأخرةُ تُرفعان من الوحدة نفسها حادثًا جسيمًا', () => {
   const probe = deadlinesProbe(deps({
     payments: { raiseOverdue: () => [{ paymentId: 'pay-1' }] },
-    settlements: { raiseUnsettled: () => [{ contractId: 'c-1' }] },
+    settlements: { raiseUnsettled: () => [{ contractId: 'c-1' }], raiseUndisposed: () => [] },
   }));
   const kinds = probe(NOW).map((f) => f.kind);
   assert.deepEqual(kinds, ['payment_confirmation_overdue', 'settlement_overdue']);

@@ -71,6 +71,11 @@ export interface ContractTerminationDeps {
   readonly settlementWindowMs: number;
   /** هل يُعلَّق الحساب الخارجي مع الإنهاء؟ قيمتها الملزمة: نعم (ثابت 3) */
   readonly suspendsAccount: boolean;
+  /**
+   * T-65 (W-2026-050): مهلةُ الحسمِ بعد التسوية — قناةٌ معلَّقةٌ بعد تسويةِ عقدها تُغلق أو تُستأنف
+   * داخلها، وإلّا رُفعت. من `config/contracts.yaml` (`channel_disposition_hours`).
+   */
+  readonly dispositionWindowMs: number;
   readonly settlerId?: EntityId;
 }
 
@@ -78,6 +83,7 @@ export class ContractTermination {
   private readonly settlements = new Map<string, SettlementRecord>();
   private readonly settlerId: EntityId;
   private obligationProbe: ObligationProbe | null = null;
+  private readonly dispositionRaised = new Set<string>();
 
   constructor(private readonly deps: ContractTerminationDeps) {
     this.settlerId = deps.settlerId ?? FINANCE_MINISTRY;
@@ -251,6 +257,28 @@ export class ContractTermination {
       this.deps.audit.append(this.settlerId, 'contract_settlement_overdue', {
         contractId: record.contractId, counterparty: record.counterparty,
         dueAt: record.dueAt, at: now, lateBy: now - record.dueAt, penalty: 'لا عقوبة — بيان',
+      });
+      raised.push(record);
+    }
+    return raised;
+  }
+
+  /**
+   * 4-ب) T-65: قناةٌ معلَّقةٌ إلى الأبد حالةٌ ثالثةٌ غيرُ معلنة — لا قائمة ولا مغلقة. فبعد التسوية
+   * ومهلةِ الحسم، حسابُ النظيرِ المعلَّقُ الذي لم يُغلق ولم يُستأنف يُرفع مرّةً — بيانٌ لا قرار:
+   * الإغلاقُ والاستئنافُ ملكيّان في `account_registry.ts`.
+   */
+  raiseUndisposed(now = Date.now()): readonly SettlementRecord[] {
+    const raised: SettlementRecord[] = [];
+    for (const record of this.settlements.values()) {
+      if (record.settledAt === null || this.dispositionRaised.has(record.contractId)) continue;
+      if (now <= record.settledAt + this.deps.dispositionWindowMs) continue;
+      const account = this.deps.accounts.get(record.counterparty);
+      if (!account || account.closedAt !== null || !account.suspended) continue;
+      this.dispositionRaised.add(record.contractId);
+      this.deps.audit.append(this.settlerId, 'contract_channel_undisposed', {
+        contractId: record.contractId, counterparty: record.counterparty, settledAt: record.settledAt,
+        windowMs: this.deps.dispositionWindowMs, at: now, note: 'القناةُ تُغلق أو تُستأنف بأمرٍ ملكيّ',
       });
       raised.push(record);
     }

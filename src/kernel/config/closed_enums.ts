@@ -81,7 +81,7 @@ export const CLOSED_ENUMS: readonly ClosedEnumBinding[] = Object.freeze([
   {
     name: 'PRODUCTION_KNOWN_INCIDENTS',
     values: PRODUCTION_KNOWN_INCIDENTS as readonly string[],
-    members: 20,
+    members: 21,
     uses: [
       { file: 'production.yaml', key: 'policy.severity.critical' },
       { file: 'production.yaml', key: 'policy.severity.high' },

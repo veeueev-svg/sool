@@ -29,6 +29,9 @@ policy:
   min_quality_score: 70
   # الفقد المقبول من المدخل (بالألف) — وما فوقه يُكذّب دعوى «الفقد داخل الحدّ»
   waste_tolerance_per_mille: 50
+  # T-72 (W-2026-050): دفعاتٌ فوق التسامح تُراكم — وبلوغُ هذا العدد يعلّق المنشأةَ آليًّا بيد المشغّل
+  # (والمشغّلُ يجب أن يكون في suspend_authorities)، والاستئنافُ ملكيٌّ كما هو
+  waste_breaches_to_suspend: 3
   # من يشغّل المنشأة ليس من يفتّش جودتها (RULE-004)
   operator: "ministry:economy"
   inspector: "authority:audit_bureau"

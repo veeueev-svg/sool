@@ -22,6 +22,8 @@ export interface EnterprisesConfig {
     max_term_days: number; max_facilities_per_ministry: number;
     max_concurrent_runs: number; max_run_duration_hours: number;
     min_quality_score: number; waste_tolerance_per_mille: number;
+    /** T-72: دفعاتٌ فوق التسامح تعلّق المنشأة آليًّا */
+    waste_breaches_to_suspend: number;
     operator: string; inspector: string;
     suspend_authorities: string[];
   };
@@ -84,6 +86,7 @@ export function loadEnterprises(configDir = resolveConfigDir()): EnterprisesConf
     ['max_run_duration_hours', policy.max_run_duration_hours],
     ['min_quality_score', policy.min_quality_score],
     ['waste_tolerance_per_mille', policy.waste_tolerance_per_mille],
+    ['waste_breaches_to_suspend', policy.waste_breaches_to_suspend],
   ] as const) {
     if (!Number.isSafeInteger(value) || value <= 0) {
       throw new SovereignViolation(
@@ -127,6 +130,12 @@ export function loadEnterprises(configDir = resolveConfigDir()): EnterprisesConf
         'جهة تعليق غير معلنة بمعرّف نصّي', 'CONFIG_ENTERPRISE_SUSPENDER_ID',
       );
     }
+  }
+  // T-72: التعليقُ الآليُّ بالهدر بيد المشغّل — فمشغّلٌ لا يملك التعليقَ يجعل الحدَّ وعدًا لا يُنفَّذ
+  if (!policy.suspend_authorities.includes(policy.operator)) {
+    throw new SovereignViolation(
+      'المشغّلُ ليس جهةَ تعليقٍ معلنة — حدُّ الهدرِ لا يدَ تنفّذه', 'CONFIG_ENTERPRISE_WASTE_SUSPENDER',
+    );
   }
 
   guardDeclaredCount(

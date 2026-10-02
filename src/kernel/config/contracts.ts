@@ -20,6 +20,8 @@ export interface ContractsConfig {
     default: string; require_end_date: boolean; max_term_days: number;
     termination: string; termination_requires_royal_command: boolean;
     termination_suspends_account: boolean; settlement_window_hours: number;
+    /** T-65: مهلةُ حسمِ القناةِ المعلَّقة بعد التسوية */
+    channel_disposition_hours: number;
     max_risk_score: number; review_interval_days: number; breach_penalty: number;
     max_open_per_counterparty: number;
     proposer: string; assessor: string; settler: string;
@@ -76,6 +78,7 @@ export function loadContracts(configDir = resolveConfigDir()): ContractsConfig {
   for (const [key, value] of [
     ['max_term_days', policy.max_term_days],
     ['settlement_window_hours', policy.settlement_window_hours],
+    ['channel_disposition_hours', policy.channel_disposition_hours],
     ['max_risk_score', policy.max_risk_score],
     ['review_interval_days', policy.review_interval_days],
     ['breach_penalty', policy.breach_penalty],

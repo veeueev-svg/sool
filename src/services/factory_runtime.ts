@@ -47,6 +47,7 @@ import {
   AUDIT_BUREAU, FactoryRuntimeDeps, InspectionReport, ProductionRequest, ProductionRun, RunResult,
 } from './factory_types';
 import { claimContradictions, declaredChecks, qualityScore } from './factory_inspection';
+import { WasteWatch } from './factory_waste';
 
 /**
  * واجهةُ التصدير تبقى هنا كما كانت قبل التفكيك: من كان يستورد شكلًا أو هويّةً من هذا
@@ -61,6 +62,7 @@ export class FactoryRuntime {
   private readonly runs = new Map<string, ProductionRun>();
   private readonly inspectorId: EntityId;
   private readonly operatorId: EntityId;
+  private readonly waste: WasteWatch;
 
   constructor(private readonly deps: FactoryRuntimeDeps) {
     this.inspectorId = deps.inspectorId ?? AUDIT_BUREAU;
@@ -69,6 +71,10 @@ export class FactoryRuntime {
     if (this.inspectorId === this.operatorId) {
       throw new Error('المفتّش والمشغّل جهة واحدة — بناء مرفوض (RULE-004)');
     }
+    this.waste = new WasteWatch({ // T-72
+      audit: deps.audit, suspender: deps.companies, operatorId: this.operatorId,
+      tolerancePerMille: deps.wasteTolerancePerMille, breachesToSuspend: deps.wasteBreachesToSuspend,
+    });
   }
 
   private refuse(
@@ -271,6 +277,7 @@ export class FactoryRuntime {
     run.qualityScore = score;
     run.passedChecks = [...seen];
     run.note = typeof report.note === 'string' ? report.note.trim() : null;
+    this.waste.note(run, [...this.runs.values()], now); // T-72: يُحصى المقبولُ والمرفوضُ معًا
 
     if (score < this.deps.minQualityScore) {
       // ثابت 7: لا مخرج يدخل المخزون، والمدخل المستهلَك فقدٌ يُسجَّل كاملًا
