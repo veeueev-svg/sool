@@ -37,12 +37,17 @@ export interface OrderExecutor {
     readonly executed: boolean;
     readonly claimedStopped: readonly EntityId[];
     readonly reason: string;
+    /** T-101: الزمنُ المقيسُ لكلِّ كيانٍ من المنفّذ نفسِه — لا من القارئ ولا صفرًا مفترضًا */
+    readonly stopMs: Readonly<Record<EntityId, number>>;
   };
 }
 
+/** T-101: كيانٌ لا زمنَ مقيسًا له يُحكم عليه بأنه تجاوز المهلة — الغيابُ ليس صفرًا */
+export const UNMEASURED_STOP_MS = Number.MAX_SAFE_INTEGER;
+
 /** قارئ القياسات بعد الأمر — يقرأ الوحدات الحقيقية ولا يدّعي عنها */
 export interface ObservationReader {
-  read(entity: EntityId): Omit<EntityObservation, 'evidence'>;
+  read(entity: EntityId): Omit<EntityObservation, 'evidence' | 'stopMs'>;
 }
 
 export interface TerminationDrillDeps {
@@ -107,6 +112,7 @@ export class TerminationDrill {
     for (const entity of targets) {
       this.deps.ledger.observe(entity, {
         ...this.deps.reader.read(entity),
+        stopMs: order.stopMs[entity] ?? UNMEASURED_STOP_MS,
         evidence: this.deps.witness.evidenceFor(entity),
       });
     }

@@ -189,7 +189,10 @@ export function realExecutor(s: State) {
       const report = order.execute(
         s.king.issueCommand('terminate_agent', 'all', { targets: targets.join(',') }),
       );
-      return { executed: report.executed, claimedStopped: report.stopped, reason: report.reason };
+      return {
+        executed: report.executed, claimedStopped: report.stopped, reason: report.reason,
+        stopMs: report.stopMs,
+      };
     },
   };
 }
@@ -203,7 +206,6 @@ export function realReader(s: State, at = T0) {
       declaredStop: s.audit.find('entity_stopped').some(
         (e) => (e.detail as { entity?: string }).entity === entity,
       ),
-      stopMs: 0,
     }),
     at,
   };

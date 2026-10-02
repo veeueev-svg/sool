@@ -22,7 +22,7 @@ test('رفع الإيقاف حق ملكي حصري', () => {
     () => s.killSwitch.release('authority:crown_guard', 'محاولة'),
     (e: unknown) => e instanceof SovereignViolation && (e as SovereignViolation).code === 'KILL_RELEASE_NOT_KING',
   );
-  s.killSwitch.release(s.king.kingId, 'انتهى السبب');
+  s.killSwitch.release(s.king.kingId, 'انتهى السبب', { cause: 'اختبار', evidence: 'انتهى الاختبار' });
   assert.equal(s.mode(), 'normal');
 });
 
@@ -51,4 +51,35 @@ test('الإيقاف لا يُعلن ناجحًا قبل تأكيد توقف ك�
   const check = s.killSwitch.verifyStopped(['agent:1', 'agent:2']);
   assert.equal(check.complete, false);
   assert.deepEqual(check.missing, ['agent:2']);
+});
+
+test('T-106: الخروجُ من الإيقافِ الشاملِ نفسِه مُقاس — ولا رفعَ بلا إثباتِ زوالِ السبب', () => {
+  const s = bootstrapState();
+  const create = () => s.gateway.authorize(s.king.issueCommand('create_agent', 'agent:after')).allowed;
+  s.guard.emergencyHalt('تسرّبُ مفتاح');
+  assert.equal(s.killSwitch.status.scope, 'all');
+  assert.equal(create(), false);
+  const refused = (clearance?: { cause: string; evidence: string }) => assert.throws(
+    () => s.killSwitch.release(s.king.kingId, 'رفع', clearance),
+    (e: unknown) => e instanceof SovereignViolation && e.code === 'KILL_RELEASE_CAUSE_UNPROVEN',
+  );
+  refused();
+  refused({ cause: 'تسرّبُ مفتاح', evidence: '  ' });
+  refused({ cause: 'سببٌ آخر', evidence: 'تدويرُ المفتاح' });
+  assert.equal(s.mode(), 'halted', 'الردُّ لا يرفع شيئًا');
+  assert.equal(create(), false);
+  s.killSwitch.release(s.king.kingId, 'زال السبب', { cause: 'تسرّبُ مفتاح', evidence: 'تدويرُ المفتاح وإبطالُ القديم' });
+  assert.equal(s.mode(), 'normal');
+  assert.equal(create(), true, 'البوابةُ تقبل بعد الرفع');
+  const released = s.audit.find('kill_switch_released').at(-1)!;
+  assert.equal(released.detail.scope, 'all');
+  assert.equal(released.detail.evidence, 'تدويرُ المفتاح وإبطالُ القديم');
+  assert.equal(typeof released.detail.haltedForMs, 'number');
+});
+
+test('T-106: الإيقافُ الجزئيُّ يُرفع بلا إثباتٍ كما كان', () => {
+  const s = bootstrapState();
+  s.guard.emergencyHalt('خروجٌ مريب', 'external');
+  s.killSwitch.release(s.king.kingId, 'انتهى');
+  assert.equal(s.killSwitch.status.engaged, false);
 });
