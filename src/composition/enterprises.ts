@@ -48,6 +48,17 @@ export function composeEnterprises(
     operatorId: enterprisesConfig.policy.operator,
     requireBudgetLine: enterprisesConfig.policy.require_budget_line,
   });
+  // T-160 (W-2026-044 · ADR-0051): مدةُ الدفعةِ المعلنةُ لا تتجاوز سقفَ حصةِ موردٍ يستأجره
+  //   نوعٌ معلن — وإلّا عاشت الدفعةُ بعد حصتِها فرُفض إقفالُها بدعوى الحصة. تناقضُ إعلانَين
+  //   بناءٌ فاسدٌ يُرفض عند التركيب، لا دَينٌ يُكتشف في الإقفال (فشلٌ مغلق).
+  const runSeconds = enterprisesConfig.policy.max_run_duration_hours * 3600;
+  for (const kind of enterprisesConfig.kinds) {
+    const spec = quotas.resources[kind.resource_cost.resource];
+    if (spec !== undefined && runSeconds > spec.lease_seconds) {
+      throw new Error(`ENTERPRISE_RUN_EXCEEDS_LEASE: ${kind.id} — مدةُ الدفعة ${runSeconds}ث `
+        + `فوق سقفِ حصةِ ${kind.resource_cost.resource} ${spec.lease_seconds}ث`);
+    }
+  }
   const supply = new SupplyChain({
     audit, materials: enterprisesConfig.materials,
     operatorId: enterprisesConfig.policy.operator,

@@ -6,12 +6,17 @@
  *   LF-01 بدايةُ الدفعةِ تحمل في سجلِّها مدةَ الدفعةِ ومدةَ حصتِها وهل تغطّيها — فالحدُّ يُقرأ
  *         عند وقوعِه لا يُستنبط من رفضٍ متأخّرٍ في الإقفال.
  *   LF-02 التقصيرُ يُسجَّل بحدثِه المسمّى مرّةً واحدةً لكلِّ دفعةٍ تبدأ.
- *   LF-03 **تثبيتُ الأثرِ الباقي** (T-160): دفعةٌ تعيشُ ساعتَين — داخلَ مدتِها المعلنةِ —
- *         تُستعاد حصتُها قبل إقفالِها، ويُرفض إقفالُها بدعوى الحصة، والاستعادةُ الفائتةُ
- *         تُقرأ الآنَ في السجل. فمن أصلح الرقمَ يسقط عنده هذا التأكيدُ فيُحدِّث الدَّين.
+ *   LF-03 **الأثرُ أُزيل** (T-160 · W-2026-044): الحصةُ تغطّي الدفعةَ كاملةً، فدفعةٌ تُفتَّش قبيلَ
+ *         نهايةِ مدتِها المعلنةِ حصتُها قائمةٌ وإقفالُها مقبول — وكان يُرفض بعد الساعةِ الأولى.
+ *   LF-04 تركيبٌ بإعلانٍ متناقضٍ (24 ساعةً فوق سقفِ 3600ث) يُرفض بـ`ENTERPRISE_RUN_EXCEEDS_LEASE`.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { bootstrapState } from '../../src/index';
+import { resolveConfigDir } from '../../src/kernel/config';
 import { FACILITY, HOUR, RAW, establish, industrialState, inspect, startRun, stockExternal } from './helpers';
 
 const CAPPED = 'resource_lease_duration_capped';
@@ -59,29 +64,37 @@ test('LF-02: تقصيرُ مدةِ الحصةِ عن مدةِ الدفعةِ ي�
   );
 });
 
-test('LF-03: دفعةٌ داخلَ مدتِها المعلنةِ تفقدُ حصتَها فيُرفض إقفالُها وتُقرأ الاستعادةُ الفائتة (T-160)', () => {
+test('LF-03: الحصةُ تغطّي الدفعةَ كاملةً — والإقفالُ قبيلَ نهايةِ مدتِها مقبول (T-160)', () => {
   const h = ready(40);
   const run = startRun(h, 'run-1', { [RAW]: 40 });
   assert.equal(run.ok, true);
   if (!run.ok) return;
   const started = h.s.audit.find('production_started')[0]!.detail;
-  const leaseSeconds = started.leaseSeconds as number;
-  const runSeconds = started.runSeconds as number;
-  assert.equal(runSeconds > leaseSeconds, true, 'شرطُ هذا التثبيت: المدةُ المعلنةُ فوق سقفِ الحصة');
-
-  const later = h.now + (leaseSeconds + 60) * 1000;
-  assert.equal(later < h.now + runSeconds * 1000, true, 'اللحظةُ داخلَ مدةِ الدفعةِ المعلنة');
-  assert.equal(h.s.resources.reclaimExpired(later).length >= 1, true);
+  assert.equal(started.leaseCoversRun, true, 'الحصةُ تغطّي مدةَ الدفعةِ المعلنة');
+  assert.equal(h.s.audit.find(CAPPED).length, 0, 'ولا تقصيرَ يُسجَّل');
+  const later = h.now + ((started.runSeconds as number) - 60) * 1000;
+  h.s.resources.reclaimExpired(later);
   assert.equal(
-    h.s.resources.activeLeases(later).some((l) => l.leaseId === run.run.leaseId),
-    false,
-    'حصةُ الدفعةِ استُعيدت وهي ما زالت تعمل',
+    h.s.resources.activeLeases(later).some((l) => l.leaseId === run.run.leaseId), true,
+    'الحصةُ قائمةٌ ما دامت الدفعةُ في مدتِها',
   );
-
-  const refusal = inspect(h, 'run-1', undefined, { at: later });
-  assert.equal(refusal.ok, false, 'الدعوى تخالف قيدَ النظام فيُرفض الإقفال (ثابت 6)');
-  assert.equal(h.s.audit.find('quality_claim_contradicted').length, 1);
-  assert.equal(later - h.now < 24 * HOUR, true);
+  const closed = inspect(h, 'run-1', undefined, { at: later });
+  assert.equal(closed.ok, true, 'الإقفالُ داخلَ المدةِ لا يُرفض بدعوى الحصة');
+  assert.equal(h.s.audit.find('quality_claim_contradicted').length, 0);
+  assert.equal(h.s.audit.find(MISSED).length, 0);
   assert.equal(FACILITY.startsWith('facility:'), true);
-  assert.equal(h.s.audit.find(MISSED).length >= 0, true);
+  assert.equal(later - h.now < HOUR, true);
+});
+
+test('LF-04: تركيبٌ بمدةِ دفعةٍ فوق سقفِ الحصةِ يُرفض عند الإقلاع (T-160)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sool-t160-'));
+  try {
+    cpSync(resolveConfigDir(), dir, { recursive: true });
+    const file = join(dir, 'enterprises.yaml');
+    writeFileSync(file, readFileSync(file, 'utf8')
+      .replace(/^  max_run_duration_hours: \d+$/m, '  max_run_duration_hours: 24'));
+    assert.throws(() => bootstrapState({ configDir: dir }), /ENTERPRISE_RUN_EXCEEDS_LEASE/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
