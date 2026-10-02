@@ -53,4 +53,6 @@ VOLUME ["/var/lib/sool"]
 # من احتاج منفذًا فليعلنه في التهيئة أولًا — لا في هذا الملف (RULE-005).
 
 ENV NODE_ENV=production
-ENTRYPOINT ["/nodejs/bin/node", "dist/src/index.js"]
+# T-109 (W-2026-049): نقطةُ الدخولِ تُقلع الدولةَ وتبدأ المراقبةَ معها — `index.js` مكتبةٌ لا تُقلع شيئًا
+# فكانت العمليّةُ تخرج فورًا. واليوميّةُ ونقطةُ التفتيشِ تحت /var/lib/sool/state (الحجمُ الوحيدُ القابلُ للكتابة).
+ENTRYPOINT ["/nodejs/bin/node", "dist/src/main.js"]

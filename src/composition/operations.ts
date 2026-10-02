@@ -38,7 +38,7 @@ import { confinementWitness } from '../security/confinement';
 export function composeOperations(
   parts: SovereigntyParts & PopulationParts & EconomyParts & EnterpriseParts
     & InstitutionParts & ResilienceParts,
-  configDir: string, now: number,
+  configDir: string, now: number, checkpointDir?: string,
 ) {
   const {
     audit, gateway, killSwitch, heartbeat, terminationRoll, permissions,
@@ -104,7 +104,7 @@ export function composeOperations(
     probes: productionScanners,
     bootAt: now,
     checkpoint: new CheckpointStore(
-      resolveCheckpointPath(productionConfig.policy.supervision.checkpoint_directory),
+      resolveCheckpointPath(checkpointDir ?? productionConfig.policy.supervision.checkpoint_directory),
     ),
   });
   const productionLedger = new ProductionLedger({
