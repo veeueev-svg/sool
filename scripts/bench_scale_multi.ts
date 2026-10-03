@@ -40,6 +40,9 @@ const configDir = resolve(repoRoot, option('config', 'config'));
 const outDir = resolve(repoRoot, option('out', join('docs', 'audit', 'measurements')));
 const label = option('label', 'C-17-bench_multi');
 if (!Number.isInteger(runs) || runs < 1) throw new Error('عددُ التشغيلات يجب أن يكون عددًا صحيحًا موجبًا');
+if (!Number.isInteger(minRuns) || minRuns < 1) throw new Error('الحدُّ الأدنى للتشغيلات يجب أن يكون عددًا صحيحًا موجبًا');
+// الأمرُ كما شُغِّل فعلًا (W-2026-059): لا نصٌّ ثابتٌ يُخفي التهيئةَ والكومةَ والوسم.
+const invocation = `node ${['dist/scripts/bench_scale_multi.js', ...args].join(' ')}`;
 
 const policy = loadScale(configDir).policy;
 const benchEntry = join(repoRoot, 'dist', 'scripts', 'bench_scale.js');
@@ -100,7 +103,7 @@ const verdict = evaluateTailRuns(samples, {
 });
 
 const summaryLines = [
-  `# الأمر: npm run bench:tail -- --runs ${runs}`,
+  `# الأمر: ${invocation} (runs=${runs} · min-runs=${minRuns} · heap=${heapMb}MiB)`,
   `# التاريخ: ${startedAt} ← ${new Date().toISOString()}`,
   `# التهيئة: ${configDir === defaultConfigDir ? 'config/scale.yaml' : configDir} · السقف ${policy.population_max} · العتبة p99 ${policy.gateway_p99_ms}ms وأقصى ${policy.gateway_max_ms}ms`,
   '',

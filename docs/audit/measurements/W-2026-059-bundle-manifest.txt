@@ -1,0 +1,37 @@
+# W-2026-059 — بيانُ الحزمة المجمّدة · BUNDLE_ROOT_SHA256=1feb73e407bd1776cd89b452decadf8909b241ca08c817f6ae20c5a724ad7736 · COMMIT=bd6936e8e36fb48d685015b04755cfcd0420b56f
+# عيبٌ في الحزمة نبّه إليه المراجعان: البيانُ يحوي سطرًا لنفسه (أُنشئ الملفُّ قبل أن يُحصى)، فيسقط ذلك السطرُ وحده في sha256sum -c؛ الملفّاتُ الـ32 الأخرى مطابقة والجذرُ مطابق.
+
+aee3833921158f5e65ede715bf21c5c44ec975605fd379bcbf671e19ddd54278  ./COMMIT.txt
+01887804bbee48f1c93a55135c17667047ed3324c7834b8af6b1c30e1d17f7a1  ./MANIFEST.sha256
+fc63461b24d634f0c1cc5fc180129d5be1d0a565fd1629c0dcd665ebaab2f808  ./criterion/C-17-T-85-rows.txt
+3d7bd268bfc13e2b37240b599db7d49908b3d1414448cdea249f2241c2f35160  ./criterion/C-17-prior-verdict.md
+8a2186e53e4d52b2098aea34932aef5c6325aae73bc8fce8b350c2025faf44ca  ./criterion/COMPLETION_CRITERIA-blockers-and-external.md
+99e72cd47d687b7118520853e38132c26a8545fa2af4c553b1534864db2ba199  ./criterion/COMPLETION_CRITERIA-head.md
+9ddfc307a0f34f91f8fe2d68498780cafd714426108b224563362bd8c2fd3cc6  ./decision/owner-decision-2026-10-03.md
+43a37f2b73757eed9814a8ecd58a655fa49f210a9ef54e36ab236c508b218333  ./diff/config-and-test.diff
+4c6304f7230160a43bfda72728eb8a56757450450380c052e50e2e3487b3409c  ./gates/ci.txt
+ab1593941ada477a8f59b58c4e4f9475fe0e65901f3c3710f082c979be933fb9  ./gates/npm-run-verify-summary.txt
+90423447c075b2659c2b22f837c7fa8961bbf6e396ac632b16e1f28b0762d6a2  ./measurements/C-17-bench_multi.txt
+4cbc5f67eccf7fe21f7b1e2dfb275d75c29e03e1d31325f76a112a49296ef012  ./measurements/C-17-bench_multi_3m-declared-run-1.txt
+af952a45b4da6aa2c3cc40a9057978ad84c304ed201dc86cd4be71573cf4dc2b  ./measurements/C-17-bench_multi_3m-declared-run-2.txt
+f4ac8a3b18c2dd41b04409932570f6068dcc97fbcbd9eb099c7afa867a55f101  ./measurements/C-17-bench_multi_3m-declared-run-3.txt
+51f4a15473c96b4c65b6bb25e05875b0f547117d0949272b7897e56779f8964f  ./measurements/C-17-bench_multi_3m-declared-run-4.txt
+5f82c5026ca7b6fae5f9bfbedd10d92c75a81c0f6d47185b88961ec89a1e978e  ./measurements/C-17-bench_multi_3m-declared-run-5.txt
+4a7a32932782e05ec638fd7867c9fdf03cf010ef01badcdd9ab30eaf59639d3b  ./measurements/C-17-bench_multi_3m-declared-run-6.txt
+bbc7e466ea847ed474e2ab8986b0086423e9a77eb285f3bf5e724fa3be90a31e  ./measurements/C-17-bench_multi_3m-declared-run-7.txt
+224d28bbe3c09a916aee477263740e90c2858be7f231027618189d5137e7f36b  ./measurements/C-17-bench_multi_3m-declared.txt
+59a3438e2b95d922dd7f29d3b12792a8ed186f830fee6868d2e1b7ff742d7d9e  ./measurements/C-17-bench_multi_3m-post-T119-run-1.txt
+7d2b52e2975f5f9de83d636aa8f3783cb13d9e5e1715c8c5619dbe6061880c57  ./measurements/C-17-bench_multi_3m-post-T119-run-2.txt
+e1c66bfa9084e5ef51d325346376d357325a8dc8ec7c5381a81ac933a9e8a1e5  ./measurements/C-17-bench_multi_3m-post-T119-run-3.txt
+203faa283f644efa503761bb3c53096de3252546981b3655c3f15d3b35a2a7c8  ./measurements/C-17-bench_multi_3m-post-T119.txt
+4e7fdc9a18a3f135664a4a097ce669032215d0811ec49838e561b9be9ddde6bc  ./measurements/C-17-bench_multi_3m-run-1.txt
+5039f2166d82e88addef5a6b3799742568ae6a4a963aa7dbba90387ba43c73b9  ./measurements/C-17-bench_multi_3m-run-2.txt
+4d64c382bc432357d4b1dfc926616c39528a223c8965773964ca9cc2df452bc4  ./measurements/C-17-bench_multi_3m-run-3.txt
+2a70ae9799de9a15753e7ab2b514b968bc06bb3837c25bc7f355be32d2f68677  ./measurements/C-17-bench_multi_3m.txt
+84b52b1403937bc6838138b98c4e70dea5c31aa06d41ac0ddc5e740a7ee9c0d3  ./source/bench_scale.ts
+6f6810d3bd17c103829543ec48de8fbe1a422ad80466fc996026a320b797b9b0  ./source/bench_scale_multi.ts
+53fa0bb7d7cc31654af9706ca952b2c01da0012b27f363dae49cb9d72c156c51  ./source/probes_institutions-C-17-excerpt.mjs
+fd4431e03943704f19644e929c5b785a3cd07502aceea67ac46f20445086ee0b  ./source/quotas.yaml
+3ee336b9e52f04c874a8ab87d70f4224c347b89c0cd32fccc8286deb410baaad  ./source/scale.ts
+d0a0021a33bdcbbceff114dc7fce04a507c2fadcb6878ad641b1eba39ac81530  ./source/scale.yaml
+97c7ef6bb650401787a1f9ccce97c6b986c6ba7c6127001292f6b81f90ed7447  ./source/tail_gate.ts

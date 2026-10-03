@@ -67,7 +67,12 @@
       ],
       "scope": [
         "docs/audit/verdict.md",
-        "docs/audit/criteria",
+        "docs/audit/criteria/C-08.md",
+        "docs/audit/criteria/C-09.md",
+        "docs/audit/criteria/C-11.md",
+        "docs/audit/criteria/C-12.md",
+        "docs/audit/criteria/C-13.md",
+        "docs/audit/criteria/C-21.md",
         "docs/audit/independence",
         "docs/audit/measurements/W-2026-038-baseline.txt",
         "docs/audit/measurements/W-2026-038-bundle-manifest.txt",
@@ -1243,7 +1248,22 @@
         "docs/audit/measurements/C-17-bench_multi_3m-declared-run-4.txt",
         "docs/audit/measurements/C-17-bench_multi_3m-declared-run-5.txt",
         "docs/audit/measurements/C-17-bench_multi_3m-declared-run-6.txt",
-        "docs/audit/measurements/C-17-bench_multi_3m-declared-run-7.txt"
+        "docs/audit/measurements/C-17-bench_multi_3m-declared-run-7.txt",
+        "scripts/bench_scale.ts",
+        "scripts/bench_scale_multi.ts",
+        "docs/audit/criteria/C-17.md",
+        "docs/audit/measurements/C-17-bench_multi_3m-asserted.txt",
+        "docs/audit/measurements/C-17-bench_multi_3m-asserted-run-1.txt",
+        "docs/audit/measurements/C-17-bench_multi_3m-asserted-run-2.txt",
+        "docs/audit/measurements/C-17-bench_multi_3m-asserted-run-3.txt",
+        "docs/audit/measurements/C-17-bench_multi_3m-asserted-run-4.txt",
+        "docs/audit/measurements/C-17-bench_multi_3m-asserted-run-5.txt",
+        "docs/audit/measurements/C-17-bench_multi_3m-asserted-run-6.txt",
+        "docs/audit/measurements/C-17-bench_multi_3m-asserted-run-7.txt",
+        "docs/audit/measurements/W-2026-059-gpt-review.txt",
+        "docs/audit/measurements/W-2026-059-grok-review.txt",
+        "docs/audit/measurements/W-2026-059-review-prompt.md",
+        "docs/audit/measurements/W-2026-059-bundle-manifest.txt"
       ],
       "excluded": "خام C-17-bench_multi_3m*.txt القديم · COMPLETION_CRITERIA.md · C-17.md · config/scale.yaml · config/quotas.yaml",
       "acceptance": [
@@ -1251,10 +1271,12 @@
         "إحالة من erratum في phase-39-T119.txt إلى الخام الجديد",
         "npm run verify رمز 0",
         "npm run check:work رمز 0",
-        "بقرار المالك (2026-10-03): السقف المعلن في config/scale.yaml وquotas.yaml = 3M، وسبع تشغيلات 3M بالتهيئة المعلنة لا بنسخة /tmp، وخامها محفوظ"
+        "بقرار المالك (2026-10-03): السقف المعلن في config/scale.yaml وquotas.yaml = 3M، وسبع تشغيلات 3M بالتهيئة المعلنة لا بنسخة /tmp، وخامها محفوظ",
+        "مراجعة متنوعة عمياء بمراجعين من مزوّدين مختلفين، خامها محفوظ، وحكمها مسجّل في C-17.md بلا ترقية",
+        "bench_scale يشترط اعتماد كل قرار مقيس ويسقط عند الرفض، وسبع تشغيلات 3M بهذا الشرط"
       ],
       "evidence": "docs/audit/measurements/C-17-bench_multi_3m-post-T119*.txt · docs/test-reports/phase-40-W-2026-059.md",
-      "next_step": "مراجعة متنوّعة عمياء (RULE-019) على حزمة مجمّدة ثم قرار المالك في T-85/C-17",
+      "next_step": "قرار المالك في الموانع الأربعة المسمّاة في C-17.md (W-2026-059): قياس يعيده ديوان التدقيق · مسبار المدقق عند 1M · معنى «إدارة الوكلاء» · T-124 الخارجي",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-03"
     }
