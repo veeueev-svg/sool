@@ -144,7 +144,7 @@ check('C-16', 'حسابٌ لطرفٍ غير معلن مرفوض، وعقدٌ ب�
 check('C-17', 'تسجيل سكانٍ ضخم ثم جدولة عادلة — زمنٌ مقيس لا مُقدَّر', () => {
   const t0 = Date.now();
   const s = boot({ now: t0 });
-  const N = 1000000; // السقف السكاني المعلن في config/scale.yaml
+  const N = s.scaleConfig.policy.population_max; // السقف السكاني المعلن في config/scale.yaml — يُقرأ من التهيئة لا يُثبَّت (W-2026-061)
   const inputs = new Array(N);
   for (let i = 0; i < N; i++) inputs[i] = { agentId: `agent:p${i}`, owner: 'ministry:population', resourceQuota: 'identity_slots:1' };
   const cmd = s.king.issueCommand('create_agent', 'population:probe', { count: N }, t0);
