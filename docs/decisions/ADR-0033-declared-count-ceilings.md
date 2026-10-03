@@ -6,7 +6,7 @@
 - **المالك:** القيّم على المستودع (بمراجعة ديوان التاج للتدقيق)
 - **المدخل الملزم:** [`ROADMAP.md`](../../ROADMAP.md) — البند مفتوحٌ من الجلسة 47،
   و[`PROGRESS.md`](../../PROGRESS.md) §2، وسابقُه
-  [`ADR-0022`](ADR-0022-declaration-ceilings.md) الذي أرسى السقوفَ في `enterprises.ts` وحدها
+  [تقريرُ T-75](../test-reports/T-075-declaration-ceilings.md) (لا ADR له — والإشارةُ السابقةُ إلى «ADR-0022» كانت إلى ملفٍّ لا وجودَ له؛ ADR-0022 هو حدودُ الوحدات) الذي أرسى السقوفَ في `enterprises.ts` وحدها
 - **القياس الخام:** [`docs/audit/measurements/phase-39-T129.txt`](../audit/measurements/phase-39-T129.txt)
 - **يُعاد توليدُ القياس بـ:** `npm run probe:declaration-scope`
 - **الاختبار:** `tests/kernel/declaration_ceilings_rest.test.ts` (21 حالة)
