@@ -1355,7 +1355,7 @@
       "reviewer": "مجلس المراجعة (RULE-020)",
       "area": "حوكمة",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "T-115ب"
       ],
@@ -1402,7 +1402,7 @@
       "discoveries": [
         "لا سجلَّ DISC ولا RK في المستودع قبل الأمر — عُرِّفا: DISC = حقلُ discoveries في صفّ البند، RK = دَينٌ بمعرّف T-NNN في PROGRESS.md"
       ],
-      "verification": "PR #29 مدموج · CI أخضر (الوظيفتان) · npm test 2366/2366 · npm run verify رمز 0"
+      "verification": "PR #29 و#30 مدموجان · CI أخضر (الوظيفتان) · npm test 2366/2366 · npm run verify رمز 0 · المجلس ثلاثيّ (GPT 5.6 · Grok 4.6 · Gemini 3.8 Flash)"
     }
   ]
 }
