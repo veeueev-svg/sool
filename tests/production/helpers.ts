@@ -145,7 +145,7 @@ export function productionHarness(options: {
       }),
       deadlines: {
         budget: state.budget, payments: state.payments, settlements: state.contractTermination,
-        services: state.hospitals, research: state.humanResearch, observer: OBSERVER,
+        services: state.hospitals, research: state.humanResearch, justice: state.court, observer: OBSERVER,
       },
     },
     buildWatchProbes({
@@ -247,6 +247,7 @@ export function quietDeadlines(): ProductionScannerDeps['deadlines'] {
     budget: { active: () => [], lapse: () => ({ ok: true }) },
     payments: { raiseOverdue: () => [] }, settlements: { raiseUnsettled: () => [], raiseUndisposed: () => [] },
     services: { activeServices: () => [], reconcile: () => ({ ok: true }) },
-    research: { lapsed: () => ({ researches: [], lessons: [] }) }, observer: OBSERVER,
+    research: { lapsed: () => ({ researches: [], lessons: [] }) },
+    justice: { defaultSilentDefenses: () => [] }, observer: OBSERVER,
   };
 }

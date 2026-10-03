@@ -36,6 +36,10 @@ const REGION_FLAG_TO_INCIDENT: Readonly<Record<string, IncidentKind>> = {
   delegated_without_governor: 'authority_without_holder',
   governor_without_region: 'authority_without_holder',
   dispute_unresolved: 'unresolved_dispute',
+  // W-2026-052 (T-45 · T-47): المُصعَّدُ بلا حكمٍ والالتماسُ بلا جوابٍ مسألتان معلَّقتان بعد مهلتهما —
+  // تُرفعان باسم الحادث المعلن نفسِه (مسألةٌ لم تُحسم) لا باسمٍ جديدٍ خارج التعداد المغلق
+  escalation_unruled: 'unresolved_dispute',
+  petition_unanswered: 'unresolved_dispute',
 };
 
 export interface WatchProbeDeps {

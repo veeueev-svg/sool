@@ -65,7 +65,19 @@ export interface Statute {
   readonly commandId: string;
   /** إصدار سابق عُدِّل إلى هذا الإصدار — للتاريخ لا للمحو */
   readonly supersedes: number | null;
+  /**
+   * T-33 (W-2026-052): مدّةُ التقادم بالأيام — معلنةٌ في نصّ القانون نفسِه (أو افتراضُ درجته المعلن في
+   * `LIMITATION_DAYS_BY_SEVERITY`). اتهامٌ بعد انقضائها من لحظة الوقوع يُرفض: لا دعوى إلى الأبد.
+   */
+  readonly limitationDays: number;
 }
+
+/** T-33: افتراضُ التقادم بحسب الدرجة — يُعلن في النصّ ما يخالفه، ولا قانونَ بلا تقادم */
+export const LIMITATION_DAYS_BY_SEVERITY: Readonly<Record<StatuteSeverity, number>> = Object.freeze({
+  minor: 90, major: 365, grave: 1825,
+});
+/** T-33: سقفُ التقادم المعلن — عشرُ سنوات */
+export const MAX_LIMITATION_DAYS = 3650;
 
 export interface StatuteInput {
   readonly statuteId: string;
@@ -76,6 +88,8 @@ export interface StatuteInput {
   readonly appliesTo: readonly string[];
   readonly proposedBy: EntityId;
   readonly effectiveFrom: number;
+  /** T-33: تقادمٌ معلنٌ بالأيام — غيابُه = افتراضُ الدرجة */
+  readonly limitationDays?: number;
 }
 
 export type StatuteResult =
@@ -135,6 +149,7 @@ export class LawRegistry {
       repealReason: null,
       commandId: command.payload.commandId,
       supersedes: null,
+      limitationDays: input.limitationDays ?? LIMITATION_DAYS_BY_SEVERITY[input.severity],
     };
     this.versions.set(statute.statuteId, [statute]);
     const entry = this.deps.audit.append(this.ministryId, 'statute_enacted', {
@@ -175,6 +190,9 @@ export class LawRegistry {
       appliesTo: changes.appliesTo ?? current.appliesTo,
       proposedBy: changes.proposedBy ?? current.proposedBy,
       effectiveFrom: changes.effectiveFrom ?? Math.max(now, current.effectiveFrom),
+      // T-33: تغييرُ الدرجة بلا تقادمٍ معلنٍ يعيد افتراضَ الدرجة الجديدة
+      ...(changes.limitationDays !== undefined ? { limitationDays: changes.limitationDays }
+        : changes.severity === undefined ? { limitationDays: current.limitationDays } : {}),
     };
     const shape = this.validateShape(merged, now);
     if (shape) return refuse(shape);
@@ -194,6 +212,7 @@ export class LawRegistry {
       repealReason: null,
       commandId: command.payload.commandId,
       supersedes: current.version,
+      limitationDays: merged.limitationDays ?? LIMITATION_DAYS_BY_SEVERITY[merged.severity],
     };
     chain.push(next);
     const entry = this.deps.audit.append(this.ministryId, 'statute_amended', {
@@ -288,6 +307,10 @@ export class LawRegistry {
       return 'لا قانون بلا عنوان ونص صريح — القانون المبهم لا يُحاكَم به';
     }
     if (!['minor', 'major', 'grave'].includes(input.severity)) return 'درجة جسامة غير معلنة';
+    if (input.limitationDays !== undefined && (!Number.isSafeInteger(input.limitationDays)
+      || input.limitationDays <= 0 || input.limitationDays > MAX_LIMITATION_DAYS)) {
+      return `مدّة تقادمٍ غير صالحة — عددُ أيامٍ صحيحٌ موجبٌ لا يتجاوز ${MAX_LIMITATION_DAYS} (T-33)`;
+    }
     if (input.penalties.length === 0) return 'لا قانون بلا عقوبة معلنة';
     for (const p of input.penalties) {
       if (!PENALTY_KINDS.includes(p)) return `عقوبة غير معلنة: ${p}`;
