@@ -95,6 +95,8 @@ export interface PartnerRiskDeps {
   readonly kinds: readonly DeclaredContractKind[];
   /** أوزان عوامل المخاطر المعلنة في config/contracts.yaml (ثابت 1) */
   readonly riskFactors: Readonly<Record<string, number>>;
+  /** T-63 (W-2026-055): إضافةُ كلِّ زوجٍ مجتمع «عامل+عامل» — من `risk_interactions` */
+  readonly riskInteractions?: Readonly<Record<string, number>>;
   /** سقف الدرجة المقبولة — من التهيئة لا من المقدِّر (ثابت 5) */
   readonly maxScore: number;
   /** مدة صلاحية التقدير (ثابت 3) */
@@ -202,6 +204,11 @@ export class PartnerRisk {
       }
       score += weight;
     }
+    // T-63: الجمعُ الخطّيُّ يُسوّي زوجًا خطِرًا بمثلَيه — فيُضاف على كلِّ زوجٍ معلنٍ اجتمع
+    const interactions: string[] = [];
+    for (const [pair, surcharge] of Object.entries(this.deps.riskInteractions ?? {})) {
+      if (pair.split('+').every((f) => seen.has(f))) { score += surcharge; interactions.push(pair); }
+    }
 
     this.sequence += 1;
     const assessment: RiskAssessment = {
@@ -216,7 +223,7 @@ export class PartnerRisk {
     this.sink?.record('partner_assessment', { assessment, sequence: this.sequence });
     const entry = this.deps.audit.append(this.assessorId, 'partner_risk_assessed', {
       assessmentId: assessment.assessmentId, kindId: kind.id, counterparty: kind.counterparty,
-      factors: assessment.factors, score, baseWeight: kind.riskWeight,
+      factors: assessment.factors, score, baseWeight: kind.riskWeight, interactions,
       maxScore: this.deps.maxScore, acceptable: this.isAcceptable(kind.id, now),
       expiresAt: assessment.expiresAt,
     });

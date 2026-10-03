@@ -114,6 +114,7 @@ export function composeEconomy(
       maxValue: k.max_value, riskWeight: k.risk_weight,
     })),
     riskFactors: contractsConfig.risk_factors,
+    ...(contractsConfig.risk_interactions ? { riskInteractions: contractsConfig.risk_interactions } : {}),
     maxScore: contractsConfig.policy.max_risk_score,
     reviewIntervalMs: contractsConfig.policy.review_interval_days * 24 * 60 * 60 * 1000,
     breachPenalty: contractsConfig.policy.breach_penalty,

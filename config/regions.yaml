@@ -17,3 +17,5 @@ regions:
     governor: "unassigned"
     autonomy_level: "limited"
 collective_override_of_king: forbidden
+# T-42: سقفُ النطاقات المفوَّضة لإقليمٍ واحد — إقليمٌ يُفوَّض كلَّ ما ليس محفوظًا يصير قوّةً موازية
+max_delegated_domains_per_region: 4

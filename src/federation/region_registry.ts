@@ -130,6 +130,12 @@ export class RegionRegistry {
     const current = this.regions.get(regionId);
     if (!current || current.dissolvedAt !== null) return refuse('إقليم غير قائم');
     if (domains.length === 0) return refuse('لا تفويض بلا نطاق معلن');
+    if (new Set(domains).size !== domains.length) return refuse('نطاقٌ مكرَّر في التفويض');
+    if (domains.length > this.deps.maxDomainsPerRegion) {
+      return refuse(`تفويضٌ فوق السقف المعلن: ${domains.length} > ${this.deps.maxDomainsPerRegion} (T-42)`, {
+        requested: domains.length, cap: this.deps.maxDomainsPerRegion,
+      });
+    }
     if (command.payload.issuedBy === regionId) {
       return refuse('الإقليم لا يفوّض نفسه (RULE-005)');
     }

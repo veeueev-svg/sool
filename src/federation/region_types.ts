@@ -71,6 +71,8 @@ export interface RegionRegistryDeps {
   readonly gateway: CrownGateway;
   /** معرّفات الأقاليم المعلنة في config/regions.yaml (ثابت 1) */
   readonly declaredRegions: readonly string[];
+  /** T-42: سقفُ النطاقات المفوَّضة لإقليمٍ واحد — من `max_delegated_domains_per_region` */
+  readonly maxDomainsPerRegion: number;
   readonly actorId?: EntityId;
 }
 
