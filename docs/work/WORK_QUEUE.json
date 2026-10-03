@@ -1347,6 +1347,59 @@
       "documentation_impact": "PROGRESS.md (وثيقة حال مشتركة — تُحدَّث بلا حجز) · لا أثر في CHANGELOG أو ARCHITECTURE أو version.json",
       "discoveries": "لا شيء",
       "verification": "PR #28 مدموج · CI أخضر · npm test 2354/2354 · npm run verify رمز 0"
+    },
+    {
+      "id": "W-2026-062",
+      "title": "مجلسُ المراجعة بأمرٍ ملكيّ: لا VERIFIED إلّا بإجماع GPT 5.6 وGrok 4.6 (RULE-020)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 88)",
+      "reviewer": "مجلس المراجعة (RULE-020)",
+      "area": "حوكمة",
+      "phase": 40,
+      "status": "IN_PROGRESS",
+      "progress_items": [
+        "T-115ب"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "GOVERNING_RULE.md",
+        "docs/decisions/ADR-0054-review-council.md",
+        "docs/work/REVIEW_COUNCIL.md",
+        "docs/work/REVIEW_COUNCIL.json",
+        "docs/work/council/README.md",
+        "scripts/review_council.ts",
+        "tests/governance/review_council.test.ts",
+        "docs/test-reports/phase-40-W-2026-062.md",
+        "docs/work/orders/W-2026-062.md"
+      ],
+      "excluded": [
+        "COMPLETION_CRITERIA.md و docs/audit/criteria/ — لا ترقيةَ لمعيار (RULE-004)",
+        "scripts/check_work.mjs و package.json و .github/workflows/ci.yml — محجوزةٌ بـW-2026-041/046/040",
+        "docs/royal-orders/ — لا أمرَ بلا auditId مقيَّد (C-20)"
+      ],
+      "acceptance": [
+        "أمرُ المالك مسجَّلٌ بنصّه في ADR-0054",
+        "RULE-020 في GOVERNING_RULE.md وRULE-019 يشير إليه",
+        "حارسٌ في npm test يُسقط VERIFIED بلا إجماعٍ محفوظ على الحال الحقيقيّ",
+        "npm run verify → 0"
+      ],
+      "evidence": [
+        "tests/governance/review_council.test.ts — 12/12",
+        "قياسٌ سلبيّ: ترقيةُ W-2026-038 إلى VERIFIED بلا محضر أسقطت الحارس",
+        "docs/test-reports/phase-40-W-2026-062.md"
+      ],
+      "next_step": "عقدُ أوّل جلسةٍ للمجلس على بنود REVIEW",
+      "created_at": "2026-10-03",
+      "updated_at": "2026-10-03",
+      "documentation_impact": [
+        "PROGRESS.md",
+        "version.json",
+        "CHANGELOG.md"
+      ],
+      "discoveries": [
+        "لا سجلَّ DISC ولا RK في المستودع قبل الأمر — عُرِّفا: DISC = حقلُ discoveries في صفّ البند، RK = دَينٌ بمعرّف T-NNN في PROGRESS.md"
+      ]
     }
   ]
 }
