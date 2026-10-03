@@ -1188,7 +1188,7 @@
       "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلٌّ وفق RULE-019",
       "area": "تدقيق وقياس",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "T-119"
       ],
@@ -1211,7 +1211,7 @@
       "next_step": "حكم المراجع في التصحيح (RULE-004)",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-03",
-      "verification": "npm test 2352/2352 · npm run verify 0 · check:work 0 · check_documentation 0"
+      "verification": "PR #23 مدمج · CI أخضر (بوابة التاج 5m3s + شاهد الحصر 1m4s) · npm test 2352/2352 · npm run verify 0 · main بعد الدمج أخضر"
     }
   ]
 }
