@@ -1,0 +1,54 @@
+Provider: OpenAI; model: ChatGPT. I cannot determine the exact model identifier.
+Isolation: Read the mandatory /tmp/review-W-2026-059/reviewer-gpt/PROMPT.md and evidence only under /tmp/review-W-2026-059/reviewer-gpt/bundle/; read nothing else. The mandatory prompt is the sole exception to the bundle-only declaration.
+
+Bundle verification: `sha256sum -c MANIFEST.sha256` exited 1: 33 entries OK, only the manifest's self-entry FAILED. The separately computed manifest SHA-256 is 1feb73e407bd1776cd89b452decadf8909b241ca08c817f6ae20c5a724ad7736, exactly the expected root; its embedded self-hash is instead 01887804bbee48f1c93a55135c17667047ed3324c7834b8af6b1c30e1d17f7a1. Payload checksums passed; full manifest verification did not. ([Manifest](bundle/MANIFEST.sha256))
+
+## VERDICT TABLE
+
+| Item | Verdict | Named defect | Decisive reason |
+|---|---|---|---|
+| T-85 | KEEP_OPEN | INDEPENDENT_REMEASUREMENT_AND_MET_VERDICT_MISSING | The row requires independent measurement yielding an updated MET audit judgment, not merely a passing benchmark summary; this package supplies neither independent remeasurement at the declared 3M configuration nor grounds for that judgment. ([T-85 row](bundle/criterion/C-17-T-85-rows.txt), [audit rules](bundle/criterion/COMPLETION_CRITERIA-head.md)) |
+| C-17 | UPHELD_GAP | REAL_CONTAINER_EXTERNAL_CONDITION_UNSATISFIED | T-124 explicitly ties C-17 to a real managed-container boot report, repeatable measurement and chain record ID; none is supplied, and the gateway-only measurement also does not demonstrate full population management. ([external conditions](bundle/criterion/COMPLETION_CRITERIA-blockers-and-external.md), [benchmark](bundle/source/bench_scale.ts)) |
+
+## T-85 — KEEP_OPEN
+
+The exact row requires an independent measurement that raises the judgment to MET, performed by the audit office and evidenced by an updated `docs/audit/criteria/C-17.md`; the governing rules explicitly distinguish independent remeasurement from reliance on the implementer's report. ([T-85 row](bundle/criterion/C-17-T-85-rows.txt), [audit rules, lines 11–19](bundle/criterion/COMPLETION_CRITERIA-head.md))
+
+The historical configuration objection is repaired: the committed diff and supplied configuration declare population_max=3,000,000, identity_slots.total=3,000,000, 16 shards and per_shard_max=200,000, with thresholds unchanged at 10/25ms. ([committed diff](bundle/diff/config-and-test.diff), [scale configuration](bundle/source/scale.yaml), [quota configuration](bundle/source/quotas.yaml))
+
+All seven declared-config raw reports agree with their summary, including rounded distribution times: worst p99=2.470ms, worst maximum=20.840ms in run 5, distribution=16,964.461–18,667.003ms, and peak RSS=2,243.8MiB. ([declared summary](bundle/measurements/C-17-bench_multi_3m-declared.txt), [run 3](bundle/measurements/C-17-bench_multi_3m-declared-run-3.txt), [run 5](bundle/measurements/C-17-bench_multi_3m-declared-run-5.txt), [run 2](bundle/measurements/C-17-bench_multi_3m-declared-run-2.txt))
+
+The three post-T119 reports likewise match their summary, but still name an unbundled /tmp configuration; they are corroboration, not declared-config evidence. ([post-T119 summary](bundle/measurements/C-17-bench_multi_3m-post-T119.txt), [post-T119 run 1](bundle/measurements/C-17-bench_multi_3m-post-T119-run-1.txt), [post-T119 run 2](bundle/measurements/C-17-bench_multi_3m-post-T119-run-2.txt), [post-T119 run 3](bundle/measurements/C-17-bench_multi_3m-post-T119-run-3.txt))
+
+Independent subprocesses are not independent auditors: the harness starts sequential Node processes, but the package identifies no independent operator or independent rerun for the new 3M measurements. ([harness, lines 55–78](bundle/source/bench_scale_multi.ts), [declared summary](bundle/measurements/C-17-bench_multi_3m-declared.txt))
+
+I verified evidence and source text, not executable performance; the package lacks the dependencies and runtime needed to independently repeat the benchmark. Do not describe this review as remeasurement. ([benchmark imports](bundle/source/bench_scale.ts), [manifest inventory](bundle/MANIFEST.sha256))
+
+## C-17 — UPHELD_GAP
+
+REAL_CONTAINER_EXTERNAL_CONDITION_UNSATISFIED: T-124 requires an external environment provider, an actual managed-container boot report, reproducible measurement and a chain record ID; no such evidence appears in the bundle. Its omission from the current list of four named blockers does not erase its explicit C-17 association, and closing T-85 would not fulfill it. ([external conditions](bundle/criterion/COMPLETION_CRITERIA-blockers-and-external.md), [manifest inventory](bundle/MANIFEST.sha256))
+
+GATEWAY_SUCCESS_PATH_UNPROVEN: after registering 3M identities, the benchmark times command issuance plus `gateway.authorize`, discards every authorization result, and performs no measured registration or task execution in that loop. Fast rejection is compatible with its reported timings; successful authorization cannot be established without the absent gateway implementation and result assertions. ([benchmark, lines 22–40](bundle/source/bench_scale.ts), [manifest inventory](bundle/MANIFEST.sha256))
+
+POPULATION_MANAGEMENT_WORKLOAD_UNMEASURED: the new benchmark exercises identity registration followed by 1,000 serial gateway calls, not scheduler fairness, task completion, concurrent population activity or lifecycle operations at 3M. The declared policy describes identity/quota/scheduling rather than OS processes, while the separate executive-agent registry intentionally remains capped at 64; identity count is not evidence of millions of executing agents. ([benchmark](bundle/source/bench_scale.ts), [scale configuration](bundle/source/scale.yaml), [loader, lines 16 and 36–39](bundle/source/scale.ts), [quota configuration](bundle/source/quotas.yaml))
+
+STALE_C17_PROBE_POPULATION: the institutional C-17 probe hardcodes N=1,000,000 while calling it the declared cap; it queues only 120 tasks and its PASS condition does not require any number of tasks served. Its gateway timer also excludes command issuance, unlike the new benchmark, and uses `appoint_official` rather than `create_agent`. This instrument cannot validate the revised 3M contract. ([institutional probe, lines 8–35](bundle/source/probes_institutions-C-17-excerpt.mjs), [benchmark, lines 37–40](bundle/source/bench_scale.ts))
+
+The supplied owner decision legitimately authorizes the cap change and explicitly excludes distribution from the response threshold; I therefore do not treat the 17–19 second initialization as a 25ms response breach. It does not change the criterion text, authorize bypassing independent audit, waive T-124 or prove the management workload. ([owner decision](bundle/decision/owner-decision-2026-10-03.md), [audit rules](bundle/criterion/COMPLETION_CRITERIA-head.md), [external conditions](bundle/criterion/COMPLETION_CRITERIA-blockers-and-external.md))
+
+The 2,352 passing tests and CI summaries establish reported gate success, not fulfillment of the missing external condition or the independent measurement obligation; the verification summary itself still reports seven gaps and four named blockers. ([verification summary](bundle/gates/npm-run-verify-summary.txt), [CI summary](bundle/gates/ci.txt))
+
+## RESIDUAL DEBT
+
+- TAIL_CONFIDENCE_LIMITED: seven runs contain 1,000 measured samples each after 100 excluded warmups; maximum headroom is 4.160ms (16.64%) and p99 headroom 7.530ms. These are empirical passes, not a sustained-load or worst-case guarantee; no prescribed larger sample requirement is supplied. ([declared summary](bundle/measurements/C-17-bench_multi_3m-declared.txt), [run 5](bundle/measurements/C-17-bench_multi_3m-declared-run-5.txt))
+- HEAP_AND_ENVIRONMENT_DEPENDENCE: declared runs use a 6,144MiB heap allowance, with peak RSS=2,243.8MiB; hardware, Node version and competing load are not recorded. ([run 2](bundle/measurements/C-17-bench_multi_3m-declared-run-2.txt))
+- FROZEN_CLOCK_AND_NO_CHURN: one fixed `now` is reused for registration, warmup and measurements; lease expiry, changing time and population churn are untested. ([benchmark, lines 20–40](bundle/source/bench_scale.ts))
+- MIN_RUNS_VALIDATION_WEAK: only `runs` is validated; a supplied nonnumeric `--min-runs` becomes NaN and defeats the minimum-run comparison. This is not evidence that the seven reported runs failed, but the acceptance tool is not fully fail-closed. ([harness, lines 36–42](bundle/source/bench_scale_multi.ts), [tail gate, lines 110–114](bundle/source/tail_gate.ts))
+
+## PACKAGE DEFECTS
+
+- MANIFEST_SELF_HASH_INVALID: expected external root matches and all payload entries pass, but the embedded manifest self-entry makes the mandatory check fail. ([manifest](bundle/MANIFEST.sha256))
+- REPRODUCTION_DEPENDENCIES_ABSENT: no bootstrap, gateway, population registry, scheduler implementation, package metadata or built benchmark is bundled; successful paths, fairness and source-to-executable correspondence cannot be checked. ([manifest inventory](bundle/MANIFEST.sha256), [benchmark imports](bundle/source/bench_scale.ts))
+- FULL_INVOCATIONS_NOT_PRESERVED: summary generation records only `--runs`, omitting actual config, heap, label, output and minimum-run options; the post-T119 summary therefore does not preserve its /tmp-config and 5,120MiB invocation. Default-config raw command text also omits the config argument that the harness actually passes. ([harness, lines 56–62 and 102–105](bundle/source/bench_scale_multi.ts), [post-T119 summary](bundle/measurements/C-17-bench_multi_3m-post-T119.txt), [post-T119 run 1](bundle/measurements/C-17-bench_multi_3m-post-T119-run-1.txt))
+- HEADROOM_POLICY_CONSUMER_ABSENT: scale.yaml declares acceptance_population=50,000 and acceptance_headroom_percent=20, but the supplied tail gate does not consume either; the package does not establish where that acceptance margin applies. Do not silently invent either an exemption or an additional mandatory threshold. ([scale configuration](bundle/source/scale.yaml), [tail policy and evaluator](bundle/source/tail_gate.ts))
+- HISTORICAL_CONTRADICTION_NOT_FULLY_RECONCILABLE: the prior verdict reports a historical 17,010ms distribution claim contradicted by 192,867–210,155ms raw results; that offending historical report and the T119 implementation change are absent. Current post-T119 results near 18–19 seconds do not retroactively correct the old claim. ([prior verdict](bundle/criterion/C-17-prior-verdict.md), [old raw summary](bundle/measurements/C-17-bench_multi_3m.txt), [post-T119 summary](bundle/measurements/C-17-bench_multi_3m-post-T119.txt), [manifest inventory](bundle/MANIFEST.sha256))

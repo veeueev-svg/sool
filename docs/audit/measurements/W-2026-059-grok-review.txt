@@ -1,0 +1,58 @@
+xAI Grok (task label: Grok; exact model snapshot/identifier is not disclosed in this session, so I cannot state it).
+Isolation: read /tmp/review-W-2026-059/reviewer-grok/PROMPT.md only as the mandatory task instruction, then only files under /tmp/review-W-2026-059/reviewer-grok/bundle/. No repository, no /home/user/workspace, no other /tmp path, no other reviewer directory, no web search, no external service.
+
+Bundle verification: `sha256sum -c MANIFEST.sha256` — 32 content files OK; `./MANIFEST.sha256` FAILED. `sha256sum MANIFEST.sha256` = 1feb73e407bd1776cd89b452decadf8909b241ca08c817f6ae20c5a724ad7736. Matches the expected root. The manifest's own line is 01887804bbee48f1c93a55135c17667047ed3324c7834b8af6b1c30e1d17f7a1, which is not the file hash. Content hashes otherwise match.
+
+## VERDICT TABLE
+| Item | Verdict | Defect |
+|---|---|---|
+| T-85 | KEEP_OPEN | NO_INDEPENDENT_MEASUREMENT_TO_MET |
+| C-17 | UPHELD_GAP | OFFICIAL_PROBE_STILL_MEASURES_ONE_MILLION |
+
+## T-85 — KEEP_OPEN · NO_INDEPENDENT_MEASUREMENT_TO_MET
+
+Row (criterion/C-17-T-85-rows.txt:4 and criterion/COMPLETION_CRITERIA-blockers-and-external.md:31): independent measurement that raises «اكتُفي بتقرير المنفَّذ» to مستوفى; fulfiller ديوان التدقيق; proof is an updated judgment in `docs/audit/criteria/C-17.md`. Closure order (same file, lines 37–39): auditor-repeated measurement, then upgrade that criteria file, then the row. No other order.
+
+The bundle does not satisfy that row.
+
+- Proof artifact absent. criterion/C-17-prior-verdict.md is still حكم فجوة (2026-08-22 and W-2026-038). No updated C-17.md saying مستوفى.
+- The new logs are the implementer's bench, not an audit remeasurement. source/bench_scale_multi.ts and source/tail_gate.ts name the owner وزارة البنية and state the tool does not close the item (RULE-004). measurements/C-17-bench_multi_3m-declared.txt ends with that same deferral. Nothing in the bundle says ديوان التدقيق re-ran the declared 3M case. Contrast the prior verdict's explicit «أعاد المدقّق القياس بنفسه».
+- gates/npm-run-verify-summary.txt at commit bd6936e8e36fb48d685015b04755cfcd0420b56f still reports فجوة 7 and 4 named blockers. The tree has not closed T-85.
+- The measurement also does not raise C-17 to met (next section). A row whose purpose is to lift the criterion to مستوفى is not met by logs that leave it a gap.
+
+Owner config edits do not fulfill a row whose who-column is the audit bureau.
+
+## C-17 — UPHELD_GAP · OFFICIAL_PROBE_STILL_MEASURES_ONE_MILLION
+
+Do not upgrade. The prior cap defect in config/scale.yaml is fixed on paper. That is not every condition these files tie to C-17.
+
+Primary defect. source/probes_institutions-C-17-excerpt.mjs:8 hardcodes `N = 1000000` and comments that this is the declared cap in config/scale.yaml. source/scale.yaml now has `population_max: 3000000`. The comment is false. The institutional C-17 check still registers one million, then 120 scheduler tasks, then 1000 `appoint_official` authorizations. It cannot prove «ملايين». diff/config-and-test.diff does not touch this probe. The prior judgment's raw line (criterion/C-17-prior-verdict.md) is this probe at سكان=1000000. No replacement probe line at 3,000,000 is in the bundle.
+
+That alone upholds the gap. The following are independent blockers; fixing the probe constant would not clear them.
+
+Narrow call, not management. source/bench_scale.ts registers identity batches, warms up 100 `create_agent` authorizations, then times 1000 more `create_agent` authorizations and discards the return value. It never calls the scheduler. It never asserts `authorize` succeeded. It never operates on the registered ids (`agent:bench-*`); the timed commands are new `gateway:bench-*` / `gateway:warmup-*` ids, issued after `population` is already at `population_max`. Policy default is deny (source/scale.yaml). A fast deny at a full cap is consistent with the numbers and is not ruled out. Gateway source is not in the bundle, so success is not shown. The criterion probe's own title is registration plus fair scheduling. The 3M bench dropped scheduling. Latency barely moves versus the 1M declared runs (measurements/C-17-bench_multi.txt worst p99 1.929ms, worst max 15.499ms; declared 3M worst p99 2.470ms, worst max 20.840ms). Tripling the registry does not show a management path that depends on those agents.
+
+Agent registry is still 64. source/quotas.yaml `agents.population_max: 64`, `spawn_rate_per_minute: 4`. source/scale.ts states this cap is the phase-13 executive agent registry and that scale policy is a different identity/quota/scheduling registry, not a system process. source/scale.yaml line 1 says the same. The criterion text is إدارة ملايين الوكلاء. The owner decision raises identity slots, not the agent cap. Three million identity records with an agent cap of 64 is not millions of agents.
+
+External condition T-124 (criterion/COMPLETION_CRITERIA-blockers-and-external.md:28) is tied to C-17. Required proof: boot report on a real managed container runtime, repeatable measurement, chain log id, by a party outside the repo. No such report is in the bundle. gates/ci.txt is PR #25 CI pass (runs 37107152226 / 37107152227), not that proof. W-2026-038 already refused to close C-18 on its linked external-party condition. Same treatment here.
+
+Owner decision limits (decision/owner-decision-2026-10-03.md). Raising `population_max` / `per_shard_max` / `spawn_rate_per_minute` / `identity_slots.total` is within owner config authority, and the numbers are consistent: 16 × 200000 = 3200000 ≥ 3000000, and identity_slots.total matches population_max, so source/scale.ts would load. The decision does not amend COMPLETION_CRITERIA.md (it says so). It cannot rewrite «داخل عتبة الاستجابة», close T-85, satisfy T-124, or replace an auditor judgment (criterion/COMPLETION_CRITERIA-head.md: RULE-004 — auditor judges, steward does not exceed the judgment). Section 2 is empty. Treating distribution time as outside the threshold is an unamended interpretation, not a criterion change. W-2026-038 also requires both reviewers to agree before a row upgrade; this file is one reviewer.
+
+Declared 3M numbers, for the record, do not rescue the above. measurements/C-17-bench_multi_3m-declared.txt: 7/7, config labeled config/scale.yaml, ceiling 3000000, worst p99 2.470ms (run 5), worst max 20.840ms (run 5), slowest distribution 18667ms, peak RSS 2243.8MiB. Raw runs 1–7 match those gateway, population, and RSS figures; distribution in the summary is `toFixed(0)` of the raw values (run 1: 17890.948 → 17891; run 3: 16964.461 → 16964; run 7: 18208.959 → 18209). Timestamps are sequential, no overlap, from 2026-10-03T07:32:53.595Z to 2026-10-03T07:35:07.406Z. Each raw bench line prints `/home/user/workspace/sool/config`, ceiling 3000000, shards 16, per-shard 200000, heap `--max-old-space-size=6144`, 100 warmup + 1000 samples. That is not `/tmp/scale3m`. The post-T119 files still are `/tmp/scale3m` and are not the declared evidence. Commit bd6936e8 is 2026-10-03 10:46:38 +0300, about 11 minutes after the runs; the printed shard caps match the committed yaml. Tail vs thresholds: p99 headroom 7.530ms; max headroom 4.160ms (16.6% under 25ms). n=1000. p99 is one order statistic (`ceil(n*0.99)-1` = index 989). source/scale.yaml `acceptance_headroom_percent: 20` would put the max ceiling at 20.0ms; 20.840ms misses it. source/tail_gate.ts never reads that field or `acceptance_population: 50000`.
+
+## RESIDUAL DEBT
+- UNEXPLAINED_DISTRIBUTION_SPEEDUP: August /tmp 3M raw distribution 192866.903 / 210155 / 203590.223 ms (measurements/C-17-bench_multi_3m*.txt) versus October declared 16964–18667 ms and post-T119 /tmp 18472–18830 ms, with RSS still ~2.1 GiB. diff/config-and-test.diff does not touch registration code. Not comparable to the August baseline. Not used as the blocking defect only because the owner excluded distribution from the threshold and the gateway samples vary run to run.
+- TAIL_MAX_MISSES_20_PERCENT_HEADROOM: worst declared max 20.840ms vs 20.0ms if `acceptance_headroom_percent: 20` applies. Enforcer not in the bundled judge. n=1000 cannot characterize the far tail. Max spread across 7 runs is 14.863–20.840ms.
+- HEAP_6144_UNDECLARED_IN_POLICY: 3M runs require `--max-old-space-size=6144`. Not in scale.yaml. Peak RSS 2243.8MiB. Announced only on the command line.
+- SPAWN_RATE_3M_UNMEASURED: `spawn_rate_per_minute: 3000000` is declared and never timed. Agent spawn rate remains 4.
+- PERCENTILE_INDEX_OFF_BY_ONE: probe uses `floor(n*0.99)` (index 990); bench uses `ceil(n*p)-1` (index 989).
+- DUAL_REVIEWER_RULE_STILL_BINDS: criterion/C-17-prior-verdict.md — no row upgrade without both reviewers. This verdict cannot upgrade alone even if it had been favorable.
+- SUMMARY_COMMAND_INCOMPLETE: bench_scale_multi.ts hardcodes `npm run bench:tail -- --runs N` and omits heap, label, min-runs, and config. Raw files carry the real command.
+
+## PACKAGE DEFECTS
+- MANIFEST_SELF_HASH_MISMATCH: `sha256sum -c` fails on `./MANIFEST.sha256`. Listed 01887804bbee48f1c93a55135c17667047ed3324c7834b8af6b1c30e1d17f7a1; actual 1feb73e407bd1776cd89b452decadf8909b241ca08c817f6ae20c5a724ad7736. Other entries OK. Root matches the expected value.
+- OWNER_DECISION_TRUNCATED: decision/owner-decision-2026-10-03.md ends at an empty `## 2) النطاق المحجوز`.
+- UPDATED_C17_MD_ABSENT: the T-85 proof path is not in the bundle. Only the prior gap verdict is.
+- POPULATION_AND_GATEWAY_SOURCE_ABSENT: cannot confirm `registerBatch` stores 3M agent records or what `authorize` does at cap. Bench and tail parser only.
+- PROBE_COMMENT_CONTRADICTS_SCALE_YAML: probe says 1000000 is the declared cap; scale.yaml says 3000000.
+- BENCH_HEADER_STALE: source/bench_scale.ts still states the constant «مليون هوية فعلية» while the code reads `population_max`.
