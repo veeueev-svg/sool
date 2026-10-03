@@ -5,22 +5,29 @@
   "members": [
     {
       "id": "gpt",
-      "model": "GPT 5.6",
+      "model": "GPT 5.6 Terra",
       "provider": "OpenAI",
-      "family": "GPT"
+      "family": "GPT",
+      "runtime_id": "gpt_5_6_terra",
+      "availability_checked_at": "2026-10-03"
     },
     {
       "id": "grok",
-      "model": "Grok 4.6",
+      "model": "Grok 4.7",
       "provider": "xAI",
-      "family": "Grok"
+      "family": "Grok",
+      "runtime_id": "grok_4_7",
+      "availability_checked_at": "2026-10-03"
     },
     {
       "id": "gemini",
       "model": "Gemini 3.8 Flash",
       "provider": "Google",
-      "family": "Gemini"
+      "family": "Gemini",
+      "runtime_id": "gemini_3_8_flash",
+      "availability_checked_at": "2026-10-03"
     }
   ],
-  "expansion": "العضوُ الثالث (Gemini 3.8 Flash · Google) أُضيف بأمر المالك في 2026-10-03 (ADR-0054 §6). ويتّسع المجلسُ لعضوٍ رابعٍ أو أكثر بعائلةٍ مختلفةٍ عن كلِّ عضوٍ قائم وعن عائلةِ المنفّذ، ويُسجَّل القرارُ قبل انعقاد الجلسة. والإجماعُ يبقى قاعدةَ القرار أيًّا كان العدد."
+  "expansion": "العضوُ الثالث (Gemini 3.8 Flash · Google) أُضيف بأمر المالك في 2026-10-03 (ADR-0054 §6). ويتّسع المجلسُ لعضوٍ رابعٍ أو أكثر بعائلةٍ مختلفةٍ عن كلِّ عضوٍ قائم وعن عائلةِ المنفّذ، ويُسجَّل القرارُ قبل انعقاد الجلسة. والإجماعُ يبقى قاعدةَ القرار أيًّا كان العدد.",
+  "availability_note": "تحقّقٌ 2026-10-03: شُغّل وكيلٌ بمعرّف التشغيل لكلّ عضو فأجاب الثلاثة. Grok 4.6 الذي سمّاه الأمرُ غيرُ متاح على منصّة التشغيل، فاستُبدل بـGrok 4.7 (العائلة والمزوّد نفساهما) بأمر المالك «حدّث المجلس تلقائيًا» (ADR-0054 §7). الهويّةُ الذاتيّة غيرُ موثوقة: gemini_3_8_flash عرّف نفسَه «Gemini 3.7 Flash»؛ فالمرجعُ معرّفُ التشغيل لا إقرارُ النموذج."
 }
