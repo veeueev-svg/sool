@@ -69,7 +69,11 @@
         "docs/audit/verdict.md",
         "docs/audit/criteria",
         "docs/audit/independence",
-        "docs/audit/measurements",
+        "docs/audit/measurements/W-2026-038-baseline.txt",
+        "docs/audit/measurements/W-2026-038-bundle-manifest.txt",
+        "docs/audit/measurements/W-2026-038-evidence-package.md",
+        "docs/audit/measurements/W-2026-038-gpt-review.txt",
+        "docs/audit/measurements/W-2026-038-grok-review.txt",
         "docs/test-reports/phase-39-W-2026-038.md",
         "COMPLETION_CRITERIA.md"
       ],
@@ -1174,7 +1178,40 @@
       "evidence": "npm run verify ✓ · npm run check:work ✓ · تقرير: docs/test-reports/phase-40-W-2026-057.md",
       "next_step": "حكم المراجع في التصحيح (RULE-004)",
       "created_at": "2026-10-03",
-      "updated_at": "2026-10-03"
+      "updated_at": "2026-10-03",
+      "verification": "PR #22 مدمج · CI أخضر (بوابة التاج 4m3s + شاهد الحصر 54s) · npm test 2352/2352 · npm run verify 0 · main بعد الدمج أخضر"
+    },
+    {
+      "id": "W-2026-058",
+      "title": "تصحيحُ ادعاءِ قياسٍ غيرِ مثبتٍ في phase-39-T119.txt — 3M بعد الإصلاح بلا خامّ",
+      "owner": "المساعد الآلي — Perplexity Computer",
+      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلٌّ وفق RULE-019",
+      "area": "تدقيق وقياس",
+      "phase": 40,
+      "status": "IN_PROGRESS",
+      "progress_items": [
+        "T-119"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "docs/audit/measurements/phase-39-T119.txt",
+        "docs/test-reports/phase-40-W-2026-058.md"
+      ],
+      "excluded": "C-17-bench_multi_3m*.txt (خام لا يُمس) · COMPLETION_CRITERIA.md · config/scale.yaml · C-17.md",
+      "acceptance": [
+        "phase-39-T119.txt يحمل erratum يعلن ان 17010ms غير مثبت بخام",
+        "erratum يذكر قيم الخام ويصحح اعلان RULE-008",
+        "npm run verify رمز 0",
+        "npm run check:work رمز 0",
+        "تقرير في docs/test-reports/phase-40-W-2026-058.md"
+      ],
+      "evidence": "npm run verify ✓ · check:work ✓ · تقرير: docs/test-reports/phase-40-W-2026-058.md",
+      "next_step": "حكم المراجع في التصحيح (RULE-004)",
+      "created_at": "2026-10-03",
+      "updated_at": "2026-10-03",
+      "verification": "npm test 2352/2352 · npm run verify 0 · check:work 0 · check_documentation 0"
     }
   ]
 }
