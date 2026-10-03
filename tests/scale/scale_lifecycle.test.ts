@@ -95,7 +95,7 @@ test('تغيير سقف طابور scale.yaml يغير السلوك الفعلي
   const s = bootstrapState({ now: T0, configDir: dir }); assert.equal(s.scheduler.enqueue('one', 'a').ok, true); assert.equal(s.scheduler.enqueue('two', 'b').ok, false);
 });
 test('تهيئة سقف شرائح لا يساوي السكان ترفض قبل الإقلاع', () => {
-  const dir = copiedScale((text) => text.replace('per_shard_max: 70000', 'per_shard_max: 62499'));
+  const dir = copiedScale((text) => text.replace(/per_shard_max: \d+/, 'per_shard_max: 1'));
   assert.throws(() => loadScale(dir), (error: unknown) => (error as { code?: string }).code === 'CONFIG_SCALE_SHARD_CAP_MISMATCH');
 });
 test('تهيئة إعادة توازن صامتة ترفض قبل الإقلاع', () => {
