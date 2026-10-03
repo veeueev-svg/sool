@@ -109,7 +109,7 @@ export { RoyalArchive } from '../data/royal_archive';
 export type { ArchiveSnapshot } from '../data/royal_archive';
 export { RetentionPolicy, DEFAULT_RETENTION_CLASSES, HOLD_AUTHORITIES } from '../data/retention';
 export type { RetentionClass, SweepReport } from '../data/retention';
-export { LawRegistry, PENALTY_KINDS, PENALTY_SEVERITY, inScope } from '../law/statutes';
+export { LawRegistry, PENALTY_KINDS, PENALTY_SEVERITY, inScope, LIMITATION_DAYS_BY_SEVERITY } from '../law/statutes';
 export type { Statute, StatuteInput, StatuteSeverity, PenaltyKind, StatuteResult } from '../law/statutes';
 export { Court, PROSECUTION_AUTHORITIES, TRIAL_COURTS, PUBLIC_DEFENDER } from '../law/courts';
 export type { LegalCase, CaseStatus, ChargeInput, Ruling, Defense, AppealOutcome, CaseResult } from '../law/courts';
@@ -139,7 +139,7 @@ export {
 } from '../federation/dispute_resolution';
 export type { Dispute, Ruling as DisputeRuling, RemedyKind, DisputeResult } from '../federation/dispute_resolution';
 export {
-  RegionMonitor, REGION_AUDITOR, VACANCY_GRACE_MS, DISPUTE_GRACE_MS,
+  RegionMonitor, REGION_AUDITOR, VACANCY_GRACE_MS, DISPUTE_GRACE_MS, ESCALATION_GRACE_MS, PETITION_GRACE_MS,
 } from '../federation/region_monitor';
 export type { RegionFlag, FlagKind } from '../federation/region_monitor';
 export { Ledger, FINANCE_MINISTRY, DEBIT_NATURED, isValidAmount } from '../economy/ledger';

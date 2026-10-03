@@ -43,7 +43,7 @@ export function composeOperations(
   const {
     audit, gateway, killSwitch, heartbeat, terminationRoll, permissions,
     unit, factories, hospitals, retention, regions, governors, regionMonitor, loadLedger,
-    journal, budget, payments, contractTermination, humanResearch,
+    journal, budget, payments, contractTermination, humanResearch, court,
   } = parts;
 
   // 1) التشغيل المحدود (المرحلة 36) — نطاق مُنفَّذ عند البوابة، ومراقب بمؤقّت حقيقي،
@@ -90,7 +90,7 @@ export function composeOperations(
       // W-2026-047: حكمُ الوقتِ في خمس وحدات يُطبَّق بمؤقّت المراقب لا بنداءِ سائل
       deadlines: {
         budget, payments, settlements: contractTermination, services: hospitals,
-        research: humanResearch, observer: productionConfig.policy.observer_authority,
+        research: humanResearch, justice: court, observer: productionConfig.policy.observer_authority,
       },
     },
     buildWatchProbes({

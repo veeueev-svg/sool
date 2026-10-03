@@ -45,12 +45,18 @@ export interface ResearchLapses {
   lapsed(now?: number): { readonly researches: readonly string[]; readonly lessons: readonly string[] };
 }
 
+/** T-36 (W-2026-052): ساعةُ العدالة — مدّةُ الدفاع تُنتج أثرها بمدخل المحكمة نفسِه */
+export interface JusticeClock {
+  defaultSilentDefenses(now?: number): readonly string[];
+}
+
 export interface DeadlineDeps {
   readonly budget: BudgetLapses;
   readonly payments: PaymentDeadlines;
   readonly settlements: SettlementDeadlines;
   readonly services: ServiceSources;
   readonly research: ResearchLapses;
+  readonly justice: JusticeClock;
   /** جهةُ الرصدِ في `reconcile` — تُمرَّر ولا تُخترع داخل الماسح */
   readonly observer: EntityId;
 }
@@ -66,6 +72,8 @@ export function deadlinesProbe(deps: DeadlineDeps): WatchProbe {
     for (const line of deps.budget.active()) {
       if (now > line.periodEnd) deps.budget.lapse(line.line, now);
     }
+    // T-36 — ثابت 3 نفسُه: انقضاءُ مدّة الدفاع واجبٌ لا حادث، يقع بمدخل المحكمة المحروس
+    deps.justice.defaultSilentDefenses(now);
     // T-57 · T-64 — الوحدةُ ترفع مرّةً بطبعها (ثابت 2)
     for (const p of deps.payments.raiseOverdue(now)) {
       findings.push(finding('payment_confirmation_overdue', `دفعةٌ بلا إثباتٍ بعد نافذتها: ${p.paymentId}`));

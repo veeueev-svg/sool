@@ -118,6 +118,13 @@ export class Court {
     if (!inScope(input.defendant, statute.appliesTo)) {
       return refuse('المتهم خارج نطاق خضوع هذا القانون');
     }
+    // T-33 (W-2026-052): التقادمُ بنصّ القانون النافذ وقت الوقوع — لا دعوى إلى الأبد
+    const limitationMs = statute.limitationDays * 24 * HOUR;
+    if (now - input.occurredAt > limitationMs) {
+      return refuse('انقضت مدّةُ التقادم المعلنة في نصّ القانون — لا اتهام بعدها', {
+        limitationDays: statute.limitationDays, elapsedMs: now - input.occurredAt,
+      });
+    }
 
     // ثابت 2: كل دليل بصمة سجل قائم
     if (input.evidence.length === 0) return refuse('لا اتهام بلا دليل مسجَّل');
@@ -205,6 +212,16 @@ export class Court {
       caseId, defendant: c.defendant, silenceMs: now - c.chargedAt,
     });
     return this.submitDefense(caseId, PUBLIC_DEFENDER, `دفاع حكمي عن ${c.defendant}: لم يقدّم بيانًا`, [], now);
+  }
+
+  /**
+   * 3-ب) T-36 (W-2026-052): ساعةُ العدالة — كلُّ دعوى `charged` انقضت مدّةُ دفاعها يُعيَّن لها المحامي
+   * العامُّ بمدخله المحروس نفسِه، بلا مُنادٍ خارجيّ. يناديها ماسحُ المواعيد في كلِّ مسحة؛ وتعيد ما عُيِّن.
+   */
+  defaultSilentDefenses(now = Date.now()): readonly string[] {
+    const due = [...this.cases.values()]
+      .filter((c) => c.status === 'charged' && now - c.chargedAt >= this.defenseWindowMs);
+    return due.filter((c) => this.appointPublicDefender(c.caseId, PUBLIC_DEFENDER, now).ok).map((c) => c.caseId);
   }
 
   /** 4) الحكم — من قضاء مخوَّل ليس هو المدّعي ولا المتهم */

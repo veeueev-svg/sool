@@ -96,7 +96,7 @@ export function composeInstitutions(
       ? { responseWindowMs: options.federation.responseWindowMs } : {}),
   });
   const regionMonitor = new RegionMonitor({
-    audit, regions, governors, tribunal, killSwitch,
+    audit, regions, governors, tribunal, killSwitch, assembly,
     ...(options.federation?.vacancyGraceMs !== undefined
       ? { vacancyGraceMs: options.federation.vacancyGraceMs } : {}),
     ...(options.federation?.disputeGraceMs !== undefined

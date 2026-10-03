@@ -745,7 +745,6 @@
         "src/main.ts",
         "src/index.ts",
         "src/composition/state.ts",
-        "src/composition/operations.ts",
         "infra/docker/Dockerfile",
         "tests/production/boot_supervision.test.ts",
         "docs/decisions/ADR-0052-supervision-from-boot.md",
@@ -807,11 +806,9 @@
         "src/kernel/config/enterprises.ts",
         "src/kernel/config/production_policy.ts",
         "src/kernel/config/staging.ts",
-        "src/production/deadline_probes.ts",
         "src/services/factory_runtime.ts",
         "src/services/factory_types.ts",
         "tests/production/deadline_probes.test.ts",
-        "tests/production/helpers.ts",
         "src/services/factory_waste.ts",
         "tests/external/channel_disposition.test.ts",
         "tests/services/factory_waste.test.ts",
@@ -864,7 +861,6 @@
         "src/chaos/chaos_drill.ts",
         "src/chaos/fault_injector.ts",
         "src/chaos/safe_stop_ledger.ts",
-        "src/composition/public_api.ts",
         "src/kernel/config/chaos.ts",
         "src/termination/stop_witness.ts",
         "src/termination/termination_ledger.ts",
@@ -894,6 +890,65 @@
       "created_at": "2026-10-02",
       "updated_at": "2026-10-02",
       "verification": "2026-10-02: npm test 2333/2333 · verify EXIT=0.",
+      "documentation_impact": [
+        "PROGRESS.md",
+        "CHANGELOG.md",
+        "version.json",
+        "ARCHITECTURE.md"
+      ]
+    },
+    {
+      "id": "W-2026-052",
+      "title": "لا مسألةَ معلَّقةً إلى الأبد: المُصعَّد والالتماس والتقادم وساعة العدالة (T-45 · T-47 · T-33 · T-36)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 80)",
+      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلٌّ وفق RULE-019",
+      "area": "الأقاليم والعدالة",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-45",
+        "T-47",
+        "T-33",
+        "T-36"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "src/composition/institutions.ts",
+        "src/composition/operations.ts",
+        "src/composition/public_api.ts",
+        "src/federation/region_monitor.ts",
+        "src/law/courts.ts",
+        "src/law/statutes.ts",
+        "src/production/deadline_probes.ts",
+        "src/staging/watch_probes.ts",
+        "tests/federation/region_monitor.test.ts",
+        "tests/production/helpers.ts",
+        "tests/federation/federation_deadlines.test.ts",
+        "tests/law/limitation_and_clock.test.ts",
+        "docs/test-reports/phase-40-W-2026-052.md"
+      ],
+      "excluded": [
+        "حكمٌ ملكيٌّ آليّ في المُصعَّد أو جوابٌ آليّ للالتماس — الرفعُ وحده، والحسمُ للملك",
+        "نقلُ المدد الفدراليّة إلى `config/regions.yaml`"
+      ],
+      "acceptance": [
+        "مُصعَّدٌ بعد مدّته من التصعيد يُرفع جسيمًا",
+        "التماسٌ بعد مدّته يُرفع ويصل حادثًا معلنًا",
+        "تقادمٌ معلنٌ لكلِّ قانونٍ واتهامٌ بعده مرفوض",
+        "انقضاءُ مدّة الدفاع يعيّن المحامي العامَّ بلا مُنادٍ",
+        "`npm test` صفرُ سقوط و`npm run verify` EXIT=0"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-W-2026-052.md",
+        "tests/federation/federation_deadlines.test.ts",
+        "tests/law/limitation_and_clock.test.ts"
+      ],
+      "next_step": "المراجع: الإقرارُ أو الرفضُ بعيوبٍ مسمّاة (RULE-004).",
+      "created_at": "2026-10-02",
+      "updated_at": "2026-10-02",
+      "verification": "2026-10-02: npm test 2340/2340 · verify EXIT=0.",
       "documentation_impact": [
         "PROGRESS.md",
         "CHANGELOG.md",

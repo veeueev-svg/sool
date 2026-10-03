@@ -229,7 +229,7 @@ test('**T-46 [DR-04]: حاكمٌ جالسٌ في إقليمٍ غير قائمٍ 
 
   const driftedMonitor = new RegionMonitor({
     audit: s.audit, regions: blindRegions, governors: s.governors,
-    tribunal: s.tribunal, killSwitch: s.killSwitch,
+    tribunal: s.tribunal, killSwitch: s.killSwitch, assembly: s.assembly,
     vacancyGraceMs: VACANCY, disputeGraceMs: DISPUTE_GRACE,
   });
   const before = s.audit.find('region_flagged').length;
@@ -255,7 +255,7 @@ test('T-46 [DR-05]: الاحتواءُ على المخالفةِ المحقون�
   blindRegions.bindGovernorProbe((regionId) => s.governors.governorOf(regionId)?.governor ?? null);
   const driftedMonitor = new RegionMonitor({
     audit: s.audit, regions: blindRegions, governors: s.governors,
-    tribunal: s.tribunal, killSwitch: s.killSwitch,
+    tribunal: s.tribunal, killSwitch: s.killSwitch, assembly: s.assembly,
     vacancyGraceMs: VACANCY, disputeGraceMs: DISPUTE_GRACE,
   });
   driftedMonitor.sweep(T0 + 1000);

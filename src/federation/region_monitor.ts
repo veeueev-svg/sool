@@ -12,6 +12,9 @@
  *   4) سلطة بلا مسؤول مخالفة: إقليم مفوَّض ومقعد حاكمه خالٍ بعد المهلة يُرفع
  *   5) نطاق محفوظ للتاج بيد إقليم انحرافٌ جسيم يُرفع فورًا بلا مهلة
  *   6) نزاع لم يُحسم بعد مهلته يُرفع — لا نزاع يُنسى
+ *   7) (T-45 · W-2026-052) نزاعٌ مُصعَّدٌ بلا حكمٍ ملكيٍّ بعد `ESCALATION_GRACE_MS` من تصعيده يُرفع جسيمًا —
+ *      التصعيدُ ينقل الحسمَ إلى الملك ولا يُعفيه من مدّة
+ *   8) (T-47 · W-2026-052) التماسُ أقاليمَ `pending` بعد `PETITION_GRACE_MS` يُرفع — لا التماسَ بلا جواب
  * حالات الفشل (كلها مغلقة): احتواء من غير الحرس ⇒ رفض؛ احتواء بلا مخالفة ⇒ رفض؛
  *   احتواء لإقليم غير قائم ⇒ رفض
  * اختبار القبول: tests/federation/federation_lifecycle.test.ts
@@ -23,6 +26,7 @@ import { KillSwitch } from '../security/kill_switch';
 import { CROWN_RESERVED_DOMAINS, RegionRegistry } from './region_registry';
 import { GovernorRegistry, GOVERNOR_EXECUTOR } from './governor';
 import { RegionalTribunal } from './dispute_resolution';
+import { RegionalAssembly } from './regional_assembly';
 
 /** ديوان التدقيق: يرفع المخالفة ولا ينفّذ الاحتواء (RULE-004) */
 export const REGION_AUDITOR: EntityId = 'authority:audit_bureau';
@@ -30,12 +34,18 @@ export const REGION_AUDITOR: EntityId = 'authority:audit_bureau';
 export const VACANCY_GRACE_MS = 48 * 60 * 60 * 1000;
 /** مهلة حسم النزاع قبل رفعه مخالفةً */
 export const DISPUTE_GRACE_MS = 72 * 60 * 60 * 1000;
+/** T-45: مدّةُ الحكمِ الملكيِّ في نزاعٍ مُصعَّد — تُعدّ من لحظة التصعيد لا من رفع النزاع */
+export const ESCALATION_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+/** T-47: مدّةُ جوابِ الملكِ على التماسِ الأقاليم */
+export const PETITION_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type FlagKind =
   | 'delegated_without_governor'
   | 'reserved_domain_drift'
   | 'governor_without_region'
-  | 'dispute_unresolved';
+  | 'dispute_unresolved'
+  | 'escalation_unruled'
+  | 'petition_unanswered';
 
 export interface RegionFlag {
   readonly kind: FlagKind;
@@ -55,16 +65,24 @@ export interface RegionMonitorDeps {
   readonly killSwitch: KillSwitch;
   readonly vacancyGraceMs?: number;
   readonly disputeGraceMs?: number;
+  /** T-47: مصدرُ الالتماسات — غيابُه في تركيبٍ قديمٍ يُبقي الالتماسَ بلا رقيب، فهو إلزاميّ */
+  readonly assembly: RegionalAssembly;
+  readonly escalationGraceMs?: number;
+  readonly petitionGraceMs?: number;
 }
 
 export class RegionMonitor {
   private readonly flags: RegionFlag[] = [];
   private readonly vacancyGraceMs: number;
   private readonly disputeGraceMs: number;
+  private readonly escalationGraceMs: number;
+  private readonly petitionGraceMs: number;
 
   constructor(private readonly deps: RegionMonitorDeps) {
     this.vacancyGraceMs = deps.vacancyGraceMs ?? VACANCY_GRACE_MS;
     this.disputeGraceMs = deps.disputeGraceMs ?? DISPUTE_GRACE_MS;
+    this.escalationGraceMs = deps.escalationGraceMs ?? ESCALATION_GRACE_MS;
+    this.petitionGraceMs = deps.petitionGraceMs ?? PETITION_GRACE_MS;
   }
 
   /** مسح دوري: يرفع المخالفات ولا يعالجها (ثابت 1) */
@@ -113,6 +131,20 @@ export class RegionMonitor {
       if (now - dispute.raisedAt > this.disputeGraceMs) {
         raise('dispute_unresolved', dispute.claimant,
           `نزاع ${dispute.disputeId} مع ${dispute.respondent} لم يُحسم بعد مهلته`, 'medium');
+      }
+      // ثابت 7: المُصعَّدُ ينتظر الملك — ومدّتُه من التصعيد
+      if (dispute.status === 'escalated' && dispute.escalation
+        && now - dispute.escalation.at > this.escalationGraceMs) {
+        raise('escalation_unruled', dispute.claimant,
+          `نزاع ${dispute.disputeId} مُصعَّدٌ إلى الملك بلا حكمٍ منذ ${Math.floor((now - dispute.escalation.at) / 3600000)} ساعة`, 'high');
+      }
+    }
+
+    // ثابت 8: التماسٌ بلا جواب
+    for (const petition of this.deps.assembly.pending()) {
+      if (now - petition.raisedAt > this.petitionGraceMs) {
+        raise('petition_unanswered', petition.attendees[0] ?? 'council:regions',
+          `التماس ${petition.petitionId} («${petition.subject}») بلا جوابٍ ملكيٍّ بعد مهلته`, 'medium');
       }
     }
 
