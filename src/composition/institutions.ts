@@ -97,13 +97,15 @@ export function composeInstitutions(
       ? { responseWindowMs: options.federation.responseWindowMs } : {}),
   });
   const regionMonitor = new RegionMonitor({
-    audit, regions, governors, tribunal, killSwitch, assembly,
+    audit, regions, governors, tribunal, assembly,
     ...(options.federation?.vacancyGraceMs !== undefined
       ? { vacancyGraceMs: options.federation.vacancyGraceMs } : {}),
     ...(options.federation?.disputeGraceMs !== undefined
       ? { disputeGraceMs: options.federation.disputeGraceMs } : {}),
   });
 
+  // T-44: احتواءُ إقليمٍ موضعيٌّ — يقرؤه سجلُّ الحكّام قبل كلِّ فعلٍ إقليميّ
+  governors.bindContainment((regionId) => regionMonitor.isContained(regionId));
   // ربط مصدر التحقق من صاحب بند الموازنة: لا موازنة لجهة لا وجود لها (ثابت 5 للموازنة).
   // يُربط هنا لأن الوزارات والأقاليم تُبنى بعد الاقتصاد، والربط لا يكتب سجلًّا.
   budget.bindOwnerProbe((owner) => ministries.isActive(owner) || regions.isActive(owner));

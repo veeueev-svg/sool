@@ -67,6 +67,13 @@ export interface BreachNote {
   readonly reason: string;
   readonly notedBy: EntityId;
   readonly at: number;
+  /** T-67 (W-2026-056): الدفعةُ التي وقع فيها الإخلال إن سُمّيت — دفعةٌ قائمةٌ على قناة النظير نفسِه */
+  readonly paymentId?: string | null;
+}
+
+/** T-67: قارئُ الدفعات — يُربط مرّةً من ضوابط الدفع؛ وبلا ربطٍ يُرفض كلُّ إخلالٍ يسمّي دفعة */
+export interface PaymentReader {
+  readonly get: (paymentId: string) => { readonly accountId: string; readonly at: number } | null;
 }
 
 /**
@@ -118,6 +125,7 @@ export class PartnerRisk {
   private sink: DurableSink | null = null;
   /** ثابت 9: يُربط مرّةً واحدةً — والربطُ الثاني يرمي فلا يُبدَّل مصدرُ الحقيقة */
   private contracts: ContractReader | null = null;
+  private payments: PaymentReader | null = null;
 
   constructor(private readonly deps: PartnerRiskDeps) {
     this.assessorId = deps.assessorId ?? RISK_ASSESSOR;
@@ -138,6 +146,11 @@ export class PartnerRisk {
    * `PARTNER_RISK_CONTRACT_READER_ALREADY_BOUND`: قارئٌ يُبدَّل بعد التسجيلِ يعني
    * أنّ إخلالًا سُجِّل على عقدٍ في سجلٍّ ثمّ صار يُقرأ في سجلٍّ آخر.
    */
+  bindPayments(reader: PaymentReader): void {
+    if (this.payments !== null) throw new Error('PARTNER_RISK_PAYMENT_READER_ALREADY_BOUND');
+    this.payments = reader;
+  }
+
   bindContracts(reader: ContractReader): void {
     if (this.contracts !== null) throw new Error('PARTNER_RISK_CONTRACT_READER_ALREADY_BOUND');
     this.contracts = reader;
@@ -237,7 +250,9 @@ export class PartnerRisk {
    * وإخلالٌ بلا عقدٍ يُسمّى عقوبةٌ لا يمكن نقضُها لأنّ المُدَّعى عليه مجهول (T-67).
    * ترتيب الفحوص مقصود: البيان ← القارئُ مربوط ← العقدُ قائمٌ في السجل ← التسجيل.
    */
-  noteBreach(by: EntityId, contractId: string, reason: string, now = Date.now()): boolean {
+  noteBreach(
+    by: EntityId, contractId: string, reason: string, now = Date.now(), paymentId: string | null = null,
+  ): boolean {
     const refuse = (why: string): false => {
       this.deps.audit.append(by, 'partner_risk_refused', {
         mode: 'breach', contractId, reason: why,
@@ -250,20 +265,33 @@ export class PartnerRisk {
     const contract = this.contracts.get(contractId);
     // ثابت 8: النظيرُ يُستنبَط من العقدِ لا يُعطى، فلا يُنشئ الإخلالُ شريكًا
     if (!contract) return refuse('لا إخلال على عقد لا وجود له في السجل');
+    // T-67: الدفعةُ المسمّاةُ تُتحقَّق — قائمةٌ، وعلى قناة نظير العقد نفسِه، وقبل لحظة التسجيل
+    if (paymentId !== null) {
+      const payment = this.payments?.get(paymentId) ?? null;
+      if (this.payments === null) return refuse('لا قارئ دفعات مربوطًا: لا إخلال يُنسب إلى دفعة');
+      if (!payment) return refuse('لا إخلال على دفعة لا وجود لها');
+      if (payment.accountId !== contract.counterparty) return refuse('الدفعةُ على قناة نظيرٍ غير نظير العقد');
+      if (payment.at > now) return refuse('لا إخلال على دفعةٍ لم تقع بعد');
+    }
     const breach: BreachNote = {
       contractId, counterparty: contract.counterparty,
-      reason: reason.trim(), notedBy: by, at: now,
+      reason: reason.trim(), notedBy: by, at: now, paymentId,
     };
     this.breaches.push(breach);
     this.sink?.record('partner_breach', { breach });
     this.deps.audit.append(by, 'partner_breach_noted', {
-      contractId, counterparty: breach.counterparty, reason: breach.reason, at: now,
+      contractId, counterparty: breach.counterparty, reason: breach.reason, at: now, paymentId,
       // هل المُخِلُّ قائمٌ لحظةَ التسجيل؟ سؤالٌ كان بلا جوابٍ قبل T-67
       contractActive: this.contracts.isActive(contractId, now),
       contractBreaches: this.breachesFor(contractId).length,
       breaches: this.breachCount(breach.counterparty), penalty: this.deps.breachPenalty,
     });
     return true;
+  }
+
+  /** T-67: إخلالاتُ دفعةٍ بعينها */
+  breachesForPayment(paymentId: string): readonly BreachNote[] {
+    return this.breaches.filter((b) => b.paymentId === paymentId);
   }
 
   /** إخلالاتُ عقدٍ بعينه — الجوابُ الذي كان مستحيلًا قبل T-67 (ثابت 9) */

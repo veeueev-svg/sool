@@ -912,13 +912,11 @@
       "scope": [
         "src/composition/operations.ts",
         "src/composition/public_api.ts",
-        "src/federation/region_monitor.ts",
         "src/law/courts.ts",
         "src/law/statutes.ts",
         "src/production/deadline_probes.ts",
         "src/staging/watch_probes.ts",
         "tests/production/helpers.ts",
-        "tests/federation/federation_deadlines.test.ts",
         "tests/law/limitation_and_clock.test.ts",
         "docs/test-reports/phase-40-W-2026-052.md"
       ],
@@ -1064,14 +1062,10 @@
       "scope": [
         "config/contracts.yaml",
         "config/regions.yaml",
-        "src/composition/economy.ts",
-        "src/composition/institutions.ts",
-        "src/external/partner_risk.ts",
         "src/federation/region_registry.ts",
         "src/federation/region_types.ts",
         "src/kernel/config/contracts.ts",
         "src/kernel/config/regions.ts",
-        "tests/federation/region_monitor.test.ts",
         "tests/external/risk_interactions_and_region_cap.test.ts",
         "docs/test-reports/phase-40-W-2026-055.md"
       ],
@@ -1092,6 +1086,58 @@
       "created_at": "2026-10-03",
       "updated_at": "2026-10-03",
       "verification": "2026-10-03: npm test 2348/2348 · verify EXIT=0.",
+      "documentation_impact": [
+        "PROGRESS.md",
+        "CHANGELOG.md",
+        "version.json",
+        "ARCHITECTURE.md"
+      ]
+    },
+    {
+      "id": "W-2026-056",
+      "title": "احتواءُ الإقليم موضعيّ والإخلالُ ينزل إلى الدفعة (T-44 · T-67)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 80)",
+      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلٌّ وفق RULE-019",
+      "area": "الاتحاد والخارج",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-44",
+        "T-67"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "src/composition/economy.ts",
+        "src/composition/institutions.ts",
+        "src/external/partner_risk.ts",
+        "src/federation/governor.ts",
+        "src/federation/region_monitor.ts",
+        "tests/federation/federation_deadlines.test.ts",
+        "tests/federation/region_monitor.test.ts",
+        "tests/external/breach_payment_link.test.ts",
+        "tests/federation/local_containment.test.ts",
+        "docs/test-reports/phase-40-W-2026-056.md"
+      ],
+      "excluded": [
+        "ثباتُ الاحتواء الموضعيّ عبر الإقلاع — المراقبُ نفسُه غيرُ مدوَّنٍ اليوم، ولم يُدوَّن هنا"
+      ],
+      "acceptance": [
+        "احتواءُ الإقليم يوقف حاكمَه وحده ولا يشغّل القاطعَ العامّ",
+        "الرفعُ لحرس التاج وحده وبسبب",
+        "الإخلالُ يسمّي دفعةً متحقَّقة على قناة نظيره",
+        "`npm test` صفرُ سقوط و`npm run verify` EXIT=0"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-W-2026-056.md",
+        "tests/federation/local_containment.test.ts",
+        "tests/external/breach_payment_link.test.ts"
+      ],
+      "next_step": "المراجع: الإقرارُ أو الرفضُ بعيوبٍ مسمّاة (RULE-004).",
+      "created_at": "2026-10-03",
+      "updated_at": "2026-10-03",
+      "verification": "2026-10-03: npm test 2352/2352 · verify EXIT=0.",
       "documentation_impact": [
         "PROGRESS.md",
         "CHANGELOG.md",

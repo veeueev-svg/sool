@@ -121,6 +121,8 @@ export function composeEconomy(
     proposerId: contractsConfig.policy.proposer,
     assessorId: contractsConfig.policy.assessor,
   });
+  // T-67: الإخلالُ يُنسب إلى دفعةٍ قائمةٍ لا إلى نصّ — القارئُ ضوابطُ الدفع نفسُها
+  partnerRisk.bindPayments({ get: (paymentId) => payments.payment(paymentId) });
   const contracts = new ExternalContractRegistry({
     audit, gateway, accounts: externalAccounts, risk: partnerRisk,
     maxTermMs: contractsConfig.policy.max_term_days * 24 * 60 * 60 * 1000,

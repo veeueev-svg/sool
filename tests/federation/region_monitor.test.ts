@@ -113,14 +113,15 @@ test('لا احتواء بلا مخالفة مرفوعة سابقًا', () => {
   assert.match(r.reason ?? '', /مخالفة مرفوعة/);
 });
 
-test('الاحتواء بعد المخالفة يقع ويوقف التشغيل ولا يمحو المخالفة', () => {
+test('الاحتواء بعد المخالفة يقع على الإقليم وحده ولا يمحو المخالفة (T-44)', () => {
   const { s } = monitoredState();
   s.regionMonitor.sweep(T0 + VACANCY * 2);
   const r = s.regionMonitor.contain(
     GOVERNOR_EXECUTOR, 'region:research', 'delegated_without_governor', 'شغور مطوَّل', T0 + VACANCY * 3,
   );
   assert.equal(r.ok, true);
-  assert.equal(s.killSwitch.status.engaged, true);
+  assert.equal(s.killSwitch.status.engaged, false, 'T-44: لا قاطعَ عامٌّ يوقف الأقاليمَ السليمة');
+  assert.equal(s.regionMonitor.isContained('region:research'), true);
   assert.equal(s.regionMonitor.history().length, 2, 'المخالفتان باقيتان');
   assert.equal(s.regionMonitor.report().contained, 1);
   assert.equal(s.regionMonitor.outstanding().length, 1);
@@ -229,7 +230,7 @@ test('**T-46 [DR-04]: حاكمٌ جالسٌ في إقليمٍ غير قائمٍ 
 
   const driftedMonitor = new RegionMonitor({
     audit: s.audit, regions: blindRegions, governors: s.governors,
-    tribunal: s.tribunal, killSwitch: s.killSwitch, assembly: s.assembly,
+    tribunal: s.tribunal, assembly: s.assembly,
     vacancyGraceMs: VACANCY, disputeGraceMs: DISPUTE_GRACE,
   });
   const before = s.audit.find('region_flagged').length;
@@ -255,7 +256,7 @@ test('T-46 [DR-05]: الاحتواءُ على المخالفةِ المحقون�
   blindRegions.bindGovernorProbe((regionId) => s.governors.governorOf(regionId)?.governor ?? null);
   const driftedMonitor = new RegionMonitor({
     audit: s.audit, regions: blindRegions, governors: s.governors,
-    tribunal: s.tribunal, killSwitch: s.killSwitch, assembly: s.assembly,
+    tribunal: s.tribunal, assembly: s.assembly,
     vacancyGraceMs: VACANCY, disputeGraceMs: DISPUTE_GRACE,
   });
   driftedMonitor.sweep(T0 + 1000);

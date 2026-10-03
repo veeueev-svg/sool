@@ -27,7 +27,7 @@ function scene() {
   }
   const monitor = new RegionMonitor({
     audit: s.audit, regions: s.regions, governors: s.governors, tribunal: s.tribunal,
-    killSwitch: s.killSwitch, assembly: s.assembly,
+    assembly: s.assembly,
     vacancyGraceMs: LONG, disputeGraceMs: LONG, escalationGraceMs: ESC, petitionGraceMs: PET,
   });
   return { s, monitor };
