@@ -6,7 +6,7 @@
 - **المالك:** القيّم على المستودع
 - **السابق:** [ADR-0021](ADR-0021-federated-operation.md) — التشغيل الاتحادي
 - **الوثائق المرافقة:** [`ARCHITECTURE.md`](../../ARCHITECTURE.md) §«حدود الحجم» ·
-  [تقرير الورشة](../test-reports/structure-0.24.0.md) · [`config/module_limits.yaml`](../../config/module_limits.yaml)
+  [تقرير الورشة](../test-reports/structure-0.24.0.md) · [`scripts/limits/module_limits.yaml`](../../scripts/limits/module_limits.yaml)
 
 ## السياق
 

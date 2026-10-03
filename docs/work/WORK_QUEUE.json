@@ -1450,6 +1450,73 @@
       "created_at": "2026-10-03",
       "updated_at": "2026-10-03",
       "verification": "npm run verify → EXIT=0 (15 حاجزًا · 2366/2366) · CI: بوابة التاج success · شاهد الحصر success"
+    },
+    {
+      "id": "W-2026-064",
+      "title": "روابطُ نسبيّةٌ مكسورةٌ وأرقامٌ منقولةٌ متقادمة — وحارسٌ يمنع رجوعَها",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 89)",
+      "reviewer": "القيّم على المستودع (المالك) — ومجلس المراجعة (RULE-020)",
+      "area": "التوثيق والحوكمة",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "قيس كلُّ رابطٍ نسبيٍّ في الوثائق: 34 مكسورًا خارج WORK_LOG.md",
+        "أُصلحت 25 في نطاق هذا البند، و9 في نطاق W-2026-038 وW-2026-059 داخل بندَيهما (#32 · #33)",
+        "أُزيلت الأرقامُ المنقولةُ غيرُ المحروسة من ترويسة ARCHITECTURE.md وصُحّح صفُّ الاختبارات في PROGRESS.md",
+        "حارسٌ جديد tests/governance/doc_links.test.ts بقائمةِ انتظارٍ فارغة"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "README.md",
+        "docs/test-reports/phase-39.md",
+        "docs/decisions/ADR-0022-module-boundaries.md",
+        "docs/decisions/ADR-0033-declared-count-ceilings.md",
+        "docs/audit/criteria/C-01.md",
+        "docs/audit/criteria/C-02.md",
+        "docs/audit/criteria/C-03.md",
+        "docs/audit/criteria/C-04.md",
+        "docs/audit/criteria/C-05.md",
+        "docs/audit/criteria/C-06.md",
+        "docs/audit/criteria/C-07.md",
+        "docs/audit/criteria/C-10.md",
+        "docs/audit/criteria/C-14.md",
+        "docs/audit/criteria/C-15.md",
+        "docs/audit/criteria/C-16.md",
+        "docs/audit/criteria/C-18.md",
+        "docs/audit/criteria/C-19.md",
+        "docs/audit/criteria/C-20.md",
+        "tests/governance/doc_links.test.ts",
+        "docs/test-reports/phase-40-W-2026-064.md"
+      ],
+      "excluded": [
+        "C-08 · C-09 · C-11 · C-12 · C-13 · C-21 — محجوزةٌ لـW-2026-038 (أُصلحت في #32)",
+        "C-17 — محجوزٌ لـW-2026-059 (أُصلح في #33)",
+        "docs/work/WORK_LOG.md — روابطُه من الجذر بعقد البوابة (RULE-014)",
+        "لا حكمَ ولا حالَ يتبدّل في ملفّات الأحكام (RULE-004)"
+      ],
+      "acceptance": [
+        "صفرُ رابطٍ نسبيٍّ مكسور",
+        "حارسٌ في npm test بقائمةِ انتظارٍ فارغة",
+        "لا رقمَ منقولٌ غيرُ محروسٍ في ترويسة ARCHITECTURE.md",
+        "check:criteria ✓ · verify → 0"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-W-2026-064.md",
+        "npm test 2367/2367 · npm run verify → 0"
+      ],
+      "next_step": "حكمُ مجلس المراجعة (RULE-020) أو إقرارُ المالك",
+      "created_at": "2026-10-03",
+      "updated_at": "2026-10-03",
+      "verification": "npm test 2367/2367 · npm run verify → EXIT=0 · طفرةُ رابطٍ مكسورٍ تُسقط الحارس · check:criteria ✓",
+      "documentation_impact": [
+        "ARCHITECTURE.md",
+        "PROGRESS.md",
+        "ROADMAP.md",
+        "CHANGELOG.md",
+        "version.json"
+      ]
     }
   ]
 }
