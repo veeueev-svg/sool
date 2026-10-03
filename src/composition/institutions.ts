@@ -83,6 +83,7 @@ export function composeInstitutions(
   //     وسجل الحكّام يربط نفسه مصدرًا للتحقق من الحاكم قبل حلّ الإقليم (فشل مغلق).
   const regions = new RegionRegistry({
     audit, gateway, declaredRegions: regionsConfig.regions.map((r) => r.id),
+    maxDomainsPerRegion: regionsConfig.max_delegated_domains_per_region,
   });
   const assembly = new RegionalAssembly({ audit, gateway, regions });
   const governors = new GovernorRegistry({

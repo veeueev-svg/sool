@@ -31,6 +31,8 @@ export interface ContractsConfig {
     max_value: number; risk_weight: number;
   }[];
   risk_factors: Record<string, number>;
+  /** T-63 (W-2026-055): إضافةٌ على زوجٍ مجتمعٍ «عامل+عامل» فوق مجموع وزنَيه */
+  risk_interactions?: Record<string, number>;
 }
 
 /**
@@ -128,6 +130,7 @@ export function loadContracts(configDir = resolveConfigDir()): ContractsConfig {
       );
     }
   }
+  guardRiskInteractions(raw.risk_interactions, raw.risk_factors);
   if (!Array.isArray(raw.kinds) || raw.kinds.length === 0) {
     throw new SovereignViolation(
       'لا أنواع عقود معلنة — لا عقد بلا إعلان', 'CONFIG_CONTRACT_NO_KINDS',
@@ -186,4 +189,25 @@ export function loadContracts(configDir = resolveConfigDir()): ContractsConfig {
     }
   }
   return raw;
+}
+
+/** T-63: كلُّ تفاعلٍ زوجٌ من عاملين معلنين مختلفين، لا يُعلن مرّتين بترتيبين، وإضافتُه صحيحةٌ موجبة */
+function guardRiskInteractions(
+  interactions: Record<string, number> | undefined, factors: Record<string, number>,
+): void {
+  if (interactions === undefined) return;
+  const fail = (why: string): never => {
+    throw new SovereignViolation(`تفاعلُ مخاطر غير صالح: ${why} (T-63)`, 'CONFIG_CONTRACT_RISK_INTERACTION');
+  };
+  if (interactions === null || typeof interactions !== 'object' || Array.isArray(interactions)) fail('ليس خريطة');
+  const seen = new Set<string>();
+  for (const [key, surcharge] of Object.entries(interactions)) {
+    const pair = key.split('+');
+    if (pair.length !== 2 || pair[0] === pair[1]) fail(`«${key}» ليس زوجًا من عاملين مختلفين`);
+    for (const f of pair) if (factors[f] === undefined) fail(`«${f}» غير معلن في risk_factors`);
+    const canonical = [...pair].sort().join('+');
+    if (seen.has(canonical)) fail(`«${key}» معلنٌ مرّتين`);
+    seen.add(canonical);
+    if (!Number.isSafeInteger(surcharge) || surcharge <= 0) fail(`إضافةُ «${key}» ليست عددًا صحيحًا موجبًا`);
+  }
 }

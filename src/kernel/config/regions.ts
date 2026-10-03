@@ -24,7 +24,12 @@ export interface RegionDeclaration {
 export interface RegionsConfig {
   regions: RegionDeclaration[];
   collective_override_of_king: string;
+  /** T-42 (W-2026-055): سقفُ النطاقات المفوَّضة لإقليمٍ واحد — عددٌ صحيحٌ في [1, {@link REGION_DOMAINS_CEILING}] */
+  max_delegated_domains_per_region: number;
 }
+
+/** أعلى ما يُقبل سقفًا للنطاقات المفوَّضة لإقليم — فوقه لا يبقى السقفُ سقفًا */
+export const REGION_DOMAINS_CEILING = 16;
 
 /**
  * يحمّل الأقاليم المعلنة ويرفض أي تهيئة تخالف الثوابت السيادية.
@@ -41,6 +46,13 @@ export function loadRegions(configDir = resolveConfigDir()): RegionsConfig {
     throw new SovereignViolation(
       'نقض الأقاليم المجتمعة للملك ممنوع — السيادة غير قابلة للتجميع',
       'CONFIG_COLLECTIVE_OVERRIDE_ALLOWED',
+    );
+  }
+  const cap = raw.max_delegated_domains_per_region;
+  if (!Number.isSafeInteger(cap) || cap < 1 || cap > REGION_DOMAINS_CEILING) {
+    throw new SovereignViolation(
+      `سقفُ النطاقات المفوَّضة غيرُ معلنٍ أو خارجَ [1, ${REGION_DOMAINS_CEILING}]: ${String(cap)} (T-42)`,
+      'CONFIG_REGION_DOMAIN_CAP',
     );
   }
   const seen = new Set<string>();

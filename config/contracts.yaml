@@ -68,3 +68,9 @@ risk_factors:
   irreversible_dependency: 30
   single_source: 15
   no_exit_clause: 40
+
+# T-63: تفاعلُ العوامل — زوجٌ مجتمعٌ أخطرُ من مجموع وزنَيه، فيُضاف عليه فوق الجمع الخطّي.
+# المفتاحُ «عامل+عامل» من العوامل المعلنة أعلاه، والقيمةُ الإضافةُ عددًا صحيحًا موجبًا.
+risk_interactions:
+  model_access+no_exit_clause: 25
+  data_egress+irreversible_dependency: 20

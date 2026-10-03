@@ -222,7 +222,7 @@ test('**T-46 [DR-04]: حاكمٌ جالسٌ في إقليمٍ غير قائمٍ 
 
   // الحقنة: سجلُّ أقاليمَ لا يعرف الإقليمَ، والمقاعدُ كما هي — تباعدُ سجلَّين
   const blindRegions = new RegionRegistry({
-    audit: s.audit, gateway: s.gateway, declaredRegions: ['region:research', 'region:industry'],
+    audit: s.audit, gateway: s.gateway, declaredRegions: ['region:research', 'region:industry'], maxDomainsPerRegion: 4,
   });
   blindRegions.bindGovernorProbe((regionId) => s.governors.governorOf(regionId)?.governor ?? null);
   assert.equal(blindRegions.isActive('region:research'), false, 'الحقنةُ واقعةٌ لا مفترضة');
@@ -250,7 +250,7 @@ test('T-46 [DR-05]: الاحتواءُ على المخالفةِ المحقون�
   const { s, seat } = monitoredState();
   seat('region:research', 'official:noor');
   const blindRegions = new RegionRegistry({
-    audit: s.audit, gateway: s.gateway, declaredRegions: ['region:research', 'region:industry'],
+    audit: s.audit, gateway: s.gateway, declaredRegions: ['region:research', 'region:industry'], maxDomainsPerRegion: 4,
   });
   blindRegions.bindGovernorProbe((regionId) => s.governors.governorOf(regionId)?.governor ?? null);
   const driftedMonitor = new RegionMonitor({
