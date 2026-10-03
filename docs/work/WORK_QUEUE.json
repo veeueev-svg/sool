@@ -1144,6 +1144,37 @@
         "version.json",
         "ARCHITECTURE.md"
       ]
+    },
+    {
+      "id": "W-2026-057",
+      "title": "تصحيحُ تعارضِ ADR-0029 مع intent_plan.ts — ستةُ أشكالٍ مُدّعاة وثلاثةٌ منفَّذة",
+      "owner": "المساعد الآلي — Perplexity Computer",
+      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلٌّ وفق RULE-019",
+      "area": "حوكمة وتوثيق",
+      "phase": 40,
+      "status": "IN_PROGRESS",
+      "progress_items": [
+        "T-23"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "docs/decisions/ADR-0029-argument-intent-and-channels.md",
+        "docs/test-reports/phase-40-W-2026-057.md"
+      ],
+      "excluded": "src/security/intent_plan.ts (لا تُلمس الشفرة) · docs/audit/measurements/phase-39-T119.txt (محجوز لـ W-2026-038)",
+      "acceptance": [
+        "ADR-0029 §2 يذكر ثلاثة أشكال فقط (exact · range · prefix) ولا يدّعي enum ولا pattern ولا any",
+        "ADR-0029 §2 يذكر رموز الرفض المنفذة فعلاً ولا يدّعي ARG_ENUM_MISMATCH ولا ARG_PATTERN_MISMATCH",
+        "npm run verify رمز الخروج 0",
+        "npm run check:work رمز الخروج 0",
+        "تقرير في docs/test-reports/phase-40-W-2026-057.md"
+      ],
+      "evidence": "npm run verify ✓ · npm run check:work ✓ · تقرير: docs/test-reports/phase-40-W-2026-057.md",
+      "next_step": "حكم المراجع في التصحيح (RULE-004)",
+      "created_at": "2026-10-03",
+      "updated_at": "2026-10-03"
     }
   ]
 }
