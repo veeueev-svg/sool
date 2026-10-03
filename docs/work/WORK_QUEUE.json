@@ -1404,6 +1404,50 @@
         "لا سجلَّ DISC ولا RK في المستودع قبل الأمر — عُرِّفا: DISC = حقلُ discoveries في صفّ البند، RK = دَينٌ بمعرّف T-NNN في PROGRESS.md"
       ],
       "verification": "PR #29 و#30 و#31 مدموجة · CI أخضر (الوظيفتان) · npm test 2366/2366 · npm run verify رمز 0 · المجلس: gpt_5_6_terra · grok_4_7 · gemini_3_8_flash (تحقّق الإتاحة 2026-10-03)"
+    },
+    {
+      "id": "W-2026-063",
+      "title": "تصحيح SECURITY.md — قيود متقادمة تخالف الواقع",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 89)",
+      "reviewer": "القيّم على المستودع (المالك)",
+      "area": "الأمن والتوثيق",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "قُرئ SECURITY.md وقُورن بـTHREAT_MODEL.md وconfig/persistence.yaml وsrc/agents/",
+        "صُحّح البندان 2 و3 ليصفا الثبات الجزئي والعزل المنفذ بدل الغياب الكامل",
+        "أُضيف مرجع T14 للبند 1",
+        "نُقلت التزمة الأولى (SECURITY.md) ونجحت CI",
+        "أُضيف سجل الجلسة 89 إلى PROGRESS.md وتقرير اختبار"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "SECURITY.md",
+        "docs/test-reports/phase-40-security-md-fix.md",
+        "docs/work/orders/W-2026-063.md"
+      ],
+      "excluded": [
+        "src/ و tests/ و scripts/ — تصحيح توثيقي فقط",
+        "THREAT_MODEL.md — حاله صادق",
+        "COMPLETION_CRITERIA.md — لا ترقية"
+      ],
+      "acceptance": [
+        "SECURITY.md يصف الثبات والعزل كما هما فعلًا مع الإشارة للفجوات المفتوحة",
+        "npm run verify → EXIT=0",
+        "CI خضراء على main",
+        "سجل في PROGRESS.md وتقرير اختبار"
+      ],
+      "evidence": [
+        "npm run verify → EXIT=0 (15 حاجزًا · 2366/2366)",
+        "CI: بوابة التاج success 3m39s",
+        "CI: شاهد الحصر success 54s"
+      ],
+      "next_step": "جهةٌ تستلمه فتنقله إلى CLAIMED",
+      "created_at": "2026-10-03",
+      "updated_at": "2026-10-03",
+      "verification": "npm run verify → EXIT=0 (15 حاجزًا · 2366/2366) · CI: بوابة التاج success · شاهد الحصر success"
     }
   ]
 }
