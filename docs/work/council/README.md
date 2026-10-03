@@ -15,7 +15,8 @@
   "convened_at": "YYYY-MM-DD",
   "verdicts": [
     { "member": "gpt",  "model": "GPT 5.6",  "verdict": "VERIFIED", "report": "docs/work/council/W-2026-0NN-gpt.md" },
-    { "member": "grok", "model": "Grok 4.6", "verdict": "REJECTED", "report": "docs/work/council/W-2026-0NN-grok.md" }
+    { "member": "grok", "model": "Grok 4.6", "verdict": "REJECTED", "report": "docs/work/council/W-2026-0NN-grok.md" },
+    { "member": "gemini", "model": "Gemini 3.8 Flash", "verdict": "VERIFIED", "report": "docs/work/council/W-2026-0NN-gemini.md" }
   ],
   "decision": "NOT_VERIFIED",
   "disposition": { "kind": "IN_PROGRESS" }
