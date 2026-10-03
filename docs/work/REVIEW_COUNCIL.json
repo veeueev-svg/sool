@@ -3,8 +3,24 @@
   "rule": "unanimous",
   "min_members": 2,
   "members": [
-    { "id": "gpt", "model": "GPT 5.6", "provider": "OpenAI", "family": "GPT" },
-    { "id": "grok", "model": "Grok 4.6", "provider": "xAI", "family": "Grok" }
+    {
+      "id": "gpt",
+      "model": "GPT 5.6",
+      "provider": "OpenAI",
+      "family": "GPT"
+    },
+    {
+      "id": "grok",
+      "model": "Grok 4.6",
+      "provider": "xAI",
+      "family": "Grok"
+    },
+    {
+      "id": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "provider": "Google",
+      "family": "Gemini"
+    }
   ],
-  "expansion": "يتّسع المجلسُ لعضوٍ ثالثٍ أو أكثر إذا قرّرت المرحلةُ ذلك، بشرطِ عائلةٍ مختلفةٍ عن كلِّ عضوٍ قائم وعن عائلةِ المنفّذ، ويُسجَّل القرارُ في أمرٍ ملكيٍّ أو صفِّ بندٍ قبل انعقاد الجلسة. والإجماعُ يبقى قاعدةَ القرار أيًّا كان العدد."
+  "expansion": "العضوُ الثالث (Gemini 3.8 Flash · Google) أُضيف بأمر المالك في 2026-10-03 (ADR-0054 §6). ويتّسع المجلسُ لعضوٍ رابعٍ أو أكثر بعائلةٍ مختلفةٍ عن كلِّ عضوٍ قائم وعن عائلةِ المنفّذ، ويُسجَّل القرارُ قبل انعقاد الجلسة. والإجماعُ يبقى قاعدةَ القرار أيًّا كان العدد."
 }
