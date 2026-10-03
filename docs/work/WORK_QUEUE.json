@@ -1355,7 +1355,7 @@
       "reviewer": "مجلس المراجعة (RULE-020)",
       "area": "حوكمة",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "T-115ب"
       ],
@@ -1389,7 +1389,7 @@
         "قياسٌ سلبيّ: ترقيةُ W-2026-038 إلى VERIFIED بلا محضر أسقطت الحارس",
         "docs/test-reports/phase-40-W-2026-062.md"
       ],
-      "next_step": "عقدُ أوّل جلسةٍ للمجلس على بنود REVIEW",
+      "next_step": "أوّلُ جلسةٍ لمجلس المراجعة — على هذا البند وبنود REVIEW الأخرى",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-03",
       "documentation_impact": [
@@ -1399,7 +1399,8 @@
       ],
       "discoveries": [
         "لا سجلَّ DISC ولا RK في المستودع قبل الأمر — عُرِّفا: DISC = حقلُ discoveries في صفّ البند، RK = دَينٌ بمعرّف T-NNN في PROGRESS.md"
-      ]
+      ],
+      "verification": "PR #29 مدموج · CI أخضر (الوظيفتان) · npm test 2366/2366 · npm run verify رمز 0"
     }
   ]
 }
