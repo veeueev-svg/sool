@@ -136,7 +136,7 @@ test('قبول (5): دورة كاملة — فتح، دفع، إقرار، تع�
   }, h.now + 1000);
   assert.equal(paid.ok, true);
   h.s.payments.confirm(
-    paid.ok ? paid.payment.paymentId : '', FOREIGN, 'مرجع استلام: RCV-2026-0100', h.now + 2000,
+    paid.ok ? paid.payment.paymentId : '', FOREIGN, `إيصال RCV-2026-0100 عن ${paid.ok ? paid.payment.paymentId : ''} بمبلغ 2000000`, h.now + 2000,
   );
   h.s.externalAccounts.suspend('authority:audit_bureau', COMPUTE, 'مراجعة دورية', h.now + 3000);
   h.s.externalAccounts.resume(

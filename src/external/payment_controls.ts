@@ -37,6 +37,7 @@
  * اختبار القبول: tests/external/external_lifecycle.test.ts
  * الوثيقة المرتبطة: docs/decisions/ADR-0010-external-accounts.md
  */
+import { createHash } from 'node:crypto';
 import { EntityId, SignedRoyalCommand } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { Treasury } from '../economy/treasury';
@@ -263,7 +264,11 @@ export class PaymentControls {
   }
 
   /** 2) إقرار الاستلام (ثابت 8): بمرجع موثَّق، مرة واحدة، من وزارة الخارجية */
-  confirm(paymentId: string, by: EntityId, evidence: string, now = Date.now()): PaymentResult {
+  /**
+   * T-61 (W-2026-054): المرجعُ وثيقةُ استلامٍ تشير إلى دفعتها لا نصٌّ حرّ — تذكر معرّفَ الدفعة ومبلغَها،
+   * ويُحفظ منها بصمتُها (`sha256:`) لا لفظُها، ولا تُقبل بصمةٌ أثبتت دفعةً أخرى.
+   */
+  confirm(paymentId: string, by: EntityId, receipt: string, now = Date.now()): PaymentResult {
     const refuse = (reason: string): PaymentResult => {
       const entry = this.deps.audit.append(by, 'external_payment_refused', {
         mode: 'confirm', paymentId, reason,
@@ -274,15 +279,24 @@ export class PaymentControls {
     if (!payment) return refuse('دفعة غير قائمة');
     if (payment.confirmedAt !== null) return refuse('استلام مُقرّ سابقًا — لا إقرار مرتين');
     if (by !== this.ministryId) return refuse('الإقرار لوزارة الخارجية وحدها');
-    if (evidence.trim().length < 8) {
+    if (receipt.trim().length < 8) {
       return refuse('لا إقرار بلا مرجع إثبات (RULE-006) — ثمانية محارف على الأقل');
     }
     if (now < payment.at) return refuse('لا إقرار بزمن قبل الدفعة');
+    const words = receipt.split(/[^\p{L}\p{N}:_-]+/u);
+    if (!words.includes(payment.paymentId) || !words.includes(String(payment.amount))) {
+      return refuse('وثيقةُ الاستلام لا تشير إلى هذه الدفعة: تذكر معرّفَها ومبلغَها (T-61)');
+    }
+    const fingerprint = `sha256:${createHash('sha256').update(receipt.trim(), 'utf8').digest('hex')}`;
+    if (this.payments.some((p) => p.evidence === fingerprint)) {
+      return refuse('بصمةُ الاستلام أثبتت دفعةً أخرى — لا يُعاد إثباتٌ واحدٌ لدفعتين (T-61)');
+    }
 
     payment.confirmedAt = now;
     payment.confirmedBy = by;
+    // يُضبط الدليل قبل التدوين: كان يُدوَّن الإقرارُ بلا دليله فيعود بعد الإقلاع مُقرًّا بلا إثبات
+    payment.evidence = fingerprint;
     this.journalPayment(payment);
-    payment.evidence = evidence.trim();
     const entry = this.deps.audit.append(by, 'external_payment_confirmed', {
       paymentId, accountId: payment.accountId, amount: payment.amount,
       evidence: payment.evidence, latencyMs: now - payment.at,
