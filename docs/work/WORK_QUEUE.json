@@ -1196,7 +1196,6 @@
         "لا شيء"
       ],
       "scope": [
-        "docs/audit/measurements/phase-39-T119.txt",
         "docs/test-reports/phase-40-W-2026-058.md"
       ],
       "excluded": "C-17-bench_multi_3m*.txt (خام لا يُمس) · COMPLETION_CRITERIA.md · config/scale.yaml · C-17.md",
@@ -1212,6 +1211,40 @@
       "created_at": "2026-10-03",
       "updated_at": "2026-10-03",
       "verification": "PR #23 مدمج · CI أخضر (بوابة التاج 5m3s + شاهد الحصر 1m4s) · npm test 2352/2352 · npm run verify 0 · main بعد الدمج أخضر"
+    },
+    {
+      "id": "W-2026-059",
+      "title": "قياسُ 3M بعد إصلاح T-119 بخامٍّ محفوظ — سندٌ لـ T-85",
+      "owner": "المساعد الآلي — Perplexity Computer",
+      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلٌّ وفق RULE-019",
+      "area": "تدقيق وقياس",
+      "phase": 40,
+      "status": "IN_PROGRESS",
+      "progress_items": [
+        "T-85"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "docs/audit/measurements/C-17-bench_multi_3m-post-T119.txt",
+        "docs/audit/measurements/C-17-bench_multi_3m-post-T119-run-1.txt",
+        "docs/audit/measurements/C-17-bench_multi_3m-post-T119-run-2.txt",
+        "docs/audit/measurements/C-17-bench_multi_3m-post-T119-run-3.txt",
+        "docs/audit/measurements/phase-39-T119.txt",
+        "docs/test-reports/phase-40-W-2026-059.md"
+      ],
+      "excluded": "خام C-17-bench_multi_3m*.txt القديم · COMPLETION_CRITERIA.md · C-17.md · config/scale.yaml · config/quotas.yaml",
+      "acceptance": [
+        "ثلاث تشغيلات 3M بعد إصلاح T-119 بخام محفوظ بأسماء جديدة دون مسّ خام ما قبل الإصلاح",
+        "إحالة من erratum في phase-39-T119.txt إلى الخام الجديد",
+        "npm run verify رمز 0",
+        "npm run check:work رمز 0"
+      ],
+      "evidence": "docs/audit/measurements/C-17-bench_multi_3m-post-T119*.txt · docs/test-reports/phase-40-W-2026-059.md",
+      "next_step": "حكم المدقق في T-85 على الخام الجديد (RULE-004)",
+      "created_at": "2026-10-03",
+      "updated_at": "2026-10-03"
     }
   ]
 }
