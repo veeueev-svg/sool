@@ -34,7 +34,8 @@ export interface OfficeDefinition {
   readonly conflictsWith: readonly string[];
 }
 
-export type ProposalKind = 'appointment' | 'dismissal';
+/** T-40 (W-2026-053): الاستقالةُ فعلٌ مستقلّ — بطلب صاحب المنصب، وباعتمادٍ ملكيّ، وتُسجَّل استقالةً لا عزلًا */
+export type ProposalKind = 'appointment' | 'dismissal' | 'resignation';
 export type ProposalStatus = 'proposed' | 'approved' | 'executed' | 'expired' | 'refused';
 
 export interface Proposal {

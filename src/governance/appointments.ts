@@ -161,10 +161,12 @@ export class AppointmentRegistry {
       });
       return { ok: false, reason, auditId: entry.hash };
     };
-    if (proposedBy !== ROYAL_COURT) return refuse('الاقتراح من الديوان الملكي وحده (RULE-004)');
+    const resigning = input.kind === 'resignation'; // T-40: الطالبُ صاحبُ المنصب نفسُه
+    if (!resigning && proposedBy !== ROYAL_COURT) return refuse('الاقتراح من الديوان الملكي وحده (RULE-004)');
+    if (resigning && proposedBy !== input.subject) return refuse('الاستقالة بطلب صاحب المنصب وحده (T-40)');
     if (this.proposals.has(input.proposalId)) return refuse('معرّف اقتراح مستخدم');
     if (input.reason.trim().length < 3) return refuse('لا اقتراح بلا سبب معلن (RULE-006)');
-    if (input.subject === proposedBy) return refuse('لا يقترح أحد تعيين نفسه');
+    if (!resigning && input.subject === proposedBy) return refuse('لا يقترح أحد تعيين نفسه');
     const office = this.offices.get(input.officeId);
     if (!office) return refuse('منصب غير معلن');
     if (!this.deps.ministries.isActive(office.ministryId)) return refuse('وزارة المنصب غير قائمة');
@@ -185,7 +187,8 @@ export class AppointmentRegistry {
     }
 
     const entry = this.deps.audit.append(proposedBy,
-      input.kind === 'appointment' ? 'appointment_proposed' : 'dismissal_proposed',
+      input.kind === 'appointment' ? 'appointment_proposed'
+        : input.kind === 'resignation' ? 'resignation_requested' : 'dismissal_proposed',
       { proposalId: input.proposalId, officeId: input.officeId, subject: input.subject, reason: input.reason });
     const proposal: Proposal = {
       proposalId: input.proposalId, kind: input.kind, officeId: input.officeId,
@@ -217,7 +220,8 @@ export class AppointmentRegistry {
     if (!decision.allowed) return refuse(`الأمر غير معتمد: ${decision.reason}`);
 
     const entry = this.deps.audit.append(command.payload.issuedBy,
-      proposal.kind === 'appointment' ? 'appointment_approved' : 'dismissal_approved',
+      proposal.kind === 'appointment' ? 'appointment_approved'
+        : proposal.kind === 'resignation' ? 'resignation_approved' : 'dismissal_approved',
       { proposalId, officeId: proposal.officeId, subject: proposal.subject, commandId: command.payload.commandId });
     const approved: Proposal = {
       ...proposal, status: 'approved', approvedBy: command.payload.issuedBy,
@@ -288,7 +292,8 @@ export class AppointmentRegistry {
 
     const current = this.holders.get(proposal.officeId);
     if (!current || current.holder !== proposal.subject) return refuse('صاحب المنصب تغيّر بعد الاعتماد');
-    const entry = this.deps.audit.append(executor, 'dismissal_executed', {
+    const entry = this.deps.audit.append(executor,
+      proposal.kind === 'resignation' ? 'resignation_executed' : 'dismissal_executed', {
       proposalId, officeId: proposal.officeId, former: current.holder, commandId: proposal.commandId,
     });
     trail.executed = entry.hash;

@@ -21,7 +21,7 @@
  * اختبار القبول: tests/governance/cabinet.test.ts
  * الوثيقة المرتبطة: docs/decisions/ADR-0007-government-and-ministries.md
  */
-import { EntityId, SovereignAction } from '../kernel/types';
+import { EntityId, SignedRoyalCommand, SovereignAction } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
 import { MinistryRegistry, ROYAL_COURT } from './ministries';
@@ -58,6 +58,8 @@ export interface CabinetDecision {
   readonly decidedAt: number;
   readonly executedBy: EntityId | null;
   readonly executedAt: number | null;
+  /** T-38 (W-2026-053): لحظةُ سقوط القرار لزوال اختصاص وزارته بعد الإجازة — `null` ما دام قائمًا */
+  readonly lapsedAt?: number | null;
 }
 
 export type CabinetResult<T> =
@@ -169,6 +171,7 @@ export class Cabinet {
       decisionId: input.decisionId, sessionId: session.sessionId, domain: input.domain,
       subject: input.subject, votes: { ...input.votes }, forCount, againstCount, passed,
       executingMinistry: ministry.ministryId, decidedAt: now, executedBy: null, executedAt: null,
+      lapsedAt: null,
     };
     this.decisions.set(decision.decisionId, decision);
     const entry = this.deps.audit.append(ROYAL_COURT, 'cabinet_decided', {
@@ -194,6 +197,17 @@ export class Cabinet {
       return refuse(`لا تنفيذ من غير ذي اختصاص: النطاق لـ ${decision.executingMinistry}`);
     }
     if (!this.deps.ministries.isActive(executor)) return refuse('وزارة غير قائمة');
+    if (decision.lapsedAt) return refuse('قرار ساقط بزوال الاختصاص — لا تنفيذ إلا بإعادة إسنادٍ ملكيّة (T-38)');
+    // T-38: الاختصاصُ يُقرأ لحظةَ التنفيذ لا لحظةَ الإجازة — فإن زال سقط القرار ويُسجَّل سقوطُه
+    const owner = this.deps.ministries.competentFor(decision.domain);
+    if (owner?.ministryId !== decision.executingMinistry) {
+      this.decisions.set(decisionId, { ...decision, lapsedAt: now });
+      const entry = this.deps.audit.append(executor, 'cabinet_decision_lapsed', {
+        decisionId, domain: decision.domain, formerMinistry: decision.executingMinistry,
+        currentOwner: owner?.ministryId ?? null, at: now,
+      });
+      return { ok: false, reason: 'زال اختصاصُ الوزارة بعد الإجازة — سقط القرار (T-38)', auditId: entry.hash };
+    }
     if (this.deps.appointments.occupiedOffices(executor).length === 0) {
       return refuse('لا تنفيذ من وزارة بلا صاحب منصب قائم');
     }
@@ -204,6 +218,33 @@ export class Cabinet {
       decisionId, domain: decision.domain, subject: decision.subject,
     });
     return { ok: true, value: executed, auditId: entry.hash };
+  }
+
+  /**
+   * T-38: إعادةُ إسنادِ قرارٍ مُجازٍ إلى صاحب الاختصاص القائم — بأمرٍ ملكيٍّ (`amend_policy` موجَّهٍ إلى
+   * القرار)، ولا تُعيد التصويت: تنقل التنفيذ وحده ويُرفع السقوط.
+   */
+  reassign(command: SignedRoyalCommand, decisionId: string, now = Date.now()): CabinetResult<CabinetDecision> {
+    const refuse = (reason: string): CabinetResult<CabinetDecision> => {
+      const entry = this.deps.audit.append(command.payload.issuedBy, 'cabinet_refused', { decisionId, reason, stage: 'reassign' });
+      return { ok: false, reason, auditId: entry.hash };
+    };
+    const decision = this.decisions.get(decisionId);
+    if (!decision || !decision.passed || decision.executedAt !== null) return refuse('لا إعادة إسناد إلا لقرارٍ مُجازٍ لم يُنفَّذ');
+    const owner = this.deps.ministries.competentFor(decision.domain);
+    if (!owner) return refuse(`لا وزارة قائمة صاحبة اختصاص في النطاق «${decision.domain}»`);
+    if (owner.ministryId === decision.executingMinistry) return refuse('الاختصاصُ لم يتغيّر — لا إعادة إسناد');
+    if (command.payload.action !== 'amend_policy' || command.payload.target !== decisionId) {
+      return refuse('إعادةُ الإسناد بأمر amend_policy موجَّهٍ إلى القرار نفسِه');
+    }
+    const authorized = this.deps.gateway.authorize(command, now);
+    if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
+    const updated: CabinetDecision = { ...decision, executingMinistry: owner.ministryId, lapsedAt: null };
+    this.decisions.set(decisionId, updated);
+    const entry = this.deps.audit.append(command.payload.issuedBy, 'cabinet_decision_reassigned', {
+      decisionId, from: decision.executingMinistry, to: owner.ministryId, commandId: command.payload.commandId,
+    });
+    return { ok: true, value: updated, auditId: entry.hash };
   }
 
   /** رفع الجلسة: لا قرار بعدها إلا بجلسة جديدة */
