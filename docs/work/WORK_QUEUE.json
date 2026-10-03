@@ -1226,7 +1226,8 @@
       "phase": 40,
       "status": "REVIEW",
       "progress_items": [
-        "T-85"
+        "T-85",
+        "2026-10-03 (الجلسة 89): إصلاحُ رابطٍ نسبيٍّ مكسورٍ في C-17.md (measurements/… من docs/audit/criteria/) — لا تغييرَ في حكمٍ ولا حال"
       ],
       "dependencies": [
         "لا شيء"
