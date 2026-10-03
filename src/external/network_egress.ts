@@ -67,6 +67,8 @@ export class NetworkEgressGuard {
   private contained = false;
   private readonly ministryId: EntityId;
   private readonly containAfter: number;
+  /** T-58 (W-2026-054): ما يُقطع مع الشبكة — القناةُ الماليّة؛ يُربط مرّةً عند التركيب */
+  private containmentHook: ((reason: string) => Decision) | null = null;
 
   constructor(
     private readonly audit: AppendOnlyLog,
@@ -194,6 +196,15 @@ export class NetworkEgressGuard {
     return { allowed: true, reason: 'خروج معلن داخل الإذن والسقف', auditId: entry.hash };
   }
 
+  /** T-58: يربط تعليقَ القناة الماليّة باحتواء الشبكة — مرّةً واحدة، فلا يُستبدل بعد التركيب */
+  bindContainmentHook(hook: (reason: string) => Decision): void {
+    if (this.containmentHook) throw new Error('EGRESS_CONTAINMENT_HOOK_REBOUND');
+    this.containmentHook = hook;
+  }
+
+  /** الجهةُ المحتوية — هي التي تعلّق الحسابات (معلنةٌ في suspend_authorities) */
+  get containingAuthority(): EntityId { return this.ministryId; }
+
   /** محاولة إلى مضيف غير معلن: تُسجَّل كحادث، وتكرارها يُحتوى ويُصعَّد */
   private recordUnannounced(entity: EntityId, host: string, port: number): Decision {
     const count = (this.unannounced.get(host) ?? 0) + 1;
@@ -208,6 +219,14 @@ export class NetworkEgressGuard {
       this.audit.append(this.ministryId, 'escalated_to_king', {
         incident: 'unannounced_egress', host, attempts: count,
       });
+      // T-58: قطعُ الشبكة وحده يُبقي القناةَ الماليّة قائمةً حتى يعلّقها إنسان — فتُعلَّق معه
+      const hook = this.containmentHook;
+      if (hook) {
+        const suspended = hook(`احتواءُ الخروج الشبكي: محاولاتٌ غير معلنة إلى ${host}`);
+        this.audit.append(this.ministryId, 'egress_containment_propagated', {
+          host, financial: suspended.allowed, reason: suspended.reason,
+        });
+      }
     }
     return { allowed: false, reason: 'مضيف غير معلن — الرفض هو الافتراض', auditId: entry.hash };
   }

@@ -371,7 +371,6 @@
         "src/kernel/config/inference.ts",
         "src/economy/ledger.ts",
         "src/economy/ledger_types.ts",
-        "src/external/payment_controls.ts",
         "tests/kernel/declared_dir_ascent.test.ts",
         "tests/kernel/channels_config.test.ts",
         "tests/kernel/config_duplicate_census.test.ts",
@@ -579,7 +578,6 @@
         "package.json",
         "src/kernel/resource_registry.ts",
         "src/agents/tools.ts",
-        "src/external/network_egress.ts",
         "src/load/load_drill.ts",
         "tests/kernel/lease_call_sites.test.ts",
         "docs/test-reports/phase-40-W-2026-046.md"
@@ -798,7 +796,6 @@
         "config/contracts.yaml",
         "config/enterprises.yaml",
         "config/production.yaml",
-        "src/composition/economy.ts",
         "src/composition/enterprises.ts",
         "src/external/contract_termination.ts",
         "src/kernel/config/closed_enums.ts",
@@ -996,6 +993,57 @@
       "created_at": "2026-10-03",
       "updated_at": "2026-10-03",
       "verification": "2026-10-03: npm test 2342/2342 · verify EXIT=0.",
+      "documentation_impact": [
+        "PROGRESS.md",
+        "CHANGELOG.md",
+        "version.json",
+        "ARCHITECTURE.md"
+      ]
+    },
+    {
+      "id": "W-2026-054",
+      "title": "احتواءُ الشبكة يعلّق المال والإثباتُ بصمةٌ لا نصّ (T-58 · T-61 · T-51)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 80)",
+      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلٌّ وفق RULE-019",
+      "area": "الخارج",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-58",
+        "T-61",
+        "T-51"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "src/external/network_egress.ts",
+        "src/external/payment_controls.ts",
+        "src/composition/economy.ts",
+        "tests/external/containment_and_receipts.test.ts",
+        "tests/external/payment_controls.test.ts",
+        "tests/external/external_lifecycle.test.ts",
+        "tests/external/account_registry.test.ts",
+        "tests/external/external_contracts_lifecycle.test.ts",
+        "docs/test-reports/phase-40-W-2026-054.md"
+      ],
+      "excluded": [
+        "توقيعُ النظير على الإيصال — لا مفتاحَ نظيرٍ معلنًا في config/external.yaml؛ الربطُ هنا بالدفعة والبصمة"
+      ],
+      "acceptance": [
+        "احتواءُ الشبكة يعلّق كلَّ حسابٍ قائم بيد الجهة المحتوية ويُقيَّد",
+        "وثيقةٌ لا تذكر معرّفَ الدفعة ومبلغَها مرفوضة، وبصمةٌ مستعملة مرفوضة",
+        "الإقرارُ يُدوَّن ومعه دليلُه",
+        "`npm test` صفرُ سقوط و`npm run verify` EXIT=0"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-W-2026-054.md",
+        "tests/external/containment_and_receipts.test.ts"
+      ],
+      "next_step": "المراجع: الإقرارُ أو الرفضُ بعيوبٍ مسمّاة (RULE-004).",
+      "created_at": "2026-10-03",
+      "updated_at": "2026-10-03",
+      "verification": "2026-10-03: npm test 2344/2344 · verify EXIT=0.",
       "documentation_impact": [
         "PROGRESS.md",
         "CHANGELOG.md",

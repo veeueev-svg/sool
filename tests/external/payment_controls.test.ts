@@ -238,16 +238,16 @@ test('إقرار الاستلام بمرجع موثَّق، مرة واحدة، 
   assert.equal(h.s.payments.confirm('extpay:99', FOREIGN, 'مرجع: RCV-1', h.now + 2000).ok, false);
   assert.equal(h.s.payments.pendingObligations(COMPUTE), 1);
 
-  const confirmed = h.s.payments.confirm(id, FOREIGN, 'مرجع استلام: RCV-2026-0007', h.now + 2000);
+  assert.equal(h.s.payments.confirm(id, FOREIGN, 'مرجع استلام: RCV-2026-0007', h.now + 2000).ok, false, 'T-61');
+  const confirmed = h.s.payments.confirm(id, FOREIGN, `إيصال RCV-2026-0007 عن ${id} بمبلغ 500000`, h.now + 2000);
   assert.equal(confirmed.ok, true);
   assert.equal(h.s.payments.pendingObligations(COMPUTE), 0);
-  assert.equal(h.s.payments.confirm(id, FOREIGN, 'مرجع استلام آخر', h.now + 3000).ok, false,
-    'لا إقرار مرتين');
+  assert.equal(h.s.payments.confirm(id, FOREIGN, 'مرجع استلام آخر', h.now + 3000).ok, false, 'لا إقرار مرتين');
   const record = h.s.audit.find('external_payment_confirmed')[0]?.detail as {
     withinWindow: boolean; evidence: string;
   };
   assert.equal(record.withinWindow, true);
-  assert.equal(record.evidence, 'مرجع استلام: RCV-2026-0007');
+  assert.match(record.evidence, /^sha256:[0-9a-f]{64}$/, 'تُحفظ البصمة لا اللفظ (T-61)');
 });
 
 test('المتأخرات تُرفع بعد نافذة الإثبات، مرة واحدة لكل دفعة، وبلا عقوبة', () => {
@@ -282,7 +282,7 @@ test('الدفعة المُقرّة لا تُرفع متأخرةً، والال�
     accountId: ARCHIVE, amount: 100_000, line: 'budget:foreign',
     purpose: 'دفعة أرشيف', requestedBy: FOREIGN,
   }, h.now + 2000);
-  h.s.payments.confirm(a.ok ? a.payment.paymentId : '', FOREIGN, 'مرجع: RCV-0009', h.now + 3000);
+  h.s.payments.confirm(a.ok ? a.payment.paymentId : '', FOREIGN, `إيصال ${a.ok ? a.payment.paymentId : ''} بمبلغ 100000`, h.now + 3000);
 
   const window = h.s.externalConfig.policy.confirmation_window_hours * HOUR;
   const raised = h.s.payments.raiseOverdue(h.now + window + HOUR);

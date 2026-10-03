@@ -151,7 +151,7 @@ test('قبول 6: **الإنهاء لا يُسقط التزامًا** — ناف
   assert.equal(early.ok, false);
   assert.match(early.ok ? '' : early.reason, /لم يُثبَت استلامه/);
   // وبعد إقرار الاستلام تصحّ التسوية
-  assert.equal(h.s.payments.confirm(paid.payment.paymentId, FOREIGN, 'RCV-2026-0001', moment).ok, true);
+  assert.equal(h.s.payments.confirm(paid.payment.paymentId, FOREIGN, `RCV-2026-0001 ${paid.payment.paymentId} 400000`, moment).ok, true);
   const settled = h.s.contractTermination.settle(
     contract.contractId, FINANCE, 'مرجع-تسوية-نهائية', moment,
   );

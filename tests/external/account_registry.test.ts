@@ -243,7 +243,7 @@ test('لا إغلاق على التزام لم يُثبَت استلامه، و�
   assert.match(blocked.ok ? '' : blocked.reason, /لم يُثبَت استلامه/);
 
   h.s.payments.confirm(
-    paid.ok ? paid.payment.paymentId : '', FOREIGN, 'مرجع استلام: RCV-2026-0001', h.now + 3000,
+    paid.ok ? paid.payment.paymentId : '', FOREIGN, `إيصال عن ${paid.ok ? paid.payment.paymentId : ''} بمبلغ 500000`, h.now + 3000,
   );
   const closed = h.s.externalAccounts.close(
     h.royalOpen(COMPUTE, h.now + 4000), COMPUTE, FOREIGN, 'انتهى الغرض المعلن', h.now + 4000,

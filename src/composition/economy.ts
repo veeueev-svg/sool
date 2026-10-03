@@ -93,6 +93,8 @@ export function composeEconomy(
     egressProbe: (host, port, at) => egress.hasAllowance(host, port, at),
   });
   externalAccounts.bindEgressProbe((host, port, at) => egress.hasAllowance(host, port, at));
+  // T-58: احتواءُ الشبكة يعلّق القناةَ الماليّة في اللحظة نفسِها، بيد الجهة المحتوية
+  egress.bindContainmentHook((reason) => externalAccounts.suspendAll(egress.containingAuthority, reason));
   externalAccounts.bindObligationProbe((accountId) => payments.pendingObligations(accountId));
   // ثابت 11 في الخزانة · ثابت 1 في ضوابط الدفع (T-60): نطاقُ `external:ledger:` محجوزٌ
   // لبابِه المعلن، والحرسُ يُربط مرّةً واحدةً. وحدُّه المعلن: خزانةٌ تُركّب بلا ضوابطِ دفعٍ
