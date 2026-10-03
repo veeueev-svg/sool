@@ -80,6 +80,9 @@ export class TerminationOrder {
     const stopMs: Record<EntityId, number> = {};
     const startedAt = performance.now();
     let reclaimed = 0;
+    // T-169 (W-2026-060): الأقصى يُحسب أثناء الحلقة لا بنشرِ وسيطٍ لكلِّ كيان — فالنشرُ يرمي
+    // `RangeError` فوق ~150 ألفًا **بعد** إيقاف الجميع، فيضيع التقريرُ وقيدُ الاكتمال والتصعيد.
+    let maxStopMs = 0;
 
     for (const entity of targeted) {
       let ok = false;
@@ -92,6 +95,7 @@ export class TerminationOrder {
       if (ok) {
         this.killSwitch.confirmStopped(entity);
         stopMs[entity] = Number((performance.now() - startedAt).toFixed(3));
+        if (stopMs[entity]! > maxStopMs) maxStopMs = stopMs[entity]!;
         stopped.push(entity);
         reclaimed += this.resources?.releaseAllFor(entity) ?? 0;
       } else {
@@ -114,7 +118,7 @@ export class TerminationOrder {
     const entry = this.audit.append(this.guardId, complete ? 'mass_termination_complete' : 'mass_termination_incomplete', {
       commandId: command.payload.commandId,
       stopped: stopped.length, failed: failed.length, resourcesReclaimed: reclaimed,
-      maxStopMs: Math.max(0, ...Object.values(stopMs)),
+      maxStopMs,
     });
 
     return {

@@ -1,0 +1,6 @@
+# W-2026-060 · إنهاءٌ جماعيٌّ عبر البوابة بالتهيئة المعلنة (config/scale.yaml · السقف 3000000) · 2026-10-03T08:57:27.015Z
+# الأمر: node --max-old-space-size=6144 <هذا السكربت> · Node v20.20.1
+مسجَّل: 3000000 في 17966ms · حصص identity_slots: 3000000
+أمر الإنهاء: executed=true complete=true stopped=3000000 failed=0 زمنُ الأمر كاملًا=57850ms maxStopMs(القيد)=55753.949
+بعده: السكان=0 · حصص identity_slots=0 · فهرس الشرائح سليم=true · سلامة السجل={"valid":true,"length":6000184,"brokenAt":null,"reason":"سلسلة سليمة"}
+ذاكرة (MiB): RSS=3829.9
