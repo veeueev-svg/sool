@@ -3,12 +3,12 @@
  * المالك: ديوان التدقيق (الرفع) وحرس التاج (الاحتواء)
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * المدخلات: حالة سجل الأقاليم وسجل الحكّام ومحكمة النزاع | المخرجات: مخالفات مرفوعة
- * التبعيات: سجل الأقاليم، سجل الحكّام، محكمة النزاع، الإيقاف الفوري، السجل غير القابل للمحو
+ * التبعيات: سجل الأقاليم، سجل الحكّام، محكمة النزاع، الاجتماع، السجل غير القابل للمحو
  * السجلات: region_sweep / region_flagged / region_contained / containment_refused
  * ثوابت هذه الوحدة:
  *   1) **المراقب يرفع ولا يعالج**: المسح يُنتج مخالفات معلنة، والاحتواء فعل حرس مسجَّل
  *   2) **لا احتواء بلا مخالفة مرفوعة سابقًا**: العقوبة لا تسبق الإثبات (RULE-006)
- *   3) الاحتواء لا يمحو المخالفة: تبقى في السجل مع أثر الاحتواء
+ *   3) الاحتواء لا يمحو المخالفة: تبقى في السجل مع أثر الاحتواء — وهو موضعيٌّ للإقليم وحده (T-44)
  *   4) سلطة بلا مسؤول مخالفة: إقليم مفوَّض ومقعد حاكمه خالٍ بعد المهلة يُرفع
  *   5) نطاق محفوظ للتاج بيد إقليم انحرافٌ جسيم يُرفع فورًا بلا مهلة
  *   6) نزاع لم يُحسم بعد مهلته يُرفع — لا نزاع يُنسى
@@ -22,7 +22,6 @@
  */
 import { EntityId } from '../kernel/types';
 import { AppendOnlyLog } from '../audit/append_only_log';
-import { KillSwitch } from '../security/kill_switch';
 import { CROWN_RESERVED_DOMAINS, RegionRegistry } from './region_registry';
 import { GovernorRegistry, GOVERNOR_EXECUTOR } from './governor';
 import { RegionalTribunal } from './dispute_resolution';
@@ -62,7 +61,6 @@ export interface RegionMonitorDeps {
   readonly regions: RegionRegistry;
   readonly governors: GovernorRegistry;
   readonly tribunal: RegionalTribunal;
-  readonly killSwitch: KillSwitch;
   readonly vacancyGraceMs?: number;
   readonly disputeGraceMs?: number;
   /** T-47: مصدرُ الالتماسات — غيابُه في تركيبٍ قديمٍ يُبقي الالتماسَ بلا رقيب، فهو إلزاميّ */
@@ -73,6 +71,8 @@ export interface RegionMonitorDeps {
 
 export class RegionMonitor {
   private readonly flags: RegionFlag[] = [];
+  /** T-44 (W-2026-056): الأقاليمُ المحتواة — الاحتواءُ موضعيٌّ لا قاطعٌ عامٌّ يوقف السليمَ معها */
+  private readonly contained = new Map<EntityId, number>();
   private readonly vacancyGraceMs: number;
   private readonly disputeGraceMs: number;
   private readonly escalationGraceMs: number;
@@ -179,12 +179,35 @@ export class RegionMonitor {
     // ثابت 3: المخالفة تبقى، ويُسجَّل عليها أثر الاحتواء
     const index = this.flags.indexOf(flag);
     this.flags[index] = { ...flag, containedAt: now };
-    this.deps.killSwitch.engage(actor, 'agents', `احتواء إقليم ${regionId}: ${reason.trim()}`);
+    // T-44: يُحتوى الإقليمُ وحده — أفعالُ حاكمه تُرفض عند الباب، والأقاليمُ السليمةُ تعمل
+    this.contained.set(regionId, now);
     const entry = this.deps.audit.append(actor, 'region_contained', {
-      regionId, kind, reason: reason.trim(), flagAudit: flag.auditId, at: now,
+      regionId, kind, reason: reason.trim(), flagAudit: flag.auditId, at: now, scope: 'region',
       note: 'الاحتواء لا يسحب التفويض — السحب أمر ملكي',
     });
     return { ok: true, auditId: entry.hash };
+  }
+
+  /** T-44: رفعُ الاحتواء الموضعيّ — لحرس التاج وحده وبسببٍ معلن، والمخالفةُ تبقى في التاريخ */
+  release(
+    actor: EntityId, regionId: EntityId, reason: string, now = Date.now(),
+  ): { readonly ok: boolean; readonly reason?: string; readonly auditId: string } {
+    const why = actor !== GOVERNOR_EXECUTOR ? 'رفعُ الاحتواء لحرس التاج وحده (RULE-004)'
+      : reason.trim().length < 3 ? 'لا رفع بلا سبب معلن (RULE-006)'
+        : !this.contained.has(regionId) ? 'إقليمٌ غير محتوى' : null;
+    if (why) {
+      const refused = this.deps.audit.append(actor, 'containment_refused', { regionId, reason: why, mode: 'release' });
+      return { ok: false, reason: why, auditId: refused.hash };
+    }
+    const since = this.contained.get(regionId);
+    this.contained.delete(regionId);
+    const entry = this.deps.audit.append(actor, 'region_released', { regionId, reason: reason.trim(), since, at: now });
+    return { ok: true, auditId: entry.hash };
+  }
+
+  /** T-44: هل الإقليمُ محتوًى الآن؟ — يقرؤه سجلُّ الحكّام قبل كلِّ فعل */
+  isContained(regionId: EntityId): boolean {
+    return this.contained.has(regionId);
   }
 
   /** كل المخالفات المرفوعة — لا تُحذف (RULE-006) */

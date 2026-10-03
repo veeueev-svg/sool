@@ -97,6 +97,8 @@ export class GovernorRegistry {
   private readonly seats = new Map<EntityId, GovernorSeat>();
   private readonly trails = new Map<string, { proposed: string; approved?: string; executed?: string }>();
   private passage: PassageGuard | null = null;
+  /** T-44 (W-2026-056): مصدرُ الاحتواء الموضعيّ — يُربط مرّةً من مراقب الأقاليم */
+  private containment: ((regionId: EntityId) => boolean) | null = null;
   private readonly approvalTtlMs: number;
 
   constructor(private readonly deps: GovernorRegistryDeps) {
@@ -290,6 +292,7 @@ export class GovernorRegistry {
     const seat = this.seats.get(input.regionId);
     if (!seat || seat.governor !== governor) return refuse('ليس حاكم هذا الإقليم');
     if (!this.deps.regions.isActive(input.regionId)) return refuse('إقليم غير قائم');
+    if (this.containment?.(input.regionId)) return refuse('الإقليم محتوًى — لا فعل حتى يرفع الحرسُ الاحتواء (T-44)');
     if (input.action.trim().length < 3) return refuse('لا فعل بلا وصف معلن (RULE-006)');
     if (input.sovereign !== undefined) {
       return refuse('الحاكم لا يبلغ فعلًا سياديًا — السيادة للتاج وحده (ثابت 5)', {
@@ -325,6 +328,12 @@ export class GovernorRegistry {
     }
     this.passage = guard;
     this.deps.audit.append(GOVERNOR_EXECUTOR, 'governor_passage_bound', {});
+  }
+
+  /** T-44: ربطُ مصدر الاحتواء الموضعيّ — مرّةً واحدة، فلا يُبدَّل بمصدرٍ يقول «لا احتواء» */
+  bindContainment(probe: (regionId: EntityId) => boolean): void {
+    if (this.containment) throw new SovereignViolation('مصدرُ الاحتواء مربوطٌ سابقًا', 'GOVERNOR_CONTAINMENT_ALREADY_BOUND');
+    this.containment = probe;
   }
 
   governorOf(regionId: EntityId): GovernorSeat | undefined {
