@@ -1412,50 +1412,6 @@
       ]
     },
     {
-      "id": "W-2026-063",
-      "title": "تصحيح SECURITY.md — قيود متقادمة تخالف الواقع",
-      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 89)",
-      "reviewer": "القيّم على المستودع (المالك)",
-      "area": "الأمن والتوثيق",
-      "phase": 40,
-      "status": "REVIEW",
-      "progress_items": [
-        "قُرئ SECURITY.md وقُورن بـTHREAT_MODEL.md وconfig/persistence.yaml وsrc/agents/",
-        "صُحّح البندان 2 و3 ليصفا الثبات الجزئي والعزل المنفذ بدل الغياب الكامل",
-        "أُضيف مرجع T14 للبند 1",
-        "نُقلت التزمة الأولى (SECURITY.md) ونجحت CI",
-        "أُضيف سجل الجلسة 89 إلى PROGRESS.md وتقرير اختبار"
-      ],
-      "dependencies": [
-        "لا شيء"
-      ],
-      "scope": [
-        "SECURITY.md",
-        "docs/test-reports/phase-40-security-md-fix.md",
-        "docs/work/orders/W-2026-063.md"
-      ],
-      "excluded": [
-        "src/ و tests/ و scripts/ — تصحيح توثيقي فقط",
-        "THREAT_MODEL.md — حاله صادق",
-        "COMPLETION_CRITERIA.md — لا ترقية"
-      ],
-      "acceptance": [
-        "SECURITY.md يصف الثبات والعزل كما هما فعلًا مع الإشارة للفجوات المفتوحة",
-        "npm run verify → EXIT=0",
-        "CI خضراء على main",
-        "سجل في PROGRESS.md وتقرير اختبار"
-      ],
-      "evidence": [
-        "npm run verify → EXIT=0 (15 حاجزًا · 2366/2366)",
-        "CI: بوابة التاج success 3m39s",
-        "CI: شاهد الحصر success 54s"
-      ],
-      "next_step": "جهةٌ تستلمه فتنقله إلى CLAIMED",
-      "created_at": "2026-10-03",
-      "updated_at": "2026-10-03",
-      "verification": "npm run verify → EXIT=0 (15 حاجزًا · 2366/2366) · CI: بوابة التاج success · شاهد الحصر success"
-    },
-    {
       "id": "W-2026-064",
       "title": "روابطُ نسبيّةٌ مكسورةٌ وأرقامٌ منقولةٌ متقادمة — وحارسٌ يمنع رجوعَها",
       "owner": "المساعد الآلي — Perplexity Computer (الجلسة 89)",
@@ -1589,6 +1545,80 @@
       ],
       "discoveries": [
         "مجلس المراجعة — الجلسة 1 (2026-10-04 · عند 5bfd61f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان: (1) إعادةُ الأمر الملكيّ نفسِه تُنفّذ تعديلًا ثانيًا لأنّ بوابةَ التاج idempotent تُعيد قرارَها السابق allowed=true وamendRate لا يميّز الإعادة — grok؛ (2) RATE_AMENDMENT_COMMAND_NOT_PARAMETER_BOUND: الأمرُ لا يربط الوعاءَ ولا النسبة، فتوقيعٌ واحدٌ يعدّل كلَّ الأوعية — gpt. وعولجا من الجذر في الجلسة 91 (انظر verification)."
+      ]
+    },
+    {
+      "id": "W-2026-066",
+      "title": "مجلسُ المراجعة — الجلسةُ الأولى والثانية: محاضرُ وتقاريرُ خامٌّ للبنود W-2026-062..065",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 91)",
+      "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
+      "area": "حوكمة",
+      "phase": 40,
+      "status": "IN_PROGRESS",
+      "progress_items": [
+        "لا ينطبق"
+      ],
+      "dependencies": [
+        "W-2026-062"
+      ],
+      "scope": [
+        "docs/work/council/W-2026-062.json",
+        "docs/work/council/W-2026-063.json",
+        "docs/work/council/W-2026-064.json",
+        "docs/work/council/W-2026-065.json",
+        "docs/work/council/W-2026-062-gpt.md",
+        "docs/work/council/W-2026-062-grok.md",
+        "docs/work/council/W-2026-062-gemini.md",
+        "docs/work/council/W-2026-063-gpt.md",
+        "docs/work/council/W-2026-063-grok.md",
+        "docs/work/council/W-2026-063-gemini.md",
+        "docs/work/council/W-2026-064-gpt.md",
+        "docs/work/council/W-2026-064-grok.md",
+        "docs/work/council/W-2026-064-gemini.md",
+        "docs/work/council/W-2026-065-gpt.md",
+        "docs/work/council/W-2026-065-grok.md",
+        "docs/work/council/W-2026-065-gemini.md",
+        "docs/work/council/W-2026-062-2.json",
+        "docs/work/council/W-2026-064-2.json",
+        "docs/work/council/W-2026-065-2.json",
+        "docs/work/council/W-2026-062-2-gpt.md",
+        "docs/work/council/W-2026-062-2-grok.md",
+        "docs/work/council/W-2026-062-2-gemini.md",
+        "docs/work/council/W-2026-064-2-gpt.md",
+        "docs/work/council/W-2026-064-2-grok.md",
+        "docs/work/council/W-2026-064-2-gemini.md",
+        "docs/work/council/W-2026-065-2-gpt.md",
+        "docs/work/council/W-2026-065-2-grok.md",
+        "docs/work/council/W-2026-065-2-gemini.md",
+        "docs/test-reports/phase-40-W-2026-066.md",
+        "docs/work/orders/W-2026-066.md"
+      ],
+      "excluded": [
+        "تعديلُ أيِّ تقريرٍ خامٍّ لعضو — يُحفظ كما كتبه",
+        "علاجُ العيوب المسمّاة — في بنودها W-2026-062 · W-2026-064 · W-2026-065 لا هنا",
+        "scripts/review_council.ts — محجوزٌ لـW-2026-062"
+      ],
+      "acceptance": [
+        "لكلِّ بندٍ مُراجَعٍ محضرٌ JSON بهاشِ التزامةٍ وبصمةِ نطاقٍ وحكمِ كلِّ عضوٍ وتقريرِه الخامّ المحفوظ",
+        "الإجماعُ وحده يُرقّي؛ والخلافُ NOT_VERIFIED بمآلٍ مسمّى ويُعاد البندُ إلى IN_PROGRESS",
+        "tests/governance/review_council.test.ts أخضرُ على الحال الحقيقيّ",
+        "npm run verify → 0"
+      ],
+      "evidence": [
+        "docs/test-reports/phase-40-W-2026-066.md"
+      ],
+      "next_step": "الجلسةُ الثانيةُ على W-2026-062 · W-2026-064 · W-2026-065 بعد علاج عيوبها.",
+      "created_at": "2026-10-04",
+      "updated_at": "2026-10-04",
+      "documentation_impact": [
+        "PROGRESS.md — مدخلُ الجلسة 91",
+        "CHANGELOG.md — مدخلُ أوّلِ انعقادٍ للمجلس"
+      ],
+      "verification": [
+        "الجلسة 1: npm test و npm run verify على شجرة العمل — انظر التقرير"
+      ],
+      "discoveries": [
+        "عيوبٌ مسمّاةٌ في ثلاثةِ بنودٍ أُعيدت إلى IN_PROGRESS — مقيّدةٌ في discoveries من صفوفها"
       ]
     }
   ]
