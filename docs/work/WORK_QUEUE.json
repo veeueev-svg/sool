@@ -5,7 +5,7 @@
   "gate": "scripts/check_work.mjs",
   "history": "docs/work/WORK_LOG.md",
   "id_pattern": "W-YYYY-NNN",
-  "updated_at": "2026-10-03",
+  "updated_at": "2026-10-04",
   "statuses": [
     "PROPOSED",
     "CLAIMED",
@@ -1516,6 +1516,63 @@
         "ROADMAP.md",
         "CHANGELOG.md",
         "version.json"
+      ]
+    },
+    {
+      "id": "W-2026-065",
+      "title": "مسارٌ ملكيٌّ لتعديل سعر الرسم مع حفظ تاريخ الإعلان — لا أثر رجعيًّا (T-53)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 90)",
+      "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
+      "area": "الاقتصاد والمالية",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "T-53"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "src/economy/tax.ts",
+        "src/kernel/config/economy.ts",
+        "tests/economy/tax_rate_amendment.test.ts",
+        "docs/test-reports/phase-40-W-2026-065.md"
+      ],
+      "excluded": [
+        "src/economy/budget.ts وtreasury.ts وledger.ts — لا علاقة للبند بها؛ وledger.ts محجوزٌ لـW-2026-042",
+        "src/composition/economy.ts — محجوزٌ لـW-2026-056؛ والتعديلُ مسارٌ على الخدمةِ القائمةِ فلا تركيبَ يُلمس",
+        "إضافةُ صنفِ يوميّةٍ جديدٍ لتدوينِ النِّسَب — تتطلّب تعديلَ src/kernel/config/closed_enums.ts المحجوز لـW-2026-050 — عائقٌ مسمًّى مؤجَّلٌ إليه",
+        "أيُّ ترقيةٍ لحكمِ معيارٍ في docs/audit/ (RULE-004)",
+        "T-107 — بندُ قدرةٍ مستقلٌّ وطريقُه محجوزٌ بأقفالِ W-2026-050 الحيّة"
+      ],
+      "acceptance": [
+        "تعديلُ نسبةٍ معلنةٍ في التشغيل بأمرٍ ملكيٍّ معتمدٍ ينجح ويسجّل rate_amended بالقيمتين وبتاريخِ السريان",
+        "لا أثرٌ رجعيٌّ: واقعةٌ قبل تاريخِ السريانِ بالنسبةِ القديمة، وقبل إعلانِ الأولى مرفوضة (ثابت 2)",
+        "لا تعديلَ بغيرِ أمرٍ ملكيٍّ معتمدٍ من بوابةِ التاج — رفضٌ لا تغييرَ معه",
+        "حدودُ النسبةِ من مصدرٍ واحدٍ يقرؤه المحمِّلُ والتعديلُ معًا",
+        "رفضٌ مغلقٌ لكلِّ: وعاءٍ غيرِ معلنٍ · نسبةٍ غيرِ سليمةٍ · تعديلٍ بلا تغييرٍ · تعديلٍ بتاريخٍ يسابق إعلانَه",
+        "سجلُّ النِّسَب يُعيدُ الإعلاناتِ كلَّها ولا يُمحى منها شيء",
+        "npm test بعددٍ مقيسٍ وnpm run verify → 0"
+      ],
+      "evidence": [
+        "npm test → 2377/2377 (2367 + 10 اختباراتِ قبولٍ في tests/economy/tax_rate_amendment.test.ts)",
+        "npm run verify → EXIT=0 (15 حاجزًا)",
+        "التقرير: docs/test-reports/phase-40-W-2026-065.md",
+        "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)"
+      ],
+      "next_step": "التحقّقُ لمجلسِ المراجعةِ (RULE-020) والقيّم على المستودع — لا يرقّي المنفِّذُ عملَه (RULE-004). وما تأجّل بعائقٍ مسمًّى: تدوينُ التعديلِ صنفًا في اليوميّةِ (closed_enums.ts محجوزٌ لـW-2026-050).",
+      "created_at": "2026-10-04",
+      "updated_at": "2026-10-04",
+      "documentation_impact": [
+        "ARCHITECTURE.md — صفُّ src/economy/ بالقياسِ الجديد",
+        "PROGRESS.md — مدخلُ الجلسةِ 90 وتحديثُ صفِّ T-53 (REVIEW لا VERIFIED — RULE-004)",
+        "CHANGELOG.md — مدخلُ البند",
+        "version.json — tests.total بالمقيس"
+      ],
+      "verification": [
+        "شُغِّل في 2026-10-04 على شجرةِ العمل: npm test (2377/2377 · صفرُ فشلٍ) ثمّ npm run verify بسلسلتِه الكاملة (15 حاجزًا) — رمزُ الخروج 0",
+        "التقرير: docs/test-reports/phase-40-W-2026-065.md — ومصفوفةُ القبولِ العشرةُ فيه كلُّها ✓",
+        "التحقّقُ المستقلُّ لمجلسِ المراجعةِ (RULE-020): لم يصدر بعدُ — الحالُ REVIEW لا VERIFIED (RULE-004)"
       ]
     }
   ]

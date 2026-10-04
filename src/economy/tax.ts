@@ -5,8 +5,9 @@
  * المدخلات: وعاء معلن في config/economy.yaml، ومبلغ أساس صحيح موجب، ولحظة الواقعة
  * المخرجات: تقدير ثم تحصيل مقيَّد في الدفتر بإيصال، أو رفض بسبب موثّق
  * التبعيات: الخزانة (القيد)، الدفتر، بوابة التاج (الإعفاء)، تهيئة الاقتصاد (النِسَب)
- * الصلاحيات: التقدير والتحصيل لوزارة المالية؛ والإعفاء بأمر ملكي وحده
- * السجلات: levy_assessed / levy_collected / levy_refused / levy_waived
+ * الصلاحيات: التقدير والتحصيل لوزارة المالية؛ والإعفاء والتعديلُ بأمرٍ ملكيٍّ وحده
+ * السجلات: levy_assessed / levy_collected / levy_refused / levy_waived /
+ *          rate_amended / rate_amendment_refused
  * ثوابت هذه الوحدة:
  *   1) **لا رسم بلا نصّ معلن**: وعاء غير معلن في التهيئة ⇒ رفض (RULE-005)
  *   2) **لا أثر رجعي**: واقعة قبل تاريخ إعلان النسبة لا تُطالَب بها —
@@ -16,6 +17,10 @@
  *   5) **لا تحصيل مرتين** لنفس التقدير
  *   6) **لا إعفاء إلا بأمر ملكي**: ولا يُعفي المكلَّفُ نفسه (RULE-005)
  *   7) كل تحصيل قيدٌ مزدوج في الدفتر بإيصال — لا مال يدخل بلا أثر
+ *   8) **تعديل النسبة بأمر ملكي وبتاريخ سريان معلن** (T-53): يسجّل القيمتين
+ *      معًا (القديمة والجديدة) كما يفعل appropriation_amended، والإعلانُ القديمُ
+ *      يبقى في سجلِ النِّسَب لا يُمحى، والواقعةُ تُقدَّر بنسبةِ إعلانِها الذي
+ *      ساد لحظة وقوعها لا بأحدثِ المعلن — فلا يُدقَّقُ الماضي بأحكامِ الحاضر
  * حالات الفشل (كلها مغلقة): وعاء غير معلن ⇒ رفض؛ واقعة سابقة للإعلان ⇒ رفض؛
  *   تحصيل بلا تقدير أو مكرَّر ⇒ رفض؛ فشل القيد ⇒ لا تحصيل؛ إعفاء ذاتي ⇒ رفض
  * اختبار القبول: tests/economy/economy_lifecycle.test.ts
@@ -26,6 +31,7 @@ import { AppendOnlyLog } from '../audit/append_only_log';
 import { CrownGateway } from '../crown/crown_gateway';
 import { FINANCE_MINISTRY, isValidAmount } from './ledger';
 import { Treasury } from './treasury';
+import { isValidRatePerMille } from '../kernel/config/economy';
 import type { DurableSink } from '../data/persistence';
 
 /** هدف الأمر الملكي لكل إعفاء */
@@ -59,6 +65,11 @@ export type LevyResult =
   | { readonly ok: true; readonly levy: Levy; readonly auditId: string }
   | { readonly ok: false; readonly reason: string; readonly auditId: string };
 
+/** نتيجةُ تعديلِ النسبةِ الملكيّ (T-53): الإعلانُ الجديدُ والسابقُ معًا أو رفضٌ بسببٍ موثّق */
+export type RateAmendmentResult =
+  | { readonly ok: true; readonly declaration: RateDeclaration; readonly previous: RateDeclaration; readonly auditId: string }
+  | { readonly ok: false; readonly reason: string; readonly auditId: string };
+
 export interface RevenueDeps {
   readonly audit: AppendOnlyLog;
   readonly gateway: CrownGateway;
@@ -74,11 +85,17 @@ export interface RevenueDeps {
 export class RevenueService {
   private readonly levies = new Map<string, Levy>();
   private readonly actorId: EntityId;
+  /**
+   * سجلُّ النِّسَب (ثابت 8 · T-53): إعلانٌ واحدٌ في التهيئةِ ثمّ ما زادَه الملكُ بأمرِه.
+   * الإعلانُ القديمُ لا يُمحى — فتاريخُ التسعيرِ دليلٌ يُدقَّقُ به لا يُدارَسُ به الحاضرُ.
+   */
+  private readonly rateHistory = new Map<string, RateDeclaration[]>();
   private sequence = 0;
   private sink: DurableSink | null = null;
 
   constructor(private readonly deps: RevenueDeps) {
     this.actorId = deps.actorId ?? FINANCE_MINISTRY;
+    for (const rate of deps.rates) this.rateHistory.set(rate.base, [rate]);
   }
 
   /** 1) التقدير: بنصّ معلن، وبلا أثر رجعي، وبحساب صحيح (ثوابت 1–4) */
@@ -119,10 +136,18 @@ export class RevenueService {
       return { ok: false, reason, auditId: entry.hash };
     };
 
-    const rate = this.deps.rates.find((r) => r.base === base);
+    // ثابتا 2 و8: الواقعةُ تُقدَّر بإعلانِ النسبةِ الذي ساد لحظةَ وقوعها —
+    // أحدثُ الإعلاناتِ لا يحكمُ الماضي (لا أثرٌ رجعيٌّ في الاتجاهين)
+    const rate = this.rateEffectiveAt(base, occurredAt);
     if (!rate) {
-      return refuse('وعاء غير معلن في config/economy.yaml — لا رسم بلا نصّ (ثابت 1)', {
-        declared: this.deps.rates.map((r) => r.base),
+      const first = this.rateHistory.get(base)?.[0];
+      if (!first) {
+        return refuse('وعاء غير معلن في config/economy.yaml — لا رسم بلا نصّ (ثابت 1)', {
+          declared: [...this.rateHistory.keys()],
+        });
+      }
+      return refuse('واقعة سابقة لإعلان النسبة — لا أثر رجعي (ثابت 2)', {
+        occurredAt, declaredAt: first.declaredAt,
       });
     }
     if (!isValidAmount(amountBase)) return refuse('أساس غير سليم: عدد صحيح موجب');
@@ -224,8 +249,89 @@ export class RevenueService {
     return { ok: true, levy: waived, auditId: entry.hash };
   }
 
+  /**
+   * 3) تعديلُ النسبةِ بأمرٍ ملكيٍّ معتمدٍ وبتاريخِ سريانٍ معلن (ثابت 8 · T-53) —
+   * نظيرُ appropriation_amended: يسجّلُ القيمتينِ معًا، والإعلانُ السابقُ يبقى
+   * في سجلِ النِّسَب لا يُمحى، ولا يسريُُ الجديدُ إلّا من لحظةِ اعتمادِه.
+   */
+  amendRate(
+    command: SignedRoyalCommand,
+    base: string,
+    newRatePerMille: number,
+    now = Date.now(),
+  ): RateAmendmentResult {
+    const refuse = (reason: string, extra: Record<string, unknown> = {}): RateAmendmentResult => {
+      const entry = this.deps.audit.append(this.actorId, 'rate_amendment_refused', {
+        base, requestedRatePerMille: newRatePerMille, reason, ...extra,
+      });
+      return { ok: false, reason, auditId: entry.hash };
+    };
+    const history = this.rateHistory.get(base);
+    if (!history) {
+      return refuse('وعاء غير معلن — لا تعديل لما لا نصّ له (ثابت 1)', {
+        declared: [...this.rateHistory.keys()],
+      });
+    }
+    // حدودُ النسبةِ من مصدرِها الواحدِ الذي يقرؤه المحمّلُ نفسه (T-53)
+    if (!isValidRatePerMille(newRatePerMille)) {
+      return refuse('نسبة غير سليمة: عددٌ صحيحٌ فوق الصفر ولا يتجاوز الألف (حدود المصدر نفسه)', {
+        requestedRatePerMille: newRatePerMille,
+      });
+    }
+    const current = history[history.length - 1];
+    if (!current) {
+      return refuse('سجلُّ نِسَبٍ فارغٌ لوعاءٍ معلن — فشلٌ مغلقٌ لا يُملأ بالتخمين');
+    }
+    if (current.ratePerMille === newRatePerMille) {
+      return refuse('لا تعديل بلا تغيير');
+    }
+    if (now < current.declaredAt) {
+      return refuse('لا تعديل بتاريخٍ يسابق إعلانَه — النسب لا تُدار رجعيًا (ثابتا 2 و8)', {
+        requestedEffectiveAt: now, latestDeclaredAt: current.declaredAt,
+      });
+    }
+    if (command.payload.action !== 'amend_policy') {
+      return refuse('تعديل النسبة بفعل amend_policy وحده');
+    }
+    if (command.payload.target !== REVENUE_TARGET) {
+      return refuse(`هدف الأمر يجب أن يكون ${REVENUE_TARGET}`);
+    }
+    const authorized = this.deps.gateway.authorize(command, now);
+    if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
+
+    const declaration: RateDeclaration = { base, ratePerMille: newRatePerMille, declaredAt: now };
+    history.push(declaration);
+    const entry = this.deps.audit.append(this.actorId, 'rate_amended', {
+      base,
+      from: current.ratePerMille,
+      to: newRatePerMille,
+      previousDeclaredAt: current.declaredAt,
+      effectiveFrom: now,
+      commandId: command.payload.commandId,
+    });
+    return { ok: true, declaration, previous: current, auditId: entry.hash };
+  }
+
+  /** سجلُ إعلاناتِ النسبةِ لوعاءٍ بعينِه مرتّبةً — لا يُمحى منها إعلان (ثابت 8) */
+  rateHistoryOf(base: string): readonly RateDeclaration[] {
+    const history = this.rateHistory.get(base);
+    return history ? [...history] : [];
+  }
+
+  /** أحدثُ إعلانٍ سارٍ لوعاءٍ في لحظةٍ بعينِها — أو لا شيء (ثابتا 2 و8) */
+  private rateEffectiveAt(base: string, at: number): RateDeclaration | null {
+    const history = this.rateHistory.get(base);
+    if (!history) return null;
+    let effective: RateDeclaration | null = null;
+    for (const decl of history) {
+      if (decl.declaredAt <= at) effective = decl;
+    }
+    return effective;
+  }
+
   rateFor(base: string): RateDeclaration | null {
-    return this.deps.rates.find((r) => r.base === base) ?? null;
+    const history = this.rateHistory.get(base);
+    return history?.[history.length - 1] ?? null;
   }
 
   get(levyId: string): Levy | null { return this.levies.get(levyId) ?? null; }
