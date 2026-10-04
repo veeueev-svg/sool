@@ -14,6 +14,7 @@
   "scope_digest": "<sha256 لنطاق البند يومَ المراجعة — scopeDigest في scripts/review_council.ts>",
   "executor_family": "Claude",
   "convened_at": "YYYY-MM-DD",
+  "session": 1,
   "verdicts": [
     { "member": "gpt",  "model": "GPT 5.6 Terra",  "verdict": "VERIFIED", "report": "docs/work/council/W-2026-0NN-gpt.md" },
     { "member": "grok", "model": "Grok 4.7", "verdict": "REJECTED", "report": "docs/work/council/W-2026-0NN-grok.md" },
@@ -25,5 +26,7 @@
 ```
 
 **`scope_digest` شرطٌ لمحضرِ VERIFIED** (الثابت 6 · علاجُ عيبِ الجلسة 1 `COUNCIL_UNBOUND_REVIEWED_COMMIT`): بصمةُ محتوى ملفّاتِ `scope` من صفِّ البند يومَ المراجعة؛ والحارسُ يعيد حسابَها على الشجرة القائمة فلا يبقى البندُ VERIFIED إن تغيّر نطاقُه بعد الحكم أو كان المحضرُ لغيرِ ما رُوجع.
+
+**`session` واجبٌ في كلّ محضر** (الثابت 7 · علاجُ عيبِ الجلسة 2 `COUNCIL_SAME_DAY_LATEST_ORDER`): رقمُ الجلسة عددٌ صحيحٌ ≥ 1، وترتيبُ «آخر محضر» قطعيٌّ به عند تعدُّدِ جلساتِ اليوم نفسه، والتعادلُ الكاملُ (تاريخٌ واحدٌ وجلسةٌ واحدةٌ لمحضرَين) مرفوضٌ بالاسم فلا يحكمَ ترتيبُ قراءةِ الملفّات.
 
 أوّلُ انعقادٍ: 2026-10-04 (W-2026-066).
