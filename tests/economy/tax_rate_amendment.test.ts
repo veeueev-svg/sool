@@ -14,15 +14,16 @@ const T2 = NOW + 20_000;
 
 function revenueState() {
   const s = bootstrapState({ now: NOW });
-  const royal = (target: string, at = NOW) =>
-    s.king.issueCommand('amend_policy', target, { kind: 'economy' }, at);
+  const royal = (target: string, at = NOW, base?: string, ratePerMille?: number) =>
+    s.king.issueCommand('amend_policy', target,
+      base === undefined ? { kind: 'economy' } : { kind: 'economy', base, ratePerMille: ratePerMille ?? 0 }, at);
   s.unit.issue(royal(UNIT_TARGET), 10_000_000, 'تمويل أولي', NOW);
   return { s, royal };
 }
 
 test('**T-53/قبول 1** — تعديلٌ ملكيٌّ معتمدٌ ينجح ويسجّل القيمتين معًا وبتاريخ السريان', () => {
   const { s, royal } = revenueState();
-  const result = s.revenue.amendRate(royal(REVENUE_TARGET, T1), 'compute_usage', 40, T1);
+  const result = s.revenue.amendRate(royal(REVENUE_TARGET, T1, 'compute_usage', 40), 'compute_usage', 40, T1);
   assert.equal(result.ok, true);
   if (result.ok) {
     assert.equal(result.previous.ratePerMille, 25, 'القيمةُ السابقةُ في النتيجة');
@@ -44,7 +45,7 @@ test('**T-53/قبول 1** — تعديلٌ ملكيٌّ معتمدٌ ينجح و
 test('**T-53/قبول 2أ** — لا أثرًا رجعيًا: واقعةٌ قبل تاريخِ السريانِ تُقدَّر بالنسبةِ القديمة', () => {
   const { s, royal } = revenueState();
   const beforeAmendment = T1 - 1;
-  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T1), 'compute_usage', 40, T1).ok, true);
+  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T1, 'compute_usage', 40), 'compute_usage', 40, T1).ok, true);
   const oldRate = s.revenue.assess('compute_usage', 'agent:worker-1', 400_000, beforeAmendment, T2);
   assert.equal(oldRate.ok, true);
   assert.equal(oldRate.ok && oldRate.levy.levied, 10_000, 'النسبةُ القديمة 25 في الألف لا 40');
@@ -56,7 +57,7 @@ test('**T-53/قبول 2أ** — لا أثرًا رجعيًا: واقعةٌ قب�
 
 test('**T-53/قبول 2ب** — واقعةٌ قبل إعلانِ النسبةِ الأولى تظلُّ مرفوضةً بعد التعديل (ثابت 2 محفوظًا)', () => {
   const { s, royal } = revenueState();
-  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T1), 'model_training', 80, T1).ok, true);
+  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T1, 'model_training', 80), 'model_training', 80, T1).ok, true);
   const beforeFirstDeclaration = Date.parse('2026-08-22T00:00:00Z') - 1;
   const refused = s.revenue.assess('model_training', 'agent:lab', 1_000_000, beforeFirstDeclaration, T2);
   assert.equal(refused.ok, false);
@@ -77,7 +78,7 @@ test('**T-53/قبول 3أ** — لا تعديلَ بفعلٍ غير amend_policy
 
 test('**T-53/قبول 3ب** — أمرٌ مزوَّرُ التوقيعِ لا يعتمدُه التاجُ فلا يُعدَّلُ به شيء', () => {
   const { s, royal } = revenueState();
-  const genuine = royal(REVENUE_TARGET, T1);
+  const genuine = royal(REVENUE_TARGET, T1, 'compute_usage', 40);
   const forged = {
     payload: genuine.payload,
     signature: 'bm90LXZhbGlkLXNpZ25hdHVyZQ==',
@@ -103,19 +104,19 @@ test('**T-53/قبول 4** — حدودُ النسبةِ من المصدرِ ال
 
 test('**T-53/قبول 5أ** — وعاءٌ غيرُ معلنٍ لا يُعدَّلُ ولو جاءَ الأمرُ بملكِها', () => {
   const { s, royal } = revenueState();
-  const result = s.revenue.amendRate(royal(REVENUE_TARGET, T1), 'secret_base', 40, T1);
+  const result = s.revenue.amendRate(royal(REVENUE_TARGET, T1, 'secret_base', 40), 'secret_base', 40, T1);
   assert.equal(result.ok, false);
   assert.match(result.ok ? '' : result.reason, /غير معلن/);
 });
 
 test('**T-53/قبول 5ب** — لا تعديلَ بلا تغييرٍ ولا بتاريخٍ يسابقُ إعلانَه', () => {
   const { s, royal } = revenueState();
-  const noChange = s.revenue.amendRate(royal(REVENUE_TARGET, T1), 'compute_usage', 25, T1);
+  const noChange = s.revenue.amendRate(royal(REVENUE_TARGET, T1, 'compute_usage', 25), 'compute_usage', 25, T1);
   assert.equal(noChange.ok, false);
   assert.match(noChange.ok ? '' : noChange.reason, /بلا تغيير/);
   // تعديلٌ أولٌ يسري في T1، ثمّ محاولةُ تعديلٍ ثانٍ بتاريخٍ يسابقُ سريانَه
-  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T1), 'compute_usage', 40, T1).ok, true);
-  const backdated = s.revenue.amendRate(royal(REVENUE_TARGET, T1 - 5), 'compute_usage', 50, T1 - 5);
+  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T1, 'compute_usage', 40), 'compute_usage', 40, T1).ok, true);
+  const backdated = s.revenue.amendRate(royal(REVENUE_TARGET, T1 - 5, 'compute_usage', 50), 'compute_usage', 50, T1 - 5);
   assert.equal(backdated.ok, false);
   assert.match(backdated.ok ? '' : backdated.reason, /يسابق/);
   assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 40, 'التعديلُ المرفوضُ لم يمسّ الحال');
@@ -123,8 +124,8 @@ test('**T-53/قبول 5ب** — لا تعديلَ بلا تغييرٍ ولا ب�
 
 test('**T-53/قبول 6** — سجلُّ النِّسَبِ يُعيدُ الإعلاناتِ كلَّها مرتّبةً ولا يُمحى منها شيء', () => {
   const { s, royal } = revenueState();
-  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T1), 'compute_usage', 40, T1).ok, true);
-  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T2), 'compute_usage', 60, T2).ok, true);
+  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T1, 'compute_usage', 40), 'compute_usage', 40, T1).ok, true);
+  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T2, 'compute_usage', 60), 'compute_usage', 60, T2).ok, true);
   const history = s.revenue.rateHistoryOf('compute_usage');
   assert.equal(history.length, 3, 'إعلانُ التهيئةِ وذَانِ التعديلان');
   assert.deepEqual(history.map((h) => h.ratePerMille), [25, 40, 60], 'مرتّبةً بزمنِ سريانها');
@@ -136,7 +137,40 @@ test('**T-53/أثرُ القياس** — تغييرُ النسبةِ يغيّر�
   const { s, royal } = revenueState();
   const before = s.revenue.assess('compute_usage', 'agent:worker-1', 400_000, NOW, NOW);
   assert.equal(before.ok && before.levy.levied, 10_000);
-  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T1), 'compute_usage', 50, T1).ok, true);
+  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T1, 'compute_usage', 50), 'compute_usage', 50, T1).ok, true);
   const after = s.revenue.assess('compute_usage', 'agent:worker-2', 400_000, T1, T1);
   assert.equal(after.ok && after.levy.levied, 20_000, '50 في الألف من 400000 = 20000');
+});
+
+test('**T-53/مجلس 1أ** — إعادةُ الأمرِ نفسِه لا تُعدّل ثانيةً ولو قبلت البوابةُ الإعادة', () => {
+  const { s, royal } = revenueState();
+  const command = royal(REVENUE_TARGET, T1, 'compute_usage', 40);
+  assert.equal(s.revenue.amendRate(command, 'compute_usage', 40, T1).ok, true);
+  // نسبةٌ تعود ثمّ يُعاد الأمرُ الأوّلُ: لولا الحرسُ لكانت «تغييرًا» يمرّ ببوابةٍ تُعيد قرارَها
+  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T1 + 1, 'compute_usage', 25), 'compute_usage', 25, T1 + 1).ok, true);
+  const replay = s.revenue.amendRate(command, 'compute_usage', 40, T2);
+  assert.equal(replay.ok, false);
+  assert.match(replay.ok ? '' : replay.reason, /نُفّذ سابقًا/);
+  assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'الإعادةُ لم تمسّ الحال');
+  assert.equal(s.revenue.rateHistoryOf('compute_usage').length, 3);
+  assert.equal(s.audit.find('rate_amended').length, 2);
+});
+
+test('**T-53/مجلس 1ب** — الأمرُ مربوطٌ بوعائه ونسبته: توقيعٌ واحدٌ لا يعدّل وعاءً آخر ولا نسبةً أخرى', () => {
+  const { s, royal } = revenueState();
+  const command = royal(REVENUE_TARGET, T1, 'compute_usage', 40);
+  const otherBase = s.revenue.amendRate(command, 'model_training', 40, T1);
+  assert.equal(otherBase.ok, false);
+  assert.match(otherBase.ok ? '' : otherBase.reason, /لا يسمّي/);
+  const otherRate = s.revenue.amendRate(command, 'compute_usage', 60, T1);
+  assert.equal(otherRate.ok, false);
+  assert.match(otherRate.ok ? '' : otherRate.reason, /لا يسمّي/);
+  const unbound = s.revenue.amendRate(royal(REVENUE_TARGET, T1), 'compute_usage', 40, T1);
+  assert.equal(unbound.ok, false, 'أمرٌ بلا params موقَّعةٍ تسمّي التعديل مرفوض');
+  assert.equal(s.audit.find('rate_amended').length, 0);
+  // والأمرُ نفسُه لم يُستهلك بالرفض: يُنفَّذ على ما سمّاه
+  assert.equal(s.revenue.amendRate(command, 'compute_usage', 40, T1).ok, true);
+  const second = s.revenue.amendRate(command, 'model_training', 40, T2);
+  assert.equal(second.ok, false, 'ولا يُعاد استعمالُه لوعاءٍ آخر بعد تنفيذه');
+  assert.equal(s.revenue.rateFor('model_training')?.ratePerMille !== 40, true);
 });

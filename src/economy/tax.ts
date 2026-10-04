@@ -90,6 +90,8 @@ export class RevenueService {
    * الإعلانُ القديمُ لا يُمحى — فتاريخُ التسعيرِ دليلٌ يُدقَّقُ به لا يُدارَسُ به الحاضرُ.
    */
   private readonly rateHistory = new Map<string, RateDeclaration[]>();
+  /** معرّفاتُ الأوامر التي نفّذت تعديلًا — الإعادةُ تُرفض لا تُعدّل ثانيةً (W-2026-065 · الجلسة 1) */
+  private readonly amendmentCommands = new Set<string>();
   private sequence = 0;
   private sink: DurableSink | null = null;
 
@@ -296,8 +298,22 @@ export class RevenueService {
     if (command.payload.target !== REVENUE_TARGET) {
       return refuse(`هدف الأمر يجب أن يكون ${REVENUE_TARGET}`);
     }
+    // الأمرُ يُوقَّع على التعديلِ بعينِه لا على تفويضٍ مفتوح (مجلس المراجعة · الجلسة 1 ·
+    // RATE_AMENDMENT_COMMAND_NOT_PARAMETER_BOUND): الوعاءُ والنسبةُ في params الموقَّعة
+    const params = command.payload.params ?? {};
+    if (params['base'] !== base || params['ratePerMille'] !== newRatePerMille) {
+      return refuse('الأمر لا يسمّي هذا التعديل: params.base وparams.ratePerMille الموقَّعتان يجب أن تطابقا الوعاءَ والنسبة', {
+        signedBase: params['base'] ?? null, signedRatePerMille: params['ratePerMille'] ?? null,
+      });
+    }
+    // أمرٌ نُفّذ مرّةً لا يُنفَّذ ثانيةً: البوابةُ تُعيد قرارَها السابق للإعادة (idempotent)
+    // فلا يكفي `allowed` شاهدًا على اعتمادٍ جديد (الجلسة 1 · إعادةُ الأمر تُعدّل ثانيةً)
+    if (this.amendmentCommands.has(command.payload.commandId)) {
+      return refuse('الأمر نُفّذ سابقًا — إعادتُه لا تُعدّل ثانيةً', { commandId: command.payload.commandId });
+    }
     const authorized = this.deps.gateway.authorize(command, now);
     if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
+    this.amendmentCommands.add(command.payload.commandId);
 
     const declaration: RateDeclaration = { base, ratePerMille: newRatePerMille, declaredAt: now };
     history.push(declaration);
@@ -308,6 +324,7 @@ export class RevenueService {
       previousDeclaredAt: current.declaredAt,
       effectiveFrom: now,
       commandId: command.payload.commandId,
+      commandIssuedAt: command.payload.issuedAt,
     });
     return { ok: true, declaration, previous: current, auditId: entry.hash };
   }
