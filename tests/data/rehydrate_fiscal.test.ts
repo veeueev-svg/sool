@@ -308,3 +308,36 @@ test('T-125: أبوابُ الإرجاع ترفض ما لا يُصدَّق — �
     sc.clean();
   }
 });
+
+test('T-53/مجلس 2: سجلُّ نِسَبِ الجبايةِ ينجو الإقلاع — من قيودِ السجلِ الأبديِّ لا من الذاكرة (RATE_AMENDMENT_HISTORY_NOT_DURABLE)', () => {
+  const sc = scene();
+  try {
+    const first = sc.boot();
+    const at = T0 + 3 * 60 * 1000;
+    const cmd = first.king.issueCommand('amend_policy', 'economy:revenue',
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at);
+    const amended = first.revenue.amendRate(cmd, 'compute_usage', 40, at);
+    assert.equal(amended.ok, true, 'التعديل شرطُ القياس');
+    // واقعةٌ تُقدَّرُ بالنسبةِ الجديدةِ فتشهدُ السجلُّ أثرَه
+    const levy = first.revenue.assess('compute_usage', 'external:compute-provider', 2_000_000, at + 1, at + 1);
+    assert.equal(levy.ok, true, 'التقدير بالنسبة الجديدة شرطُ الشاهد');
+
+    const second = sc.boot(T0 + DAY);
+    const history = second.revenue.rateHistoryOf('compute_usage');
+    assert.equal(history.length, 2, 'إعلانُ التهيئة + التعديل');
+    assert.equal(history[1]?.ratePerMille, 40, 'الإعلانُ التشغيليُّ 40‰ لم يُمحَ بالإقلاع');
+    assert.equal(second.revenue.rateFor('compute_usage')?.ratePerMille, 40, 'النسبةُ الحاكمةُ بعد الإقلاع');
+    assert.equal(second.rehydratedFiscal?.rateAmendments, 1, 'تقريرُ الإرجاعِ يشهدُ بالتعديل');
+    // والأمرُ المنفَّذُ قبلَ الإقلاعِ لا يُنفَّذُ ثانيةً بعدَ تعديلٍ لاحق
+    const at2 = T0 + DAY + 60_000;
+    const cmd60 = second.king.issueCommand('amend_policy', 'economy:revenue',
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 60 }, at2);
+    assert.equal(second.revenue.amendRate(cmd60, 'compute_usage', 60, at2).ok, true, 'تعديلٌ لاحقٌ بعد الإقلاع');
+    const replay = second.revenue.amendRate(cmd, 'compute_usage', 40, T0 + DAY + 120_000);
+    assert.equal(replay.ok, false, 'إعادةُ الأمرِ القديمِ مرفوضة');
+    assert.match(replay.ok ? '' : replay.reason, /نُفّذ سابقًا/);
+    assert.equal(second.revenue.rateFor('compute_usage')?.ratePerMille, 60, 'لا رجوعَ بالأمر المُعاد');
+  } finally {
+    sc.clean();
+  }
+});

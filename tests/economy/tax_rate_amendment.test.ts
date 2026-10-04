@@ -174,3 +174,50 @@ test('**T-53/مجلس 1ب** — الأمرُ مربوطٌ بوعائه ونسب�
   assert.equal(second.ok, false, 'ولا يُعاد استعمالُه لوعاءٍ آخر بعد تنفيذه');
   assert.equal(s.revenue.rateFor('model_training')?.ratePerMille !== 40, true);
 });
+
+test('**T-53/مجلس 2أ** — سجلُّ النِّسَبِ والأوامرُ المنفَّذةُ تُستعادُ من الشاهدِ وتنجو إعادةَ التشغيل (RATE_AMENDMENT_HISTORY_NOT_DURABLE)', () => {
+  const first = revenueState();
+  const cmd1 = first.royal(REVENUE_TARGET, T1, 'compute_usage', 40);
+  assert.equal(first.s.revenue.amendRate(cmd1, 'compute_usage', 40, T1).ok, true);
+  const cmd2 = first.royal(REVENUE_TARGET, T2, 'compute_usage', 60);
+  assert.equal(first.s.revenue.amendRate(cmd2, 'compute_usage', 60, T2).ok, true);
+  // الدولةُ الثانيةُ تُبنى من التهيئة ثمّ يُرجَعُ لها شاهدُ التعديلين
+  const second = revenueState();
+  const seen = [
+    { base: 'compute_usage', ratePerMille: 40, declaredAt: T1, commandId: cmd1.payload.commandId },
+    { base: 'compute_usage', ratePerMille: 60, declaredAt: T2, commandId: cmd2.payload.commandId },
+  ];
+  second.s.revenue.restoreRateAmendments(seen, 'authority:audit_bureau');
+  const history = second.s.revenue.rateHistoryOf('compute_usage');
+  assert.equal(history.length, 3, 'إعلانُ التهيئة + التعديلان');
+  assert.equal(history.map((d) => d.ratePerMille).join(','), '25,40,60', 'السجلُّ مرتّبٌ بلا محو');
+  assert.equal(second.s.revenue.rateFor('compute_usage')?.ratePerMille, 60, 'النسبةُ الحاكمةُ بعد الإرجاع');
+  // أمرٌ نُفِّذ قبلَ الإقلاع: إعادتُه بعدَ تعديلٍ لاحقٍ تُرفضُ بالإرجاعِ لا بالبوابةِ وحدها
+  const replay = second.s.revenue.amendRate(cmd1, 'compute_usage', 40, T2 + 1);
+  assert.equal(replay.ok, false);
+  assert.match(replay.ok ? '' : replay.reason, /نُفّذ سابقًا/);
+  assert.equal(second.s.revenue.rateFor('compute_usage')?.ratePerMille, 60, 'لا رجوعَ بالأمر المُعاد');
+  // والإرجاعُ مرةً ثانيةً لا يُكرِّر
+  second.s.revenue.restoreRateAmendments(seen, 'authority:audit_bureau');
+  assert.equal(second.s.revenue.rateHistoryOf('compute_usage').length, 3, 'المعرّفُ شاهدُ التفرّد');
+});
+
+test('**T-53/مجلس 2ب** — الإرجاعُ فشلٌ مغلق: وعاءٌ دخيلٌ أو نسبةٌ غيرُ سليمةٍ أو إعلانٌ يرجعُ بالزمنِ أو تعديلٌ بلا تغيير', () => {
+  const { s } = revenueState();
+  assert.throws(() => s.revenue.restoreRateAmendments(
+    [{ base: 'undeclared_base', ratePerMille: 40, declaredAt: T1, commandId: 'cmd:x' }], 'authority:audit_bureau'),
+    /RECOVERY_RATE_BASE_UNDECLARED/);
+  assert.throws(() => s.revenue.restoreRateAmendments(
+    [{ base: 'compute_usage', ratePerMille: 0, declaredAt: T1, commandId: 'cmd:x' }], 'authority:audit_bureau'),
+    /RECOVERY_RATE_INVALID/);
+  assert.throws(() => s.revenue.restoreRateAmendments(
+    [{ base: 'compute_usage', ratePerMille: 40, declaredAt: 0, commandId: 'cmd:x' }], 'authority:audit_bureau'),
+    /RECOVERY_RATE_ORDER_VIOLATION/);
+  assert.throws(() => s.revenue.restoreRateAmendments(
+    [{ base: 'compute_usage', ratePerMille: 40, declaredAt: T1, commandId: ' ' }], 'authority:audit_bureau'),
+    /RECOVERY_RATE_COMMAND_ID_MISSING/);
+  assert.throws(() => s.revenue.restoreRateAmendments(
+    [{ base: 'compute_usage', ratePerMille: 25, declaredAt: T1, commandId: 'cmd:x' }], 'authority:audit_bureau'),
+    /RECOVERY_RATE_NO_CHANGE/);
+  assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'لا تغيّرَ بعد الرفض');
+});
