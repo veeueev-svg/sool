@@ -43,18 +43,30 @@ export function stripCode(text: string): string {
   return text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, '').replace(/(`+)[^`\n]*?\1/g, '');
 }
 
+/**
+ * شفرةُ العنوان كما يعرفُها CommonMark: "…" أو '…' أو (…) — بعد فراغٍ بعد الوجهة.
+ * (الجلسة 2 · DOC_LINK_GUARD_REFERENCE_STYLE_BYPASS: العنوانُ المفردُ والقوسيُّ كانا يعميانِ الحارس)
+ */
+const TITLE = String.raw`(?:\s+(?:"[^"]*"|'[^']*'|\([^()]*\)))?`;
+/** الروابطُ المباشرة: ](وجهة) أو ](<وجهة بفراغات>) — والوجهةُ العاريةُ قد تحملُ أقواسًا متوازنة */
+const INLINE_LINK = new RegExp(String.raw`\]\(\s*(?:<([^<>]*)>|([^()\s]*(?:\([^()]*\)[^()\s]*)*))\s*` + TITLE + String.raw`\)`, 'g');
+/** تعريفاتُ الروابط المرجعية: ^[وسم]: وجهة أو <وجهة بفراغات> — الوجهةُ على سطرِ التعريفِ دائمًا */
+const REFERENCE_DEF = new RegExp(String.raw`^ {0,3}\[[^\]]+\]:\s*(?:<([^<>]*)>|(\S+))`, 'gm');
+
 /** الروابطُ النسبيّةُ المكسورة في نصٍّ موضعُه `file` — بلا مخرجٍ إلّا المخطّطَ (URI) والمرساةَ الخالصة. */
 export function brokenLinksIn(file: string, text: string, exists: (p: string) => boolean): string[] {
   const base = ROOT_RELATIVE.has(file) ? '' : dirname(file);
   const out: string[] = [];
-  for (const m of stripCode(text).matchAll(/\]\(<?([^)\s>]*)>?(?:\s+"[^"]*")?\)/g)) {
-    const raw = m[1] ?? '';
+  const consider = (raw: string): void => {
     const link = raw.split('#')[0] ?? '';
-    if (link === '' || /^[a-z][a-z0-9+.-]*:/i.test(link)) continue;
+    if (link === '' || /^[a-z][a-z0-9+.-]*:/i.test(link)) return;
     let target = link;
     try { target = decodeURIComponent(link); } catch { /* يُقاس كما كُتب */ }
     if (!exists(normalize(join(base, target)))) out.push(raw);
-  }
+  };
+  const body = stripCode(text);
+  for (const m of body.matchAll(INLINE_LINK)) consider(m[1] ?? m[2] ?? '');
+  for (const m of body.matchAll(REFERENCE_DEF)) consider(m[1] ?? m[2] ?? '');
   return out;
 }
 
@@ -107,8 +119,8 @@ test('حارسُ الروابط: الاستثناءُ نمطُ اسمٍ مغلق
   assert.ok(!VERBATIM.test('docs/work/REVIEW_COUNCIL.md'));
 });
 
-/** عددٌ يتبعه وصفُ ما يُعَدّ — صيغةُ الرقمِ المنقولِ الذي لا يقرؤه فحص */
-const TRANSCRIBED_COUNT = /\d[\d,٬]*\s*(ملف|سطر|اختبار)/;
+/** عددٌ يتبعه وصفُ ما يُعَدّ — صيغةُ الرقمِ المنقولِ الذي لا يقرؤه فحص، عربيّه وغربيّه (الجلسة 2: ٢٠٠ كان يعبر) */
+const TRANSCRIBED_COUNT = /(?:\d[\d,٬]*|[٠-٩][٠-٩٬]*)\s*(ملف|سطر|اختبار)/u;
 export function architectureHeader(text: string): string {
   const start = text.indexOf('**آخر تحديث:**');
   if (start < 0) return '';
@@ -120,4 +132,27 @@ test('ترويسةُ ARCHITECTURE.md بلا عددٍ منقولٍ لملفّات
   assert.ok(h.length > 0, 'سطرُ «آخر تحديث» غائب');
   assert.equal(TRANSCRIBED_COUNT.exec(h)?.[0], undefined);
   assert.match('والمقيسُ يومَ صُحّح: 200 ملف · 36,913 سطرًا · 2366 اختبارًا', TRANSCRIBED_COUNT);
+  assert.match('٢٠٠ ملف منقولةٌ بالعربيةِ لا تعبر', TRANSCRIBED_COUNT);
+});
+
+test('حارسُ الروابط: الصيغُ المرجعيةُ والعناوينُ البديلةُ ووجهاتُ الفراغِ تُقاس — لا مخرجَ صامتًا (DOC_LINK_GUARD_REFERENCE_STYLE_BYPASS)', () => {
+  // روابطٌ مباشرةٌ بعناوينَ مفردةٍ أو قوسيّةٍ — كانت تمرّ صامتةً
+  assert.deepEqual(brokenLinksIn('docs/a.md', "[x](missing.md 'عنوان')", none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](missing.md (عنوان))', none), ['missing.md']);
+  // وجهةٌ ذاتُ فراغٍ داخل <> — صيغةُ GitHub لمسارٍ فيه فراغ
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](<my file.md>)', none), ['my file.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](<missing file.md> "عنوان")', none), ['missing file.md']);
+  // وجهةٌ عاريةٌ بأقواسٍ متوازنة
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo(bar).md)', none), ['foo(bar).md']);
+  // روابطٌ مرجعيةٌ: التعريفُ هو ما يُقاس — والاستعمالُ بلا تعريفٍ نصٌّ لا رابط
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x][r]\n\n[r]: missing.md', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[r]: <broken ref.md>', none), ['broken ref.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[r]: missing.md "عنوان"', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x][undefined]', none), []);
+  // سالبةُ الضبط: صيغٌ سليمةٌ لا تُبلَّغ
+  const all = (): boolean => true;
+  assert.deepEqual(brokenLinksIn('docs/a.md', "[x](../README.md 't') [y](<../README.md>)", all), []);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[r]: ../README.md', all), []);
+  // وجهةٌ مخطّطةٌ أو مرساةٌ خالصةٌ تُتركان
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[r]: https://x.y/z [c](#anchor)', none), []);
 });
