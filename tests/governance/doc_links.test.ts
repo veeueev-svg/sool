@@ -31,16 +31,35 @@ const ROOT_RELATIVE = new Set(['docs/work/WORK_LOG.md']);
 /** ملفٌّ ⇒ البندُ الحيُّ الذي يحجزه (يُفرَّغ بإصلاحه داخل بندِه). */
 const PENDING: ReadonlyMap<string, string> = new Map<string, string>([]);
 
-function brokenLinks(file: string): string[] {
-  const text = readFileSync(join(ROOT, file), 'utf8');
+/**
+ * التقاريرُ الخامُّ لأعضاء مجلس المراجعة تُحفظ حرفًا بحرف (ADR-0054 §4 · RULE-020) ولا تُعدَّل —
+ * وفيها روابطُ مكسورةٌ عمدًا هي نصُّ مسابير الطفرة نفسِها. فتُستثنى **بنمطِ اسمٍ مغلق** لا بمجلد:
+ * المحاضرُ (`.json`) و`README.md` في المجلد نفسِه تبقى محروسة.
+ */
+const VERBATIM = /^docs\/work\/council\/W-\d{4}-\d{3}(-\d+)?-[a-z0-9]+\.md$/;
+
+/** يُزيل الشفرةَ المسوّرةَ والمضمّنة: ما بين علامات الشفرة نصٌّ لا رابط (كما يعرضه GitHub). */
+export function stripCode(text: string): string {
+  return text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, '').replace(/(`+)[^`\n]*?\1/g, '');
+}
+
+/** الروابطُ النسبيّةُ المكسورة في نصٍّ موضعُه `file` — بلا مخرجٍ إلّا المخطّطَ (URI) والمرساةَ الخالصة. */
+export function brokenLinksIn(file: string, text: string, exists: (p: string) => boolean): string[] {
   const base = ROOT_RELATIVE.has(file) ? '' : dirname(file);
   const out: string[] = [];
-  for (const m of text.matchAll(/\]\(([^)\s#]+)(#[^)]*)?\)/g)) {
-    const link = m[1] ?? '';
-    if (/^[a-z]+:/i.test(link) || !/[A-Za-z]/.test(link) || link.includes("'")) continue;
-    if (!existsSync(join(ROOT, normalize(join(base, link))))) out.push(link);
+  for (const m of stripCode(text).matchAll(/\]\(<?([^)\s>]*)>?(?:\s+"[^"]*")?\)/g)) {
+    const raw = m[1] ?? '';
+    const link = raw.split('#')[0] ?? '';
+    if (link === '' || /^[a-z][a-z0-9+.-]*:/i.test(link)) continue;
+    let target = link;
+    try { target = decodeURIComponent(link); } catch { /* يُقاس كما كُتب */ }
+    if (!exists(normalize(join(base, target)))) out.push(raw);
   }
   return out;
+}
+
+function brokenLinks(file: string): string[] {
+  return brokenLinksIn(file, readFileSync(join(ROOT, file), 'utf8'), (p) => existsSync(join(ROOT, p)));
 }
 
 test('حارسُ الروابط: كلُّ رابطٍ نسبيٍّ في الوثائق يصل إلى ملفٍّ موجود، والانتظارُ مسمًّى ببندِه', () => {
@@ -51,6 +70,7 @@ test('حارسُ الروابط: كلُّ رابطٍ نسبيٍّ في الوث�
   const broken: string[] = [];
   const healedPending: string[] = [];
   for (const f of files) {
+    if (VERBATIM.test(f)) continue;
     const b = brokenLinks(f);
     if (PENDING.has(f)) {
       if (b.length === 0) healedPending.push(f);
@@ -60,4 +80,44 @@ test('حارسُ الروابط: كلُّ رابطٍ نسبيٍّ في الوث�
   }
   assert.deepEqual(broken, [], `روابطُ مكسورة:\n${broken.join('\n')}`);
   assert.deepEqual(healedPending, [], `ملفّاتٌ في قائمةِ الانتظار صارت سليمة — احذفها منها:\n${healedPending.join('\n')}`);
+});
+
+const none = (): boolean => false;
+test('حارسُ الروابط: رابطٌ نسبيٌّ بلا حرفٍ لاتينيٍّ يُقاس ولا يُتخطّى (DOC_LINK_GUARD_ASCII_BYPASS)', () => {
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](وثيقة.md) [y](./١٢) [z](../وثائق/)', none), ['وثيقة.md', './١٢', '../وثائق/']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', "[q](it's.md)", none), ["it's.md"]);
+});
+test('حارسُ الروابط: المرساةُ تُنزع والملفُّ يُقاس · المرساةُ الخالصةُ والمخطّطُ يُتركان', () => {
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[a](missing.md#s) [b](#local) [c](https://x.y/z) [d](mailto:a@b)', none), ['missing.md#s']);
+});
+test('حارسُ الروابط: ما في الشفرة نصٌّ لا رابط · وما خارجها يُقاس', () => {
+  const t = '`[a](nope.md)`\n```\n[b](nope2.md)\n```\n[c](nope3.md)';
+  assert.deepEqual(brokenLinksIn('docs/a.md', t, none), ['nope3.md']);
+});
+test('حارسُ الروابط: الرابطُ يُحسب من مجلدِ ملفِّه، ومُرمَّزُ النسبة يُفكّ', () => {
+  const seen: string[] = [];
+  brokenLinksIn('docs/x/a.md', '[a](../b%20c.md)', (p) => { seen.push(p); return true; });
+  assert.deepEqual(seen, ['docs/b c.md']);
+});
+test('حارسُ الروابط: الاستثناءُ نمطُ اسمٍ مغلقٌ للتقارير الخامّ وحدها لا للمجلد', () => {
+  assert.ok(VERBATIM.test('docs/work/council/W-2026-064-grok.md'));
+  assert.ok(VERBATIM.test('docs/work/council/W-2026-064-2-gpt.md'));
+  assert.ok(!VERBATIM.test('docs/work/council/README.md'));
+  assert.ok(!VERBATIM.test('docs/work/council/W-2026-064.json'));
+  assert.ok(!VERBATIM.test('docs/work/REVIEW_COUNCIL.md'));
+});
+
+/** عددٌ يتبعه وصفُ ما يُعَدّ — صيغةُ الرقمِ المنقولِ الذي لا يقرؤه فحص */
+const TRANSCRIBED_COUNT = /\d[\d,٬]*\s*(ملف|سطر|اختبار)/;
+export function architectureHeader(text: string): string {
+  const start = text.indexOf('**آخر تحديث:**');
+  if (start < 0) return '';
+  const end = text.indexOf('\n\n', start);
+  return text.slice(start, end < 0 ? undefined : end);
+}
+test('ترويسةُ ARCHITECTURE.md بلا عددٍ منقولٍ لملفّاتٍ أو أسطرٍ أو اختبارات (W-2026-064 · الجلسة 1)', () => {
+  const h = architectureHeader(readFileSync(join(ROOT, 'ARCHITECTURE.md'), 'utf8'));
+  assert.ok(h.length > 0, 'سطرُ «آخر تحديث» غائب');
+  assert.equal(TRANSCRIBED_COUNT.exec(h)?.[0], undefined);
+  assert.match('والمقيسُ يومَ صُحّح: 200 ملف · 36,913 سطرًا · 2366 اختبارًا', TRANSCRIBED_COUNT);
 });
