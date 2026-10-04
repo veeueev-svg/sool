@@ -23,6 +23,11 @@
  *    — والبندُ لا يكون VERIFIED في السجلّ الحيّ إلّا وبصمةُ نطاقِه اليومَ تساويها. فإجماعٌ على
  *    التزامةٍ أخرى، أو نطاقٌ تغيّر بعد الحكم، يسقط. والبصمةُ محتوًى لا تاريخ: تصحّ على نسخةٍ
  *    ضحلة (CI بعمقِ التزامتين) حيث لا تُرى الالتزاماتُ القديمة.
+ * 7) **ترتيبُ «آخر محضر» قطعيٌّ** (مجلس المراجعة · الجلسة 2 · COUNCIL_SAME_DAY_LATEST_ORDER):
+ *    التاريخُ (`convened_at`) يومٌ لا يرتّبُ جلستين في اليوم نفسه، فالمرجعُ الثالثُ في الترتيب
+ *    رقمُ الجلسة (`session`) — عددٌ صحيحٌ ≥ 1 واجبٌ في كلّ محضر. والتعادلُ الكاملُ (تاريخٌ واحدٌ
+ *    وجلسةٌ واحدةٌ لمحضرَين) مرفوضٌ باسمِه لا يُحكَم فيه بترتيبِ قراءةِ الملفّات — فتبديلُ
+ *    ترتيبِ الإدخال لا يقلبُ حكمًا. والجلسةُ الأحدثُ تُغني القديمةَ لِما بعدها في السجلّ الحيّ.
  *
  * الحدُّ المعلن: الهويّةُ والعزلُ **مُعلَنان** في المحضر لا **مُثبَتان** — فالأعضاءُ وكلاءُ
  * يوفّرهم المنفّذُ على منصّته. وهذا ما قبله المالكُ بأمره صراحةً، والدالّةُ تقيس الشكلَ
@@ -54,6 +59,8 @@ export interface CouncilRecord {
   scope_digest?: string;
   executor_family: string;
   convened_at: string;
+  /** رقمُ الجلسة — واجبٌ صحيحًا ≥ 1، وبهِ يُقطعُ ترتيبُ المحاضرِ في اليوم نفسه (الثابت 7) */
+  session?: number;
   verdicts: CouncilVerdict[];
   decision: string;
   disposition?: CouncilDisposition;
@@ -75,6 +82,9 @@ export function scopeDigest(
 
 const has = <T extends string>(set: readonly T[], v: unknown): v is T => typeof v === 'string' && (set as readonly string[]).includes(v);
 const norm = (s: unknown): string => String(s ?? '').trim().toLowerCase();
+/** رقمُ الجلسةِ الصالحُ من محضرٍ — أو 0 لِما لا جلسةَ له (قد قيّده checkRecord بعيبِه) */
+const sessionOf = (r: CouncilRecord): number =>
+  Number.isInteger(r?.session) && (r.session as number) >= 1 ? (r.session as number) : 0;
 
 /** يفحص الإعلانَ وحده (الثابت 3 · الثابت 5) */
 export function checkDeclaration(d: CouncilDeclaration | null | undefined): string[] {
@@ -106,6 +116,7 @@ export function checkRecord(r: CouncilRecord, d: CouncilDeclaration, fileExists:
   if (!/^W-\d{4}-\d{3}$/.test(String(r?.item))) e.push(`${tag}: معرّفُ بندٍ غيرُ صالح`);
   if (!/^[0-9a-f]{7,40}$/.test(String(r?.commit))) e.push(`${tag}: بلا هاشِ التزامةٍ مُراجَعة — والحكمُ على شيءٍ لا يُسمّى لا يُقرأ`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(r?.convened_at))) e.push(`${tag}: convened_at ليس تاريخًا YYYY-MM-DD`);
+  if (!Number.isInteger(r?.session) || (r?.session as number) < 1) e.push(`${tag}: بلا رقمِ جلسةٍ صالحٍ (session عددٌ صحيحٌ ≥ 1) — فالتاريخُ يومٌ لا يرتّبُ جلستين في يومٍ واحد (الثابت 7)`);
   if (r?.decision === 'VERIFIED' && !/^[0-9a-f]{64}$/.test(String(r?.scope_digest ?? ''))) e.push(`${tag}: محضرُ VERIFIED بلا scope_digest — والحكمُ الذي لا يُربط بما رُوجع يُرقّي ما لم يُراجَع (الثابت 6)`);
   if (typeof r?.executor_family !== 'string' || r.executor_family.trim() === '') e.push(`${tag}: بلا عائلةِ المنفّذ — فلا يُقاس اختلافُ العائلات (الثابت 3)`);
   const byId = new Map(d.members.map((m) => [norm(m.id), m]));
@@ -148,7 +159,15 @@ export function evaluateCouncil(
   for (const r of records) {
     e.push(...checkRecord(r, d, fileExists));
     const prev = latest.get(r.item);
-    if (prev === undefined || String(r.convened_at) >= String(prev.convened_at)) latest.set(r.item, r);
+    if (prev === undefined) { latest.set(r.item, r); continue; }
+    // الثابت 7: الترتيبُ قطعيٌّ (تاريخٌ ثمّ جلسةٌ)، والتعادلُ الكاملُ مرفوضٌ بالاسم —
+    // فلا يحكمَ ترتيبُ قراءةِ الملفّات، وتبديلُ الإدخال لا يقلبُ حكمًا. الإشارةُ: ab يقارنُ
+    // prev بـ r — فسالبٌ يعني r أحدثُ فيحلّ، وموجبٌ يعني القديمَ أحدثُ فيبقى، وصفرٌ تعادلٌ مرفوض
+    const da = String(prev.convened_at);
+    const db = String(r.convened_at);
+    const ab = da < db ? -1 : da > db ? 1 : sessionOf(prev) - sessionOf(r);
+    if (ab === 0) e.push(`${r.item}: محضران للبند في الجلسة نفسها (${db} · جلسة ${sessionOf(r)}) — والتعادلُ مرفوضٌ فلا يُحكمَ بترتيبِ القراءة (الثابت 7)`);
+    else if (ab < 0) latest.set(r.item, r);
   }
   for (const it of items) {
     if (it.status !== 'VERIFIED') continue;

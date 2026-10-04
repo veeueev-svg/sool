@@ -30,7 +30,7 @@ const decl = (over: Partial<CouncilDeclaration> = {}): CouncilDeclaration => ({
   ...over,
 });
 const rec = (over: Partial<CouncilRecord> = {}): CouncilRecord => ({
-  item: 'W-2026-900', commit: 'abcdef1', scope_digest: DIGEST, executor_family: 'Claude', convened_at: '2026-10-03',
+  item: 'W-2026-900', commit: 'abcdef1', scope_digest: DIGEST, executor_family: 'Claude', convened_at: '2026-10-03', session: 1,
   verdicts: [
     { member: 'gpt', verdict: 'VERIFIED', report: 'r/gpt.md' },
     { member: 'grok', verdict: 'VERIFIED', report: 'r/grok.md' },
@@ -142,6 +142,40 @@ test('مجلس: البصمةُ لا تتبع ترتيبَ النطاق، وتت�
   assert.equal(digestOf(['docs/b.md', 'src/a.ts']), DIGEST);
   assert.notEqual(digestOf([...SCOPE, 'missing.ts']), DIGEST);
   assert.match(DIGEST, /^[0-9a-f]{64}$/);
+});
+
+test('مجلس: ترتيبُ «آخر محضر» قطعيٌّ برقمِ الجلسةِ لا بترتيبِ القراءة (COUNCIL_SAME_DAY_LATEST_ORDER)', () => {
+  const day = '2026-10-04';
+  const session1 = rec({ convened_at: day, session: 1, verdicts: split, decision: 'NOT_VERIFIED', disposition: { kind: 'IN_PROGRESS' } });
+  const session2 = rec({ convened_at: day, session: 2 });
+  // الجلسةُ 2 هي الأحدث مهما كان ترتيبُ الإدخال — فلا يقلبُ الترتيبُ حكمًا
+  assert.deepEqual(evaluateCouncil(decl(), verified, [session1, session2], yes), []);
+  assert.deepEqual(evaluateCouncil(decl(), verified, [session2, session1], yes), []);
+  // وبالعكس: محضرُ الجلسةِ 2 خلافٌ والبندُ VERIFIED — يسقط في الترتيبين معًا
+  const later = rec({ convened_at: day, session: 2, verdicts: split, decision: 'NOT_VERIFIED', disposition: { kind: 'IN_PROGRESS' } });
+  const earlier = rec({ convened_at: day, session: 1 });
+  for (const records of [[earlier, later], [later, earlier]]) {
+    assert.ok(evaluateCouncil(decl(), verified, records, yes).some((m) => /الخلافُ يُعيده/.test(m)));
+  }
+});
+
+test('مجلس: محضران لنفسِ الجلسةِ تعادلٌ مرفوضٌ بالاسم، ومحضرٌ بلا جلسةٍ فشلٌ مغلق (الثابت 7)', () => {
+  const tie = [rec({ convened_at: '2026-10-04', session: 3 }), rec({ convened_at: '2026-10-04', session: 3 })];
+  assert.ok(evaluateCouncil(decl(), verified, tie, yes).some((m) => /الجلسة نفسها/.test(m)));
+  const { session: _drop, ...bare } = rec();
+  assert.ok(evaluateCouncil(decl(), verified, [bare as CouncilRecord], yes).some((m) => /رقمِ جلسة/.test(m)));
+  assert.ok(evaluateCouncil(decl(), verified, [rec({ session: 0 })], yes).some((m) => /رقمِ جلسة/.test(m)));
+});
+
+test('مجلس: تاريخٌ أحدثُ يُغني الأقدمَ مهما كان ترتيبُ الإدخال — والعكسُ يسقط في الترتيبين', () => {
+  const earlier = rec({ convened_at: '2026-10-03', session: 5, verdicts: split, decision: 'NOT_VERIFIED', disposition: { kind: 'IN_PROGRESS' } });
+  const nextDay = rec({ convened_at: '2026-10-05', session: 1 });
+  assert.deepEqual(evaluateCouncil(decl(), verified, [earlier, nextDay], yes), []);
+  assert.deepEqual(evaluateCouncil(decl(), verified, [nextDay, earlier], yes), []);
+  const laterDisagreement = rec({ convened_at: '2026-10-05', session: 1, verdicts: split, decision: 'NOT_VERIFIED', disposition: { kind: 'IN_PROGRESS' } });
+  for (const records of [[rec(), laterDisagreement], [laterDisagreement, rec()]]) {
+    assert.ok(evaluateCouncil(decl(), verified, records, yes).some((m) => /الخلافُ يُعيده/.test(m)));
+  }
 });
 
 test('مجلس: الحالُ الحقيقيُّ للمستودع — لا VERIFIED بلا إجماعٍ محفوظ', () => {
