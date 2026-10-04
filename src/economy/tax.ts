@@ -21,6 +21,12 @@
  *      معًا (القديمة والجديدة) كما يفعل appropriation_amended، والإعلانُ القديمُ
  *      يبقى في سجلِ النِّسَب لا يُمحى، والواقعةُ تُقدَّر بنسبةِ إعلانِها الذي
  *      ساد لحظة وقوعها لا بأحدثِ المعلن — فلا يُدقَّقُ الماضي بأحكامِ الحاضر
+ *   9) **سجلُّ النِّسَبِ ومعرّفاتُ الأوامرِ تنجو إعادةَ التشغيل** (الجلسة 2 ·
+ *      RATE_AMENDMENT_HISTORY_NOT_DURABLE): الإرجاعُ يعيدُ بناءَهما من قيودِ
+ *      rate_amended في السجلِ الأبديِّ (شاهدُها لا يُسقَطُ بالضغط)، فلا يُمحى
+ *      إعلانٌ بالإقلاعِ ولا يُنفَّذ أمرٌ نُفِّذ قبلَه. وما لا يُصدَّق يُرفضُ
+ *      برمزٍ مغلقٍ لا يُخمَّن: وعاءٌ دخيلٌ · نسبةٌ غيرُ سليمةٍ · إعلانٌ يرجعُ
+ *      بالزمنِ · تعديلٌ بلا تغييرٍ دخيل
  * حالات الفشل (كلها مغلقة): وعاء غير معلن ⇒ رفض؛ واقعة سابقة للإعلان ⇒ رفض؛
  *   تحصيل بلا تقدير أو مكرَّر ⇒ رفض؛ فشل القيد ⇒ لا تحصيل؛ إعفاء ذاتي ⇒ رفض
  * اختبار القبول: tests/economy/economy_lifecycle.test.ts
@@ -32,17 +38,14 @@ import { CrownGateway } from '../crown/crown_gateway';
 import { FINANCE_MINISTRY, isValidAmount } from './ledger';
 import { Treasury } from './treasury';
 import { isValidRatePerMille } from '../kernel/config/economy';
+import { RatePolicy } from './rate_policy';
 import type { DurableSink } from '../data/persistence';
+import type { RateAmendmentRecovery, RateDeclaration } from './rate_policy';
+
+export type { RateAmendmentRecovery, RateDeclaration };
 
 /** هدف الأمر الملكي لكل إعفاء */
 export const REVENUE_TARGET: EntityId = 'economy:revenue';
-
-/** نسبة معلنة: بالأجزاء من الألف، ومن تاريخ معلن لا قبله */
-export interface RateDeclaration {
-  readonly base: string;
-  readonly ratePerMille: number;
-  readonly declaredAt: number;
-}
 
 export type LevyStatus = 'assessed' | 'collected' | 'waived';
 
@@ -86,18 +89,17 @@ export class RevenueService {
   private readonly levies = new Map<string, Levy>();
   private readonly actorId: EntityId;
   /**
-   * سجلُّ النِّسَب (ثابت 8 · T-53): إعلانٌ واحدٌ في التهيئةِ ثمّ ما زادَه الملكُ بأمرِه.
-   * الإعلانُ القديمُ لا يُمحى — فتاريخُ التسعيرِ دليلٌ يُدقَّقُ به لا يُدارَسُ به الحاضرُ.
+   * سياسةُ النِّسَب (ثابت 8 · T-53 · والجلسة 2): سجلُّ إعلاناتٍ لا يُمحى منه إعلان،
+   * وحرسُ الأوامرِ المنفَّذة، وإرجاعُهما من شاهدِ السجلِ الأبديِّ — في وحدةٍ مستقلّة
+   * `rate_policy.ts` تحت سقفِ الوحدة، والاعتمادُ والتدوينُ هنا لا هناك (RULE-004).
    */
-  private readonly rateHistory = new Map<string, RateDeclaration[]>();
-  /** معرّفاتُ الأوامر التي نفّذت تعديلًا — الإعادةُ تُرفض لا تُعدّل ثانيةً (W-2026-065 · الجلسة 1) */
-  private readonly amendmentCommands = new Set<string>();
+  private readonly rates: RatePolicy;
   private sequence = 0;
   private sink: DurableSink | null = null;
 
   constructor(private readonly deps: RevenueDeps) {
     this.actorId = deps.actorId ?? FINANCE_MINISTRY;
-    for (const rate of deps.rates) this.rateHistory.set(rate.base, [rate]);
+    this.rates = new RatePolicy(deps.rates);
   }
 
   /** 1) التقدير: بنصّ معلن، وبلا أثر رجعي، وبحساب صحيح (ثوابت 1–4) */
@@ -128,6 +130,17 @@ export class RevenueService {
     });
   }
 
+  /**
+   * بابُ إرجاعِ تعديلاتِ النِّسَب (ثابت 9 · الجلسة 2 · RATE_AMENDMENT_HISTORY_NOT_DURABLE):
+   * يعيدُ بناءَ سجلِّ النِّسَبِ ومجموعةِ الأوامرِ المنفَّذةِ من شاهدِ السجلِ الأبديِّ
+   * بترتيبِه. إعادةُ الإرجاعِ لا تُكرِّر (المعرّفُ شاهدُ التفرّد)، وما لا يُصدَّق يُرفضُ
+   * برمزٍ مغلقٍ لا تخمينَ فيه — فسجلُّ النِّسَبِ دليلٌ يُدقَّقُ به لا يُدارَس به الحاضر.
+   */
+  restoreRateAmendments(amendments: readonly RateAmendmentRecovery[], by: EntityId): void {
+    const applied = this.rates.restore(amendments);
+    this.deps.audit.append(by, 'rate_amendments_restored', { applied, seen: amendments.length });
+  }
+
   assess(
     base: string, payer: EntityId, amountBase: number, occurredAt: number, now = Date.now(),
   ): LevyResult {
@@ -140,12 +153,12 @@ export class RevenueService {
 
     // ثابتا 2 و8: الواقعةُ تُقدَّر بإعلانِ النسبةِ الذي ساد لحظةَ وقوعها —
     // أحدثُ الإعلاناتِ لا يحكمُ الماضي (لا أثرٌ رجعيٌّ في الاتجاهين)
-    const rate = this.rateEffectiveAt(base, occurredAt);
+    const rate = this.rates.effectiveAt(base, occurredAt);
     if (!rate) {
-      const first = this.rateHistory.get(base)?.[0];
+      const first = this.rates.firstOf(base);
       if (!first) {
         return refuse('وعاء غير معلن في config/economy.yaml — لا رسم بلا نصّ (ثابت 1)', {
-          declared: [...this.rateHistory.keys()],
+          declared: this.rates.declaredBases(),
         });
       }
       return refuse('واقعة سابقة لإعلان النسبة — لا أثر رجعي (ثابت 2)', {
@@ -268,10 +281,9 @@ export class RevenueService {
       });
       return { ok: false, reason, auditId: entry.hash };
     };
-    const history = this.rateHistory.get(base);
-    if (!history) {
+    if (!this.rates.declares(base)) {
       return refuse('وعاء غير معلن — لا تعديل لما لا نصّ له (ثابت 1)', {
-        declared: [...this.rateHistory.keys()],
+        declared: this.rates.declaredBases(),
       });
     }
     // حدودُ النسبةِ من مصدرِها الواحدِ الذي يقرؤه المحمّلُ نفسه (T-53)
@@ -280,7 +292,7 @@ export class RevenueService {
         requestedRatePerMille: newRatePerMille,
       });
     }
-    const current = history[history.length - 1];
+    const current = this.rates.currentFor(base);
     if (!current) {
       return refuse('سجلُّ نِسَبٍ فارغٌ لوعاءٍ معلن — فشلٌ مغلقٌ لا يُملأ بالتخمين');
     }
@@ -308,15 +320,14 @@ export class RevenueService {
     }
     // أمرٌ نُفّذ مرّةً لا يُنفَّذ ثانيةً: البوابةُ تُعيد قرارَها السابق للإعادة (idempotent)
     // فلا يكفي `allowed` شاهدًا على اعتمادٍ جديد (الجلسة 1 · إعادةُ الأمر تُعدّل ثانيةً)
-    if (this.amendmentCommands.has(command.payload.commandId)) {
+    if (this.rates.hasExecuted(command.payload.commandId)) {
       return refuse('الأمر نُفّذ سابقًا — إعادتُه لا تُعدّل ثانيةً', { commandId: command.payload.commandId });
     }
     const authorized = this.deps.gateway.authorize(command, now);
     if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
-    this.amendmentCommands.add(command.payload.commandId);
+    this.rates.markExecuted(command.payload.commandId);
 
-    const declaration: RateDeclaration = { base, ratePerMille: newRatePerMille, declaredAt: now };
-    history.push(declaration);
+    const declaration = this.rates.append(base, newRatePerMille, now);
     const entry = this.deps.audit.append(this.actorId, 'rate_amended', {
       base,
       from: current.ratePerMille,
@@ -331,24 +342,11 @@ export class RevenueService {
 
   /** سجلُ إعلاناتِ النسبةِ لوعاءٍ بعينِه مرتّبةً — لا يُمحى منها إعلان (ثابت 8) */
   rateHistoryOf(base: string): readonly RateDeclaration[] {
-    const history = this.rateHistory.get(base);
-    return history ? [...history] : [];
-  }
-
-  /** أحدثُ إعلانٍ سارٍ لوعاءٍ في لحظةٍ بعينِها — أو لا شيء (ثابتا 2 و8) */
-  private rateEffectiveAt(base: string, at: number): RateDeclaration | null {
-    const history = this.rateHistory.get(base);
-    if (!history) return null;
-    let effective: RateDeclaration | null = null;
-    for (const decl of history) {
-      if (decl.declaredAt <= at) effective = decl;
-    }
-    return effective;
+    return this.rates.historyOf(base);
   }
 
   rateFor(base: string): RateDeclaration | null {
-    const history = this.rateHistory.get(base);
-    return history?.[history.length - 1] ?? null;
+    return this.rates.currentFor(base);
   }
 
   get(levyId: string): Levy | null { return this.levies.get(levyId) ?? null; }

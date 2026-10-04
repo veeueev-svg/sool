@@ -38,7 +38,7 @@ import type { EntityId } from '../kernel/types';
 import type { DurableRecord } from './persistence';
 import type { Appropriation, Budget } from '../economy/budget';
 import type { Disbursement, Treasury } from '../economy/treasury';
-import type { Levy, RevenueService } from '../economy/tax';
+import type { Levy, RateAmendmentRecovery, RevenueService } from '../economy/tax';
 import type { DigitalUnit } from '../economy/digital_unit';
 import type { ExternalAccount, ExternalAccountRegistry } from '../external/account_registry';
 import type { ExternalPayment, PaymentControls } from '../external/payment_controls';
@@ -60,6 +60,8 @@ export interface RehydrateFiscalReport {
   readonly treasuryFrozen: boolean;
   readonly budgetLines: number;
   readonly levies: number;
+  /** تعديلاتُ النِّسَبِ المُرجَعةُ من شاهدِ السجلِ الأبديّ (الجلسة 2 · W-2026-065) */
+  readonly rateAmendments: number;
   readonly unitIssued: number;
   readonly unitBurned: number;
   readonly accounts: number;
@@ -81,6 +83,8 @@ interface Collected {
   levies: Map<string, Levy>;
   levySequence: number;
   revenueSeen: boolean;
+  /** تعديلاتُ النِّسَبِ بشاهدِ السجلِ الأبديِّ بترتيبِ قيودِه (الجلسة 2 · W-2026-065) */
+  rateAmendments: RateAmendmentRecovery[];
   unitIssued: number;
   unitBurned: number;
   unitSeen: boolean;
@@ -101,7 +105,7 @@ function empty(): Collected {
     disbursements: [], treasurySequence: 0, frozen: false, frozenReason: null,
     treasurySeen: false,
     lines: new Map(), budgetSeen: false,
-    levies: new Map(), levySequence: 0, revenueSeen: false,
+    levies: new Map(), levySequence: 0, revenueSeen: false, rateAmendments: [],
     unitIssued: 0, unitBurned: 0, unitSeen: false,
     accounts: new Map(), accountsSeen: false,
     payments: new Map(), paymentOrder: [], paymentSequence: 0, paymentsSeen: false,
@@ -184,6 +188,23 @@ function collect(state: Collected, entry: DurableRecord, payload: Record<string,
       if (breach && typeof breach.counterparty === 'string') state.breaches.push({ ...breach });
       return;
     }
+    // الجلسة 2 · W-2026-065 (RATE_AMENDMENT_HISTORY_NOT_DURABLE): تعديلُ النسبةِ لا
+    // يوميّةَ حالةٍ خاصّةً به — شاهدُه قيدُه في السلسلةِ الأبديّةِ (audit_entry لا
+    // يُسقَطُ بالضغطِ ولا يُنسَخ)، فمن قيودِه يُعادُ بناءُ سجلِ النِّسَبِ والأوامر.
+    case 'audit_entry': {
+      if (payload.kind !== 'rate_amended') return;
+      state.revenueSeen = true;
+      const detail = payload.detail as Record<string, unknown> | undefined;
+      const base = detail?.base;
+      const ratePerMille = detail?.to;
+      const declaredAt = detail?.effectiveFrom;
+      const commandId = detail?.commandId;
+      if (typeof base === 'string' && typeof ratePerMille === 'number'
+        && typeof declaredAt === 'number' && typeof commandId === 'string') {
+        state.rateAmendments.push({ base, ratePerMille, declaredAt, commandId });
+      }
+      return;
+    }
     default:
       return;
   }
@@ -228,6 +249,7 @@ export function rehydrateFiscalFromJournal(
   });
   door('revenue', targets.revenue, state.revenueSeen, () => {
     targets.revenue!.restore([...state.levies.values()], state.levySequence, by);
+    targets.revenue!.restoreRateAmendments(state.rateAmendments, by);
   });
   door('unit', targets.unit, state.unitSeen, () => {
     targets.unit!.restore(state.unitIssued, state.unitBurned, by);
@@ -246,6 +268,7 @@ export function rehydrateFiscalFromJournal(
     treasuryFrozen: state.frozen,
     budgetLines: state.lines.size,
     levies: state.levies.size,
+    rateAmendments: state.rateAmendments.length,
     unitIssued: state.unitIssued,
     unitBurned: state.unitBurned,
     accounts: state.accounts.size,
