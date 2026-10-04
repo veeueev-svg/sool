@@ -18,6 +18,11 @@
  *    المسمّاة في المحضر — فالتنويعُ شرطٌ مقيسٌ لا وصف.
  * 4) **الخرجُ الخامُّ محفوظٌ لا ملخَّص**: لكلِّ حكمٍ ملفُّ تقريرٍ موجودٌ في المستودع.
  * 5) **فشلٌ مغلق**: إعلانٌ ناقصٌ أو معجمٌ خارجَ المغلق يُرفض ولا يُفترض صحيحًا.
+ * 6) **الحكمُ مربوطٌ بما رُوجع** (مجلس المراجعة · الجلسة 1 · COUNCIL_UNBOUND_REVIEWED_COMMIT):
+ *    محضرُ VERIFIED يحمل `scope_digest` — بصمةَ محتوى نطاقِ البندِ يومَ المراجعة (`scopeDigest`)
+ *    — والبندُ لا يكون VERIFIED في السجلّ الحيّ إلّا وبصمةُ نطاقِه اليومَ تساويها. فإجماعٌ على
+ *    التزامةٍ أخرى، أو نطاقٌ تغيّر بعد الحكم، يسقط. والبصمةُ محتوًى لا تاريخ: تصحّ على نسخةٍ
+ *    ضحلة (CI بعمقِ التزامتين) حيث لا تُرى الالتزاماتُ القديمة.
  *
  * الحدُّ المعلن: الهويّةُ والعزلُ **مُعلَنان** في المحضر لا **مُثبَتان** — فالأعضاءُ وكلاءُ
  * يوفّرهم المنفّذُ على منصّته. وهذا ما قبله المالكُ بأمره صراحةً، والدالّةُ تقيس الشكلَ
@@ -45,13 +50,28 @@ export interface CouncilDisposition { kind: string; ref?: string }
 export interface CouncilRecord {
   item: string;
   commit: string;
+  /** بصمةُ محتوى نطاقِ البند يومَ المراجعة — شرطٌ لمحضرِ VERIFIED (الثابت 6) */
+  scope_digest?: string;
   executor_family: string;
   convened_at: string;
   verdicts: CouncilVerdict[];
   decision: string;
   disposition?: CouncilDisposition;
 }
-export interface QueueItemLike { id: string; status: string; discoveries?: unknown }
+export interface QueueItemLike { id: string; status: string; scope?: string[]; discoveries?: unknown }
+
+/**
+ * بصمةُ نطاق (الثابت 6): المساراتُ مرتّبةً، لكلٍّ سطرٌ `path<TAB>sha256(محتواه)` أو `-` لغائب،
+ * ثمّ sha256 للنصّ كلِّه. `hash` يُحقن (node:crypto في الحارس) فلا تبعيّةَ هنا.
+ */
+export function scopeDigest(
+  scope: readonly string[],
+  fileHash: (p: string) => string | null,
+  hash: (text: string) => string,
+): string {
+  const lines = [...scope].sort().map((p) => `${p}\t${fileHash(p) ?? '-'}\n`);
+  return hash(lines.join(''));
+}
 
 const has = <T extends string>(set: readonly T[], v: unknown): v is T => typeof v === 'string' && (set as readonly string[]).includes(v);
 const norm = (s: unknown): string => String(s ?? '').trim().toLowerCase();
@@ -86,6 +106,7 @@ export function checkRecord(r: CouncilRecord, d: CouncilDeclaration, fileExists:
   if (!/^W-\d{4}-\d{3}$/.test(String(r?.item))) e.push(`${tag}: معرّفُ بندٍ غيرُ صالح`);
   if (!/^[0-9a-f]{7,40}$/.test(String(r?.commit))) e.push(`${tag}: بلا هاشِ التزامةٍ مُراجَعة — والحكمُ على شيءٍ لا يُسمّى لا يُقرأ`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(r?.convened_at))) e.push(`${tag}: convened_at ليس تاريخًا YYYY-MM-DD`);
+  if (r?.decision === 'VERIFIED' && !/^[0-9a-f]{64}$/.test(String(r?.scope_digest ?? ''))) e.push(`${tag}: محضرُ VERIFIED بلا scope_digest — والحكمُ الذي لا يُربط بما رُوجع يُرقّي ما لم يُراجَع (الثابت 6)`);
   if (typeof r?.executor_family !== 'string' || r.executor_family.trim() === '') e.push(`${tag}: بلا عائلةِ المنفّذ — فلا يُقاس اختلافُ العائلات (الثابت 3)`);
   const byId = new Map(d.members.map((m) => [norm(m.id), m]));
   const seen = new Set<string>();
@@ -119,6 +140,7 @@ export function evaluateCouncil(
   items: QueueItemLike[],
   records: CouncilRecord[],
   fileExists: (p: string) => boolean,
+  digestOf?: (scope: readonly string[]) => string,
 ): string[] {
   const e = checkDeclaration(d);
   if (e.length > 0 || d === null || d === undefined) return e;
@@ -133,6 +155,8 @@ export function evaluateCouncil(
     const r = latest.get(it.id);
     if (r === undefined) e.push(`${it.id}: حالُه VERIFIED بلا محضرِ مجلس — ولا يُمنح VERIFIED إلّا بإجماع الأعضاء (RULE-020)`);
     else if (r.decision !== 'VERIFIED') e.push(`${it.id}: حالُه VERIFIED وآخرُ محاضره ${r.decision} — الخلافُ يُعيده لا يُرقّيه (RULE-020)`);
+    else if (digestOf === undefined || !Array.isArray(it.scope)) e.push(`${it.id}: لا تُقاس بصمةُ نطاقِه — فلا يُثبت أنّ ما رُوجع هو الحالُ القائم (الثابت 6 · فشلٌ مغلق)`);
+    else if (digestOf(it.scope) !== r.scope_digest) e.push(`${it.id}: بصمةُ نطاقِه اليومَ لا تساوي بصمةَ المحضر — تغيّر بعد الحكم أو رُوجع غيرُه (الثابت 6 · RULE-020)`);
   }
   for (const [id, r] of latest) {
     if (r.decision !== 'NOT_VERIFIED' || r.disposition?.kind !== 'IN_PROGRESS') continue;
