@@ -43,7 +43,16 @@ export interface EconomyConfig {
 }
 
 /**
- * يحمّل تهيئة الاقتصاد ويرفض أي إعلان يخالف الثوابت المالية أو تنبيه النطاق.
+ * حدودُ النسبةِ المعلنةِ من مصدرٍ واحدٍ (T-53): عددٌ صحيحٌ فوق الصفرِ ولا يتجاوزُ الألفَ
+ * بالأجزاءِ من الألف. يقرؤه محمّلُ التهيئةِ **والتعديلُ الملكيُّ في التشغيل** معًا —
+ * فلا تكونُ لحدٍّ واحدٍ قيمتانِ تسقطُ إحداهما في صمت. (درسُ الجلسةِ 14:
+ * «حدّانِ لرقمٍ واحدٍ» ليست حمايةً بل بابٌ يُفتحُ من الجهةِ الأضعف.)
+ */
+export function isValidRatePerMille(rate: unknown): rate is number {
+  return typeof rate === 'number' && Number.isSafeInteger(rate) && rate > 0 && rate <= 1000;
+}
+
+/** يحمّل تهيئة الاقتصاد ويرفض أي إعلان يخالف الثوابت المالية أو تنبيه النطاق.
  * سببه: المال أخطر ما يُترك لقيم مكتوبة في الكود — والسقوف إن لم تكن معلنة لم تكن ملزمة.
  */
 export function loadEconomy(configDir = resolveConfigDir()): EconomyConfig {
@@ -145,8 +154,7 @@ export function loadEconomy(configDir = resolveConfigDir()): EconomyConfig {
       throw new SovereignViolation(`وعاء مكرَّر: ${rate.base}`, 'CONFIG_RATE_DUPLICATE');
     }
     bases.add(rate.base);
-    if (!Number.isSafeInteger(rate.rate_per_mille) || rate.rate_per_mille <= 0
-      || rate.rate_per_mille > 1000) {
+    if (!isValidRatePerMille(rate.rate_per_mille)) {
       throw new SovereignViolation(
         `نسبة غير صالحة (تُحسب بالأجزاء من الألف): ${rate.base}`, 'CONFIG_RATE_RANGE',
       );
