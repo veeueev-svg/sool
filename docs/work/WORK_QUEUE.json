@@ -1357,7 +1357,7 @@
       "reviewer": "مجلس المراجعة (RULE-020)",
       "area": "حوكمة",
       "phase": 40,
-      "status": "REVIEW",
+      "status": "IN_PROGRESS",
       "progress_items": [
         "T-115ب"
       ],
@@ -1394,18 +1394,22 @@
         "تعديل 2026-10-03: الحارسُ على الحال الحقيقيّ يمرّ بثلاثة أعضاء",
         "تحقّق الإتاحة 2026-10-03: gpt_5_6_terra · grok_4_7 · gemini_3_8_flash أجابت؛ Grok 4.6 غير متاح ⇒ 4.7"
       ],
-      "next_step": "أوّلُ جلسةٍ لمجلس المراجعة — على هذا البند وبنود REVIEW الأخرى",
+      "next_step": "الجلسةُ الثانيةُ لمجلس المراجعة (RULE-020) على الالتزامة بعد الدمج.",
       "created_at": "2026-10-03",
-      "updated_at": "2026-10-03",
+      "updated_at": "2026-10-04",
       "documentation_impact": [
         "PROGRESS.md",
         "version.json",
         "CHANGELOG.md"
       ],
       "discoveries": [
-        "لا سجلَّ DISC ولا RK في المستودع قبل الأمر — عُرِّفا: DISC = حقلُ discoveries في صفّ البند، RK = دَينٌ بمعرّف T-NNN في PROGRESS.md"
+        "لا سجلَّ DISC ولا RK في المستودع قبل الأمر — عُرِّفا: DISC = حقلُ discoveries في صفّ البند، RK = دَينٌ بمعرّف T-NNN في PROGRESS.md",
+        "مجلس المراجعة — الجلسة 1 (2026-10-04 · عند 5bfd61f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب COUNCIL_UNBOUND_REVIEWED_COMMIT (gpt): scripts/review_council.ts لا يربط المحضرَ بالحال المُراجَع — هاشٌ سداسيٌّ أيًّا كان يكفي. وعولج في الجلسة 91 (انظر verification)."
       ],
-      "verification": "PR #29 و#30 و#31 مدموجة · CI أخضر (الوظيفتان) · npm test 2366/2366 · npm run verify رمز 0 · المجلس: gpt_5_6_terra · grok_4_7 · gemini_3_8_flash (تحقّق الإتاحة 2026-10-03)"
+      "verification": [
+        "PR #29 و#30 و#31 مدموجة · CI أخضر (الوظيفتان) · npm test 2366/2366 · npm run verify رمز 0 · المجلس: gpt_5_6_terra · grok_4_7 · gemini_3_8_flash (تحقّق الإتاحة 2026-10-03)",
+        "علاجُ الجلسة 1 (2026-10-04): الثابت 6 — scope_digest شرطٌ لمحضرِ VERIFIED، والحارسُ يعيد حسابَ بصمةِ نطاقِ البند على الشجرة القائمة (scopeDigest)، وفشلٌ مغلقٌ بلا دالّةِ بصمةٍ أو بلا نطاق. +3 اختبارات (15/15)، وطفرةُ نزعِ المقارنة تُسقط اختبارَ COUNCIL_UNBOUND_REVIEWED_COMMIT وحده (pass 14 · fail 1). والبصمةُ في TS تطابق بصمةَ المحضر المحسوبةَ مستقلّةً (6e788b479935 لـW-2026-063)."
+      ]
     },
     {
       "id": "W-2026-063",

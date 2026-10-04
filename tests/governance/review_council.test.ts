@@ -13,9 +13,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import {
-  evaluateCouncil, checkDeclaration, type CouncilDeclaration, type CouncilRecord, type QueueItemLike,
+  evaluateCouncil as evaluateRaw, checkDeclaration, scopeDigest, type CouncilDeclaration, type CouncilRecord, type QueueItemLike,
 } from '../../scripts/review_council';
 
 const decl = (over: Partial<CouncilDeclaration> = {}): CouncilDeclaration => ({
@@ -29,7 +30,7 @@ const decl = (over: Partial<CouncilDeclaration> = {}): CouncilDeclaration => ({
   ...over,
 });
 const rec = (over: Partial<CouncilRecord> = {}): CouncilRecord => ({
-  item: 'W-2026-900', commit: 'abcdef1', executor_family: 'Claude', convened_at: '2026-10-03',
+  item: 'W-2026-900', commit: 'abcdef1', scope_digest: DIGEST, executor_family: 'Claude', convened_at: '2026-10-03',
   verdicts: [
     { member: 'gpt', verdict: 'VERIFIED', report: 'r/gpt.md' },
     { member: 'grok', verdict: 'VERIFIED', report: 'r/grok.md' },
@@ -38,7 +39,14 @@ const rec = (over: Partial<CouncilRecord> = {}): CouncilRecord => ({
   ...over,
 });
 const yes = (): boolean => true;
-const verified: QueueItemLike[] = [{ id: 'W-2026-900', status: 'VERIFIED' }];
+const sha = (t: string): string => createHash('sha256').update(t).digest('hex');
+const SCOPE = ['src/a.ts', 'docs/b.md'];
+const contents = new Map<string, string>([['src/a.ts', 'A'], ['docs/b.md', 'B']]);
+const digestOf = (scope: readonly string[]): string => scopeDigest(scope, (p) => (contents.has(p) ? sha(contents.get(p)!) : null), sha);
+const DIGEST = digestOf(SCOPE);
+const evaluateCouncil = (d: Parameters<typeof evaluateRaw>[0], it: QueueItemLike[], r: CouncilRecord[], f: (p: string) => boolean): string[] =>
+  evaluateRaw(d, it, r, f, digestOf);
+const verified: QueueItemLike[] = [{ id: 'W-2026-900', status: 'VERIFIED', scope: SCOPE }];
 const split = [
   { member: 'gpt', verdict: 'VERIFIED', report: 'r/gpt.md' },
   { member: 'grok', verdict: 'REJECTED', report: 'r/grok.md' },
@@ -113,12 +121,37 @@ test('مجلس: ثلاثةُ أعضاءٍ من عائلاتٍ مختلفة — �
   assert.ok(evaluateCouncil(three, verified, [rec()], yes).some((m) => /لا حكمَ للعضو «gemini»/.test(m)));
 });
 
+test('مجلس: محضرٌ مربوطٌ بغيرِ ما رُوجع — بصمةٌ لا تطابق النطاق القائم تسقط (COUNCIL_UNBOUND_REVIEWED_COMMIT)', () => {
+  const other = rec({ scope_digest: sha('محضرٌ على التزامةٍ أخرى') });
+  assert.ok(evaluateCouncil(decl(), verified, [other], yes).some((m) => /بصمةُ نطاقِه اليومَ/.test(m)));
+  contents.set('src/a.ts', 'A — تغيّر بعد الحكم');
+  try {
+    assert.ok(evaluateCouncil(decl(), verified, [rec()], yes).some((m) => /تغيّر بعد الحكم/.test(m)));
+  } finally { contents.set('src/a.ts', 'A'); }
+  assert.deepEqual(evaluateCouncil(decl(), verified, [rec()], yes), []);
+});
+
+test('مجلس: محضرُ VERIFIED بلا scope_digest، أو حكمٌ بلا دالّةِ بصمة، أو بندٌ بلا نطاق — يسقط', () => {
+  const { scope_digest: _drop, ...bare } = rec();
+  assert.ok(evaluateCouncil(decl(), verified, [bare as CouncilRecord], yes).some((m) => /بلا scope_digest/.test(m)));
+  assert.ok(evaluateRaw(decl(), verified, [rec()], yes).some((m) => /لا تُقاس بصمةُ نطاقِه/.test(m)));
+  assert.ok(evaluateCouncil(decl(), [{ id: 'W-2026-900', status: 'VERIFIED' }], [rec()], yes).some((m) => /لا تُقاس بصمةُ نطاقِه/.test(m)));
+});
+
+test('مجلس: البصمةُ لا تتبع ترتيبَ النطاق، وتتبع كلَّ بايتٍ وغيابَ الملف', () => {
+  assert.equal(digestOf(['docs/b.md', 'src/a.ts']), DIGEST);
+  assert.notEqual(digestOf([...SCOPE, 'missing.ts']), DIGEST);
+  assert.match(DIGEST, /^[0-9a-f]{64}$/);
+});
+
 test('مجلس: الحالُ الحقيقيُّ للمستودع — لا VERIFIED بلا إجماعٍ محفوظ', () => {
   const d = JSON.parse(readFileSync('docs/work/REVIEW_COUNCIL.json', 'utf8')) as CouncilDeclaration;
   const q = JSON.parse(readFileSync('docs/work/WORK_QUEUE.json', 'utf8')) as { work_items: QueueItemLike[] };
   const dir = 'docs/work/council';
   const records = readdirSync(dir).filter((f) => f.endsWith('.json'))
     .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')) as CouncilRecord);
-  assert.deepEqual(evaluateCouncil(d, q.work_items, records, (p) => existsSync(p) && readFileSync(p, 'utf8').trim() !== ''), []);
+  const fileHash = (p: string): string | null => (existsSync(p) ? createHash('sha256').update(readFileSync(p)).digest('hex') : null);
+  const realDigest = (scope: readonly string[]): string => scopeDigest(scope, fileHash, sha);
+  assert.deepEqual(evaluateRaw(d, q.work_items, records, (p) => existsSync(p) && readFileSync(p, 'utf8').trim() !== '', realDigest), []);
   assert.ok(existsSync(d.authority), 'قرارُ المالك المسمّى في الإعلان موجود');
 });
