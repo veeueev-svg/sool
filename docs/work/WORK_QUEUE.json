@@ -1536,7 +1536,8 @@
         "src/economy/tax.ts",
         "src/kernel/config/economy.ts",
         "tests/economy/tax_rate_amendment.test.ts",
-        "docs/test-reports/phase-40-W-2026-065.md"
+        "docs/test-reports/phase-40-W-2026-065.md",
+        "docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
       "excluded": [
         "src/economy/budget.ts وtreasury.ts وledger.ts — لا علاقة للبند بها؛ وledger.ts محجوزٌ لـW-2026-042",
@@ -1558,7 +1559,8 @@
         "npm test → 2377/2377 (2367 + 10 اختباراتِ قبولٍ في tests/economy/tax_rate_amendment.test.ts)",
         "npm run verify → EXIT=0 (15 حاجزًا)",
         "التقرير: docs/test-reports/phase-40-W-2026-065.md",
-        "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)"
+        "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
+        "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
       "next_step": "التحقّقُ لمجلسِ المراجعةِ (RULE-020) والقيّم على المستودع — لا يرقّي المنفِّذُ عملَه (RULE-004). وما تأجّل بعائقٍ مسمًّى: تدوينُ التعديلِ صنفًا في اليوميّةِ (closed_enums.ts محجوزٌ لـW-2026-050).",
       "created_at": "2026-10-04",
