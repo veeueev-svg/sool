@@ -1,0 +1,36 @@
+{
+  "item": "W-2026-062",
+  "commit": "147399214c8f",
+  "scope_digest": "b19ba927ee3119d1a4fe8765892b4363ea0ebf178971440212e54555c7d71ee3",
+  "executor_family": "Claude",
+  "convened_at": "2026-10-04",
+  "session": 2,
+  "evidence_bundle": "council_bundles/W-2026-062 (MANIFEST.sha256) · sool.bundle sha256 08d933cf62553e21ab482fde75720c58f3df325421a7e8a6a211347f23506de8",
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-062-2-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-062-2-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-062-2-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS"
+  }
+}
