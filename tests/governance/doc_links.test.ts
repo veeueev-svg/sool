@@ -44,14 +44,23 @@ export function stripCode(text: string): string {
 }
 
 /**
- * شفرةُ العنوان كما يعرفُها CommonMark: "…" أو '…' أو (…) — بعد فراغٍ بعد الوجهة.
- * (الجلسة 2 · DOC_LINK_GUARD_REFERENCE_STYLE_BYPASS: العنوانُ المفردُ والقوسيُّ كانا يعميانِ الحارس)
+ * شفرةُ العنوان كما يعرفُها CommonMark: "…" أو '…' أو (…) — بعد فراغٍ بعد الوجهة، وفي كلٍّ منها
+ * **التهريبُ بالشرطة المائلة** (`\"` · `\'` · `\(` `\)`) حرفٌ من العنوان لا خاتمةٌ له.
+ * (الجلسة 2 · DOC_LINK_GUARD_REFERENCE_STYLE_BYPASS: العنوانُ المفردُ والقوسيُّ كانا يعميانِ الحارس ·
+ *  الجلسة 3 · DOC_LINK_GUARD_TITLE_ESCAPE_BYPASS: عنوانٌ فيه تهريبٌ كان يُفشل المطابقةَ كلَّها فتختفي الوجهة)
  */
-const TITLE = String.raw`(?:\s+(?:"[^"]*"|'[^']*'|\([^()]*\)))?`;
+const TITLE = String.raw`(?:\s+(?:"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|\((?:[^()\\]|\\[\s\S])*\)))?`;
 /** الروابطُ المباشرة: ](وجهة) أو ](<وجهة بفراغات>) — والوجهةُ العاريةُ قد تحملُ أقواسًا متوازنة */
 const INLINE_LINK = new RegExp(String.raw`\]\(\s*(?:<([^<>]*)>|([^()\s]*(?:\([^()]*\)[^()\s]*)*))\s*` + TITLE + String.raw`\)`, 'g');
-/** تعريفاتُ الروابط المرجعية: ^[وسم]: وجهة أو <وجهة بفراغات> — الوجهةُ على سطرِ التعريفِ دائمًا */
-const REFERENCE_DEF = new RegExp(String.raw`^ {0,3}\[[^\]]+\]:\s*(?:<([^<>]*)>|(\S+))`, 'gm');
+/**
+ * تعريفاتُ الروابط المرجعية: [وسم]: وجهة أو <وجهة بفراغات> — في أوّل السطر **أو بعد بادئةِ حاوية**:
+ * علاماتُ الاقتباس `>` (ولو متداخلةً أو مُزاحة) وعلاماتُ القائمة (`-` `*` `+` `1.` `1)`) وأيُّ إزاحةٍ
+ * لقائمةٍ متداخلة. (الجلسة 3 · DOC_LINK_GUARD_CONTAINER_REFERENCE_BYPASS: التثبيتُ بـ`^ {0,3}\[` كان
+ * يُعمي الحارسَ عن تعريفٍ داخل اقتباسٍ أو قائمة.) والحدُّ المعلن: إزاحةٌ بأربعةِ فراغاتٍ خارجَ قائمةٍ
+ * شفرةٌ في CommonMark — فتعريفٌ فيها يُقاس هنا وقد لا يكون رابطًا: إنذارٌ زائدٌ يُرى لا عمًى صامت.
+ */
+const CONTAINER = String.raw`(?:[ \t]*(?:>|[-*+]|\d{1,9}[.)])(?=[ \t]|$)[ \t]?)*[ \t]*`;
+const REFERENCE_DEF = new RegExp(String.raw`^` + CONTAINER + String.raw`\[[^\]]+\]:\s*(?:<([^<>]*)>|(\S+))`, 'gm');
 
 /** الروابطُ النسبيّةُ المكسورة في نصٍّ موضعُه `file` — بلا مخرجٍ إلّا المخطّطَ (URI) والمرساةَ الخالصة. */
 export function brokenLinksIn(file: string, text: string, exists: (p: string) => boolean): string[] {
@@ -155,4 +164,23 @@ test('حارسُ الروابط: الصيغُ المرجعيةُ والعناو�
   assert.deepEqual(brokenLinksIn('docs/a.md', '[r]: ../README.md', all), []);
   // وجهةٌ مخطّطةٌ أو مرساةٌ خالصةٌ تُتركان
   assert.deepEqual(brokenLinksIn('docs/a.md', '[r]: https://x.y/z [c](#anchor)', none), []);
+});
+
+test('حارسُ الروابط: العنوانُ المُهرَّبُ وتعريفُ الحاوية يُقاسان — لا مخرجَ صامتًا (الجلسة 3 · DOC_LINK_GUARD_TITLE_ESCAPE_BYPASS · DOC_LINK_GUARD_CONTAINER_REFERENCE_BYPASS)', () => {
+  // مسابيرُ grok في الجلسة 3 بحرفها — كانت كلُّها []
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](missing.md "say \\"hi\\"")', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', "[x](missing.md 'it\\'s gone')", none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](missing.md (title \\(with\\) parens))', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](<my file.md> "say \\"hi\\"")', none), ['my file.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '> [r]: missing.md\n>\n> [x][r]', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '   > [r]: missing.md', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '- item\n  - nested\n\n    [r]: missing.md', none), ['missing.md']);
+  // حاوياتٌ أخرى من العائلة نفسِها
+  assert.deepEqual(brokenLinksIn('docs/a.md', '> > [r]: missing.md', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '- [r]: missing.md', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '1. [r]: missing.md\n2) [s]: gone.md', none), ['missing.md', 'gone.md']);
+  // سالبةُ الضبط: الصيغُ نفسُها سليمةً لا تُبلَّغ، ومربّعُ المهمّة ليس تعريفًا
+  const all = (): boolean => true;
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](../README.md "say \\"hi\\"") > [r]: ../README.md', all), []);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '- [ ] مهمّة\n- [x] منجزة', none), []);
 });
