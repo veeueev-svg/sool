@@ -27,6 +27,8 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ROYAL_COURT, UNIT_TARGET, bootstrapState } from '../../src/index';
+import { rehydrateFiscalFromJournal } from '../../src/data/rehydrate_fiscal';
+import type { DurableRecord } from '../../src/data/persistence';
 
 /** ثابت 4: بعد أحدثِ `declared_at` في نِسَب الجباية المعلنة */
 const T0 = Date.parse('2026-08-23T00:00:00Z');
@@ -337,6 +339,34 @@ test('T-53/مجلس 2: سجلُّ نِسَبِ الجبايةِ ينجو الإ�
     assert.equal(replay.ok, false, 'إعادةُ الأمرِ القديمِ مرفوضة');
     assert.match(replay.ok ? '' : replay.reason, /نُفّذ سابقًا/);
     assert.equal(second.revenue.rateFor('compute_usage')?.ratePerMille, 60, 'لا رجوعَ بالأمر المُعاد');
+  } finally {
+    sc.clean();
+  }
+});
+
+test('T-53/مجلس 3: شاهدُ rate_amended التالفُ يُسقط الإرجاعَ برمزٍ مسمًّى ولا يُسقَطُ صمتًا (RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS)', () => {
+  const sc = scene();
+  try {
+    const s = sc.boot();
+    const at = T0 + 60_000;
+    const good = { base: 'compute_usage', from: 30, to: 40, effectiveFrom: at, commandId: 'cmd:probe-1' };
+    const entry = (detail: unknown): DurableRecord => ({
+      seq: 1, at, kind: 'audit_entry', prevHash: '0', hash: '1',
+      payload: { kind: 'rate_amended', detail },
+    });
+    const run = (detail: unknown) => rehydrateFiscalFromJournal([entry(detail)], { revenue: s.revenue }, 'ministry:data');
+    // مسبارُ gpt في الجلسة 3 بحرفه — كان RESULT { rateAmendments: 0 } بلا رمي
+    assert.throws(() => run({ ...good, to: 'not-a-number' }), (e: Error) => e.message === 'RECOVERY_RATE_INVALID');
+    // مسبارُ grok: قيدٌ بلا commandId
+    const { commandId: _drop, ...noCommand } = good;
+    assert.throws(() => run(noCommand), (e: Error) => e.message === 'RECOVERY_RATE_COMMAND_ID_MISSING');
+    assert.throws(() => run({ ...good, effectiveFrom: 'أمس' }), (e: Error) => e.message === 'RECOVERY_RATE_DECLARED_AT_INVALID');
+    assert.throws(() => run(null), (e: Error) => e.message.startsWith('RECOVERY_RATE_BASE_UNDECLARED'));
+    assert.throws(() => run({ ...good, base: 'لا-وعاء' }), (e: Error) => e.message === 'RECOVERY_RATE_BASE_UNDECLARED:لا-وعاء');
+    assert.equal(s.revenue.rateHistoryOf('compute_usage').length, 1, 'الرفضُ لا يُغيّر السجل');
+    // سالبةُ الضبط: الشاهدُ السليمُ نفسُه يُرجَع
+    assert.equal(run(good).rateAmendments, 1);
+    assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 40);
   } finally {
     sc.clean();
   }

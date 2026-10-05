@@ -1505,13 +1505,15 @@
     {
       "id": "W-2026-065",
       "title": "مسارٌ ملكيٌّ لتعديل سعر الرسم مع حفظ تاريخ الإعلان — لا أثر رجعيًّا (T-53)",
-      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 90)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 95)",
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "الاقتصاد والمالية",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
-        "T-53"
+        "T-53",
+        "2026-10-05 (الجلسة 95): استلامٌ بأمر المالك («عالج العيوب وحل التعارضات وواصل العمل») من المساعد الآلي — Perplexity Computer (الجلسة 90)، وعلاجُ RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS داخل النطاق (src/data/rehydrate_fiscal.ts · src/economy/rate_policy.ts · tests/data/rehydrate_fiscal.test.ts).",
+        "2026-10-05 (الجلسة 95): بعد دمج الثابت 8 (#48) رُفع البندُ إلى REVIEW بتغيّرٍ مقيس — بصمةُ نطاقِه تخالف بصمةَ محضرِ الجلسة 3. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده."
       ],
       "dependencies": [
         "لا شيء"
@@ -1550,7 +1552,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "علاجُ عيوب الجلسة 3 المسمّاة في discoveries، ثمّ الجلسةُ الرابعة لمجلس المراجعة (RULE-020).",
+      "next_step": "الجلسةُ الرابعة لمجلس المراجعة (RULE-020) على التزامةِ الدمج — بحزمةٍ تضمّ قواعدَ النطاق (docs/work/WORK_CONTROL.md §5–§7 · scripts/check_work.mjs).",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-05",
       "documentation_impact": [
@@ -1564,12 +1566,16 @@
         "التقرير: docs/test-reports/phase-40-W-2026-065.md — ومصفوفةُ القبولِ العشرةُ فيه كلُّها ✓",
         "التحقّقُ المستقلُّ لمجلسِ المراجعةِ (RULE-020): لم يصدر بعدُ — الحالُ REVIEW لا VERIFIED (RULE-004)",
         "علاجُ الجلسة 1 (2026-10-04): (1) params.base وparams.ratePerMille الموقَّعتان شرطٌ مطابقٌ للوعاء والنسبة قبل البوابة؛ (2) سجلُّ معرّفاتِ الأوامر المنفَّذة يرفض الإعادة قبل البوابة؛ وتاريخُ إصدارِ الأمرِ الموقَّعُ يُسجَّل مع rate_amended (commandIssuedAt) — والسريانُ لحظةُ التنفيذ، ونافذتُه محدودةٌ بحداثةِ الأمر في البوابة. +2 اختبار (مجلس 1أ · 1ب)، وطفرةُ نزعِ كلِّ حرسٍ تُسقط اختبارَه وحده (pass 11 · fail 1). tax.ts 381 سطرًا (≤400).",
-        "علاجُ الجلسة 2 (2026-10-04): ثابت 9 — سجلُّ النِّسَبِ ومعرّفاتُ الأوامرِ تُستعادُ من قيودِ rate_amended في السجلِ الأبديِّ عبرَ بابِ restoreRateAmendments الفاشلِ مغلقًا (وعاءٌ دخيلٌ · نسبةٌ غيرُ سليمةٍ · إعلانٌ يرجعُ بالزمنِ · تعديلٌ بلا تغييرٍ دخيل)، والسياسةُ فُكِّكت إلى src/economy/rate_policy.ts تحت سقفِ الوحدة (tax.ts 379 سطرًا). +3 اختبارات (تعديلٌ ينجو إقلاعًا حقيقيًّا في rehydrate_fiscal.test.ts واختبارا وحدة)، وطفرةُ نزعِ الإرجاعِ تُسقط اختبارَ النجاةِ وحده (pass 5 · fail 1)."
+        "علاجُ الجلسة 2 (2026-10-04): ثابت 9 — سجلُّ النِّسَبِ ومعرّفاتُ الأوامرِ تُستعادُ من قيودِ rate_amended في السجلِ الأبديِّ عبرَ بابِ restoreRateAmendments الفاشلِ مغلقًا (وعاءٌ دخيلٌ · نسبةٌ غيرُ سليمةٍ · إعلانٌ يرجعُ بالزمنِ · تعديلٌ بلا تغييرٍ دخيل)، والسياسةُ فُكِّكت إلى src/economy/rate_policy.ts تحت سقفِ الوحدة (tax.ts 379 سطرًا). +3 اختبارات (تعديلٌ ينجو إقلاعًا حقيقيًّا في rehydrate_fiscal.test.ts واختبارا وحدة)، وطفرةُ نزعِ الإرجاعِ تُسقط اختبارَ النجاةِ وحده (pass 5 · fail 1).",
+        "علاجُ الجلسة 3 (2026-10-05 · الجلسة 95): collect في rehydrate_fiscal.ts صار ينقل شاهدَ rate_amended كما شهد بلا تصفية، فيبلغ RatePolicy.restore ويُرفض برمزٍ مسمًّى؛ وأُضيف فحصُ تاريخ السريان RECOVERY_RATE_DECLARED_AT_INVALID. مسبارُ gpt بحرفه (to: \"not-a-number\") ⇒ RECOVERY_RATE_INVALID بدل rateAmendments: 0 · مسبارُ grok (بلا commandId) ⇒ RECOVERY_RATE_COMMAND_ID_MISSING · تفصيلٌ غائب ⇒ RECOVERY_RATE_BASE_UNDECLARED · والشاهدُ السليمُ يُرجَع (سالبةُ ضبط). +1 اختبار (rehydrate_fiscal 7/7) · طفرتان مقتولتان: إرجاعُ collect القديم ⇒ pass 6 · fail 1، ونزعُ فحصِ التاريخ ⇒ pass 6 · fail 1.",
+        "قياسُ OUT_OF_SCOPE_WRITE (الجلسة 95 · 2026-10-05) — ملاحظةُ المنفّذ تُقيَّد ولا تُبدِّل الحكم: شُغّلت البوابةُ node scripts/check_work.mjs على التزامةِ العلاجِ نفسِها (5e040de) في شجرةٍ منفصلة ⇒ EXIT=0 «✓ كلُّ عملٍ محجوزٌ ومملوكٌ ومراجَعٌ بلا تداخل». والمساراتُ التي سمّاها gpt ثلاثةُ أصناف: وثائقُ حالٍ مشتركةٌ يرفض الميثاقُ إدراجَها في scope ويُلزم تسميتَها في §6 من العقد (WORK_CONTROL §5–§6 · الحاجزان 14 و15) · والسجلُّ الحيّ WORK_QUEUE.json · وعقدُ البند نفسِه في docs/work/orders/ (يستثنيهما الحاجزُ 12 ويوجبُ الحاجزُ 13 لمسَهما). والحكمُ على هذا للجلسة الرابعة بحزمةٍ تضمّ الميثاقَ والبوابة.",
+        "أُعيد بناءُ الفرع على main بعد #48 و#49 و#46 (2026-10-05): npm test → 2398 متوقَّعًا · npm run verify → في طلب الدمج."
       ],
       "discoveries": [
         "مجلس المراجعة — الجلسة 1 (2026-10-04 · عند 5bfd61f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان: (1) إعادةُ الأمر الملكيّ نفسِه تُنفّذ تعديلًا ثانيًا لأنّ بوابةَ التاج idempotent تُعيد قرارَها السابق allowed=true وamendRate لا يميّز الإعادة — grok؛ (2) RATE_AMENDMENT_COMMAND_NOT_PARAMETER_BOUND: الأمرُ لا يربط الوعاءَ ولا النسبة، فتوقيعٌ واحدٌ يعدّل كلَّ الأوعية — gpt. وعولجا من الجذر في الجلسة 91 (انظر verification).",
         "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب RATE_AMENDMENT_HISTORY_NOT_DURABLE (gpt): سجلُّ النِّسَبِ (rateHistory) ومعرّفاتُ الأوامرِ المنفَّذةِ (amendmentCommands) في الذاكرة وحدها — restore لا يسترجعُهما ومسارُ rehydrate_fiscal.ts لا يمررُهما لخدمةِ الإيراد، فإعادةُ تشغيلِ الدولة تمحو الإعلاناتِ التشغيليةَ من سجلِ النِّسَب (قيسها المسبارُ: الإعلانُ 40‰ يختفي بعد إعادةِ البناء) وتفقدُ منعَ إعادةِ الأمرِ نفسِه عبرَ حدودِ إعادةِ التشغيل.",
-        "مجلس المراجعة — الجلسة 3 (2026-10-05 · عند 8efba7c4057b): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). عيبٌ جديدٌ من gpt بخرجٍ خامّ: RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS — قيدُ audit_entry بنوع rate_amended وتفصيلٍ غيرِ صالح (to: \"not-a-number\") يُسقطه collect صمتًا فينجح الإرجاعُ بـrateAmendments: 0 بدل الفشل المغلق. وقاسه grok بقيدٍ بلا commandId فوجد السلوكَ نفسَه (thrown: null · rateAmendments: 0) وعدّه غيرَ مُسقِط. وسببٌ ثانٍ من gpt: OUT_OF_SCOPE_WRITE على 5e040de."
+        "مجلس المراجعة — الجلسة 3 (2026-10-05 · عند 8efba7c4057b): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). عيبٌ جديدٌ من gpt بخرجٍ خامّ: RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS — قيدُ audit_entry بنوع rate_amended وتفصيلٍ غيرِ صالح (to: \"not-a-number\") يُسقطه collect صمتًا فينجح الإرجاعُ بـrateAmendments: 0 بدل الفشل المغلق. وقاسه grok بقيدٍ بلا commandId فوجد السلوكَ نفسَه (thrown: null · rateAmendments: 0) وعدّه غيرَ مُسقِط. وسببٌ ثانٍ من gpt: OUT_OF_SCOPE_WRITE على 5e040de.",
+        "DISC (الجلسة 95): حدٌّ معلن — الرفضُ رميٌ من بابِ الإرجاع (كسائرِ أبواب rehydrate_fiscal: RECOVERY_*) فيُسقط الإقلاع؛ ولا يُستبدل بإقلاعٍ ناجحٍ يُعلن الصامت. وأثرُه أنّ يوميّةً فيها قيدُ rate_amended تالفٌ لا تُقلع حتى يُعالَج القيد — وهو عينُ الفشل المغلق الذي طلبه العيب."
       ]
     },
     {

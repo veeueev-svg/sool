@@ -14,7 +14,9 @@
  *      (W-2026-065 · الجلسة 1)
  *   3) **الإرجاعُ فشلٌ مغلق** (W-2026-065 · الجلسة 2 · RATE_AMENDMENT_HISTORY_NOT_DURABLE):
  *      وعاءٌ دخيلٌ أو نسبةٌ غيرُ سليمةٍ أو إعلانٌ يرجعُ بالزمنِ أو تعديلٌ بلا
- *      تغييرٍ دخيلٌ ⇒ رمزُ رفضٍ مسمًّى لا تخمين، والإرجاعُ المُعادُ لا يُكرِّر
+ *      تغييرٍ دخيلٌ ⇒ رمزُ رفضٍ مسمًّى لا تخمين، والإرجاعُ المُعادُ لا يُكرِّر. والشاهدُ يصل
+ *      كما شهد (الجلسة 3 · RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS) فكلُّ حقلٍ يُفحص بنوعه —
+ *      ومنه تاريخُ السريان: غيرُ العدديّ ⇒ RECOVERY_RATE_DECLARED_AT_INVALID
  * اختبار القبول: tests/economy/tax_rate_amendment.test.ts
  */
 import { isValidRatePerMille } from '../kernel/config/economy';
@@ -91,6 +93,7 @@ export class RatePolicy {
       if (!h) throw new Error(`RECOVERY_RATE_BASE_UNDECLARED:${a.base}`);
       if (!isValidRatePerMille(a.ratePerMille)) throw new Error('RECOVERY_RATE_INVALID');
       if (typeof a.commandId !== 'string' || a.commandId.trim() === '') throw new Error('RECOVERY_RATE_COMMAND_ID_MISSING');
+      if (typeof a.declaredAt !== 'number' || !Number.isFinite(a.declaredAt)) throw new Error('RECOVERY_RATE_DECLARED_AT_INVALID');
       if (this.executed.has(a.commandId)) continue;
       const last = h[h.length - 1]!;
       if (a.declaredAt < last.declaredAt) throw new Error('RECOVERY_RATE_ORDER_VIOLATION');

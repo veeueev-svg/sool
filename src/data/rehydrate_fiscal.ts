@@ -191,18 +191,18 @@ function collect(state: Collected, entry: DurableRecord, payload: Record<string,
     // الجلسة 2 · W-2026-065 (RATE_AMENDMENT_HISTORY_NOT_DURABLE): تعديلُ النسبةِ لا
     // يوميّةَ حالةٍ خاصّةً به — شاهدُه قيدُه في السلسلةِ الأبديّةِ (audit_entry لا
     // يُسقَطُ بالضغطِ ولا يُنسَخ)، فمن قيودِه يُعادُ بناءُ سجلِ النِّسَبِ والأوامر.
+    // الجلسة 3 · RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS: الشاهدُ يُنقل كما شهد ولا يُصفّى
+    // هنا — فقيدٌ ناقصٌ أو بتفصيلٍ غيرِ صالحٍ يبلغ بابَ RatePolicy.restore فيُرفض برمزٍ
+    // مسمًّى (فشلٌ مغلق)، لا يُسقَط صمتًا فينجح الإرجاعُ بعددٍ أقلَّ ممّا شهد به السجل.
     case 'audit_entry': {
       if (payload.kind !== 'rate_amended') return;
       state.revenueSeen = true;
-      const detail = payload.detail as Record<string, unknown> | undefined;
-      const base = detail?.base;
-      const ratePerMille = detail?.to;
-      const declaredAt = detail?.effectiveFrom;
-      const commandId = detail?.commandId;
-      if (typeof base === 'string' && typeof ratePerMille === 'number'
-        && typeof declaredAt === 'number' && typeof commandId === 'string') {
-        state.rateAmendments.push({ base, ratePerMille, declaredAt, commandId });
-      }
+      const raw = payload.detail;
+      const detail = (raw !== null && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+      state.rateAmendments.push({
+        base: detail.base, ratePerMille: detail.to,
+        declaredAt: detail.effectiveFrom, commandId: detail.commandId,
+      } as RateAmendmentRecovery);
       return;
     }
     default:
