@@ -5,7 +5,7 @@
   "gate": "scripts/check_work.mjs",
   "history": "docs/work/WORK_LOG.md",
   "id_pattern": "W-YYYY-NNN",
-  "updated_at": "2026-10-04",
+  "updated_at": "2026-10-05",
   "statuses": [
     "PROPOSED",
     "CLAIMED",
@@ -1394,7 +1394,7 @@
         "تعديل 2026-10-03: الحارسُ على الحال الحقيقيّ يمرّ بثلاثة أعضاء",
         "تحقّق الإتاحة 2026-10-03: gpt_5_6_terra · grok_4_7 · gemini_3_8_flash أجابت؛ Grok 4.6 غير متاح ⇒ 4.7"
       ],
-      "next_step": "الجلسةُ الثالثةُ لمجلس المراجعة (RULE-020) على الالتزامة بعد الدمج.",
+      "next_step": "علاجُ عيوب الجلسة 3 المسمّاة في discoveries، ثمّ الجلسةُ الرابعة لمجلس المراجعة (RULE-020).",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-05",
       "documentation_impact": [
@@ -1405,7 +1405,8 @@
       "discoveries": [
         "لا سجلَّ DISC ولا RK في المستودع قبل الأمر — عُرِّفا: DISC = حقلُ discoveries في صفّ البند، RK = دَينٌ بمعرّف T-NNN في PROGRESS.md",
         "مجلس المراجعة — الجلسة 1 (2026-10-04 · عند 5bfd61f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب COUNCIL_UNBOUND_REVIEWED_COMMIT (gpt): scripts/review_council.ts لا يربط المحضرَ بالحال المُراجَع — هاشٌ سداسيٌّ أيًّا كان يكفي. وعولج في الجلسة 91 (انظر verification).",
-        "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب COUNCIL_SAME_DAY_LATEST_ORDER (gpt): اختيارُ «آخر محضر» في evaluateCouncil غيرُ حتميٍّ عند جلستين في اليوم نفسه — التاريخُ يومٌ لا أكثر ولا رقمَ جلسةَ في الترتيب ولا رفضَ للتعادل (>=)، فترتيبُ قراءة الملفّات هو الذي يحددُ الحكم. أثبته المسبارُ بمحضرين سليمين للتاريخ نفسه: تبديلُ ترتيبِ القراءة وحده يقلب نتيجةَ الحارس."
+        "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب COUNCIL_SAME_DAY_LATEST_ORDER (gpt): اختيارُ «آخر محضر» في evaluateCouncil غيرُ حتميٍّ عند جلستين في اليوم نفسه — التاريخُ يومٌ لا أكثر ولا رقمَ جلسةَ في الترتيب ولا رفضَ للتعادل (>=)، فترتيبُ قراءة الملفّات هو الذي يحددُ الحكم. أثبته المسبارُ بمحضرين سليمين للتاريخ نفسه: تبديلُ ترتيبِ القراءة وحده يقلب نتيجةَ الحارس.",
+        "مجلس المراجعة — الجلسة 3 (2026-10-05 · عند 8efba7c4057b): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). عيبُ الجلسة 2 COUNCIL_SAME_DAY_LATEST_ORDER لم يُعِد إنتاجَه أيُّ عضو. وسببُ رفض gpt: OUT_OF_SCOPE_WRITE — التزامةُ العلاج 322d8de لمست CHANGELOG.md · PROGRESS.md · docs/work/WORK_QUEUE.json · version.json وهي غيرُ مدرجةٍ في scope. (ملاحظةُ المنفّذ تُقيَّد ولا تُبدِّل الحكم: هذه وثائقُ حالٍ مشتركةٌ يمنع WORK_CONTROL §5 إدراجَها في scope، والسجلُّ الحيُّ مُستثنًى في check_work.mjs — ولم تكن الوثيقتان في الحزمة؛ انظر discoveries في W-2026-066.)"
       ],
       "verification": [
         "PR #29 و#30 و#31 مدموجة · CI أخضر (الوظيفتان) · npm test 2366/2366 · npm run verify رمز 0 · المجلس: gpt_5_6_terra · grok_4_7 · gemini_3_8_flash (تحقّق الإتاحة 2026-10-03)",
@@ -1468,7 +1469,7 @@
         "docs/test-reports/phase-40-W-2026-064.md",
         "npm test 2367/2367 · npm run verify → 0"
       ],
-      "next_step": "الجلسةُ الثالثةُ لمجلس المراجعة (RULE-020) على الالتزامة بعد الدمج.",
+      "next_step": "علاجُ عيوب الجلسة 3 المسمّاة في discoveries، ثمّ الجلسةُ الرابعة لمجلس المراجعة (RULE-020).",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-05",
       "verification": [
@@ -1485,7 +1486,8 @@
       ],
       "discoveries": [
         "مجلس المراجعة — الجلسة 1 (2026-10-04 · عند 5bfd61f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان: (1) ARCHITECTURE.md:8-10 ما زالت ترويستُه تنقل أرقامًا غير محروسة ومتقادمة — grok؛ (2) DOC_LINK_GUARD_ASCII_BYPASS: tests/governance/doc_links.test.ts يتخطّى رابطًا نسبيًّا بلا حرفٍ لاتينيّ أو فيه «'» — gpt. وعولجا من الجذر في الجلسة 91 (انظر verification).",
-        "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيب DOC_LINK_GUARD_REFERENCE_STYLE_BYPASS (gpt · وأكّده grok بقياسٍ مستقل): الحارسُ لا يقيس كلَّ رابطٍ نسبي — النمطُ الحالي يطابق الصيغةَ المباشرة ](...) وحدها، فالروابطُ المرجعيةُ [x][r] مع تعريفِها [r]: url، والعناوينُ المفردةُ '…' أو (…)، والوجهاتُ ذاتُ الفراغِ داخل <>، صيغٌ قياسيةٌ يعرضُها GitHub وتمرُّ صامتةً لا يقيسُها الحارسُ ولا يبلغُ بكسرها."
+        "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيب DOC_LINK_GUARD_REFERENCE_STYLE_BYPASS (gpt · وأكّده grok بقياسٍ مستقل): الحارسُ لا يقيس كلَّ رابطٍ نسبي — النمطُ الحالي يطابق الصيغةَ المباشرة ](...) وحدها، فالروابطُ المرجعيةُ [x][r] مع تعريفِها [r]: url، والعناوينُ المفردةُ '…' أو (…)، والوجهاتُ ذاتُ الفراغِ داخل <>، صيغٌ قياسيةٌ يعرضُها GitHub وتمرُّ صامتةً لا يقيسُها الحارسُ ولا يبلغُ بكسرها.",
+        "مجلس المراجعة — الجلسة 3 (2026-10-05 · عند 8efba7c4057b): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). الصيغُ المسمّاةُ في الجلسة 2 صارت تُقاس عند الثلاثة. عيبان جديدان من grok بخرجٍ خامّ: DOC_LINK_GUARD_TITLE_ESCAPE_BYPASS — عنوانٌ فيه تهريب (\\\" أو \\' أو \\( ) يُعمي الرابطَ كلَّه لأنّ TITLE بلا تهريب؛ وDOC_LINK_GUARD_CONTAINER_REFERENCE_BYPASS — تعريفٌ مرجعيٌّ داخل اقتباس > أو بإزاحةِ قائمةٍ متداخلة لا يطابق ^ {0,3}\\[. وسببُ رفض gpt: OUT_OF_SCOPE_WRITE على fa759e7 (CHANGELOG.md · PROGRESS.md · WORK_QUEUE.json · orders/W-2026-064.md · version.json)."
       ]
     },
     {
@@ -1536,7 +1538,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "الجلسةُ الثالثةُ لمجلس المراجعة (RULE-020) على الالتزامة بعد الدمج. وما تأجّل بعائقٍ مسمًّى: تدوينُ التعديلِ صنفًا مستقلًّا في اليوميّة (closed_enums.ts محجوزٌ لـW-2026-050).",
+      "next_step": "علاجُ عيوب الجلسة 3 المسمّاة في discoveries، ثمّ الجلسةُ الرابعة لمجلس المراجعة (RULE-020).",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-05",
       "documentation_impact": [
@@ -1554,19 +1556,21 @@
       ],
       "discoveries": [
         "مجلس المراجعة — الجلسة 1 (2026-10-04 · عند 5bfd61f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان: (1) إعادةُ الأمر الملكيّ نفسِه تُنفّذ تعديلًا ثانيًا لأنّ بوابةَ التاج idempotent تُعيد قرارَها السابق allowed=true وamendRate لا يميّز الإعادة — grok؛ (2) RATE_AMENDMENT_COMMAND_NOT_PARAMETER_BOUND: الأمرُ لا يربط الوعاءَ ولا النسبة، فتوقيعٌ واحدٌ يعدّل كلَّ الأوعية — gpt. وعولجا من الجذر في الجلسة 91 (انظر verification).",
-        "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب RATE_AMENDMENT_HISTORY_NOT_DURABLE (gpt): سجلُّ النِّسَبِ (rateHistory) ومعرّفاتُ الأوامرِ المنفَّذةِ (amendmentCommands) في الذاكرة وحدها — restore لا يسترجعُهما ومسارُ rehydrate_fiscal.ts لا يمررُهما لخدمةِ الإيراد، فإعادةُ تشغيلِ الدولة تمحو الإعلاناتِ التشغيليةَ من سجلِ النِّسَب (قيسها المسبارُ: الإعلانُ 40‰ يختفي بعد إعادةِ البناء) وتفقدُ منعَ إعادةِ الأمرِ نفسِه عبرَ حدودِ إعادةِ التشغيل."
+        "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب RATE_AMENDMENT_HISTORY_NOT_DURABLE (gpt): سجلُّ النِّسَبِ (rateHistory) ومعرّفاتُ الأوامرِ المنفَّذةِ (amendmentCommands) في الذاكرة وحدها — restore لا يسترجعُهما ومسارُ rehydrate_fiscal.ts لا يمررُهما لخدمةِ الإيراد، فإعادةُ تشغيلِ الدولة تمحو الإعلاناتِ التشغيليةَ من سجلِ النِّسَب (قيسها المسبارُ: الإعلانُ 40‰ يختفي بعد إعادةِ البناء) وتفقدُ منعَ إعادةِ الأمرِ نفسِه عبرَ حدودِ إعادةِ التشغيل.",
+        "مجلس المراجعة — الجلسة 3 (2026-10-05 · عند 8efba7c4057b): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). عيبٌ جديدٌ من gpt بخرجٍ خامّ: RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS — قيدُ audit_entry بنوع rate_amended وتفصيلٍ غيرِ صالح (to: \"not-a-number\") يُسقطه collect صمتًا فينجح الإرجاعُ بـrateAmendments: 0 بدل الفشل المغلق. وقاسه grok بقيدٍ بلا commandId فوجد السلوكَ نفسَه (thrown: null · rateAmendments: 0) وعدّه غيرَ مُسقِط. وسببٌ ثانٍ من gpt: OUT_OF_SCOPE_WRITE على 5e040de."
       ]
     },
     {
       "id": "W-2026-066",
       "title": "مجلسُ المراجعة — الجلسةُ الأولى والثانية: محاضرُ وتقاريرُ خامٌّ للبنود W-2026-062..065",
-      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 91)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 94)",
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "حوكمة",
       "phase": 40,
       "status": "IN_PROGRESS",
       "progress_items": [
-        "لا ينطبق"
+        "لا ينطبق",
+        "2026-10-05 (الجلسة 94): استلامٌ بإذن المالك («الجلسة الثالثة للمجلس») من المساعد الآلي — Perplexity Computer (الجلسة 91)، وتوسيعُ النطاق بملفّات الجلسة 3 قبل لمسها. انعقدت الجلسة 3 عند 8efba7c: الثلاثة NOT_VERIFIED، والمآلُ IN_PROGRESS."
       ],
       "dependencies": [
         "W-2026-062"
@@ -1601,7 +1605,19 @@
         "docs/work/council/W-2026-065-2-grok.md",
         "docs/work/council/W-2026-065-2-gemini.md",
         "docs/test-reports/phase-40-W-2026-066.md",
-        "docs/work/orders/W-2026-066.md"
+        "docs/work/orders/W-2026-066.md",
+        "docs/work/council/W-2026-062-3.json",
+        "docs/work/council/W-2026-062-3-gpt.md",
+        "docs/work/council/W-2026-062-3-grok.md",
+        "docs/work/council/W-2026-062-3-gemini.md",
+        "docs/work/council/W-2026-064-3.json",
+        "docs/work/council/W-2026-064-3-gpt.md",
+        "docs/work/council/W-2026-064-3-grok.md",
+        "docs/work/council/W-2026-064-3-gemini.md",
+        "docs/work/council/W-2026-065-3.json",
+        "docs/work/council/W-2026-065-3-gpt.md",
+        "docs/work/council/W-2026-065-3-grok.md",
+        "docs/work/council/W-2026-065-3-gemini.md"
       ],
       "excluded": [
         "تعديلُ أيِّ تقريرٍ خامٍّ لعضو — يُحفظ كما كتبه",
@@ -1618,7 +1634,7 @@
         "docs/test-reports/phase-40-W-2026-066.md",
         "docs/test-reports/phase-40-W-2026-066.md — الجلسة 2 (الأعضاء الثلاثة معزولين على حزم مجمّدة عند 1473992): البنود الثلاثة NOT_VERIFIED بعيوب مسمّاة"
       ],
-      "next_step": "الجلسةُ الثالثةُ لمجلس المراجعة (RULE-020) على الالتزامة بعد دمج علاج الجلسة 2 (W-2026-062 · W-2026-064 · W-2026-065).",
+      "next_step": "الجلسةُ الرابعة لمجلس المراجعة بعد علاج عيوب الجلسة 3 في بنودها W-2026-062 · W-2026-064 · W-2026-065.",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-05",
       "documentation_impact": [
@@ -1630,7 +1646,10 @@
         "الجلسة 2: علاجُ عيوب الجلسة 2 في بنود W-2026-062 · W-2026-064 · W-2026-065 دُمج في PRs #41 · #42 · #43 · CI أخضر · npm test 2395/2395 · npm run verify → EXIT=0"
       ],
       "discoveries": [
-        "عيوبٌ مسمّاةٌ في ثلاثةِ بنودٍ أُعيدت إلى IN_PROGRESS — مقيّدةٌ في discoveries من صفوفها"
+        "عيوبٌ مسمّاةٌ في ثلاثةِ بنودٍ أُعيدت إلى IN_PROGRESS — مقيّدةٌ في discoveries من صفوفها",
+        "DISC (الجلسة 94): تناقضٌ بين آلة الحالات والحارس — WORK_CONTROL §3 يجعل VERIFIED لا يُبلغ إلّا من REVIEW، لكنّ evaluateCouncil يُسقط npm test إن رُفع بندٌ إلى REVIEW وآخرُ محاضره NOT_VERIFIED/IN_PROGRESS («المجلسُ أعاده إلى IN_PROGRESS وحالُه لا يزال REVIEW») — قيس في 2026-10-05 على نسخةٍ مؤقّتة: 17/18 بثلاثة أخطاء. فالمجلسُ يراجع بنودًا IN_PROGRESS منذ الجلسة 2. القرارُ في تفسير الانتقال للمالك؛ لم يُعدَّل الحارسُ ولا الميثاق.",
+        "DISC (الجلسة 94): حزمةُ الجلسة 3 لم تضمّ WORK_CONTROL.md ولا check_work.mjs، وأسقط gpt البنودَ الثلاثة بـOUT_OF_SCOPE_WRITE على وثائق الحالِ المشتركة والسجلّ الحيّ وعقودِ البنود، وهي ممّا يمنع الميثاقُ إدراجَه في scope أو يستثنيه الحارس. الحكمُ محفوظٌ كما صدر؛ وعلى الجلسة التالية ضمُّ قواعد النطاق إلى الحزمة.",
+        "DISC (الجلسة 94): قياسٌ بيئيّ — load_calibration.test.js سقط منفردًا عند gpt (6/7 · COMMAND_P99_OVER_THRESHOLD + CALIBRATION_OVER_MAX_SCALE) ونجح منفردًا عند grok (7/7)؛ وتقلّبُ declaration_gate وscale_lifecycle تحت تزامن ثلاث مجموعات. خطُّ الأساس عند المنفّذ قبل الانعقاد: npm run verify → EXIT=0 · 2395/2395."
       ]
     },
     {
