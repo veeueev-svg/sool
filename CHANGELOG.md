@@ -2,6 +2,8 @@
 
 ### إصلاح(40)
 
+- **W-2026-065 — علاجُ عيبِ الجلسة 3 لتعديلِ النسبة** (`RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS`): قيدُ `rate_amended` التالفُ يُسقط الإرجاعَ برمزٍ مسمًّى (`RECOVERY_RATE_*`) ولا يُسقَط صمتًا. `npm test` 2398.
+
 - **W-2026-064 — علاجُ عيبَي الجلسة 3 لحارسِ الروابط** (`DOC_LINK_GUARD_TITLE_ESCAPE_BYPASS` · `DOC_LINK_GUARD_CONTAINER_REFERENCE_BYPASS`): العنوانُ المُهرَّبُ وتعريفُ الحاوية يُقاسان. `npm test` 2397.
 
 ### حوكمة(40)
