@@ -86,6 +86,26 @@ test('مجلس: إعادةٌ إلى IN_PROGRESS والبندُ باقٍ REVIEW �
   assert.ok(evaluateCouncil(decl(), [{ id: 'W-2026-900', status: 'REVIEW' }], [r], yes).some((m) => /لا يزال REVIEW/.test(m)));
 });
 
+test('مجلس: REVIEW بعد الرفض بتغيّرٍ مقيس — يصحّ؛ وبلا تغيّرٍ أو بلا قياسٍ يسقط (الثابت 8 · قرارُ المالك 2026-10-05)', () => {
+  const rejected = rec({ verdicts: split, decision: 'NOT_VERIFIED', disposition: { kind: 'IN_PROGRESS' } });
+  const review: QueueItemLike[] = [{ id: 'W-2026-900', status: 'REVIEW', scope: SCOPE }];
+  // لم يتغيّر شيءٌ منذ الرفض ⇒ يسقط
+  assert.ok(evaluateCouncil(decl(), review, [rejected], yes).some((m) => /تساوي بصمةَ محضرِ الرفض/.test(m)));
+  // تغيّر النطاقُ بعد الرفض ⇒ يصحّ REVIEW
+  contents.set('src/a.ts', 'A — عولج بعد الرفض');
+  try {
+    assert.deepEqual(evaluateCouncil(decl(), review, [rejected], yes), []);
+    // وتعذُّرُ القياس فشلٌ مغلق: محضرٌ بلا بصمة · بلا دالّةِ بصمة · بندٌ بلا نطاق
+    const { scope_digest: _d, ...bare } = rejected;
+    assert.ok(evaluateCouncil(decl(), review, [bare as CouncilRecord], yes).some((m) => /لا تُقاس بصمةُ ما تغيّر/.test(m)));
+    assert.ok(evaluateRaw(decl(), review, [rejected], yes).some((m) => /لا تُقاس بصمةُ ما تغيّر/.test(m)));
+    assert.ok(evaluateCouncil(decl(), [{ id: 'W-2026-900', status: 'REVIEW' }], [rejected], yes).some((m) => /لا تُقاس بصمةُ ما تغيّر/.test(m)));
+    // ومآلٌ غيرُ IN_PROGRESS (DISC) لا يقيّد REVIEW بهذا الثابت
+    const disc = rec({ verdicts: split, decision: 'NOT_VERIFIED', disposition: { kind: 'DISC', ref: 'x' } });
+    assert.deepEqual(evaluateCouncil(decl(), review, [disc], yes), []);
+  } finally { contents.set('src/a.ts', 'A'); }
+});
+
 test('مجلس: عضوٌ غائبُ الحكم، أو حكمٌ من غريب، أو حكمان لعضو — يسقط', () => {
   const cases = [
     [{ member: 'gpt', verdict: 'VERIFIED', report: 'r' }],
