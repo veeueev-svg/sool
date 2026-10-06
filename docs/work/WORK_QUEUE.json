@@ -1516,7 +1516,7 @@
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "الاقتصاد والمالية",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "T-53",
         "2026-10-05 (الجلسة 95): استلامٌ بأمر المالك («عالج العيوب وحل التعارضات وواصل العمل») من المساعد الآلي — Perplexity Computer (الجلسة 90)، وعلاجُ RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS داخل النطاق (src/data/rehydrate_fiscal.ts · src/economy/rate_policy.ts · tests/data/rehydrate_fiscal.test.ts).",
@@ -1525,7 +1525,8 @@
         "2026-10-06 (الجلسة 97): الجلسة 5 — NOT_VERIFIED. عيوب Grok: RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_SILENT_SKIP + STALE_TRANSFERRED_ECONOMY_COUNT. عاد إلى IN_PROGRESS.",
         "2026-10-06 (الجلسة 97): علاجُ عيبَي الجلسة 5 — RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_SILENT_SKIP (executed صار Map يخزّن الحمولة، والتعارض يُرفض برمز RECOVERY_RATE_COMMAND_CONFLICT) · STALE_TRANSFERRED_ECONOMY_COUNT (صُحّح العقد §5 والتقرير: 1994 سطرًا و8 ملفات) · +1 اختبار يقتل الطفرة · ورُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ نطاقِه 7b361dbb… ⇒ 5e1a3afa… تخالف بصمةَ محضر الجلسة 5. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده",
         "2026-10-06 (الجلسة 98): الجلسة 6 — NOT_VERIFIED. gpt REJECTED · grok REJECTED · gemini VERIFIED. عيوب جديدة: RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_FROM_FIELD_SILENT_SKIP (gpt) · RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP (grok) · FALSE_RECORDED_SCOPE_DIGEST (grok). عاد إلى IN_PROGRESS.",
-        "2026-10-06 (الجلسة 98): استلامٌ بأمر المالك «ابدا» من (الجلسة 95) — المعرّف لم يتبدّل (WORK_CONTROL §6). علاجُ عيوب الجلسة 6 في نطاق البند: RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP و RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_FROM_FIELD_SILENT_SKIP (لكلِّ معرّفٍ منفَّذٍ حمولةٌ قانونيّةٌ بحقول rate_amended السبعة — حيًّا أو مُستعادًا — وفحصُ السلسلة RECOVERY_RATE_CHAIN_BROKEN) · FALSE_RECORDED_SCOPE_DIGEST (تصحيحٌ مُلحَقٌ في التقرير لا إعادةُ كتابة). +2 اختبار (2403) · نطاقٌ موسَّعٌ بـtests/data/rehydrate_fiscal_rate.test.ts (نقلٌ لسقف 400 سطر). تصحيحٌ لسطر الجلسة 97 أعلاه: «1994 سطرًا» والمقيس 1997، و«5e1a3afa…» والمقيس 403e8b94…، و«executed صار Map» والواقع Set مع خريطة restored — يبقى السطر كما كُتب. الحال IN_PROGRESS حتى التزامة الرفع."
+        "2026-10-06 (الجلسة 98): استلامٌ بأمر المالك «ابدا» من (الجلسة 95) — المعرّف لم يتبدّل (WORK_CONTROL §6). علاجُ عيوب الجلسة 6 في نطاق البند: RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP و RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_FROM_FIELD_SILENT_SKIP (لكلِّ معرّفٍ منفَّذٍ حمولةٌ قانونيّةٌ بحقول rate_amended السبعة — حيًّا أو مُستعادًا — وفحصُ السلسلة RECOVERY_RATE_CHAIN_BROKEN) · FALSE_RECORDED_SCOPE_DIGEST (تصحيحٌ مُلحَقٌ في التقرير لا إعادةُ كتابة). +2 اختبار (2403) · نطاقٌ موسَّعٌ بـtests/data/rehydrate_fiscal_rate.test.ts (نقلٌ لسقف 400 سطر). تصحيحٌ لسطر الجلسة 97 أعلاه: «1994 سطرًا» والمقيس 1997، و«5e1a3afa…» والمقيس 403e8b94…، و«executed صار Map» والواقع Set مع خريطة restored — يبقى السطر كما كُتب. الحال IN_PROGRESS حتى التزامة الرفع.",
+        "2026-10-06 (الجلسة 98): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 403e8b94… (محضر الجلسة 6) ⇒ f5607542… على 8b9b812. رفعٌ للمراجعة لا ترقية."
       ],
       "dependencies": [
         "لا شيء"
@@ -1565,7 +1566,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "الرفع إلى REVIEW في التزامةٍ لا تلمس النطاق، بالبصمة المقيسة على التزامة العلاج، ثم الجلسة 7 لمجلس المراجعة (RULE-020).",
+      "next_step": "الجلسة 7 لمجلس المراجعة (RULE-020) على التزامة الرفع.",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-06",
       "documentation_impact": [
@@ -1574,7 +1575,7 @@
         "CHANGELOG.md — مدخلُ البند",
         "version.json — tests.total بالمقيس"
       ],
-      "verification": "شُغِّل في 2026-10-06 على شجرة العمل بعد علاج عيبَي الجلسة 5: node --test dist/tests/data/rehydrate_fiscal.test.js → pass 8 · fail 0؛ npm run verify → EXIT=0 (15 حاجزًا). بصمة النطاق 7b361dbb… ⇒ 8f841e3c… — تغيّر مقيس (الثابت 8). التقرير: docs/test-reports/phase-40-W-2026-065.md. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرار المجلس بالإجماع (RULE-020).",
+      "verification": "شُغِّل في 2026-10-06 (الجلسة 98) على التزامة العلاج 8b9b812: npm run verify → EXIT=0 (قيس رمزُ الخروج مباشرةً لا عبر أنبوب) · npm test 2403/2403 · ملفّات البند الثلاثة pass 24 · fail 0 · أربعُ طفراتٍ مقتولة. بصمةُ النطاق (9 مسارات، خوارزمية scopeDigest) على 8b9b812 = f56075427adbe7ee119875db8e360230f24d2bf3482cd7758e9a2a628e3a9f6d — قيست بعد التزام محتوى النطاق الأخير، وتُكتب هنا وفي العقد وحدهما (خارج النطاق)، والتزامةُ الرفع لا تلمس النطاق؛ وتخالف بصمةَ محضر الجلسة 6 (403e8b94…) — الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-065.md. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرار المجلس بالإجماع (RULE-020).",
       "discoveries": [
         "مجلس المراجعة — الجلسة 1 (2026-10-04 · عند 5bfd61f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان: (1) إعادةُ الأمر الملكيّ نفسِه تُنفّذ تعديلًا ثانيًا لأنّ بوابةَ التاج idempotent تُعيد قرارَها السابق allowed=true وamendRate لا يميّز الإعادة — grok؛ (2) RATE_AMENDMENT_COMMAND_NOT_PARAMETER_BOUND: الأمرُ لا يربط الوعاءَ ولا النسبة، فتوقيعٌ واحدٌ يعدّل كلَّ الأوعية — gpt. وعولجا من الجذر في الجلسة 91 (انظر verification).",
         "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب RATE_AMENDMENT_HISTORY_NOT_DURABLE (gpt): سجلُّ النِّسَبِ (rateHistory) ومعرّفاتُ الأوامرِ المنفَّذةِ (amendmentCommands) في الذاكرة وحدها — restore لا يسترجعُهما ومسارُ rehydrate_fiscal.ts لا يمررُهما لخدمةِ الإيراد، فإعادةُ تشغيلِ الدولة تمحو الإعلاناتِ التشغيليةَ من سجلِ النِّسَب (قيسها المسبارُ: الإعلانُ 40‰ يختفي بعد إعادةِ البناء) وتفقدُ منعَ إعادةِ الأمرِ نفسِه عبرَ حدودِ إعادةِ التشغيل.",
