@@ -50,8 +50,16 @@ export function stripCode(text: string): string {
  *  الجلسة 3 · DOC_LINK_GUARD_TITLE_ESCAPE_BYPASS: عنوانٌ فيه تهريبٌ كان يُفشل المطابقةَ كلَّها فتختفي الوجهة)
  */
 const TITLE = String.raw`(?:\s+(?:"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|\((?:[^()\\]|\\[\s\S])*\)))?`;
-/** الروابطُ المباشرة: ](وجهة) أو ](<وجهة بفراغات>) — والوجهةُ العاريةُ قد تحملُ أقواسًا متوازنة */
-const INLINE_LINK = new RegExp(String.raw`\]\(\s*(?:<([^<>]*)>|([^()\s]*(?:\([^()]*\)[^()\s]*)*))\s*` + TITLE + String.raw`\)`, 'g');
+/**
+ * الروابطُ المباشرة: ](وجهة) أو ](<وجهة بفراغات>) — والوجهةُ العاريةُ قد تحملُ أقواسًا متوازنة.
+ * CommonMark 0.31.2 يوجبُ دعمَ ثلاثةِ مستوياتٍ على الأقلّ من الأقواسِ المتوازنةِ غيرِ المهرَّبةِ في
+ * الوجهةِ العارية (يحكمُ التنفيذُ فيما فوقها). النمطُ السابقُ (`[^()\s]*(?:\([^()]*\)[^()\s]*)*`)
+ * كان مستوىً واحدًا، فعَمِيَ عن `[x](foo(bar(baz)).md)` — عيبُ الجلسة 5
+ * (DOC_LINK_GUARD_NESTED_PAREN_DESTINATION_BYPASS). والحدُّ المعلنُ هنا ثلاثةٌ، وهو سقفٌ أدنى
+ * يُوثَّقُ لا سقفٌ مطلق: ما فُتحَ قوسًا ولم يُغلَقْ ضمنَ الثلاثةِ لا يُعدُّ وجهةً — فلا يُبلَّغ ولا يُعمى.
+ */
+const PAREN = String.raw`\((?:[^()\\]|\\[\s\S]|\((?:[^()\\]|\\[\s\S]|\((?:[^()\\]|\\[\s\S])*\))*\))*\)`;
+const INLINE_LINK = new RegExp(String.raw`\]\(\s*(?:<([^<>]*)>|([^()\s]*(?:` + PAREN + String.raw`[^()\s]*)*))\s*` + TITLE + String.raw`\)`, 'g');
 /**
  * تعريفاتُ الروابط المرجعية: [وسم]: وجهة أو <وجهة بفراغات> — في أوّل السطر **أو بعد بادئةِ حاوية**:
  * علاماتُ الاقتباس `>` (ولو متداخلةً أو مُزاحة) وعلاماتُ القائمة (`-` `*` `+` `1.` `1)`) وأيُّ إزاحةٍ
@@ -215,4 +223,22 @@ test('حارسُ الروابط: الاقتباسُ بلا فراغٍ والوس
   assert.deepEqual(brokenLinksIn('docs/a.md', '- [ ] مهمّة\n- [x] منجزة', none), []);
   const all = (): boolean => true;
   assert.deepEqual(brokenLinksIn('docs/a.md', '>[r]: ../README.md\n[a\\]b]: ../README.md', all), []);
+});
+
+test('حارسُ الروابط: الوجهةُ العاريةُ بأقواسٍ متداخلةٍ تُقاس — لا مخرجَ صامتًا (الجلسة 5 · DOC_LINK_GUARD_NESTED_PAREN_DESTINATION_BYPASS)', () => {
+  const none = (): boolean => false;
+  // مسابيرُ grok في الجلسة 5 بحرفها — كانت كلُّها []
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo(bar(baz)).md)', none), ['foo(bar(baz)).md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](a(b(c(d))).md)', none), ['a(b(c(d))).md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo(bar(baz)).md "title")', none), ['foo(bar(baz)).md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', "[x](foo(bar(baz)).md 'title')", none), ['foo(bar(baz)).md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo(bar(baz)).md (title))', none), ['foo(bar(baz)).md']);
+  // المستوى الواحد لا يزال يُقاس
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo(bar).md)', none), ['foo(bar).md']);
+  // صيغةُ الزوايا بأقواسٍ متداخلةٍ تُقاس (كانت تمرّ)
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](<foo(bar(baz)).md>)', none), ['foo(bar(baz)).md']);
+  // سالبةُ الضبط: قوسٌ غيرُ متوازنٍ لا يُعدُّ وجهةً — فلا يُبلَّغ ولا يُعمى
+  const all = (): boolean => true;
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](../README.md) [y](foo(bar(baz)).md)', all), []);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](a(b(c).md)', none), []);
 });
