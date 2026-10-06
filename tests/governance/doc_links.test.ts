@@ -58,9 +58,17 @@ const INLINE_LINK = new RegExp(String.raw`\]\(\s*(?:<([^<>]*)>|([^()\s]*(?:\([^(
  * لقائمةٍ متداخلة. (الجلسة 3 · DOC_LINK_GUARD_CONTAINER_REFERENCE_BYPASS: التثبيتُ بـ`^ {0,3}\[` كان
  * يُعمي الحارسَ عن تعريفٍ داخل اقتباسٍ أو قائمة.) والحدُّ المعلن: إزاحةٌ بأربعةِ فراغاتٍ خارجَ قائمةٍ
  * شفرةٌ في CommonMark — فتعريفٌ فيها يُقاس هنا وقد لا يكون رابطًا: إنذارٌ زائدٌ يُرى لا عمًى صامت.
+ * (الجلسة 4 · DOC_LINK_GUARD_BLOCKQUOTE_NOSPACE_BYPASS: علامةُ الاقتباس `>` **لا يلزمها فراغٌ بعدها**
+ *  — CommonMark 0.31.2 §5.1 — فـ`>[r]:` و`>>[r]:` و`> >[r]:` تعريفاتٌ؛ والفراغُ شرطٌ لعلامةِ القائمة وحدها،
+ *  فـ`-[r]:` ليس قائمةً ولا تعريفًا.)
  */
-const CONTAINER = String.raw`(?:[ \t]*(?:>|[-*+]|\d{1,9}[.)])(?=[ \t]|$)[ \t]?)*[ \t]*`;
-const REFERENCE_DEF = new RegExp(String.raw`^` + CONTAINER + String.raw`\[[^\]]+\]:\s*(?:<([^<>]*)>|(\S+))`, 'gm');
+const CONTAINER = String.raw`(?:[ \t]*(?:>|(?:[-*+]|\d{1,9}[.)])(?=[ \t]|$))[ \t]?)*[ \t]*`;
+/**
+ * الوسم: ينتهي عند أوّلِ `]` **غيرِ مهرَّب** — فالتهريبُ بالشرطة المائلة حرفٌ منه لا خاتمةٌ له.
+ * (الجلسة 4 · DOC_LINK_GUARD_ESCAPED_LABEL_BYPASS: `[foo\]bar]:` كان يقف عند أوّلِ `]` فيفلت التعريف.)
+ */
+const LABEL = String.raw`\[(?:[^\]\\]|\\[\s\S])+\]`;
+const REFERENCE_DEF = new RegExp(String.raw`^` + CONTAINER + LABEL + String.raw`:\s*(?:<([^<>]*)>|(\S+))`, 'gm');
 
 /** الروابطُ النسبيّةُ المكسورة في نصٍّ موضعُه `file` — بلا مخرجٍ إلّا المخطّطَ (URI) والمرساةَ الخالصة. */
 export function brokenLinksIn(file: string, text: string, exists: (p: string) => boolean): string[] {
@@ -183,4 +191,28 @@ test('حارسُ الروابط: العنوانُ المُهرَّبُ وتعر�
   const all = (): boolean => true;
   assert.deepEqual(brokenLinksIn('docs/a.md', '[x](../README.md "say \\"hi\\"") > [r]: ../README.md', all), []);
   assert.deepEqual(brokenLinksIn('docs/a.md', '- [ ] مهمّة\n- [x] منجزة', none), []);
+});
+
+test('حارسُ الروابط: الاقتباسُ بلا فراغٍ والوسمُ المهرَّب يُقاسان — لا مخرجَ صامتًا (الجلسة 4 · DOC_LINK_GUARD_BLOCKQUOTE_NOSPACE_BYPASS · DOC_LINK_GUARD_ESCAPED_LABEL_BYPASS)', () => {
+  const none = (): boolean => false;
+  // مسابيرُ grok في الجلسة 4 بحرفها — كانت كلُّها []
+  assert.deepEqual(brokenLinksIn('docs/a.md', '>[r]: missing.md', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', ' >[r]: missing.md', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '   >[r]: missing.md', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '>> [r]: missing.md', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '>>[r]: missing.md', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '> >[r]: missing.md', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '>[r]: missing.md "title"', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '>[r]: <missing file.md>', none), ['missing file.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[foo\\]bar]: missing.md', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '> [foo\\]bar]: missing.md', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[a\\]b]: gone.md', none), ['gone.md']);
+  // العيبان معًا
+  assert.deepEqual(brokenLinksIn('docs/a.md', '>[a\\]b]: gone.md', none), ['gone.md']);
+  // سالبةُ الضبط: `-[r]:` ليس قائمةً (علامتُها يلزمها فراغ) ولا نصٌّ يسبقه حرفٌ قبل `>`؛ والسليمُ لا يُبلَّغ
+  assert.deepEqual(brokenLinksIn('docs/a.md', '-[r]: missing.md', none), []);
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'a > [r]: missing.md', none), []);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '- [ ] مهمّة\n- [x] منجزة', none), []);
+  const all = (): boolean => true;
+  assert.deepEqual(brokenLinksIn('docs/a.md', '>[r]: ../README.md\n[a\\]b]: ../README.md', all), []);
 });
