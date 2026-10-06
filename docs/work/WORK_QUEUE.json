@@ -1512,7 +1512,7 @@
     {
       "id": "W-2026-065",
       "title": "مسارٌ ملكيٌّ لتعديل سعر الرسم مع حفظ تاريخ الإعلان — لا أثر رجعيًّا (T-53)",
-      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 95)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 98)",
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "الاقتصاد والمالية",
       "phase": 40,
@@ -1524,7 +1524,8 @@
         "2026-10-06 (الجلسة 97): توثيقُ الجلسة 4 في التقرير بإذن المالك («ابدا») — تغيّرٌ مقيس للثابت 8. رُفع إلى REVIEW.",
         "2026-10-06 (الجلسة 97): الجلسة 5 — NOT_VERIFIED. عيوب Grok: RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_SILENT_SKIP + STALE_TRANSFERRED_ECONOMY_COUNT. عاد إلى IN_PROGRESS.",
         "2026-10-06 (الجلسة 97): علاجُ عيبَي الجلسة 5 — RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_SILENT_SKIP (executed صار Map يخزّن الحمولة، والتعارض يُرفض برمز RECOVERY_RATE_COMMAND_CONFLICT) · STALE_TRANSFERRED_ECONOMY_COUNT (صُحّح العقد §5 والتقرير: 1994 سطرًا و8 ملفات) · +1 اختبار يقتل الطفرة · ورُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ نطاقِه 7b361dbb… ⇒ 5e1a3afa… تخالف بصمةَ محضر الجلسة 5. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده",
-        "2026-10-06 (الجلسة 98): الجلسة 6 — NOT_VERIFIED. gpt REJECTED · grok REJECTED · gemini VERIFIED. عيوب جديدة: RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_FROM_FIELD_SILENT_SKIP (gpt) · RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP (grok) · FALSE_RECORDED_SCOPE_DIGEST (grok). عاد إلى IN_PROGRESS."
+        "2026-10-06 (الجلسة 98): الجلسة 6 — NOT_VERIFIED. gpt REJECTED · grok REJECTED · gemini VERIFIED. عيوب جديدة: RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_FROM_FIELD_SILENT_SKIP (gpt) · RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP (grok) · FALSE_RECORDED_SCOPE_DIGEST (grok). عاد إلى IN_PROGRESS.",
+        "2026-10-06 (الجلسة 98): استلامٌ بأمر المالك «ابدا» من (الجلسة 95) — المعرّف لم يتبدّل (WORK_CONTROL §6). علاجُ عيوب الجلسة 6 في نطاق البند: RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP و RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_FROM_FIELD_SILENT_SKIP (لكلِّ معرّفٍ منفَّذٍ حمولةٌ قانونيّةٌ بحقول rate_amended السبعة — حيًّا أو مُستعادًا — وفحصُ السلسلة RECOVERY_RATE_CHAIN_BROKEN) · FALSE_RECORDED_SCOPE_DIGEST (تصحيحٌ مُلحَقٌ في التقرير لا إعادةُ كتابة). +2 اختبار (2403) · نطاقٌ موسَّعٌ بـtests/data/rehydrate_fiscal_rate.test.ts (نقلٌ لسقف 400 سطر). تصحيحٌ لسطر الجلسة 97 أعلاه: «1994 سطرًا» والمقيس 1997، و«5e1a3afa…» والمقيس 403e8b94…، و«executed صار Map» والواقع Set مع خريطة restored — يبقى السطر كما كُتب. الحال IN_PROGRESS حتى التزامة الرفع."
       ],
       "dependencies": [
         "لا شيء"
@@ -1537,7 +1538,8 @@
         "docs/incident-reports/2026-10-04-merge-35-work-trailer.md",
         "src/economy/rate_policy.ts",
         "src/data/rehydrate_fiscal.ts",
-        "tests/data/rehydrate_fiscal.test.ts"
+        "tests/data/rehydrate_fiscal.test.ts",
+        "tests/data/rehydrate_fiscal_rate.test.ts"
       ],
       "excluded": [
         "src/economy/budget.ts وtreasury.ts وledger.ts — لا علاقة للبند بها؛ وledger.ts محجوزٌ لـW-2026-042",
@@ -1563,7 +1565,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "علاج عيوب الجلسة 6 في src/economy/rate_policy.ts وsrc/data/rehydrate_fiscal.ts: تعارض markExecuted بلا حمولة وتصحيح البصمة المكتوبة. ثم رفع إلى REVIEW بتغيّرٍ مقيس.",
+      "next_step": "الرفع إلى REVIEW في التزامةٍ لا تلمس النطاق، بالبصمة المقيسة على التزامة العلاج، ثم الجلسة 7 لمجلس المراجعة (RULE-020).",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-06",
       "documentation_impact": [

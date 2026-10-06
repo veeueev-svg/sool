@@ -199,9 +199,12 @@ function collect(state: Collected, entry: DurableRecord, payload: Record<string,
       state.revenueSeen = true;
       const raw = payload.detail;
       const detail = (raw !== null && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+      // الجلسة 6: الشاهدُ بحقولِه كلِّها — from وpreviousDeclaredAt وcommandIssuedAt لا تُسقَط
+      // قبل المقارنة (RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_FROM_FIELD_SILENT_SKIP)
       state.rateAmendments.push({
-        base: detail.base, ratePerMille: detail.to,
-        declaredAt: detail.effectiveFrom, commandId: detail.commandId,
+        base: detail.base, from: detail.from, ratePerMille: detail.to,
+        previousDeclaredAt: detail.previousDeclaredAt, declaredAt: detail.effectiveFrom,
+        commandId: detail.commandId, commandIssuedAt: detail.commandIssuedAt,
       } as RateAmendmentRecovery);
       return;
     }

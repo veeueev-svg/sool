@@ -7,6 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { REVENUE_TARGET, UNIT_TARGET, bootstrapState } from '../../src/index';
+import type { RateAmendmentRecovery } from '../../src/economy/tax';
 
 const NOW = Date.now();
 const T1 = NOW + 10_000;
@@ -183,10 +184,9 @@ test('**T-53/مجلس 2أ** — سجلُّ النِّسَبِ والأوامرُ
   assert.equal(first.s.revenue.amendRate(cmd2, 'compute_usage', 60, T2).ok, true);
   // الدولةُ الثانيةُ تُبنى من التهيئة ثمّ يُرجَعُ لها شاهدُ التعديلين
   const second = revenueState();
-  const seen = [
-    { base: 'compute_usage', ratePerMille: 40, declaredAt: T1, commandId: cmd1.payload.commandId },
-    { base: 'compute_usage', ratePerMille: 60, declaredAt: T2, commandId: cmd2.payload.commandId },
-  ];
+  // الشاهدُ كما دُوِّن حرفًا (rate_amended) — بحقوله كلِّها (الجلسة 6 · ثابت 4)
+  const seen = first.s.audit.find('rate_amended').map((e) => witnessOf(e.detail));
+  assert.equal(seen.length, 2, 'شاهدا التعديلين');
   second.s.revenue.restoreRateAmendments(seen, 'authority:audit_bureau');
   const history = second.s.revenue.rateHistoryOf('compute_usage');
   assert.equal(history.length, 3, 'إعلانُ التهيئة + التعديلان');
@@ -202,22 +202,63 @@ test('**T-53/مجلس 2أ** — سجلُّ النِّسَبِ والأوامرُ
   assert.equal(second.s.revenue.rateHistoryOf('compute_usage').length, 3, 'المعرّفُ شاهدُ التفرّد');
 });
 
+/** يبني شاهدَ الإرجاعِ من تفصيلِ قيدِ rate_amended كما يبنيه rehydrate_fiscal */
+function witnessOf(detail: unknown): RateAmendmentRecovery {
+  const d = detail as Record<string, unknown>;
+  return {
+    base: d['base'], from: d['from'], ratePerMille: d['to'], previousDeclaredAt: d['previousDeclaredAt'],
+    declaredAt: d['effectiveFrom'], commandId: d['commandId'], commandIssuedAt: d['commandIssuedAt'],
+  } as RateAmendmentRecovery;
+}
+
 test('**T-53/مجلس 2ب** — الإرجاعُ فشلٌ مغلق: وعاءٌ دخيلٌ أو نسبةٌ غيرُ سليمةٍ أو إعلانٌ يرجعُ بالزمنِ أو تعديلٌ بلا تغيير', () => {
   const { s } = revenueState();
-  assert.throws(() => s.revenue.restoreRateAmendments(
-    [{ base: 'undeclared_base', ratePerMille: 40, declaredAt: T1, commandId: 'cmd:x' }], 'authority:audit_bureau'),
+  const D0 = s.revenue.rateFor('compute_usage')!.declaredAt;
+  const w = (o: Partial<RateAmendmentRecovery>): RateAmendmentRecovery[] =>
+    [{ base: 'compute_usage', from: 25, ratePerMille: 40, previousDeclaredAt: D0, declaredAt: T1, commandId: 'cmd:x', ...o }];
+  assert.throws(() => s.revenue.restoreRateAmendments(w({ base: 'undeclared_base' }), 'authority:audit_bureau'),
     /RECOVERY_RATE_BASE_UNDECLARED/);
-  assert.throws(() => s.revenue.restoreRateAmendments(
-    [{ base: 'compute_usage', ratePerMille: 0, declaredAt: T1, commandId: 'cmd:x' }], 'authority:audit_bureau'),
+  assert.throws(() => s.revenue.restoreRateAmendments(w({ ratePerMille: 0 }), 'authority:audit_bureau'),
     /RECOVERY_RATE_INVALID/);
-  assert.throws(() => s.revenue.restoreRateAmendments(
-    [{ base: 'compute_usage', ratePerMille: 40, declaredAt: 0, commandId: 'cmd:x' }], 'authority:audit_bureau'),
+  assert.throws(() => s.revenue.restoreRateAmendments(w({ declaredAt: 0 }), 'authority:audit_bureau'),
     /RECOVERY_RATE_ORDER_VIOLATION/);
-  assert.throws(() => s.revenue.restoreRateAmendments(
-    [{ base: 'compute_usage', ratePerMille: 40, declaredAt: T1, commandId: ' ' }], 'authority:audit_bureau'),
+  assert.throws(() => s.revenue.restoreRateAmendments(w({ commandId: ' ' }), 'authority:audit_bureau'),
     /RECOVERY_RATE_COMMAND_ID_MISSING/);
-  assert.throws(() => s.revenue.restoreRateAmendments(
-    [{ base: 'compute_usage', ratePerMille: 25, declaredAt: T1, commandId: 'cmd:x' }], 'authority:audit_bureau'),
+  assert.throws(() => s.revenue.restoreRateAmendments(w({ ratePerMille: 25 }), 'authority:audit_bureau'),
     /RECOVERY_RATE_NO_CHANGE/);
   assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'لا تغيّرَ بعد الرفض');
+});
+
+test('**T-53/مجلس 6** — الأمرُ المنفَّذُ حيًّا له حمولتُه: شاهدٌ مخالفٌ بمعرّفِه يُرفض ولا يُتخطّى (RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP)', () => {
+  const { s, royal } = revenueState();
+  const cmd = royal(REVENUE_TARGET, T1, 'compute_usage', 40);
+  assert.equal(s.revenue.amendRate(cmd, 'compute_usage', 40, T1).ok, true);
+  const live = witnessOf(s.audit.find('rate_amended')[0]!.detail);
+  // مسبارُ grok بحرفه: تنفيذٌ حيٌّ عند 40 ثمّ شاهدٌ بالمعرّفِ نفسِه عند 90 وتاريخٍ لاحق — كان applied=0 بلا رمي
+  assert.throws(() => s.revenue.restoreRateAmendments([{ ...live, ratePerMille: 90, declaredAt: T2 }], 'authority:audit_bureau'),
+    (e: Error) => e.message === `RECOVERY_RATE_COMMAND_CONFLICT:${cmd.payload.commandId}`);
+  // ومخالفةُ حقلٍ واحدٍ غيرِ النسبة تكفي: from · previousDeclaredAt · commandIssuedAt
+  for (const o of [{ from: 999 }, { previousDeclaredAt: 1 }, { commandIssuedAt: 1 }]) {
+    assert.throws(() => s.revenue.restoreRateAmendments([{ ...live, ...o }], 'authority:audit_bureau'),
+      (e: Error) => e.message === `RECOVERY_RATE_COMMAND_CONFLICT:${cmd.payload.commandId}`, JSON.stringify(o));
+  }
+  assert.equal(s.revenue.rateHistoryOf('compute_usage').length, 2, 'لا شيءَ طُبِّق بالرفض');
+  // سالبةُ الضبط: الشاهدُ طبقَ الأصلِ لما نُفِّذ حيًّا يُتخطّى بأمانٍ ولا يُكرَّر
+  s.revenue.restoreRateAmendments([live], 'authority:audit_bureau');
+  assert.equal(s.revenue.rateHistoryOf('compute_usage').length, 2, 'الإعادةُ الأمينةُ لا تُكرِّر');
+});
+
+test('**T-53/مجلس 6** — الشاهدُ الجديدُ يصل سلسلتَه: from وpreviousDeclaredAt يُصدَّقان بالسائدة (RECOVERY_RATE_CHAIN_BROKEN) ويُفحصان بنوعهما', () => {
+  const { s } = revenueState();
+  const D0 = s.revenue.rateFor('compute_usage')!.declaredAt;
+  const ok: RateAmendmentRecovery = { base: 'compute_usage', from: 25, ratePerMille: 40, previousDeclaredAt: D0, declaredAt: T1, commandId: 'cmd:c' };
+  const run = (o: Record<string, unknown>) => () => s.revenue.restoreRateAmendments([{ ...ok, ...o } as RateAmendmentRecovery], 'authority:audit_bureau');
+  assert.throws(run({ from: 999 }), (e: Error) => e.message === 'RECOVERY_RATE_CHAIN_BROKEN');
+  assert.throws(run({ previousDeclaredAt: D0 + 1 }), (e: Error) => e.message === 'RECOVERY_RATE_CHAIN_BROKEN');
+  assert.throws(run({ from: undefined }), (e: Error) => e.message === 'RECOVERY_RATE_FROM_INVALID');
+  assert.throws(run({ previousDeclaredAt: 'أمس' }), (e: Error) => e.message === 'RECOVERY_RATE_PREVIOUS_DECLARED_AT_INVALID');
+  assert.throws(run({ commandIssuedAt: 'x' }), (e: Error) => e.message === 'RECOVERY_RATE_COMMAND_ISSUED_AT_INVALID');
+  assert.equal(s.revenue.rateHistoryOf('compute_usage').length, 1, 'لا تغيّرَ بعد الرفض');
+  s.revenue.restoreRateAmendments([ok], 'authority:audit_bureau');
+  assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 40, 'الشاهدُ الواصلُ سلسلتَه يُرجَع');
 });

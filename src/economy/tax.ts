@@ -325,7 +325,13 @@ export class RevenueService {
     }
     const authorized = this.deps.gateway.authorize(command, now);
     if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
-    this.rates.markExecuted(command.payload.commandId);
+    // الحمولةُ القانونيّةُ نفسُها تُسجَّل للأمرِ المنفَّذ وتُدوَّن شاهدًا — فإرجاعٌ لاحقٌ
+    // بالمعرّفِ نفسِه يُقابَل بها لا بالمعرّفِ وحده (الجلسة 6 · RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP)
+    this.rates.markExecuted({
+      base, from: current.ratePerMille, ratePerMille: newRatePerMille,
+      previousDeclaredAt: current.declaredAt, declaredAt: now,
+      commandId: command.payload.commandId, commandIssuedAt: command.payload.issuedAt,
+    });
 
     const declaration = this.rates.append(base, newRatePerMille, now);
     const entry = this.deps.audit.append(this.actorId, 'rate_amended', {
