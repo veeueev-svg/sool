@@ -40,6 +40,8 @@ export interface RateAmendmentRecovery {
 export class RatePolicy {
   private readonly history = new Map<string, RateDeclaration[]>();
   private readonly executed = new Set<string>();
+  /** حمولاتُ الشهودِ المُستعادَة بمعرّفِ الأمر — لكشفِ التعارضِ في الإرجاع (الجلسة 5) */
+  private readonly restored = new Map<string, RateAmendmentRecovery>();
 
   constructor(rates: readonly RateDeclaration[]) {
     for (const rate of rates) this.history.set(rate.base, [rate]);
@@ -85,6 +87,9 @@ export class RatePolicy {
   /**
    * إرجاعُ التعديلاتِ من شاهدِ السجلِ الأبديِّ بترتيبِ قيودِه (ثابت 3) — يُعيدُ
    * عددَ ما طُبِّق. الفشلُ مغلقٌ برموزٍ مسمّاة، والإعادةُ لا تُكرِّر (المعرّفُ شاهدُ التفرّد).
+   * والإعادةُ طبقَ الأصلِ (الحمولةُ نفسُها) تُتخطّى بأمانٍ؛ والتعارضُ (معرّفٌ واحدٌ وحمولةٌ مختلفة)
+   * يُرفض برمزٍ مسمّى — فالشاهدُ المخالِفُ لا يُمحى بصمت (الجلسة 5 ·
+   * RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_SILENT_SKIP).
    */
   restore(amendments: readonly RateAmendmentRecovery[]): number {
     let applied = 0;
@@ -94,12 +99,18 @@ export class RatePolicy {
       if (!isValidRatePerMille(a.ratePerMille)) throw new Error('RECOVERY_RATE_INVALID');
       if (typeof a.commandId !== 'string' || a.commandId.trim() === '') throw new Error('RECOVERY_RATE_COMMAND_ID_MISSING');
       if (typeof a.declaredAt !== 'number' || !Number.isFinite(a.declaredAt)) throw new Error('RECOVERY_RATE_DECLARED_AT_INVALID');
-      if (this.executed.has(a.commandId)) continue;
+      if (this.executed.has(a.commandId)) {
+        const first = this.restored.get(a.commandId);
+        if (first && (first.base !== a.base || first.ratePerMille !== a.ratePerMille || first.declaredAt !== a.declaredAt))
+          throw new Error(`RECOVERY_RATE_COMMAND_CONFLICT:${a.commandId}`);
+        continue;
+      }
       const last = h[h.length - 1]!;
       if (a.declaredAt < last.declaredAt) throw new Error('RECOVERY_RATE_ORDER_VIOLATION');
       if (a.ratePerMille === last.ratePerMille) throw new Error('RECOVERY_RATE_NO_CHANGE');
       h.push({ base: a.base, ratePerMille: a.ratePerMille, declaredAt: a.declaredAt });
       this.executed.add(a.commandId);
+      this.restored.set(a.commandId, a);
       applied += 1;
     }
     return applied;
