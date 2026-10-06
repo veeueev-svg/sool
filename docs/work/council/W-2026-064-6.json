@@ -1,0 +1,23 @@
+{
+  "item": "W-2026-064",
+  "commit": "aaa117d4dab3da83af602a21e67c6913278927b9",
+  "scope_digest": "3e9e7cd4eddf274fafeaa225afbbf0b91a93f5209d619af578b8728c70929378",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-06",
+  "session": 6,
+  "verdicts": [
+    {"member": "gpt", "model": "GPT 5.6 Terra", "runtime_id": "gpt_5_6_terra", "verdict": "REJECTED", "report": "docs/work/council/W-2026-064-6-gpt.md"},
+    {"member": "grok", "model": "Grok 4.7", "runtime_id": "grok_4_7", "verdict": "REJECTED", "report": "docs/work/council/W-2026-064-6-grok.md"},
+    {"member": "gemini", "model": "Gemini 3.8 Flash", "runtime_id": "gemini_3_8_flash", "verdict": "REJECTED", "report": "docs/work/council/W-2026-064-6-gemini.md"}
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "DOC_LINK_GUARD_FOUR_LEVEL_PAREN_DESTINATION_BYPASS (gpt): وجهة عارية بأربعة مستويات أقواس متوازنة يتخطاها الحارس",
+      "DOC_LINK_GUARD_ESCAPED_PAREN_DESTINATION_BYPASS (grok · gemini): وجهة عارية بأقواس مهرّبة [x](foo\\(bar\\).md) يعيدها الحارس [] لأن الفئة [^()\\s] تستبعد القوس المهرّب",
+      "DOC_LINK_GUARD_NESTING_ABOVE_THREE_BYPASS (grok): وجهة عارية بأربعة مستويات متوازنة أو أكثر يقبلها cmark-gfm حتى 32 والحارس أعمى عنها",
+      "DOC_LINK_GUARD_POINTY_ESCAPE_BYPASS (gemini): وجهة داخل أقواس زاوية تحوي قوس زاوية مهرّبًا وفراغًا يعمى عنها الحارس"
+    ]
+  }
+}

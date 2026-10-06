@@ -1,0 +1,22 @@
+{
+  "item": "W-2026-065",
+  "commit": "aaa117d4dab3da83af602a21e67c6913278927b9",
+  "scope_digest": "403e8b943f9984e211c017ec9abcbc2a747842f4d133b8f7696c8ecf4ebe900e",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-06",
+  "session": 6,
+  "verdicts": [
+    {"member": "gpt", "model": "GPT 5.6 Terra", "runtime_id": "gpt_5_6_terra", "verdict": "REJECTED", "report": "docs/work/council/W-2026-065-6-gpt.md"},
+    {"member": "grok", "model": "Grok 4.7", "runtime_id": "grok_4_7", "verdict": "REJECTED", "report": "docs/work/council/W-2026-065-6-grok.md"},
+    {"member": "gemini", "model": "Gemini 3.8 Flash", "runtime_id": "gemini_3_8_flash", "verdict": "VERIFIED", "report": "docs/work/council/W-2026-065-6-gemini.md"}
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_FROM_FIELD_SILENT_SKIP (gpt): تعارض شاهدين من حقل منفصل يتخطى بصمت",
+      "RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP (grok): markExecuted يضع معرّف الأمر في executed بلا حمولة في restored، فـ restore اللاحق لشاهد مخالف يتابع بصمت",
+      "FALSE_RECORDED_SCOPE_DIGEST (grok): العقد والتقرير يقولان البصمة 8f841e3c والقياس 403e8b94"
+    ]
+  }
+}
