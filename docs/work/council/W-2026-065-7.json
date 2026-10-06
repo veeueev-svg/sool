@@ -1,0 +1,20 @@
+{
+  "item": "W-2026-065",
+  "commit": "7f3dcbd5d07804cbb7d37546cf2a2f2a329d33c4",
+  "scope_digest": "f56075427adbe7ee119875db8e360230f24d2bf3482cd7758e9a2a628e3a9f6d",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-06",
+  "session": 7,
+  "verdicts": [
+    {"member": "gpt", "model": "GPT 5.6 Terra", "runtime_id": "gpt_5_6_terra", "verdict": "REJECTED", "report": "docs/work/council/W-2026-065-7-gpt.md"},
+    {"member": "grok", "model": "Grok 4.7", "runtime_id": "grok_4_7", "verdict": "VERIFIED", "report": "docs/work/council/W-2026-065-7-grok.md"},
+    {"member": "gemini", "model": "Gemini 3.8 Flash", "runtime_id": "gemini_3_8_flash", "verdict": "VERIFIED", "report": "docs/work/council/W-2026-065-7-gemini.md"}
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "RATE_AMENDMENT_HISTORY_MUTABLE_REFERENCE_ESCAPE (gpt): RatePolicy.historyOf() ينسخ المصفوفة فقط (return h ? [...h] : []) ولا ينسخ كائنات RateDeclaration. وRevenueService.rateHistoryOf() يعيد تلك المراجع إلى المستدعي العام. لذلك يستطيع أي مستدعٍ تعديل إعلان قائم بلا أمر ملكي ولا بوابة تاج ولا قيد rate_amended. أُعيد الإنتاج: history[0].ratePerMille = 999 غيّر النسبة المعلنة تاريخيًا واستعملها التقدير فعلًا. النسخ السطحي للمصفوفة لا يكفي؛ يلزم ألا تخرج كائنات التاريخ الداخلية قابلة للتعديل."
+    ]
+  }
+}

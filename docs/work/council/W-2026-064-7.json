@@ -1,0 +1,20 @@
+{
+  "item": "W-2026-064",
+  "commit": "7f3dcbd5d07804cbb7d37546cf2a2f2a329d33c4",
+  "scope_digest": "540f684868785dd3ae81907296fc8c21b755c470ce74e70ebd873705bdf934da",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-06",
+  "session": 7,
+  "verdicts": [
+    {"member": "gpt", "model": "GPT 5.6 Terra", "runtime_id": "gpt_5_6_terra", "verdict": "REJECTED", "report": "docs/work/council/W-2026-064-7-gpt.md"},
+    {"member": "grok", "model": "Grok 4.7", "runtime_id": "grok_4_7", "verdict": "VERIFIED", "report": "docs/work/council/W-2026-064-7-grok.md"},
+    {"member": "gemini", "model": "Gemini 3.8 Flash", "runtime_id": "gemini_3_8_flash", "verdict": "VERIFIED", "report": "docs/work/council/W-2026-064-7-gemini.md"}
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "TEST_TALLY_APPEND_RACE (gpt): ملف الحصيلة dist/.tests.tap الذي يعتمد عليه check_generated_numbers.sh ليس حصيلة تشغيل واحد موثوقًا — احتوى حصيلة ناجحة (pass 2404, fail 0) تلتها حصيلة فاشلة (pass 2403, fail 1) من تشغيلٍ متزامن. والفاحص يقرأ السطر الأخير فقط فيرفض verify. كما أن npm test فشل بحالتي بوابة إعلان (DC-04 وDC-03) خارج نطاق البند. والحارسُ نفسه (doc_links.test.ts) يجتاز 12/12 وعيوب الجلسة 6 الأربعة مغلقة. Grok لاحظ التقاطع نفسه وأعاد التشغيل منفردًا فنجح. عيبُ تجهيزٍ في البنية التحتية للاختبار لا في حارس الروابط."
+    ]
+  }
+}
