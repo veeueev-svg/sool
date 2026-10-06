@@ -1490,7 +1490,7 @@
       "evidence": [
         "docs/test-reports/phase-40-W-2026-064.md",
         "npm test 2367/2367 · npm run verify → 0",
-        "الجلسة 97: npm test 2401/2401 · verify EXIT=0 · سقوطان في CI عُولجا بالتزامةٍ إضافية بلا إعادة كتابة تاريخ (RULE-015)"
+        "الجلسة 97: npm test 2401/2401 · verify EXIT=0 · سقوطان في CI عُولجا بالتزامةٍ إضافية بسحق التزمتين في التزمةٍ واحدة `c2b738b` وإعادة الدفع بـ `git push --force-with-lease` (RULE-015 — التاريخ الفعلي)"
       ],
       "next_step": "علاجُ عيبَي الجلسة 5 (DOC_LINK_GUARD_NESTED_PAREN_BYPASS · DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS) منجَز. الجلسةُ السادسة للمجلس",
       "created_at": "2026-10-03",
