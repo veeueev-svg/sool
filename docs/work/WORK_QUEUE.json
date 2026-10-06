@@ -1429,7 +1429,7 @@
       "reviewer": "القيّم على المستودع (المالك) — ومجلس المراجعة (RULE-020)",
       "area": "التوثيق والحوكمة",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "قيس كلُّ رابطٍ نسبيٍّ في الوثائق: 34 مكسورًا خارج WORK_LOG.md",
         "أُصلحت 25 في نطاق هذا البند، و9 في نطاق W-2026-038 وW-2026-059 داخل بندَيهما (#32 · #33)",
@@ -1439,7 +1439,8 @@
         "2026-10-05 (الجلسة 95): بعد دمج الثابت 8 (#48) رُفع البندُ إلى REVIEW بتغيّرٍ مقيس — بصمةُ نطاقِه تخالف بصمةَ محضرِ الجلسة 3 (ddee0287…). رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده.",
         "2026-10-06 (الجلسة 96): استلامٌ بأمر المالك («ابدأ» — جوابًا على «علاجُ عيبَي حارسِ الروابط في بند W-2026-064 يحتاج أمرك») من المساعد الآلي — Perplexity Computer (الجلسة 95). المعرّفُ لم يتبدّل (WORK_CONTROL §6). وتعارضٌ مقيسٌ عند الاستلام: ترويسةُ العقد كانت «الجلسة 89» والسجلُّ الحيُّ «الجلسة 95» — المرجعُ السجلُّ (RULE-010)، وصُحّحت الترويسة",
         "2026-10-06 (الجلسة 96): علاجُ عيبَي الجلسة 4 (DOC_LINK_GUARD_BLOCKQUOTE_NOSPACE_BYPASS · DOC_LINK_GUARD_ESCAPED_LABEL_BYPASS) داخل النطاق (tests/governance/doc_links.test.ts) · +1 اختبار · ورُفع إلى REVIEW بتغيّرٍ مقيسٍ — بصمةُ نطاقِه تخالف بصمةَ محضرِ الجلسة 4 (c9acfd3a…). رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده",
-        "2026-10-06 (الجلسة 97): الجلسة 5 — NOT_VERIFIED. عيب Grok: DOC_LINK_GUARD_NESTED_PAREN_DESTINATION_BYPASS. عاد إلى IN_PROGRESS."
+        "2026-10-06 (الجلسة 97): الجلسة 5 — NOT_VERIFIED. عيب Grok: DOC_LINK_GUARD_NESTED_PAREN_DESTINATION_BYPASS. عاد إلى IN_PROGRESS.",
+        "2026-10-06 (الجلسة 97): علاجُ عيب الجلسة 5 (DOC_LINK_GUARD_NESTED_PAREN_DESTINATION_BYPASS) داخل النطاق (tests/governance/doc_links.test.ts) — PAREN ثلاثة مستويات متداخلة (سقف CommonMark 0.31.2 الأدنى) · +1 اختبار · ورُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ نطاقِه 13f354ed… ⇒ 3e9e7cd4… تخالف بصمةَ محضر الجلسة 5. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده"
       ],
       "dependencies": [
         "لا شيء"
@@ -1482,10 +1483,10 @@
         "docs/test-reports/phase-40-W-2026-064.md",
         "npm test 2367/2367 · npm run verify → 0"
       ],
-      "next_step": "الجلسةُ الخامسة لمجلس المراجعة (RULE-020) على التزامةِ الدمج — بحزمةٍ داخل جذرِ كلِّ عضوٍ مقيسٍ وجودُها قبل التكليف (علاجُ EVIDENCE-PACKAGE-ABSENT في W-2026-066)",
+      "next_step": "الجلسة السادسة لمجلس المراجعة (RULE-020) — رفعٌ بتغيّرٍ مقيسٍ (الثابت 8) بعد علاج عيب الجلسة 5",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-06",
-      "verification": "",
+      "verification": "شُغِّل في 2026-10-06 على شجرة العمل بعد علاج عيب الجلسة 5: node --test dist/tests/governance/doc_links.test.js → pass 11 · fail 0 (والاختبار الجامع على الشجرة القائمة ✓ بلا إنذار جديد)؛ npm run verify → EXIT=0 (15 حاجزًا). بصمة النطاق 13f354ed… ⇒ 3e9e7cd4… — تغيّر مقيس (الثابت 8). التقرير: docs/test-reports/phase-40-W-2026-064.md. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرار المجلس بالإجماع (RULE-020).",
       "documentation_impact": [
         "ARCHITECTURE.md",
         "PROGRESS.md",
@@ -1498,7 +1499,8 @@
         "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيب DOC_LINK_GUARD_REFERENCE_STYLE_BYPASS (gpt · وأكّده grok بقياسٍ مستقل): الحارسُ لا يقيس كلَّ رابطٍ نسبي — النمطُ الحالي يطابق الصيغةَ المباشرة ](...) وحدها، فالروابطُ المرجعيةُ [x][r] مع تعريفِها [r]: url، والعناوينُ المفردةُ '…' أو (…)، والوجهاتُ ذاتُ الفراغِ داخل <>، صيغٌ قياسيةٌ يعرضُها GitHub وتمرُّ صامتةً لا يقيسُها الحارسُ ولا يبلغُ بكسرها.",
         "مجلس المراجعة — الجلسة 3 (2026-10-05 · عند 8efba7c4057b): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). الصيغُ المسمّاةُ في الجلسة 2 صارت تُقاس عند الثلاثة. عيبان جديدان من grok بخرجٍ خامّ: DOC_LINK_GUARD_TITLE_ESCAPE_BYPASS — عنوانٌ فيه تهريب (\\\" أو \\' أو \\( ) يُعمي الرابطَ كلَّه لأنّ TITLE بلا تهريب؛ وDOC_LINK_GUARD_CONTAINER_REFERENCE_BYPASS — تعريفٌ مرجعيٌّ داخل اقتباس > أو بإزاحةِ قائمةٍ متداخلة لا يطابق ^ {0,3}\\[. وسببُ رفض gpt: OUT_OF_SCOPE_WRITE على fa759e7 (CHANGELOG.md · PROGRESS.md · WORK_QUEUE.json · orders/W-2026-064.md · version.json).",
         "DISC (الجلسة 95): حدٌّ معلنٌ لا عيب — الحارسُ لا يقيس روابطَ HTML (<a href>)، وهو ما سجّله grok في الجلسة 3 ملاحظةً غيرَ مُسقِطة؛ لم يُدَّعَ قياسُه ولم يُضَف. وإزاحةُ أربعةِ فراغاتٍ خارجَ قائمةٍ شفرةٌ في CommonMark، فتعريفٌ فيها يُقاس الآن — إنذارٌ زائدٌ يُرى لا عمًى صامت.",
-        "مجلس المراجعة — الجلسة 4 (2026-10-06 · عند fb9863e): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان الجديدان (grok): DOC_LINK_GUARD_BLOCKQUOTE_NOSPACE_BYPASS — تعريفٌ مرجعيٌّ داخل اقتباسٍ بلا فراغٍ بعد > لا يُقاس · DOC_LINK_GUARD_ESCAPED_LABEL_BYPASS — الوسمُ المهرَّب [foo\\]bar] يُنهي المطابقةَ عند أول ] غيرِ مهرَّبٍ فلا يُرى التعريف (CommonMark 0.31.2). ومعهما عيبُ التجهيز: EVIDENCE-PACKAGE-ABSENT (الجلسة 4 · gpt): حزمةُ الأدلةِ المجمّدة وُضعت في جذر council4/ المشترك لا داخل جذرِ العضوِ المعزول، فالتزم gpt بعزله وتعذّر فحصه — عيبُ تجهيزِ المنفّذ (W-2026-066) لا عيبُ البند، يُعالج قبل الجلسة الخامسة"
+        "مجلس المراجعة — الجلسة 4 (2026-10-06 · عند fb9863e): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان الجديدان (grok): DOC_LINK_GUARD_BLOCKQUOTE_NOSPACE_BYPASS — تعريفٌ مرجعيٌّ داخل اقتباسٍ بلا فراغٍ بعد > لا يُقاس · DOC_LINK_GUARD_ESCAPED_LABEL_BYPASS — الوسمُ المهرَّب [foo\\]bar] يُنهي المطابقةَ عند أول ] غيرِ مهرَّبٍ فلا يُرى التعريف (CommonMark 0.31.2). ومعهما عيبُ التجهيز: EVIDENCE-PACKAGE-ABSENT (الجلسة 4 · gpt): حزمةُ الأدلةِ المجمّدة وُضعت في جذر council4/ المشترك لا داخل جذرِ العضوِ المعزول، فالتزم gpt بعزله وتعذّر فحصه — عيبُ تجهيزِ المنفّذ (W-2026-066) لا عيبُ البند، يُعالج قبل الجلسة الخامسة",
+        "مجلس المراجعة — الجلسة 5 (2026-10-06 · عند d8fe184): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيب الجديد (grok): DOC_LINK_GUARD_NESTED_PAREN_DESTINATION_BYPASS — الوجهةُ العاريةُ بقوسين متداخلين [x](foo(bar(baz)).md) رابطٌ نسبيٌّ صالحٌ في CommonMark 0.31.2 (ثلاثة مستويات على الأقل) يعرضه GitHub، وbrokenLinksIn يعيد [] لأن النمط مستوى واحد. وعولج: PAREN ثلاثة مستويات متداخلة من الأقواس المتوازنة غير المهرَّبة"
       ]
     },
     {
