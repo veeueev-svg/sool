@@ -38,9 +38,16 @@ const PENDING: ReadonlyMap<string, string> = new Map<string, string>([]);
  */
 const VERBATIM = /^docs\/work\/council\/W-\d{4}-\d{3}(-\d+)?-[a-z0-9]+\.md$/;
 
-/** يُزيل الشفرةَ المسوّرةَ والمضمّنة: ما بين علامات الشفرة نصٌّ لا رابط (كما يعرضه GitHub). */
+/** يُزيل الشفرةَ المسوّرةَ والمضمّنة: ما بين علامات الشفرة نصٌّ لا رابط (كما يعرضه GitHub).
+ *  (الجلسة 5 · DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS: `\`` backtickٌ مهرَّبٌ حرفٌ لا حدٌّ،
+ *  فاستبداله مؤقّتٌ قبل نزع الشفرة يُبقي الرابط الذي بعده مرئيًّا.)
+ */
 export function stripCode(text: string): string {
-  return text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, '').replace(/(`+)[^`\n]*?\1/g, '');
+  return text
+    .replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, '')
+    .replace(/\\`/g, '\u0000')
+    .replace(/(`+)[^`\n]*?\1/g, '')
+    .replace(/\u0000/g, '`');
 }
 
 /**
@@ -50,8 +57,13 @@ export function stripCode(text: string): string {
  *  الجلسة 3 · DOC_LINK_GUARD_TITLE_ESCAPE_BYPASS: عنوانٌ فيه تهريبٌ كان يُفشل المطابقةَ كلَّها فتختفي الوجهة)
  */
 const TITLE = String.raw`(?:\s+(?:"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|\((?:[^()\\]|\\[\s\S])*\)))?`;
+/**
+ * أقواسٌ متوازنةٌ حتى ثلاثة مستويات (CommonMark 0.31.2 يطلب ثلاثة على الأقل).
+ * (الجلسة 5 · DOC_LINK_GUARD_NESTED_PAREN_BYPASS: مستوىً واحدٌ كان يُعمي الحارسَ عن وجهةٍ بعمقٍ أعمق.)
+ */
+const BALANCED_PAREN = String.raw`\((?:[^()]*|\((?:[^()]*|\([^()]*\))*\))*\)`;
 /** الروابطُ المباشرة: ](وجهة) أو ](<وجهة بفراغات>) — والوجهةُ العاريةُ قد تحملُ أقواسًا متوازنة */
-const INLINE_LINK = new RegExp(String.raw`\]\(\s*(?:<([^<>]*)>|([^()\s]*(?:\([^()]*\)[^()\s]*)*))\s*` + TITLE + String.raw`\)`, 'g');
+const INLINE_LINK = new RegExp(String.raw`\]\(\s*(?:<([^<>]*)>|([^()\s]*(?:` + BALANCED_PAREN + String.raw`[^()\s]*)*))\s*` + TITLE + String.raw`\)`, 'g');
 /**
  * تعريفاتُ الروابط المرجعية: [وسم]: وجهة أو <وجهة بفراغات> — في أوّل السطر **أو بعد بادئةِ حاوية**:
  * علاماتُ الاقتباس `>` (ولو متداخلةً أو مُزاحة) وعلاماتُ القائمة (`-` `*` `+` `1.` `1)`) وأيُّ إزاحةٍ
@@ -215,4 +227,31 @@ test('حارسُ الروابط: الاقتباسُ بلا فراغٍ والوس
   assert.deepEqual(brokenLinksIn('docs/a.md', '- [ ] مهمّة\n- [x] منجزة', none), []);
   const all = (): boolean => true;
   assert.deepEqual(brokenLinksIn('docs/a.md', '>[r]: ../README.md\n[a\\]b]: ../README.md', all), []);
+});
+
+test('حارسُ الروابط: الأقواسُ المتداخلةُ في الوجهةِ تُقاس — لا مخرجَ صامتًا (الجلسة 5 · DOC_LINK_GUARD_NESTED_PAREN_BYPASS)', () => {
+  const none = (): boolean => false;
+  // مستوى واحد — كان يعمل
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo(bar).md)', none), ['foo(bar).md']);
+  // مستويان — كان صامتًا
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo(bar(baz)).md)', none), ['foo(bar(baz)).md']);
+  // ثلاثة مستويات
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo(bar(baz(qux))).md)', none), ['foo(bar(baz(qux))).md']);
+  // مستويات متتالية
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo(bar)(baz).md)', none), ['foo(bar)(baz).md']);
+  // مع عنوان
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo(bar(baz)).md "عنوان")', none), ['foo(bar(baz)).md']);
+  // صورة
+  assert.deepEqual(brokenLinksIn('docs/a.md', '![x](foo(bar(baz)).png)', none), ['foo(bar(baz)).png']);
+  // سالبةُ الضبط
+  const all = (): boolean => true;
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo(bar(baz)).md)', all), []);
+});
+
+test('حارسُ الروابط: backtickٌ مهرَّبٌ لا يبتلعُ الرابطَ بعده (الجلسة 5 · DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS)', () => {
+  const none = (): boolean => false;
+  // \\` هو backtick مهرَّب — CommonMark يراه حرفًا لا حدًّا
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'See \\` [x](missing.md) ` end', none), ['missing.md']);
+  // سالبةُ الضبط: الرابط داخل شفرةٍ حقيقية لا يُبلَّغ
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'See ` [x](ok.md) ` end', none), []);
 });
