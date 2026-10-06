@@ -1429,7 +1429,7 @@
     {
       "id": "W-2026-064",
       "title": "روابطُ نسبيّةٌ مكسورةٌ وأرقامٌ منقولةٌ متقادمة — وحارسٌ يمنع رجوعَها",
-      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 96)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 98)",
       "reviewer": "القيّم على المستودع (المالك) — ومجلس المراجعة (RULE-020)",
       "area": "التوثيق والحوكمة",
       "phase": 40,
@@ -1445,7 +1445,8 @@
         "2026-10-06 (الجلسة 96): علاجُ عيبَي الجلسة 4 (DOC_LINK_GUARD_BLOCKQUOTE_NOSPACE_BYPASS · DOC_LINK_GUARD_ESCAPED_LABEL_BYPASS) داخل النطاق (tests/governance/doc_links.test.ts) · +1 اختبار · ورُفع إلى REVIEW بتغيّرٍ مقيسٍ — بصمةُ نطاقِه تخالف بصمةَ محضرِ الجلسة 4 (c9acfd3a…). رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده",
         "2026-10-06 (الجلسة 97): الجلسة 5 — NOT_VERIFIED. عيب Grok: DOC_LINK_GUARD_NESTED_PAREN_DESTINATION_BYPASS. عاد إلى IN_PROGRESS.",
         "2026-10-06 (الجلسة 97): علاجُ عيب الجلسة 5 (DOC_LINK_GUARD_NESTED_PAREN_DESTINATION_BYPASS) داخل النطاق (tests/governance/doc_links.test.ts) — PAREN ثلاثة مستويات متداخلة (سقف CommonMark 0.31.2 الأدنى) · +1 اختبار · ورُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ نطاقِه 13f354ed… ⇒ 3e9e7cd4… تخالف بصمةَ محضر الجلسة 5. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده",
-        "2026-10-06 (الجلسة 98): الجلسة 6 — NOT_VERIFIED. gpt REJECTED · grok REJECTED · gemini REJECTED. عيوب جديدة: DOC_LINK_GUARD_FOUR_LEVEL_PAREN_DESTINATION_BYPASS (gpt) · DOC_LINK_GUARD_ESCAPED_PAREN_DESTINATION_BYPASS (grok · gemini) · DOC_LINK_GUARD_NESTING_ABOVE_THREE_BYPASS (grok) · DOC_LINK_GUARD_POINTY_ESCAPE_BYPASS (gemini). عاد إلى IN_PROGRESS."
+        "2026-10-06 (الجلسة 98): الجلسة 6 — NOT_VERIFIED. gpt REJECTED · grok REJECTED · gemini REJECTED. عيوب جديدة: DOC_LINK_GUARD_FOUR_LEVEL_PAREN_DESTINATION_BYPASS (gpt) · DOC_LINK_GUARD_ESCAPED_PAREN_DESTINATION_BYPASS (grok · gemini) · DOC_LINK_GUARD_NESTING_ABOVE_THREE_BYPASS (grok) · DOC_LINK_GUARD_POINTY_ESCAPE_BYPASS (gemini). عاد إلى IN_PROGRESS.",
+        "2026-10-06 (الجلسة 98): استلامٌ بأمر المالك «ابدا» من (الجلسة 96) — المعرّف لم يتبدّل (WORK_CONTROL §6). علاجُ عيوب الجلسة 6 الأربعة في tests/governance/doc_links.test.ts وحده: ماسحٌ للوجهة بدل PAREN/INLINE_LINK (تهريبٌ · عمقٌ حتى 32 كسقف cmark-gfm · زاويّةٌ تعرف \\>) وفكُّ الوجهة قبل قياس وجودها، وتعريفُ المرجع الزاويّ يعرف التهريب. +1 اختبار · ثلاثُ طفراتٍ مقتولة. وقُيِّد بطلانُ دعوى «لا يُعدُّ وجهةً فلا يُعمى» (الجلسة 97). الحال IN_PROGRESS حتى التزامة الرفع."
       ],
       "dependencies": [
         "لا شيء"
@@ -1488,7 +1489,7 @@
         "docs/test-reports/phase-40-W-2026-064.md",
         "npm test 2367/2367 · npm run verify → 0"
       ],
-      "next_step": "علاج عيوب الجلسة 6 في tests/governance/doc_links.test.ts: الأقواس المهرّبة والأقواس فوق ثلاثة مستويات وأقواس الزاوية المهرّبة. ثم رفع إلى REVIEW بتغيّرٍ مقيس.",
+      "next_step": "الرفع إلى REVIEW في التزامةٍ لا تلمس النطاق، بالبصمة المقيسة على التزامة العلاج، ثم الجلسة 7 لمجلس المراجعة (RULE-020).",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-06",
       "verification": "شُغِّل في 2026-10-06 على شجرة العمل بعد علاج عيب الجلسة 5: node --test dist/tests/governance/doc_links.test.js → pass 11 · fail 0 (والاختبار الجامع على الشجرة القائمة ✓ بلا إنذار جديد)؛ npm run verify → EXIT=0 (15 حاجزًا). بصمة النطاق 13f354ed… ⇒ 3e9e7cd4… — تغيّر مقيس (الثابت 8). التقرير: docs/test-reports/phase-40-W-2026-064.md. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرار المجلس بالإجماع (RULE-020).",
