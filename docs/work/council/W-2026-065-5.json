@@ -1,0 +1,39 @@
+{
+  "item": "W-2026-065",
+  "commit": "d8fe184875a546e9b2e4ded6eeb36ad553428f22",
+  "scope_digest": "7b361dbba29fc2c9c454391933e01569fe0d68a86453e3b056c1957c4b80e58e",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-06",
+  "session": 5,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-5-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-5-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-065-5-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_SILENT_SKIP (grok): شاهدان بمعرّف واحد ونسبتين مختلفتين يُمحى الثاني بلا رمز",
+      "STALE_TRANSFERRED_ECONOMY_COUNT (grok): العقد يقول 1864 سطرًا و7 ملفات والقياس 1986 و8"
+    ]
+  }
+}
