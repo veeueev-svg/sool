@@ -1357,7 +1357,7 @@
       "reviewer": "مجلس المراجعة (RULE-020)",
       "area": "حوكمة",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "T-115ب",
         "2026-10-05 (الجلسة 95): استلامٌ بأمر المالك («عالج العيوب وحل التعارضات وواصل العمل») من المساعد الآلي — Perplexity Computer (الجلسة 88). عيبُ الجلسة 3 الوحيد OUT_OF_SCOPE_WRITE لا شفرةَ فيه تُعالَج: قِيس بالبوابة وقُيّد، والحكمُ للجلسة الرابعة.",
@@ -1401,7 +1401,7 @@
         "تعديل 2026-10-03: الحارسُ على الحال الحقيقيّ يمرّ بثلاثة أعضاء",
         "تحقّق الإتاحة 2026-10-03: gpt_5_6_terra · grok_4_7 · gemini_3_8_flash أجابت؛ Grok 4.6 غير متاح ⇒ 4.7"
       ],
-      "next_step": "علاجُ عيبِ التجهيزِ في W-2026-066 (الحزمةُ داخل جذرِ كلِّ عضو) ثمّ الجلسةُ الخامسة للمجلس — فلا VERIFIED إلا بإجماع الثلاثة (RULE-020)",
+      "next_step": "الجلسةُ الخامسة للمجلس — فلا VERIFIED إلا بإجماع الثلاثة (RULE-020)",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-06",
       "documentation_impact": [
@@ -1563,7 +1563,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "علاجُ عيبِ التجهيزِ في W-2026-066 (الحزمةُ داخل جذرِ كلِّ عضو) ثمّ الجلسةُ الخامسة للمجلس — فلا VERIFIED إلا بإجماع الثلاثة (RULE-020)",
+      "next_step": "محجوبٌ: بصمةُ النطاق لم تتغير منذ الجلسة 4 (الثابت 8) — قرارُ المالك مطلوب لرفعه إلى REVIEW رغم أنّ الرفض كان لعيبِ تجهيزٍ لا لعيبٍ في البند",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-06",
       "documentation_impact": [
@@ -1662,7 +1662,15 @@
         "docs/work/council/W-2026-065-4-gpt.md",
         "docs/work/council/W-2026-065-4-grok.md",
         "docs/work/council/W-2026-065-4-gemini.md",
-        "docs/incident-reports/2026-10-06-merge-50-work-trailer.md"
+        "docs/incident-reports/2026-10-06-merge-50-work-trailer.md",
+        "docs/work/council/W-2026-062-5.json",
+        "docs/work/council/W-2026-062-5-gpt.md",
+        "docs/work/council/W-2026-062-5-grok.md",
+        "docs/work/council/W-2026-062-5-gemini.md",
+        "docs/work/council/W-2026-064-5.json",
+        "docs/work/council/W-2026-064-5-gpt.md",
+        "docs/work/council/W-2026-064-5-grok.md",
+        "docs/work/council/W-2026-064-5-gemini.md"
       ],
       "excluded": [
         "تعديلُ أيِّ تقريرٍ خامٍّ لعضو — يُحفظ كما كتبه",
