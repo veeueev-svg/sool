@@ -10,6 +10,8 @@
 
 ### إصلاح(40)
 
+- **W-2026-064 — علاجُ عيوبِ الجلسة 6 لحارسِ الروابط** (`DOC_LINK_GUARD_FOUR_LEVEL_PAREN_DESTINATION_BYPASS` · `DOC_LINK_GUARD_NESTING_ABOVE_THREE_BYPASS` · `DOC_LINK_GUARD_ESCAPED_PAREN_DESTINATION_BYPASS` · `DOC_LINK_GUARD_POINTY_ESCAPE_BYPASS`): الوجهةُ تُمسح حرفًا حرفًا بقواعد CommonMark بدل نمطٍ ثابتِ العمق — تهريبٌ وعمقٌ حتى 32 (cmark-gfm) وزاويّةٌ تعرف `\>` — وتُفكّ قبل قياس وجودها. +1 اختبار (2404). [التقرير](docs/test-reports/phase-40-W-2026-064.md)
+
 - **W-2026-065 — علاجُ عيوبِ الجلسة 6 لتعديلِ النسبة** (`RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP` · `RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_FROM_FIELD_SILENT_SKIP` · `FALSE_RECORDED_SCOPE_DIGEST`): لكلِّ أمرٍ منفَّذٍ — حيًّا أو مُستعادًا — حمولةٌ قانونيّةٌ بحقول `rate_amended` السبعة، فشاهدٌ مخالفٌ بمعرّفِه يُرفض بـ`RECOVERY_RATE_COMMAND_CONFLICT`، وشاهدٌ لا يصل سلسلتَه بـ`RECOVERY_RATE_CHAIN_BROKEN`؛ وتصحيحٌ مُلحَقٌ للبصمة المكتوبة خطأً (`8f841e3c…` والمقيس `403e8b94…`). +2 اختبار (2403)؛ واختباراتُ إرجاعِ النسبة نُقلت إلى `tests/data/rehydrate_fiscal_rate.test.ts` (سقفُ الوحدة 400 سطر). [التقرير](docs/test-reports/phase-40-W-2026-065.md)
 
 - **W-2026-064 — علاجُ عيبَي الجلسة 4 لحارسِ الروابط** (`DOC_LINK_GUARD_BLOCKQUOTE_NOSPACE_BYPASS` · `DOC_LINK_GUARD_ESCAPED_LABEL_BYPASS`): الاقتباسُ بلا فراغٍ بعد `>` والوسمُ المهرَّب يُقاسان. `npm test` 2399.

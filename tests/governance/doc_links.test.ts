@@ -51,15 +51,70 @@ export function stripCode(text: string): string {
  */
 const TITLE = String.raw`(?:\s+(?:"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|\((?:[^()\\]|\\[\s\S])*\)))?`;
 /**
- * الروابطُ المباشرة: ](وجهة) أو ](<وجهة بفراغات>) — والوجهةُ العاريةُ قد تحملُ أقواسًا متوازنة.
- * CommonMark 0.31.2 يوجبُ دعمَ ثلاثةِ مستوياتٍ على الأقلّ من الأقواسِ المتوازنةِ غيرِ المهرَّبةِ في
- * الوجهةِ العارية (يحكمُ التنفيذُ فيما فوقها). النمطُ السابقُ (`[^()\s]*(?:\([^()]*\)[^()\s]*)*`)
- * كان مستوىً واحدًا، فعَمِيَ عن `[x](foo(bar(baz)).md)` — عيبُ الجلسة 5
- * (DOC_LINK_GUARD_NESTED_PAREN_DESTINATION_BYPASS). والحدُّ المعلنُ هنا ثلاثةٌ، وهو سقفٌ أدنى
- * يُوثَّقُ لا سقفٌ مطلق: ما فُتحَ قوسًا ولم يُغلَقْ ضمنَ الثلاثةِ لا يُعدُّ وجهةً — فلا يُبلَّغ ولا يُعمى.
+ * الروابطُ المباشرة: `](وجهة …)` — **ماسحٌ لا نمط** (الجلسة 6). أخفقت الأنماطُ الثابتةُ العمق جلستين
+ * متتاليتين: مستوىً واحدٌ من الأقواس (الجلسة 5)، ثمّ ثلاثةٌ عَمِيت عن الرابع وعن القوسِ المهرَّب
+ * وعن زاويةٍ مهرَّبة (الجلسة 6 · DOC_LINK_GUARD_FOUR_LEVEL_PAREN_DESTINATION_BYPASS ·
+ * DOC_LINK_GUARD_NESTING_ABOVE_THREE_BYPASS · DOC_LINK_GUARD_ESCAPED_PAREN_DESTINATION_BYPASS ·
+ * DOC_LINK_GUARD_POINTY_ESCAPE_BYPASS). فالوجهةُ تُقرأ حرفًا حرفًا بقواعد CommonMark 0.31.2 §6.3:
+ *   - **الزاويّة** `<…>`: حتى أوّلِ `>` غيرِ مهرَّب؛ ولا سطرَ جديدًا ولا `<` غيرَ مهرَّب فيها.
+ *   - **العارية**: حتى فراغٍ أو محرفِ تحكّم؛ القوسُ المهرَّب (`\(` `\)`) حرفٌ منها، والقوسُ غيرُ المهرَّب
+ *     يُعدّ عمقًا بلا سقفٍ ثابتٍ إلّا سقفَ cmark-gfm الذي يعرض به GitHub (32 مستوى)؛ وما لم يتوازن
+ *     فليس رابطًا في CommonMark أصلًا (نصٌّ يُعرض لا وجهة).
+ *   - بعدها عنوانٌ اختياريٌّ (`TITLE`) ثمّ `)` — وإلّا فليس رابطًا.
+ * والوجهةُ تُفكّ قبل قياسِ وجودِها كما يفكّها العارض: التهريبُ بالشرطة المائلة ثمّ مراجعُ المحارف
+ * الرقميّةُ والخمسُ المسمّاةُ (`&amp;` `&lt;` `&gt;` `&quot;` `&apos;`) ثمّ ترميزُ النسبة.
+ * **الحدُّ المعلن:** سائرُ المراجعِ المسمّاة (`&copy;` …) تُقاس كما كُتبت — فيُبلَّغ عنها إنذارٌ زائدٌ
+ * يُرى، ولا تعمى إلّا إن وُجد ملفٌّ اسمُه المرجعُ نفسُه حرفًا.
  */
-const PAREN = String.raw`\((?:[^()\\]|\\[\s\S]|\((?:[^()\\]|\\[\s\S]|\((?:[^()\\]|\\[\s\S])*\))*\))*\)`;
-const INLINE_LINK = new RegExp(String.raw`\]\(\s*(?:<([^<>]*)>|([^()\s]*(?:` + PAREN + String.raw`[^()\s]*)*))\s*` + TITLE + String.raw`\)`, 'g');
+const MAX_PAREN_DEPTH = 32;
+const ASCII_PUNCT = /[!-/:-@[-`{-~]/;
+const TITLE_TAIL = new RegExp(String.raw`\s*` + TITLE + String.raw`\s*\)`, 'y');
+
+/** يقرأ وجهةَ رابطٍ مباشرٍ يبدأ عند `start` (بعد `](`) — أو null إن لم يكن رابطًا في CommonMark. */
+export function scanInlineDestination(text: string, start: number): string | null {
+  let i = start;
+  while (i < text.length && /[ \t\n]/.test(text[i]!)) i += 1;
+  let dest: string;
+  if (text[i] === '<') {
+    let j = i + 1;
+    for (; j < text.length; j += 1) {
+      const c = text[j]!;
+      if (c === '\\' && j + 1 < text.length && ASCII_PUNCT.test(text[j + 1]!)) { j += 1; continue; }
+      if (c === '>' || c === '<' || c === '\n') break;
+    }
+    if (text[j] !== '>') return null;
+    dest = text.slice(i + 1, j);
+    i = j + 1;
+  } else {
+    let j = i;
+    let depth = 0;
+    for (; j < text.length; j += 1) {
+      const c = text[j]!;
+      if (c === '\\' && j + 1 < text.length && ASCII_PUNCT.test(text[j + 1]!)) { j += 1; continue; }
+      if (c.charCodeAt(0) <= 0x20 || c.charCodeAt(0) === 0x7f) break;
+      if (c === '(') { depth += 1; if (depth > MAX_PAREN_DEPTH) return null; continue; }
+      if (c === ')') { if (depth === 0) break; depth -= 1; }
+    }
+    if (depth !== 0) return null;
+    dest = text.slice(i, j);
+    i = j;
+  }
+  TITLE_TAIL.lastIndex = i;
+  return TITLE_TAIL.test(text) ? dest : null;
+}
+
+const NAMED: Readonly<Record<string, string>> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+/** فكُّ الوجهة كما يفكّها العارض: تهريبٌ ثمّ مراجعُ محارف (CommonMark §2.4 · §2.5) */
+export function unescapeDestination(raw: string): string {
+  return raw
+    .replace(/\\([!-/:-@[-`{-~])/g, '$1')
+    .replace(/&(?:#(\d{1,7})|#[xX]([0-9a-fA-F]{1,6})|([a-zA-Z]+));/g, (m: string, dec?: string, hex?: string, name?: string) => {
+      if (name !== undefined) return NAMED[name] ?? m;
+      const cp = dec !== undefined ? parseInt(dec, 10) : parseInt(hex ?? '', 16);
+      return cp > 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : '\uFFFD';
+    });
+}
+
 /**
  * تعريفاتُ الروابط المرجعية: [وسم]: وجهة أو <وجهة بفراغات> — في أوّل السطر **أو بعد بادئةِ حاوية**:
  * علاماتُ الاقتباس `>` (ولو متداخلةً أو مُزاحة) وعلاماتُ القائمة (`-` `*` `+` `1.` `1)`) وأيُّ إزاحةٍ
@@ -76,21 +131,25 @@ const CONTAINER = String.raw`(?:[ \t]*(?:>|(?:[-*+]|\d{1,9}[.)])(?=[ \t]|$))[ \t
  * (الجلسة 4 · DOC_LINK_GUARD_ESCAPED_LABEL_BYPASS: `[foo\]bar]:` كان يقف عند أوّلِ `]` فيفلت التعريف.)
  */
 const LABEL = String.raw`\[(?:[^\]\\]|\\[\s\S])+\]`;
-const REFERENCE_DEF = new RegExp(String.raw`^` + CONTAINER + LABEL + String.raw`:\s*(?:<([^<>]*)>|(\S+))`, 'gm');
+/** وجهةُ التعريفِ الزاويّة: التهريبُ حرفٌ منها (`\>` لا يُغلقها) — الجلسة 6 · DOC_LINK_GUARD_POINTY_ESCAPE_BYPASS */
+const REFERENCE_DEF = new RegExp(String.raw`^` + CONTAINER + LABEL + String.raw`:\s*(?:<((?:[^<>\\\n]|\\[\s\S])*)>|(\S+))`, 'gm');
 
 /** الروابطُ النسبيّةُ المكسورة في نصٍّ موضعُه `file` — بلا مخرجٍ إلّا المخطّطَ (URI) والمرساةَ الخالصة. */
 export function brokenLinksIn(file: string, text: string, exists: (p: string) => boolean): string[] {
   const base = ROOT_RELATIVE.has(file) ? '' : dirname(file);
   const out: string[] = [];
   const consider = (raw: string): void => {
-    const link = raw.split('#')[0] ?? '';
+    const link = unescapeDestination(raw).split('#')[0] ?? '';
     if (link === '' || /^[a-z][a-z0-9+.-]*:/i.test(link)) return;
     let target = link;
     try { target = decodeURIComponent(link); } catch { /* يُقاس كما كُتب */ }
     if (!exists(normalize(join(base, target)))) out.push(raw);
   };
   const body = stripCode(text);
-  for (const m of body.matchAll(INLINE_LINK)) consider(m[1] ?? m[2] ?? '');
+  for (let at = body.indexOf(']('); at >= 0; at = body.indexOf('](', at + 2)) {
+    const dest = scanInlineDestination(body, at + 2);
+    if (dest !== null) consider(dest);
+  }
   for (const m of body.matchAll(REFERENCE_DEF)) consider(m[1] ?? m[2] ?? '');
   return out;
 }
@@ -241,4 +300,34 @@ test('حارسُ الروابط: الوجهةُ العاريةُ بأقواسٍ 
   const all = (): boolean => true;
   assert.deepEqual(brokenLinksIn('docs/a.md', '[x](../README.md) [y](foo(bar(baz)).md)', all), []);
   assert.deepEqual(brokenLinksIn('docs/a.md', '[x](a(b(c).md)', none), []);
+});
+
+test('حارسُ الروابط: الوجهةُ تُمسح لا تُطابَق — أقواسٌ مهرَّبةٌ وتداخلٌ بلا سقفٍ ثابتٍ وزاويةٌ مهرَّبة (الجلسة 6 · DOC_LINK_GUARD_FOUR_LEVEL_PAREN_DESTINATION_BYPASS · DOC_LINK_GUARD_NESTING_ABOVE_THREE_BYPASS · DOC_LINK_GUARD_ESCAPED_PAREN_DESTINATION_BYPASS · DOC_LINK_GUARD_POINTY_ESCAPE_BYPASS)', () => {
+  const none = (): boolean => false;
+  // مسابيرُ الجلسة 6 بحرفها — كانت كلُّها []
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](a(b(c(d(e)))).md)', none), ['a(b(c(d(e)))).md']); // gpt: أربعة
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](a(b(c(d(e(f))))).md)', none), ['a(b(c(d(e(f))))).md']); // grok: خمسة
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo\\(bar\\).md)', none), ['foo\\(bar\\).md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo\\(bar.md)', none), ['foo\\(bar.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo\\)bar.md)', none), ['foo\\)bar.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](<foo\\> bar.md>)', none), ['foo\\> bar.md']); // gemini
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[r]: <foo\\> bar.md>', none), ['foo\\> bar.md']); // gemini: التعريف
+  // أمثلةُ CommonMark 0.31.2 (495 · 498 · 500) وصورةٌ وعنوانٌ وسطرٌ مختلط
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[link](\\(foo\\))', none), ['\\(foo\\)']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[link](foo\\(and\\(bar\\))', none), ['foo\\(and\\(bar\\)']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[link](foo\\)\\:)', none), ['foo\\)\\:']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '![alt](missing\\(file\\).md "t")', none), ['missing\\(file\\).md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[a](ok.md) و[b](x(y(z(w))).md \'t\') و[c](<p\\>q.md>)', (p) => p === 'docs/ok.md'),
+    ['x(y(z(w))).md', 'p\\>q.md']);
+  // سقفُ cmark-gfm: 32 مستوى رابطٌ يُقاس، و33 ليس رابطًا في عارضِ GitHub
+  const nest = (n: number): string => `${'('.repeat(n)}z${')'.repeat(n)}.md`;
+  assert.deepEqual(brokenLinksIn('docs/a.md', `[x](${nest(32)})`, none), [nest(32)]);
+  assert.deepEqual(brokenLinksIn('docs/a.md', `[x](${nest(33)})`, none), []);
+  // الوجهةُ تُفكّ قبل قياسِ وجودها: التهريبُ ومراجعُ المحارف
+  const seen: string[] = [];
+  brokenLinksIn('docs/a.md', '[a](foo\\(bar\\).md) [b](<x\\> y.md>) [c](a&amp;b.md) [d](&#x6d;e.md)\n[r]: <p\\>q.md>', (p) => { seen.push(p); return true; });
+  assert.deepEqual(seen, ['docs/foo(bar).md', 'docs/x> y.md', 'docs/a&b.md', 'docs/me.md', 'docs/p>q.md']);
+  // سالبةُ الضبط: ما ليس رابطًا في CommonMark لا يُبلَّغ — قوسٌ لا يتوازن · فراغٌ في وجهةٍ عارية · زاويةٌ لا تُغلق
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](a(b.md) [y](foo bar.md) [z](<a.md)', none), []);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](a(b(c(d(e)))).md) [y](foo\\(bar\\).md)', () => true), []);
 });
