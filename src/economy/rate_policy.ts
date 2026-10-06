@@ -71,17 +71,19 @@ export class RatePolicy {
   declaredBases(): readonly string[] { return [...this.history.keys()]; }
   declares(base: string): boolean { return this.history.has(base); }
 
-  /** سجلُّ إعلاناتِ النسبةِ لوعاءٍ بعينِه مرتّبةً — لا يُمحى منها إعلان (ثابت 1) */
+  /** سجلُّ إعلاناتِ النسبةِ لوعاءٍ بعينِه مرتّبةً — لا يُمحى منها إعلان (ثابت 1)
+   *  النسخُ عميقةٌ لا سطحية: المرجعُ القابلُ للتعديل يُسرِّبُ الإعلانَ التاريخيَّ بلا أمرٍ ملكيٍّ (الجلسة 7 · RATE_AMENDMENT_HISTORY_MUTABLE_REFERENCE_ESCAPE) */
   historyOf(base: string): readonly RateDeclaration[] {
     const h = this.history.get(base);
-    return h ? [...h] : [];
+    return h ? h.map((d) => ({ ...d })) : [];
   }
 
-  firstOf(base: string): RateDeclaration | null { return this.history.get(base)?.[0] ?? null; }
+  firstOf(base: string): RateDeclaration | null { const d = this.history.get(base)?.[0]; return d ? { ...d } : null; }
 
   currentFor(base: string): RateDeclaration | null {
     const h = this.history.get(base);
-    return h?.[h.length - 1] ?? null;
+    const d = h?.[h.length - 1];
+    return d ? { ...d } : null;
   }
 
   /** أحدثُ إعلانٍ سارٍ لوعاءٍ في لحظةٍ بعينِها — أو لا شيء (لا أثر رجعي في الاتجاهين) */
@@ -90,7 +92,7 @@ export class RatePolicy {
     for (const decl of this.history.get(base) ?? []) {
       if (decl.declaredAt <= at) effective = decl;
     }
-    return effective;
+    return effective ? { ...effective } : null;
   }
 
   hasExecuted(commandId: string): boolean { return this.executed.has(commandId); }
