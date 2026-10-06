@@ -262,3 +262,22 @@ test('**T-53/مجلس 6** — الشاهدُ الجديدُ يصل سلسلتَ�
   s.revenue.restoreRateAmendments([ok], 'authority:audit_bureau');
   assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 40, 'الشاهدُ الواصلُ سلسلتَه يُرجَع');
 });
+
+test('**T-53/مجلس 7** — RATE_AMENDMENT_HISTORY_MUTABLE_REFERENCE_ESCAPE: المرجعُ المُعاد لا يُسرِّبُ الإعلانَ التاريخيَّ', () => {
+  const { s } = revenueState();
+  const before = s.revenue.rateFor('compute_usage')!.ratePerMille;
+  assert.equal(before, 25, 'النسبةُ الأولية 25');
+  // المُستدعي يأخذُ تاريخَ الإعلانات
+  const history = s.revenue.rateHistoryOf('compute_usage');
+  assert.equal(history.length, 1, 'إعلانٌ واحد');
+  // يحاول تعديل النسبة بلا أمرٍ ملكي
+  (history[0] as { ratePerMille: number }).ratePerMille = 999;
+  // لا أثر: النسبة الداخلية لم تتغير
+  assert.equal(s.revenue.rateFor('compute_usage')!.ratePerMille, 25, 'المرجعُ المُعاد نسخةٌ لا أصل — التعديلُ بلا أمرٍ ملكيٍّ لا يصل');
+  // والتقديرُ يستعملُ النسبة الصحيحة
+  const levy = s.revenue.assess('compute_usage', 'agent:external', 1000, NOW, NOW);
+  assert.equal(levy.ok && levy.levy.ratePerMille, 25, 'التقديرُ بالنسبة الأصلية لا المُعدَّلة');
+  // ومسارُ historyOf لا يُرجِعُ المرجعَ الداخلي
+  const again = s.revenue.rateHistoryOf('compute_usage');
+  assert.equal(again[0]!.ratePerMille, 25, 'التاريخُ الداخليُّ لم يتأثّر');
+});
