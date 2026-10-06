@@ -371,3 +371,30 @@ test('T-53/مجلس 3: شاهدُ rate_amended التالفُ يُسقط الإ�
     sc.clean();
   }
 });
+
+test('T-53/مجلس 5: شاهدان بمعرّفِ أمرٍ واحدٍ ونسبتَين مختلفتَين يُرفضان برمزٍ مسمًّى — لا يُمحى الثاني بصمت (RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_SILENT_SKIP)', () => {
+  const sc = scene();
+  try {
+    const s = sc.boot();
+    const at = T0 + 60_000;
+    const first = { base: 'compute_usage', from: 30, to: 80, effectiveFrom: at, commandId: 'cmd:dup-1' };
+    const second = { base: 'compute_usage', from: 30, to: 90, effectiveFrom: at + 60_000, commandId: 'cmd:dup-1' };
+    const entry = (detail: unknown, seq: number): DurableRecord => ({
+      seq, at, kind: 'audit_entry', prevHash: String(seq - 1), hash: String(seq),
+      payload: { kind: 'rate_amended', detail },
+    });
+    // شاهدان بمعرّفٍ واحد وحمولتَين مختلفتَين — كان يُمحى الثاني بلا رمز
+    assert.throws(
+      () => rehydrateFiscalFromJournal([entry(first, 1), entry(second, 2)], { revenue: s.revenue }, 'ministry:data'),
+      (e: Error) => e.message === 'RECOVERY_RATE_COMMAND_CONFLICT:cmd:dup-1',
+    );
+    // الشاهدُ الأول طُبِّق والثاني رُفض — فالنسبةُ 80‰ لا 90‰
+    assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 80, 'الشاهدُ المرفوضُ لم يُطبَّق');
+    const same = { base: 'compute_usage', from: 30, to: 80, effectiveFrom: at, commandId: 'cmd:dup-1' };
+    const report = rehydrateFiscalFromJournal([entry(first, 1), entry(same, 2)], { revenue: s.revenue }, 'ministry:data');
+    assert.equal(report.rateAmendments, 2, 'الإعادةُ الأمينةُ: شاهدان شُوهِدا ولا رميَ');
+    assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 80, 'والإعادةُ لم تُكرَّر');
+  } finally {
+    sc.clean();
+  }
+});

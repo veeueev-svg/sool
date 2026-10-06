@@ -1510,13 +1510,14 @@
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "الاقتصاد والمالية",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "T-53",
         "2026-10-05 (الجلسة 95): استلامٌ بأمر المالك («عالج العيوب وحل التعارضات وواصل العمل») من المساعد الآلي — Perplexity Computer (الجلسة 90)، وعلاجُ RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS داخل النطاق (src/data/rehydrate_fiscal.ts · src/economy/rate_policy.ts · tests/data/rehydrate_fiscal.test.ts).",
         "2026-10-05 (الجلسة 95): بعد دمج الثابت 8 (#48) رُفع البندُ إلى REVIEW بتغيّرٍ مقيس — بصمةُ نطاقِه تخالف بصمةَ محضرِ الجلسة 3. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده.",
         "2026-10-06 (الجلسة 97): توثيقُ الجلسة 4 في التقرير بإذن المالك («ابدا») — تغيّرٌ مقيس للثابت 8. رُفع إلى REVIEW.",
-        "2026-10-06 (الجلسة 97): الجلسة 5 — NOT_VERIFIED. عيوب Grok: RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_SILENT_SKIP + STALE_TRANSFERRED_ECONOMY_COUNT. عاد إلى IN_PROGRESS."
+        "2026-10-06 (الجلسة 97): الجلسة 5 — NOT_VERIFIED. عيوب Grok: RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_SILENT_SKIP + STALE_TRANSFERRED_ECONOMY_COUNT. عاد إلى IN_PROGRESS.",
+        "2026-10-06 (الجلسة 97): علاجُ عيبَي الجلسة 5 — RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_SILENT_SKIP (executed صار Map يخزّن الحمولة، والتعارض يُرفض برمز RECOVERY_RATE_COMMAND_CONFLICT) · STALE_TRANSFERRED_ECONOMY_COUNT (صُحّح العقد §5 والتقرير: 1994 سطرًا و8 ملفات) · +1 اختبار يقتل الطفرة · ورُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ نطاقِه 7b361dbb… ⇒ 5e1a3afa… تخالف بصمةَ محضر الجلسة 5. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده"
       ],
       "dependencies": [
         "لا شيء"
@@ -1555,7 +1556,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "علاجُ عيبِ التجهيزِ في W-2026-066 (الحزمةُ داخل جذرِ كلِّ عضو) ثمّ الجلسةُ الخامسة للمجلس — فلا VERIFIED إلا بإجماع الثلاثة (RULE-020)",
+      "next_step": "الجلسة السادسة لمجلس المراجعة (RULE-020) — رفعٌ بتغيّرٍ مقيسٍ (الثابت 8) بعد علاج عيبَي الجلسة 5",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-06",
       "documentation_impact": [
@@ -1564,13 +1565,14 @@
         "CHANGELOG.md — مدخلُ البند",
         "version.json — tests.total بالمقيس"
       ],
-      "verification": "",
+      "verification": "شُغِّل في 2026-10-06 على شجرة العمل بعد علاج عيبَي الجلسة 5: node --test dist/tests/data/rehydrate_fiscal.test.js → pass 8 · fail 0؛ npm run verify → EXIT=0 (15 حاجزًا). بصمة النطاق 7b361dbb… ⇒ 5e1a3afa… — تغيّر مقيس (الثابت 8). التقرير: docs/test-reports/phase-40-W-2026-065.md. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرار المجلس بالإجماع (RULE-020).",
       "discoveries": [
         "مجلس المراجعة — الجلسة 1 (2026-10-04 · عند 5bfd61f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان: (1) إعادةُ الأمر الملكيّ نفسِه تُنفّذ تعديلًا ثانيًا لأنّ بوابةَ التاج idempotent تُعيد قرارَها السابق allowed=true وamendRate لا يميّز الإعادة — grok؛ (2) RATE_AMENDMENT_COMMAND_NOT_PARAMETER_BOUND: الأمرُ لا يربط الوعاءَ ولا النسبة، فتوقيعٌ واحدٌ يعدّل كلَّ الأوعية — gpt. وعولجا من الجذر في الجلسة 91 (انظر verification).",
         "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب RATE_AMENDMENT_HISTORY_NOT_DURABLE (gpt): سجلُّ النِّسَبِ (rateHistory) ومعرّفاتُ الأوامرِ المنفَّذةِ (amendmentCommands) في الذاكرة وحدها — restore لا يسترجعُهما ومسارُ rehydrate_fiscal.ts لا يمررُهما لخدمةِ الإيراد، فإعادةُ تشغيلِ الدولة تمحو الإعلاناتِ التشغيليةَ من سجلِ النِّسَب (قيسها المسبارُ: الإعلانُ 40‰ يختفي بعد إعادةِ البناء) وتفقدُ منعَ إعادةِ الأمرِ نفسِه عبرَ حدودِ إعادةِ التشغيل.",
         "مجلس المراجعة — الجلسة 3 (2026-10-05 · عند 8efba7c4057b): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). عيبٌ جديدٌ من gpt بخرجٍ خامّ: RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS — قيدُ audit_entry بنوع rate_amended وتفصيلٍ غيرِ صالح (to: \"not-a-number\") يُسقطه collect صمتًا فينجح الإرجاعُ بـrateAmendments: 0 بدل الفشل المغلق. وقاسه grok بقيدٍ بلا commandId فوجد السلوكَ نفسَه (thrown: null · rateAmendments: 0) وعدّه غيرَ مُسقِط. وسببٌ ثانٍ من gpt: OUT_OF_SCOPE_WRITE على 5e040de.",
         "DISC (الجلسة 95): حدٌّ معلن — الرفضُ رميٌ من بابِ الإرجاع (كسائرِ أبواب rehydrate_fiscal: RECOVERY_*) فيُسقط الإقلاع؛ ولا يُستبدل بإقلاعٍ ناجحٍ يُعلن الصامت. وأثرُه أنّ يوميّةً فيها قيدُ rate_amended تالفٌ لا تُقلع حتى يُعالَج القيد — وهو عينُ الفشل المغلق الذي طلبه العيب.",
-        "مجلس المراجعة — الجلسة 4 (2026-10-06 · عند fb9863e): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). EVIDENCE-PACKAGE-ABSENT (الجلسة 4 · gpt): حزمةُ الأدلةِ المجمّدة وُضعت في جذر council4/ المشترك لا داخل جذرِ العضوِ المعزول، فالتزم gpt بعزله وتعذّر فحصه — عيبُ تجهيزِ المنفّذ (W-2026-066) لا عيبُ البند، يُعالج قبل الجلسة الخامسة"
+        "مجلس المراجعة — الجلسة 4 (2026-10-06 · عند fb9863e): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). EVIDENCE-PACKAGE-ABSENT (الجلسة 4 · gpt): حزمةُ الأدلةِ المجمّدة وُضعت في جذر council4/ المشترك لا داخل جذرِ العضوِ المعزول، فالتزم gpt بعزله وتعذّر فحصه — عيبُ تجهيزِ المنفّذ (W-2026-066) لا عيبُ البند، يُعالج قبل الجلسة الخامسة",
+        "مجلس المراجعة — الجلسة 5 (2026-10-06 · عند d8fe184): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان (grok): (1) RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_SILENT_SKIP — RatePolicy.restore يتخطّى بصمت شاهدًا ثانيًا بمعرّف أمر مكرر وحمولة مختلفة؛ (2) STALE_TRANSFERRED_ECONOMY_COUNT — العقد §5 والتقرير يقولان src/economy/ 1864 سطرًا و7 ملفات، والقياس 1986 و8. وعولجا: executed صار Map يخزّن الحمولة الأولى والتعارض يُرفض برمز مسمى؛ والأرقام صُحّحت بالقياس الحالي"
       ]
     },
     {
