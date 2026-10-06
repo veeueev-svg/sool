@@ -17,6 +17,13 @@
  *      تغييرٍ دخيلٌ ⇒ رمزُ رفضٍ مسمًّى لا تخمين، والإرجاعُ المُعادُ لا يُكرِّر. والشاهدُ يصل
  *      كما شهد (الجلسة 3 · RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS) فكلُّ حقلٍ يُفحص بنوعه —
  *      ومنه تاريخُ السريان: غيرُ العدديّ ⇒ RECOVERY_RATE_DECLARED_AT_INVALID
+ *   4) **الشاهدُ كلُّه لا بعضُه** (الجلسة 6): لكلِّ أمرٍ منفَّذٍ — حيًّا بـamendRate أو مُستعادًا —
+ *      حمولةٌ قانونيّةٌ واحدةٌ بحقولِ rate_amended كلِّها (from · to · previousDeclaredAt ·
+ *      effectiveFrom · commandIssuedAt). فشاهدٌ بالمعرّفِ نفسِه يخالفها في أيِّ حقلٍ ⇒
+ *      RECOVERY_RATE_COMMAND_CONFLICT، ولو نُفِّذ الأوّلُ حيًّا (RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP)
+ *      أو خالفه في from وحده (RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_FROM_FIELD_SILENT_SKIP)؛
+ *      وشاهدٌ جديدٌ لا يصل سلسلتَه (from ≠ النسبةِ السائدة أو previousDeclaredAt ≠ تاريخِها)
+ *      ⇒ RECOVERY_RATE_CHAIN_BROKEN — فالقيمةُ القديمةُ المشهودُ بها تُصدَّق لا تُهمَل.
  * اختبار القبول: tests/economy/tax_rate_amendment.test.ts
  */
 import { isValidRatePerMille } from '../kernel/config/economy';
@@ -28,20 +35,34 @@ export interface RateDeclaration {
   readonly declaredAt: number;
 }
 
-/** تعديلٌ مُستعاد: ما شهد به قيدُ rate_amended في السجل الأبدي (ثابت 3) */
+/** تعديلٌ مُستعاد: ما شهد به قيدُ rate_amended في السجل الأبدي — بحقوله كلِّها (ثابتا 3 و4) */
 export interface RateAmendmentRecovery {
   readonly base: string;
+  /** النسبةُ السابقة المشهودُ بها (from) — تُقابَل بالسائدةِ لحظةَ الإرجاع */
+  readonly from: number;
+  /** النسبةُ الجديدة (to) */
   readonly ratePerMille: number;
+  /** تاريخُ الإعلانِ السابق المشهودُ به */
+  readonly previousDeclaredAt: number;
+  /** تاريخُ سريانِ الجديدة (effectiveFrom) */
   readonly declaredAt: number;
   readonly commandId: string;
+  /** وقتُ إصدارِ الأمرِ الموقَّع — إن شُهد به قُوبل */
+  readonly commandIssuedAt?: number;
 }
+
+/** الحمولةُ القانونيّةُ لشاهدٍ — يُقارَن بها كلُّ تكرارٍ للمعرّف (ثابت 4) */
+function witnessKey(a: RateAmendmentRecovery): string {
+  return JSON.stringify([a.base, a.from, a.ratePerMille, a.previousDeclaredAt, a.declaredAt, a.commandId, a.commandIssuedAt ?? null]);
+}
+
+const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 /** سجلُّ النِّسَبِ وحرسُ الأوامرِ المنفَّذة — بلا تدوينٍ ولا اعتماد (RULE-004) */
 export class RatePolicy {
   private readonly history = new Map<string, RateDeclaration[]>();
-  private readonly executed = new Set<string>();
-  /** حمولاتُ الشهودِ المُستعادَة بمعرّفِ الأمر — لكشفِ التعارضِ في الإرجاع (الجلسة 5) */
-  private readonly restored = new Map<string, RateAmendmentRecovery>();
+  /** معرّفُ الأمرِ المنفَّذ ⇒ حمولتُه القانونيّة — حيًّا أو مُستعادًا، فلا معرّفَ بلا حمولة (ثابت 4) */
+  private readonly executed = new Map<string, string>();
 
   constructor(rates: readonly RateDeclaration[]) {
     for (const rate of rates) this.history.set(rate.base, [rate]);
@@ -73,7 +94,8 @@ export class RatePolicy {
   }
 
   hasExecuted(commandId: string): boolean { return this.executed.has(commandId); }
-  markExecuted(commandId: string): void { this.executed.add(commandId); }
+  /** يُسجِّلُ الأمرَ المنفَّذَ حيًّا **بحمولتِه** — فإرجاعٌ لاحقٌ بالمعرّفِ نفسِه يُقابَل بها (ثابت 4) */
+  markExecuted(witness: RateAmendmentRecovery): void { this.executed.set(witness.commandId, witnessKey(witness)); }
 
   /** يُلحقُ إعلانًا جديدًا بسلْسلةِ الوعاءِ — المنادي فحصَ القبولَ قبله */
   append(base: string, ratePerMille: number, declaredAt: number): RateDeclaration {
@@ -89,7 +111,8 @@ export class RatePolicy {
    * عددَ ما طُبِّق. الفشلُ مغلقٌ برموزٍ مسمّاة، والإعادةُ لا تُكرِّر (المعرّفُ شاهدُ التفرّد).
    * والإعادةُ طبقَ الأصلِ (الحمولةُ نفسُها) تُتخطّى بأمانٍ؛ والتعارضُ (معرّفٌ واحدٌ وحمولةٌ مختلفة)
    * يُرفض برمزٍ مسمّى — فالشاهدُ المخالِفُ لا يُمحى بصمت (الجلسة 5 ·
-   * RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_SILENT_SKIP).
+   * RATE_AMENDMENT_DUPLICATE_COMMAND_CONFLICT_SILENT_SKIP). والمقارنةُ بالحمولةِ القانونيّةِ كلِّها،
+   * والمعرّفُ المنفَّذُ حيًّا له حمولتُه أيضًا (الجلسة 6 · ثابت 4).
    */
   restore(amendments: readonly RateAmendmentRecovery[]): number {
     let applied = 0;
@@ -99,18 +122,20 @@ export class RatePolicy {
       if (!isValidRatePerMille(a.ratePerMille)) throw new Error('RECOVERY_RATE_INVALID');
       if (typeof a.commandId !== 'string' || a.commandId.trim() === '') throw new Error('RECOVERY_RATE_COMMAND_ID_MISSING');
       if (typeof a.declaredAt !== 'number' || !Number.isFinite(a.declaredAt)) throw new Error('RECOVERY_RATE_DECLARED_AT_INVALID');
-      if (this.executed.has(a.commandId)) {
-        const first = this.restored.get(a.commandId);
-        if (first && (first.base !== a.base || first.ratePerMille !== a.ratePerMille || first.declaredAt !== a.declaredAt))
-          throw new Error(`RECOVERY_RATE_COMMAND_CONFLICT:${a.commandId}`);
+      if (!isValidRatePerMille(a.from)) throw new Error('RECOVERY_RATE_FROM_INVALID');
+      if (!finite(a.previousDeclaredAt)) throw new Error('RECOVERY_RATE_PREVIOUS_DECLARED_AT_INVALID');
+      if (a.commandIssuedAt !== undefined && !finite(a.commandIssuedAt)) throw new Error('RECOVERY_RATE_COMMAND_ISSUED_AT_INVALID');
+      const seen = this.executed.get(a.commandId);
+      if (seen !== undefined) {
+        if (seen !== witnessKey(a)) throw new Error(`RECOVERY_RATE_COMMAND_CONFLICT:${a.commandId}`);
         continue;
       }
       const last = h[h.length - 1]!;
+      if (a.from !== last.ratePerMille || a.previousDeclaredAt !== last.declaredAt) throw new Error('RECOVERY_RATE_CHAIN_BROKEN');
       if (a.declaredAt < last.declaredAt) throw new Error('RECOVERY_RATE_ORDER_VIOLATION');
       if (a.ratePerMille === last.ratePerMille) throw new Error('RECOVERY_RATE_NO_CHANGE');
       h.push({ base: a.base, ratePerMille: a.ratePerMille, declaredAt: a.declaredAt });
-      this.executed.add(a.commandId);
-      this.restored.set(a.commandId, a);
+      this.executed.set(a.commandId, witnessKey(a));
       applied += 1;
     }
     return applied;
