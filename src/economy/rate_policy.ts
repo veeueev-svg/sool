@@ -65,7 +65,7 @@ export class RatePolicy {
   private readonly executed = new Map<string, string>();
 
   constructor(rates: readonly RateDeclaration[]) {
-    for (const rate of rates) this.history.set(rate.base, [rate]);
+    for (const rate of rates) this.history.set(rate.base, [{ ...rate }]);
   }
 
   declaredBases(): readonly string[] { return [...this.history.keys()]; }
@@ -105,7 +105,7 @@ export class RatePolicy {
     const h = this.history.get(base);
     if (!h) throw new Error(`RATE_BASE_UNDECLARED:${base}`);
     h.push(declaration);
-    return declaration;
+    return { ...declaration };
   }
 
   /**

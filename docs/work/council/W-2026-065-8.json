@@ -1,0 +1,20 @@
+{
+  "item": "W-2026-065",
+  "commit": "cce53c359609b044f9f2c00bb330aac2889b453",
+  "scope_digest": "bde1d46eb2ab97719f553728127053b8ac10cdfd86b9107afebd331fdfc7dae7",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-07",
+  "session": 8,
+  "verdicts": [
+    {"member": "gpt", "model": "GPT 5.6 Terra", "runtime_id": "gpt_5_6_terra", "verdict": "REJECTED", "report": "docs/work/council/W-2026-065-8-gpt.md"},
+    {"member": "grok", "model": "Grok 4.7", "runtime_id": "grok_4_7", "verdict": "REJECTED", "report": "docs/work/council/W-2026-065-8-grok.md"},
+    {"member": "gemini", "model": "Gemini 3.8 Flash", "runtime_id": "gemini_3_8_flash", "verdict": "REJECTED", "report": "docs/work/council/W-2026-065-8-gemini.md"}
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "RATE_AMENDMENT_APPEND_MUTABLE_REFERENCE_ESCAPE (gpt · grok · gemini — إجماع): علاجُ الجلسة 7 اقتصر على دوال الاستعلام الأربع (historyOf · firstOf · currentFor · effectiveAt) وتجاهل RatePolicy.append() التي تدفع كائن RateDeclaration في مصفوفة التاريخ وتعيد المرجع ذاته. وRevenueService.amendRate() يعيد هذا المرجع الحي في result.declaration. تعديل المستدعي لـ result.declaration.ratePerMille يغيّر النسبة الحاكمة بلا أمر ملكي ولا قيد rate_amended. كما لاحظ gemini عدم نسخ مدخلات المُنشئ new RatePolicy(rates)."
+    ]
+  }
+}
