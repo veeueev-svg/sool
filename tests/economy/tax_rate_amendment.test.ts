@@ -281,3 +281,25 @@ test('**T-53/مجلس 7** — RATE_AMENDMENT_HISTORY_MUTABLE_REFERENCE_ESCAPE: �
   const again = s.revenue.rateHistoryOf('compute_usage');
   assert.equal(again[0]!.ratePerMille, 25, 'التاريخُ الداخليُّ لم يتأثّر');
 });
+
+test('**T-53/مجلس 8** — RATE_AMENDMENT_APPEND_MUTABLE_REFERENCE_ESCAPE: amendRate يُعيدُ نسخةً لا مرجعًا حيًّا', () => {
+  const { s, royal } = revenueState();
+  const cmd = royal(REVENUE_TARGET, T1, 'compute_usage', 40);
+  const result = s.revenue.amendRate(cmd, 'compute_usage', 40, T1);
+  assert.equal(result.ok, true, 'التعديل نجح');
+  if (!result.ok) return;
+  assert.equal(result.declaration.ratePerMille, 40, 'النسبة المُعلَنة 40');
+  assert.equal(result.previous.ratePerMille, 25, 'النسبة السابقة 25');
+  // المُستدعي يحاول تعديل النسبة بلا أمرٍ ملكي
+  (result.declaration as { ratePerMille: number }).ratePerMille = 999;
+  (result.previous as { ratePerMille: number }).ratePerMille = 888;
+  // لا أثر: النسبة الداخلية لم تتغير
+  assert.equal(s.revenue.rateFor('compute_usage')!.ratePerMille, 40, 'المرجعُ المُعاد نسخةٌ لا أصل — التعديلُ بلا أمرٍ ملكيٍّ لا يصل');
+  // والتقدير يستعمل النسبة الصحيحة
+  const levy = s.revenue.assess('compute_usage', 'agent:external', 1000, T1, T1);
+  assert.equal(levy.ok && levy.levy.ratePerMille, 40, 'التقدير بالنسبة الأصلية لا المُعدَّلة');
+  // والتاريخ الداخلي لم يتأثر
+  const history = s.revenue.rateHistoryOf('compute_usage');
+  assert.equal(history[history.length - 1]!.ratePerMille, 40, 'الإعلان الداخلي لم يتأثر');
+  assert.equal(history[0]!.ratePerMille, 25, 'الإعلان الأول لم يتأثر');
+});
