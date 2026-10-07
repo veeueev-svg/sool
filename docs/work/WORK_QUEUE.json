@@ -1701,7 +1701,15 @@
         "docs/work/council/W-2026-065-7.json",
         "docs/work/council/W-2026-065-7-gpt.md",
         "docs/work/council/W-2026-065-7-grok.md",
-        "docs/work/council/W-2026-065-7-gemini.md"
+        "docs/work/council/W-2026-065-7-gemini.md",
+        "docs/work/council/W-2026-064-8.json",
+        "docs/work/council/W-2026-065-8.json",
+        "docs/work/council/W-2026-064-8-gpt.md",
+        "docs/work/council/W-2026-064-8-grok.md",
+        "docs/work/council/W-2026-064-8-gemini.md",
+        "docs/work/council/W-2026-065-8-gpt.md",
+        "docs/work/council/W-2026-065-8-grok.md",
+        "docs/work/council/W-2026-065-8-gemini.md"
       ],
       "excluded": [
         "تعديلُ أيِّ تقريرٍ خامٍّ لعضو — يُحفظ كما كتبه",
@@ -1720,7 +1728,7 @@
       ],
       "next_step": "الجلسة 7 لمجلس المراجعة على 7f3dcbd لـ W-2026-064 وW-2026-065؛ ثم المحاضر والتقارير الخامّ.",
       "created_at": "2026-10-04",
-      "updated_at": "2026-10-06",
+      "updated_at": "2026-10-07",
       "documentation_impact": [
         "PROGRESS.md — مدخلُ الجلسة 91",
         "CHANGELOG.md — مدخلُ أوّلِ انعقادٍ للمجلس"
