@@ -1444,7 +1444,7 @@
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "الاقتصاد والمالية",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "T-53",
         "2026-10-05 (الجلسة 95): استلامٌ بأمر المالك («عالج العيوب وحل التعارضات وواصل العمل») من المساعد الآلي — Perplexity Computer (الجلسة 90)، وعلاجُ RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS داخل النطاق (src/data/rehydrate_fiscal.ts · src/economy/rate_policy.ts · tests/data/rehydrate_fiscal.test.ts).",
@@ -1457,7 +1457,8 @@
         "2026-10-06 (الجلسة 98): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 403e8b94… (محضر الجلسة 6) ⇒ f5607542… على 8b9b812. رفعٌ للمراجعة لا ترقية.",
         "2026-10-06 (الجلسة 99): الجلسة 7 — NOT_VERIFIED. gpt REJECTED · grok VERIFIED · gemini VERIFIED. عيبٌ جديد: RATE_AMENDMENT_HISTORY_MUTABLE_REFERENCE_ESCAPE (gpt) — historyOf() ينسخ المصفوفة فقط ولا ينسخ كائنات RateDeclaration. عاد إلى IN_PROGRESS.",
         "2026-10-07 (الجلسة 99): علاجُ عيب الجلسة 7 (RATE_AMENDMENT_HISTORY_MUTABLE_REFERENCE_ESCAPE) في src/economy/rate_policy.ts — historyOf وfirstOf وcurrentFor وeffectiveAt تُعيد نسخًا لا مراجع. +1 اختبار يقتل الطفرة (2405). ورُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق f5607542… (محضر الجلسة 7) ⇒ bde1d46e…. والدفعةُ الأولى للعلاج في #67 (6183d45) أسقطها CI بـRULE-000/008 (كودٌ بلا PROGRESS.md ولا تقرير) ولم تُدمج، وبصمتُها المكتوبة d8a6c6c1… لم تعد تصف الشجرة بعد إلحاق التقرير. رفعٌ للمراجعة لا ترقية.",
-        "2026-10-07 (الجلسة 100): الجلسة 8 — NOT_VERIFIED بإجماع. gpt REJECTED · grok REJECTED · gemini REJECTED. العيب: RATE_AMENDMENT_APPEND_MUTABLE_REFERENCE_ESCAPE — RatePolicy.append() يدفع كائن RateDeclaration في مصفوفة التاريخ ويعيد المرجع ذاته؛ وRevenueService.amendRate() يعيد هذا المرجع الحي في result.declaration. علاج الجلسة 7 اقتصر على دوال الاستعلام الأربع وتجاهل append وamendRate. عاد إلى IN_PROGRESS."
+        "2026-10-07 (الجلسة 100): الجلسة 8 — NOT_VERIFIED بإجماع. gpt REJECTED · grok REJECTED · gemini REJECTED. العيب: RATE_AMENDMENT_APPEND_MUTABLE_REFERENCE_ESCAPE — RatePolicy.append() يدفع كائن RateDeclaration في مصفوفة التاريخ ويعيد المرجع ذاته؛ وRevenueService.amendRate() يعيد هذا المرجع الحي في result.declaration. علاج الجلسة 7 اقتصر على دوال الاستعلام الأربع وتجاهل append وamendRate. عاد إلى IN_PROGRESS.",
+        "2026-10-07 (الجلسة 100): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 1bcaedf8… تخالف بصمةَ محضر الجلسة 8 (bde1d46e…). رفعٌ للمراجعة لا ترقية."
       ],
       "dependencies": [
         "لا شيء"
@@ -1497,7 +1498,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "علاجُ عيب الجلسة 8 (RATE_AMENDMENT_APPEND_MUTABLE_REFERENCE_ESCAPE) في src/economy/rate_policy.ts وsrc/economy/tax.ts ثم الرفعُ إلى REVIEW بعقد الجلسة التاسعة (RULE-020).",
+      "next_step": "الجلسة التاسعة لمجلس المراجعة (RULE-020) على التزامة الرفع.",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-07",
       "documentation_impact": [
@@ -1506,7 +1507,7 @@
         "CHANGELOG.md — مدخلُ البند",
         "version.json — tests.total بالمقيس"
       ],
-      "verification": "شُغِّل في 2026-10-07 (الجلسة 99) على التزامة العلاج: npm run verify → EXIT=0 · npm test 2405/2405 (تشغيلٌ منفرد) · ملفّات البند الثلاثة pass 25 · fail 0 · طفرةُ النسخة السطحية مقتولة (pass 16 · fail 1). بصمةُ النطاق (9 مسارات، خوارزمية scopeDigest) = bde1d46eb2ab97719f553728127053b8ac10cdfd86b9107afebd331fdfc7dae7 — قيست بعد كتابة محتوى النطاق كلِّه (ومنه التقرير)، وتُكتب هنا وفي العقد وحدهما (خارج النطاق). وتخالف بصمةَ محضر الجلسة 7 (f5607542…) — الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-065.md. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرار المجلس بالإجماع (RULE-020).",
+      "verification": "شُغِّل في 2026-10-07 (الجلسة 100) على التزامة العلاج 75cdece (مدموج في #73): npm run verify → EXIT=0 · npm test 2406/2406 · ملفّات البند الثلاثة pass 26 · fail 0 · طفرة المرجع الحي مقتولة. بصمةُ النطاق (9 مسارات) = 1bcaedf8c13afc62626a6b5256cf3a98524ac71429142a9b525ecc135f2ba296 — قيست بعد دمج العلاج. تخالف بصمةَ محضر الجلسة 8 (bde1d46e…) — الثابت 8. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
       "discoveries": [
         "مجلس المراجعة — الجلسة 1 (2026-10-04 · عند 5bfd61f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان: (1) إعادةُ الأمر الملكيّ نفسِه تُنفّذ تعديلًا ثانيًا لأنّ بوابةَ التاج idempotent تُعيد قرارَها السابق allowed=true وamendRate لا يميّز الإعادة — grok؛ (2) RATE_AMENDMENT_COMMAND_NOT_PARAMETER_BOUND: الأمرُ لا يربط الوعاءَ ولا النسبة، فتوقيعٌ واحدٌ يعدّل كلَّ الأوعية — gpt. وعولجا من الجذر في الجلسة 91 (انظر verification).",
         "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب RATE_AMENDMENT_HISTORY_NOT_DURABLE (gpt): سجلُّ النِّسَبِ (rateHistory) ومعرّفاتُ الأوامرِ المنفَّذةِ (amendmentCommands) في الذاكرة وحدها — restore لا يسترجعُهما ومسارُ rehydrate_fiscal.ts لا يمررُهما لخدمةِ الإيراد، فإعادةُ تشغيلِ الدولة تمحو الإعلاناتِ التشغيليةَ من سجلِ النِّسَب (قيسها المسبارُ: الإعلانُ 40‰ يختفي بعد إعادةِ البناء) وتفقدُ منعَ إعادةِ الأمرِ نفسِه عبرَ حدودِ إعادةِ التشغيل.",
