@@ -1374,7 +1374,8 @@
         "2026-10-06 (الجلسة 98): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 3e9e7cd4… (محضر الجلسة 6) ⇒ 540f6848… على f4f0fbf. رفعٌ للمراجعة لا ترقية.",
         "2026-10-06 (الجلسة 99): الجلسة 7 — NOT_VERIFIED. gpt REJECTED · grok VERIFIED · gemini VERIFIED. عيبٌ جديد: TEST_TALLY_APPEND_RACE (gpt) — ملفُ الحصيلة dist/.tests.tap يحتوي حصيلتين متتابعتين من تشغيلٍ متزامن، والفاحص يقرأ الأخيرة فقط. عاد إلى IN_PROGRESS.",
         "2026-10-08 (الجلسة 101): استلامٌ بأمر المالك «ابدا» من (الجلسة 99) — المعرّف لم يتبدّل (WORK_CONTROL §6). علاجُ عيب الجلسة 7 (TEST_TALLY_APPEND_RACE) في scripts/check_generated_numbers.sh: بابٌ جديد [GN-05] يرفض الحصيلةَ متعددةَ النتائج — حصيلةٌ واحدةٌ موثوقةٌ تتطلب سطر `# tests` واحدًا وسطر `# pass` واحدًا وسطر `# fail` واحدًا. وتوسيعُ النطاق بـscripts/check_generated_numbers.sh. واختبارُ الانحدار في tests/governance/generated_numbers.test.ts (نطاق W-2026-040 لا W-2026-064 — تداخلٌ مُلحوظٌ ومُحلٌّ). الحال IN_PROGRESS حتى التزامة الرفع.",
-        "2026-10-08 (الجلسة 101): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 540f6848… (محضر الجلسة 7) ⇒ d732eaea… على c1fc9a5. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده."
+        "2026-10-08 (الجلسة 101): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 540f6848… (محضر الجلسة 7) ⇒ d732eaea… على c1fc9a5. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده.",
+        "2026-10-08 (الجلسة 102): استلامٌ بأمر المالك («ابدا + اعقد الجلسة السادسة لمجلس المراجعة…») من المساعد الآلي — Perplexity Computer (الجلسة 98). المعرّف لم يتبدّل (WORK_CONTROL §6). رُفع إلى REVIEW بتغيّرٍ مقيسٍ مِن IN_PROGRESS — بصمةُ النطاق d732eaea… تخالف بصمةَ محضر الجلسة 7 (540f6848…) كما قُيست عند التزام العلاج. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020)."
       ],
       "dependencies": [
         "لا شيء"
@@ -1418,7 +1419,7 @@
         "docs/test-reports/phase-40-W-2026-064.md",
         "npm test 2367/2367 · npm run verify → 0"
       ],
-      "next_step": "الجلسة الثامنة لمجلس المراجعة (RULE-020) على التزامة الرفع.",
+      "next_step": "الجلسة العاشرة لمجلس المراجعة (RULE-020) على التزامة الرفع.",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-08",
       "verification": "شُغِّل في 2026-10-08 (الجلسة 101) على التزامة العلاج 86450d2 (مدموج في هذا الفرع): npm run check:numbers → EXIT=0 (2407/2407) · npm run check:work → EXIT=0 · npm run check:size → EXIT=0 · node --test dist/tests/governance/doc_links.test.js → pass 12 · fail 0 · node --test dist/tests/governance/generated_numbers.test.js → pass 18 · fail 0 · npm test 2407/2407. بصمةُ النطاق (21 مسارًا) = d732eaeaa93db76215a9c57c4aa25839654ae37fb3d1ef190d08d22152096f12 — قيست بعد التزام محتوى النطاق. تخالف بصمةَ محضر الجلسة 7 (540f6848…) — الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-064.md. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
