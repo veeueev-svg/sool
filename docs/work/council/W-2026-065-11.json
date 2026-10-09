@@ -1,0 +1,42 @@
+{
+  "item": "W-2026-065",
+  "commit": "a41efbe4d4b7b814a8797735ff894b62a37c2af6",
+  "scope_digest": "e8304c9aa90e83588179b6ed6079ebec393d81cec0fb0fbca3be2fdba569a83a",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-09",
+  "session": 11,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-11-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-11-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-065-11-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "RATE_AMENDMENT_DURABLE_POSTCOMMIT_THROW_INCONSISTENT_ACK (gpt): الوسيط قد يُدوّن القيدَ ثم يرمي قبل إقرار النجاح — append يردّ الذاكرة بـentries.pop() فيعود الاستدعاء بالرمي وتبقى الحياة عند 25‰، ثم يقبل الإقلاعُ الشاهدَ الدائم فيحوّلها إلى 40‰ من محاولةٍ قال المستدعي إنها فشلت (قِيس: persistedWitnesses=1 بعد الرمي · rehydratedRateAmendments=1 · secondRate=40). يلزم بروتوكول التزام/استعادة يميز النتيجة غير المعلومة، مع اختبار إعادة تشغيل لحالة الكتابة ثم الرمي.",
+      "RATE_AMENDMENT_PRIMITIVE_GUARD_REREAD_LIVE_REFERENCE (grok): assertPrimitiveDeclaration وrestore يفحصان قراءةً ويخزّنان قراءةً أخرى — كائنٌ بـgetters يعيد رقمًا في القراءة الأولى فيجتاز الفحص، ويُخزَّن المرجعُ الحيّ في المُنشئ وrestoreRateAmendments؛ وبعد ذلك بلا أمرٍ ملكيٍّ ولا قيدٍ جديد تنتقل النسبة من 40 إلى 500 والتقدير من 16000 إلى 200000 وتُجبى واقعةٌ قبل الإعلان الأول كانت مرفوضةً بثابت 2 (قِيس بمسبارين مستقلين).",
+      "RATE_AMENDMENT_APPEND_ROLLBACK_POPS_WRONG_ENTRY (grok · مقيس): الردّ الجديد في AppendOnlyLog.append يدفع ثم يسجّل ثم ينفّذ entries.pop() بلا التحقّق أن المُخرَج هو القيد الذي دُفع — وسيطٌ يعيد الدخول (append داخلي ينجح ثم رمي) يترك القيد الفاشلَ في الذاكرة ويحذف الناجحَ (قِيس: memoryKinds=[rate_amended] · durableKinds=[inner_ok]). الوصول الإنتاجي بهذا الشكل غير قائم في الوسيط المضمّن — العيب في منطق الردّ نفسه.",
+      "RATE_AMENDMENT_SINK_NULL_ACCEPTED_AS_COMMIT (grok · مقيس): DurableSink.record يعيد DurableRecord | null، وappend يتجاهل القيمة المعادة — وسيطٌ يعيد null لقيد rate_amended بلا رمي يُقبل التعديلُ وتبقى الحياةُ بلا شاهدٍ دائم (قِيس: ok=true · النسبة 40 · durableKept=[]). نطاق اليوميّة المعلن يشمل audit_entry فاليوميّة المضبوطة لا تعيد null له — الثقبُ عند من يعيد null وهي إشارة «لم يُدوَّن» في العقد.",
+      "npm run verify فشل على الالتزام المجمد عند gpt (خارج مسارات البند): حاجز الإعلان DC-03 — docs/audit/criteria/C-12.md يذكر T-23 وخانة «البند المفتوح» لا تذكره. فشلُ أمرِ معيارِ القبولِ مقيسٌ ويُسجَّل؛ والعلاجُ لصاحبِ المسارِ لا يُعالَج في هذا البند."
+    ]
+  }
+}

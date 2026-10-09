@@ -1,0 +1,41 @@
+{
+  "item": "W-2026-064",
+  "commit": "b9312885e0a85ff9a4492cfe87cbf24679347a1c",
+  "scope_digest": "0dc9a55ab4682f8843b2551113abb58fb2ba4263e89b8f215ae37b68b2a03adb",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-09",
+  "session": 12,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-12-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-12-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-064-12-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "GN05_VERTICAL_TAB_EOL_BYPASS (gpt): باب [GN-05] في scripts/check_generated_numbers.sh يقبل حصيلةً ثانيةً سطرُها ينتهي بمحرف VT (\\v) — السطرُ المنتهي بـVT لا يُعدُّ حصيلةً فتُصدَّق نتيجةُ الأولى (قِيس بمسبار: الثانية المنتهية بـVT تمرّ والفحص يخرج 0).",
+      "GN05_CR_ONLY_SEPARATOR_BYPASS (grok): الحصيلةُ الثانيةُ المفصولةُ بـCR فقط (بلا LF) تُصدَّق نتيجتُها الأولى — الفاصل CR وحده لا يفصل الأسطرَ عند الفحص فيمرّ الشكلان (قِيس).",
+      "GN05_VT_FF_NBSP_EOL_BYPASS (grok): أسطر الحصيلة المنتهية بـVT أو FF أو U+00A0 تُرفض الأبوابُ الأخرى حسابَها حصائلَ فيُصدَّق رقمُ النتيجة الأولى (قِيس).",
+      "GN05_TOKEN_SHAPE_BYPASS (grok): رمزُ الحصيلة بمسافةٍ قائدة أو بمسافتين بين الرمز والعدد يخالف شكلَ الرمز المعلن فتُقبل الحصيلةُ الأولى وتُخفى الثانيةُ كاملة (قِيس). والتعليقُ المضاف يدّعي أن السطر المنتهي بـCR أو بفراغ زائد يُعدّ فلا يُصدَّق واحد من اثنين — والقياس يخالف الدعوى."
+    ]
+  }
+}
