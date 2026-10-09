@@ -1549,7 +1549,7 @@
     {
       "id": "W-2026-066",
       "title": "مجلسُ المراجعة — الجلساتُ الأولى إلى الرابعة: محاضرُ وتقاريرُ خامٌّ للبنود W-2026-062..065",
-      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 105)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 106)",
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "حوكمة",
       "phase": 40,
@@ -1690,7 +1690,11 @@
         "docs/work/council/W-2026-064-12.json",
         "docs/work/council/W-2026-064-12-gpt.md",
         "docs/work/council/W-2026-064-12-grok.md",
-        "docs/work/council/W-2026-064-12-gemini.md"
+        "docs/work/council/W-2026-064-12-gemini.md",
+        "docs/work/council/W-2026-064-13.json",
+        "docs/work/council/W-2026-064-13-gpt.md",
+        "docs/work/council/W-2026-064-13-grok.md",
+        "docs/work/council/W-2026-064-13-gemini.md"
       ],
       "excluded": [
         "تعديلُ أيِّ تقريرٍ خامٍّ لعضو — يُحفظ كما كتبه",
