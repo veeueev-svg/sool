@@ -281,6 +281,12 @@ export class RevenueService {
       });
       return { ok: false, reason, auditId: entry.hash };
     };
+    // تاريخُ السريان رقمٌ بدائيٌّ محددٌ لا كائنٌ يُكرَه عند كلِّ مقارنةٍ فيُخزَّن مرجعُه
+    // الحيُّ ويُحرِّك السريانَ رجعيًّا وإلى المستقبلِ بلا أمرٍ ملكيّ (الجلسة 9 ·
+    // RATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE) — والنسخُ لا يغلق مسارًا لا يمرّ به أصلًا.
+    if (typeof now !== 'number' || !Number.isFinite(now)) {
+      return refuse('تاريخُ السريانِ رقمٌ محددٌ لا كائنٌ يُكرَه عند المقارنة — وذاك مرجعٌ حيٌّ يحرّك السريان بلا أمرٍ ملكي');
+    }
     if (!this.rates.declares(base)) {
       return refuse('وعاء غير معلن — لا تعديل لما لا نصّ له (ثابت 1)', {
         declared: this.rates.declaredBases(),
@@ -325,15 +331,11 @@ export class RevenueService {
     }
     const authorized = this.deps.gateway.authorize(command, now);
     if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
-    // الحمولةُ القانونيّةُ نفسُها تُسجَّل للأمرِ المنفَّذ وتُدوَّن شاهدًا — فإرجاعٌ لاحقٌ
-    // بالمعرّفِ نفسِه يُقابَل بها لا بالمعرّفِ وحده (الجلسة 6 · RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP)
-    this.rates.markExecuted({
-      base, from: current.ratePerMille, ratePerMille: newRatePerMille,
-      previousDeclaredAt: current.declaredAt, declaredAt: now,
-      commandId: command.payload.commandId, commandIssuedAt: command.payload.issuedAt,
-    });
-
-    const declaration = this.rates.append(base, newRatePerMille, now);
+    // الشاهدُ الدائمُ **أولًا**: كتابةُ قيد rate_amended في السجلِ الأبديّ تسبقُ كلَّ تغييرٍ
+    // في الحال — فإذا رمى الوسيطُ الدائمُ رُدَّ قيدها ورُمي الاستثناءُ قبل أيِّ تعديلٍ حيٍّ،
+    // وإذا نجحت فالتغييرُ بعدها لا يعرف الفشل. فلا يبقى تعديلٌ حيٌّ بلا سجلٍّ دائمٍ تفقدُه
+    // إعادةُ التشغيل (الجلسة 9 · RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC — والإضافةُ في
+    // AppendOnlyLog ذرّيّةٌ منذ الجلسة 9 نفسِها).
     const entry = this.deps.audit.append(this.actorId, 'rate_amended', {
       base,
       from: current.ratePerMille,
@@ -343,6 +345,15 @@ export class RevenueService {
       commandId: command.payload.commandId,
       commandIssuedAt: command.payload.issuedAt,
     });
+    // الحمولةُ القانونيّةُ نفسُها تُسجَّل للأمرِ المنفَّذ وتُدوَّن شاهدًا — فإرجاعٌ لاحقٌ
+    // بالمعرّفِ نفسِه يُقابَل بها لا بالمعرّفِ وحده (الجلسة 6 · RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP)
+    this.rates.markExecuted({
+      base, from: current.ratePerMille, ratePerMille: newRatePerMille,
+      previousDeclaredAt: current.declaredAt, declaredAt: now,
+      commandId: command.payload.commandId, commandIssuedAt: command.payload.issuedAt,
+    });
+
+    const declaration = this.rates.append(base, newRatePerMille, now);
     return { ok: true, declaration, previous: current, auditId: entry.hash };
   }
 

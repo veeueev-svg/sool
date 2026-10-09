@@ -8,6 +8,8 @@
 
 - **W-2026-064 — علاجُ عيوبِ الجلسة 10** (`DOC_LINK_GUARD_PARENT_ESCAPE_BYPASS` · `DOC_LINK_GUARD_TRAVERSAL_HOST_EXISTS_BYPASS` · `DOC_LINK_GUARD_ROOT_ABSOLUTE_FALSE_REJECT` · `DOC_LINK_GUARD_CRLF_DESTINATION_BYPASS` · `GN05_REGEX_EOL_BYPASS` · `PROGRESS_TEST_ROW_STALE`): الوجهةُ النسبيّةُ تُحصر تحت جذرِ المستودعِ فالخروجُ يُبلَّغ ولا يُقاسُ وجودُه على المضيف، والرابطُ من `/` يُنسبُ إلى الجذرِ كما يعرضُه GitHub، و`\r` فراغٌ في ماسحِ الوجهة، وأسطرُ الحصيلةِ تُقاسُ معياريةً في [GN-05]، وصفُّ الاختبارات صُحّح بالقياس 2406 ⇒ 2408. و`TEST_TALLY_TRUNCATE_RACE` مروَّطٌ لصاحبِ `package.json` (W-2026-046). +1 اختبار (2408) · أربعُ طفراتٍ مقتولة. [التقرير](docs/test-reports/phase-40-W-2026-064.md)
 
+- **W-2026-065 — علاجُ عيوبِ الجلسة 9** (`RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC` · `RATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE`): قيدُ السجلِ الأبديِّ ذرّيٌّ — فشلُ الوسيطِ الدائمِ يردُّ القيدَ من الذاكرة ويرمي — وشاهدُ `rate_amended` يُكتب قبل أيِّ تغييرٍ في الحال فلا تعديلَ حيًّا بلا سجلٍّ دائم ولا أمرَ محروقًا بفشلِ التدوين، وحقولُ الإعلانِ بدائيّةٌ والـ`now` غيرُ الرقميِّ مرفوض. توسيعُ النطاق بـ`src/audit/append_only_log.ts`. +3 اختبارات (2411) · ثلاثُ طفراتٍ مقتولة. [التقرير](docs/test-reports/phase-40-W-2026-065.md)
+
 ## [غيرُ مُصدَر] — 2026-10-06
 
 ### حوكمة(40)

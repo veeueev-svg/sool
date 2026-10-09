@@ -7,7 +7,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { REVENUE_TARGET, UNIT_TARGET, bootstrapState } from '../../src/index';
+import { RatePolicy } from '../../src/economy/rate_policy';
 import type { RateAmendmentRecovery } from '../../src/economy/tax';
+import type { DurableSink } from '../../src/data/persistence';
 
 const NOW = Date.now();
 const T1 = NOW + 10_000;
@@ -302,4 +304,61 @@ test('**T-53/مجلس 8** — RATE_AMENDMENT_APPEND_MUTABLE_REFERENCE_ESCAPE: am
   const history = s.revenue.rateHistoryOf('compute_usage');
   assert.equal(history[history.length - 1]!.ratePerMille, 40, 'الإعلان الداخلي لم يتأثر');
   assert.equal(history[0]!.ratePerMille, 25, 'الإعلان الأول لم يتأثر');
+});
+
+test('**T-53/مجلس 9أ** — RATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE: now كائنًا يُرفض ولا يُخزَّن مرجعه الحي', () => {
+  const { s, royal } = revenueState();
+  // كائنٌ يُكرَه رقمًا عند كل مقارنة — يمرّ البوابةَ لو لم يُحرَّس النوع
+  const clock = { valueOf: () => T1 } as unknown as number;
+  const result = s.revenue.amendRate(royal(REVENUE_TARGET, T1, 'compute_usage', 40), 'compute_usage', 40, clock);
+  assert.equal(result.ok, false, 'الكائنُ ذو valueOf مرفوض');
+  assert.match(result.ok ? '' : result.reason, /رقم|مرجع/);
+  assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'النسبةُ لم تتغير');
+  assert.equal(s.revenue.rateHistoryOf('compute_usage').length, 1, 'التاريخُ لم يزدد');
+  assert.equal(s.audit.find('rate_amended').length, 0, 'لا شاهدَ تعديل');
+  // والأمرُ لم يُستهلك بالرفض: التعديلُ الرقميُّ السليمُ بعده ينجح
+  assert.equal(s.revenue.amendRate(royal(REVENUE_TARGET, T1, 'compute_usage', 40), 'compute_usage', 40, T1).ok, true);
+  assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 40);
+});
+
+test('**T-53/مجلس 9ب** — RATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE: إعلانٌ بحقلٍ غيرِ بدائيٍّ يُرفض عند البناء', () => {
+  const asNumber = { n: 40 } as unknown as number;
+  assert.throws(() => new RatePolicy([{ base: 'compute_usage', ratePerMille: asNumber, declaredAt: NOW }]),
+    /RATE_DECLARATION_NOT_PRIMITIVE/, 'الكائنُ في ratePerMille مرفوض');
+  assert.throws(() => new RatePolicy([{ base: 'compute_usage', ratePerMille: 25, declaredAt: { valueOf: () => NOW } as unknown as number }]),
+    /RATE_DECLARATION_NOT_PRIMITIVE/, 'والكائنُ في declaredAt مرفوض');
+  // والبناءُ السليمُ لا يتأثر
+  const policy = new RatePolicy([{ base: 'compute_usage', ratePerMille: 25, declaredAt: NOW }]);
+  assert.equal(policy.currentFor('compute_usage')?.ratePerMille, 25);
+});
+
+test('**T-53/مجلس 9ج** — RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC: فشلُ كتابة الشاهد الدائم يُرجع الحال كاملًا', () => {
+  const { s, royal } = revenueState();
+  const cmd = royal(REVENUE_TARGET, T1, 'compute_usage', 40);
+  const before = s.audit.length;
+  // وسيطٌ دائمٌ يرفض كتابة قيد rate_amended وحده — عينُ مسبار الجلسة 9
+  const refusingSink: DurableSink = {
+    record: (_kind, payload) => {
+      if ((payload as { kind?: string } | undefined)?.kind === 'rate_amended') throw new Error('PROBE_DURABILITY_REFUSAL');
+      return null;
+    },
+  };
+  s.audit.attachSink(refusingSink);
+  assert.throws(() => s.revenue.amendRate(cmd, 'compute_usage', 40, T1),
+    /PROBE_DURABILITY_REFUSAL/, 'فشلُ الوسيط يُرمي لا يُبتلع');
+  // الحالُ رُدَّ كاملًا: لا نسبةَ جديدة ولا تاريخَ زائد ولا أمرًا محروقًا ولا قيدًا في الذاكرة
+  assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'النسبةُ الحاكمة لم تتغير');
+  assert.equal(s.revenue.rateHistoryOf('compute_usage').length, 1, 'التاريخُ لم يزدد');
+  assert.equal(s.audit.find('rate_amended').length, 0, 'لا شاهدَ تعديلٍ في الذاكرة');
+  // قيدُ اعتمادِ البوابة (command_approved) وحده بقي — وهو أثرُ محاولةٍ مشروعةٌ لا شاهدُ تعديل؛
+  // وقيدُ rate_amended نفسُه رُدَّ — فالإضافةُ ذرّيّة
+  assert.equal(s.audit.length, before + 1, 'قيدُ rate_amended رُدّ ولم يبقَ إلا قيدُ البوابة');
+  assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةٌ بعد الرد');
+  // والأمرُ لم يُستهلك: بعد زوال السبب ينجحُ التعديلُ بالمعرّف نفسه
+  const okSink: DurableSink = { record: () => null };
+  s.audit.attachSink(okSink);
+  const retry = s.revenue.amendRate(cmd, 'compute_usage', 40, T1);
+  assert.equal(retry.ok, true, 'إعادةُ الأمرِ بعد زوالِ سببِ الفشل تنجح');
+  assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 40);
+  assert.equal(s.audit.find('rate_amended').length, 1, 'وشاهدٌ واحدٌ لا اثنان');
 });
