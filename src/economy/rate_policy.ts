@@ -70,6 +70,34 @@ function assertPrimitiveDeclaration(rate: RateDeclaration): void {
   }
 }
 
+/**
+ * قراءةٌ واحدةٌ لكلِّ حقلٍ ثم تجميدُها (الجلسة 11 · RATE_AMENDMENT_PRIMITIVE_GUARD_REREAD_LIVE_REFERENCE):
+ * الحارسُ الذي يقرأُ مرجعًا حيًّا (getters) مرّتين يفحصَ قراءةً ويُخزّنَ الأخرى — فما فُحِص هو ما
+ * يُخزَّن: القيمُ تُقرأ مرةً واحدةً في كائنٍ مجمّدٍ، والفحصُ والتخزينُ عليه معًا.
+ */
+function snapshotDeclaration(rate: RateDeclaration): RateDeclaration {
+  const base = rate.base;
+  const ratePerMille = rate.ratePerMille;
+  const declaredAt = rate.declaredAt;
+  return Object.freeze({ base, ratePerMille, declaredAt });
+}
+
+/** كذلك شاهدُ الإرجاعِ يُقرأ مرةً واحدةً — فالفحصُ والمفتاحُ والدفعُ كلُّها على القراءةِ نفسِها */
+function snapshotRecovery(a: RateAmendmentRecovery): RateAmendmentRecovery {
+  const base = a.base;
+  const from = a.from;
+  const ratePerMille = a.ratePerMille;
+  const previousDeclaredAt = a.previousDeclaredAt;
+  const declaredAt = a.declaredAt;
+  const commandId = a.commandId;
+  const commandIssuedAt = a.commandIssuedAt;
+  return Object.freeze(
+    commandIssuedAt === undefined
+      ? { base, from, ratePerMille, previousDeclaredAt, declaredAt, commandId }
+      : { base, from, ratePerMille, previousDeclaredAt, declaredAt, commandId, commandIssuedAt },
+  );
+}
+
 /** سجلُّ النِّسَبِ وحرسُ الأوامرِ المنفَّذة — بلا تدوينٍ ولا اعتماد (RULE-004) */
 export class RatePolicy {
   private readonly history = new Map<string, RateDeclaration[]>();
@@ -78,8 +106,10 @@ export class RatePolicy {
 
   constructor(rates: readonly RateDeclaration[]) {
     for (const rate of rates) {
-      assertPrimitiveDeclaration(rate);
-      this.history.set(rate.base, [{ ...rate }]);
+      // لقطةٌ واحدةٌ مجمّدة: الفحصُ على ما يُخزَّنُ لا على قراءةٍ أخرى لمرجعٍ حيّ (الجلسة 11)
+      const snapshot = snapshotDeclaration(rate);
+      assertPrimitiveDeclaration(snapshot);
+      this.history.set(snapshot.base, [snapshot]);
     }
   }
 
@@ -134,7 +164,10 @@ export class RatePolicy {
    */
   restore(amendments: readonly RateAmendmentRecovery[]): number {
     let applied = 0;
-    for (const a of amendments) {
+    for (const witness of amendments) {
+      // قراءةٌ واحدةٌ لحقولِ الشاهدِ (الجلسة 11): الفحصُ والمفتاحُ والدفعُ كلُّها على اللقطةِ لا على
+      // قراءاتٍ متجدّدةٍ لمرجعٍ حيّ — فما فُحِص هو ما يُخزَّن
+      const a = snapshotRecovery(witness);
       const h = this.history.get(a.base);
       if (!h) throw new Error(`RECOVERY_RATE_BASE_UNDECLARED:${a.base}`);
       if (!isValidRatePerMille(a.ratePerMille)) throw new Error('RECOVERY_RATE_INVALID');

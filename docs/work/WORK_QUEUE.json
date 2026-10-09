@@ -1462,7 +1462,7 @@
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "الاقتصاد والمالية",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "T-53",
         "2026-10-05 (الجلسة 95): استلامٌ بأمر المالك («عالج العيوب وحل التعارضات وواصل العمل») من المساعد الآلي — Perplexity Computer (الجلسة 90)، وعلاجُ RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS داخل النطاق (src/data/rehydrate_fiscal.ts · src/economy/rate_policy.ts · tests/data/rehydrate_fiscal.test.ts).",
@@ -1480,7 +1480,8 @@
         "2026-10-09 (الجلسة 104): الجلسة 9 — NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). عاد إلى IN_PROGRESS بعيبَين مسمّيين في دوام تعديل النسبة. رفعٌ لاحقٌ إلى REVIEW بتغيّرٍ مقيسٍ بعد علاجهما في هذا البند.",
         "2026-10-09 (الجلسة 104): علاجُ عيوب الجلسة 9 داخل النطاق: ذرّيةُ قيد السجل في AppendOnlyLog.append (فشلُ الوسيط الدائم يردُّ القيد ويرمي — RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC) وتقديمُ شاهد rate_amended على كل تغييرٍ في amendRate، وبدائيّةُ الإعلان في مُنشئ RatePolicy وappend مع رفضُ now غير الرقمي (RATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE) · +3 اختبارات · ثلاثُ طفراتٍ مقتولة. وتوسيعُ النطاق بـsrc/audit/append_only_log.ts (غير محجوزٍ لأحد). الحال IN_PROGRESS حتى التزامة الرفع.",
         "2026-10-09 (الجلسة 104): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق (10 مسارات) تخالف بصمةَ محضر الجلسة 9 (1bcaedf8…) كما قِيست عند التزام العلاج. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
-        "2026-10-09 (الجلسة 105): الجلسة 11 — NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). عاد إلى IN_PROGRESS بأربعة عيوبٍ مسمّاةٍ في دوام تعديل النسبة (دوامُ الوسيط بعد التدوين · إعادةُ قراءة الحارس للمرجع الحيّ · ردُّ الذاكرة يُخرج القيد الخطأ · وقبولُ null بوصفه التزامًا) وفشلِ verify على الالتزام المجمد (DC-03 خارج النطاق). رفعٌ لاحقٌ إلى REVIEW بتغيّرٍ مقيسٍ بعد علاجها في هذا البند."
+        "2026-10-09 (الجلسة 105): الجلسة 11 — NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). عاد إلى IN_PROGRESS بأربعة عيوبٍ مسمّاةٍ في دوام تعديل النسبة (دوامُ الوسيط بعد التدوين · إعادةُ قراءة الحارس للمرجع الحيّ · ردُّ الذاكرة يُخرج القيد الخطأ · وقبولُ null بوصفه التزامًا) وفشلِ verify على الالتزام المجمد (DC-03 خارج النطاق). رفعٌ لاحقٌ إلى REVIEW بتغيّرٍ مقيسٍ بعد علاجها في هذا البند.",
+        "2026-10-09 (الجلسة 105 — علاج الجلسة 11): عولجت ثلاثةٌ من عيوب الجلسة 11: حارسُ دخولٍ في AppendOnlyLog.append (APPEND_REENTRANCY_REFUSED — رَدُّ القيدِ بتحقّقِ الهُويّةِ لا يفرقعَ قيدَ غيرِه) ورميُ الوسيطِ يُغلَّفُ بـAUDIT_APPEND_OUTCOME_UNKNOWN (نتيجةٌ غير معلومةٍ — الإرجاعُ الحَكَم) وقراءةٌ واحدةٌ لكلِّ حقلٍ في rate_policy (لقطةٌ مجمّدة — ما فُحِص هو ما يُخزَّن). +4 اختبارات (11أ · 11ج · 11د · 11هـ) و3 طفراتٍ مقتولة. وعيبُ رفضِ null علاجُه مصمَّمٌ ومُقيسٌ لكنه مسدودٌ بمحاكاةٍ في مسارٍ محجوزٍ لبندٍ حيّ (tests/data/rehydrate_roundtrip.test.ts · W-2026-040) فسُحب — تناقضٌ موثق قرارُه للمالك. npm test 2423/2423 · check:numbers ✓. رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 87f5bb97… (10 مسارات) تخالف بصمةَ محضر الجلسة 11 (e8304c9a…). رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020)."
       ],
       "dependencies": [
         "لا شيء"
@@ -1521,7 +1522,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "علاجُ عيوب الجلسة 11 الأربعة المسمّاة داخل النطاق (بروتوكولُ التزام/استعادةٍ للوسيط في append · لقطةٌ واحدةٌ تُفحص وتُخزَّن في الحارس البدائي · ردُّ الذاكرة بالمُخرَج المسمّى · ورفضُ null بوصفه التزامًا) ثم الرفعُ إلى REVIEW بتغيّرٍ مقيس (الثابت 8) لعقد الجلسة 13.",
+      "next_step": "قرارُ المالكِ في تناقضِ عيبِ null (مسارٌ محجوزٌ لـW-2026-040) ثم الجلسة 13 لمجلس المراجعة (RULE-020) — جولةٌ واحدةٌ غير متزامنة؛ وعقدُها قبل القرارِ محسومُ النتيجةِ على عيبٍ مُعلَنٍ مسدود.",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-09",
       "documentation_impact": [
@@ -1530,7 +1531,7 @@
         "CHANGELOG.md — مدخلُ البند",
         "version.json — tests.total بالمقيس"
       ],
-      "verification": "شُغِّل في 2026-10-09 (الجلسة 104) على التزامة العلاج 3a63483 (على هذا الفرع): node --test dist/tests/economy/tax_rate_amendment.test.js → pass 21 · fail 0 · node --test dist/tests/data/rehydrate_fiscal*.test.js → pass 8 · fail 0 · npm test → 2411/2411 · npm run verify → EXIT=0 · ثلاثُ طفراتٍ مقتولة (بلا ردِّ القيد · بلا حراسةِ now · بلا بدائيّةِ الإعلان). بصمةُ النطاق (10 مسارات بعد التوسيع بـsrc/audit/append_only_log.ts) = e8304c9aa90e83588179b6ed6079ebec393d81cec0fb0fbca3be2fdba569a83a — قيست بعد التزام محتوى النطاق. تخالف بصمةَ محضر الجلسة 9 (1bcaedf8…) — الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-065.md. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
+      "verification": "شُغِّل في 2026-10-09 (الجلسة 105) على هذه الشجعة: node --test dist/tests/economy/tax_rate_amendment.test.js → 22/22 · node --test dist/tests/data/rehydrate_fiscal_rate.test.js → 6/6 · node --test dist/tests/data/rehydrate_roundtrip.test.js → 3/3 (المسارُ المحجوزُ بلا أثرٍ بعد سحبِ علاجِ null) · npm test → 2423/2423 · npm run check:numbers → EXIT=0 (2423 مطابق) · npm run verify → EXIT=0 · قتلُ الطفرات: إلغاءُ التغليفِ ⇒ سقوطُ 11أ و9ج · إلغاءُ اللقطاتِ ⇒ سقوطُ 11د و11هـ · إلغاءُ الحارسِ ⇒ سقوطُ 11ج · إلغاءُ فرعِ null ⇒ سقوطُ 11ب (قبل سحبه) — كلُّها مقتولة. بصمةُ النطاق (10 مسارات) = 87f5bb976f3eebe46bad2f592be96a4f7fc838259437fe30e66c695837941194 — تخالف بصمةَ محضر الجلسة 11 (e8304c9a…). الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-065.md.",
       "discoveries": [
         "مجلس المراجعة — الجلسة 1 (2026-10-04 · عند 5bfd61f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان: (1) إعادةُ الأمر الملكيّ نفسِه تُنفّذ تعديلًا ثانيًا لأنّ بوابةَ التاج idempotent تُعيد قرارَها السابق allowed=true وamendRate لا يميّز الإعادة — grok؛ (2) RATE_AMENDMENT_COMMAND_NOT_PARAMETER_BOUND: الأمرُ لا يربط الوعاءَ ولا النسبة، فتوقيعٌ واحدٌ يعدّل كلَّ الأوعية — gpt. وعولجا من الجذر في الجلسة 91 (انظر verification).",
         "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب RATE_AMENDMENT_HISTORY_NOT_DURABLE (gpt): سجلُّ النِّسَبِ (rateHistory) ومعرّفاتُ الأوامرِ المنفَّذةِ (amendmentCommands) في الذاكرة وحدها — restore لا يسترجعُهما ومسارُ rehydrate_fiscal.ts لا يمررُهما لخدمةِ الإيراد، فإعادةُ تشغيلِ الدولة تمحو الإعلاناتِ التشغيليةَ من سجلِ النِّسَب (قيسها المسبارُ: الإعلانُ 40‰ يختفي بعد إعادةِ البناء) وتفقدُ منعَ إعادةِ الأمرِ نفسِه عبرَ حدودِ إعادةِ التشغيل.",
