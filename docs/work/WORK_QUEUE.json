@@ -1360,7 +1360,7 @@
       "reviewer": "القيّم على المستودع (المالك) — ومجلس المراجعة (RULE-020)",
       "area": "التوثيق والحوكمة",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "قيس كلُّ رابطٍ نسبيٍّ في الوثائق: 34 مكسورًا خارج WORK_LOG.md",
         "أُصلحت 25 في نطاق هذا البند، و9 في نطاق W-2026-038 وW-2026-059 داخل بندَيهما (#32 · #33)",
@@ -1428,7 +1428,7 @@
       "next_step": "الجلسةُ الحادية عشرة لمجلس المراجعة (RULE-020) — البندُ في REVIEW بعلاجِ عيوب الجلسة 10 ملتزمًا وبصمةٍ تخالف محضرها.",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-09",
-      "verification": "شُغِّل في 2026-10-08 (الجلسة 101) على التزامة العلاج 86450d2 (مدموج في هذا الفرع): npm run check:numbers → EXIT=0 (2407/2407) · npm run check:work → EXIT=0 · npm run check:size → EXIT=0 · node --test dist/tests/governance/doc_links.test.js → pass 12 · fail 0 · node --test dist/tests/governance/generated_numbers.test.js → pass 18 · fail 0 · npm test 2407/2407. بصمةُ النطاق (21 مسارًا) = d732eaeaa93db76215a9c57c4aa25839654ae37fb3d1ef190d08d22152096f12 — قيست بعد التزام محتوى النطاق. تخالف بصمةَ محضر الجلسة 7 (540f6848…) — الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-064.md. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
+      "verification": "شُغِّل في 2026-10-09 (الجلسة 104) على التزامة العلاج eef2dae (على هذا الفرع): node --test dist/tests/governance/doc_links.test.js → pass 13 · fail 0 · npm test → 2408/2408 · npm run verify → EXIT=0 · أربعُ طفراتٍ مقتولة (بلا حصر الجذر · بلا \\r · بلا نسبة الجذر · قراءة GN-05 خامًا). بصمةُ النطاق (21 مسارًا) = 0dc9a55ab4682f8843b2551113abb58fb2ba4263e89b8f215ae37b68b2a03adb — قيست بعد التزام محتوى النطاق. تخالف بصمةَ محضر الجلسة 10 (d732eaea…) — الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-064.md. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
       "documentation_impact": [
         "ARCHITECTURE.md",
         "PROGRESS.md",
