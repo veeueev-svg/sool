@@ -22,7 +22,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { bootstrapState } from '../../src/index';
 import { rehydrateFiscalFromJournal } from '../../src/data/rehydrate_fiscal';
-import type { DurableRecord } from '../../src/data/persistence';
+import type { DurableRecord, DurableSink } from '../../src/data/persistence';
+import type { RateAmendmentRecovery } from '../../src/economy/tax';
 
 const T0 = Date.parse('2026-08-23T00:00:00Z');
 const DAY = 24 * 60 * 60 * 1000;
@@ -141,6 +142,102 @@ test('T-53/مجلس 5: شاهدان بمعرّفِ أمرٍ واحدٍ ونسب�
       assert.throws(() => rehydrateFiscalFromJournal([entry({ ...first, ...o }, 3)], { revenue: s.revenue }, 'ministry:data'),
         (e: Error) => e.message === 'RECOVERY_RATE_COMMAND_CONFLICT:cmd:dup-1', JSON.stringify(o));
     }
+  } finally {
+    sc.clean();
+  }
+});
+
+test('T-53/مجلس 11أ: رميُ الوسيطِ بعد التدوينِ نتيجةٌ غير معلومةٍ — والإرجاعُ بعد التشغيلِ هو الحَكَم (RATE_AMENDMENT_DURABLE_POSTCOMMIT_THROW_INCONSISTENT_ACK)', () => {
+  const sc = scene();
+  try {
+    const s = sc.boot();
+    const at = T0 + 5 * 60_000;
+    const cmd = s.king.issueCommand('amend_policy', 'economy:revenue',
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at);
+    // وسيطٌ يدوّنُ قيدَ rate_amended في دفترِه ثم يرمي — عينُ مسبار gpt في الجلسة 11
+    const durable: DurableRecord[] = [];
+    const postCommitThrow: DurableSink = {
+      record: (kind, payload, at = 0) => {
+        if ((payload as { kind?: string } | undefined)?.kind === 'rate_amended') {
+          durable.push({ seq: 1, at, kind, payload, prevHash: '0', hash: '1' });
+          throw new Error('PROBE_POST_COMMIT_THROW');
+        }
+        return { seq: 0, at, kind, payload, prevHash: '0', hash: '0' };
+      },
+    };
+    s.audit.attachSink(postCommitThrow);
+    // الاستدعاءُ يعودُ بـ«مجهولِ النتيجة» لا «فشلٍ قاطعٍ»: القيدُ قد يكونُ دُوّنَ ثم رمى الوسيطُ
+    assert.throws(() => s.revenue.amendRate(cmd, 'compute_usage', 40, at),
+      (e: Error) => e.message === 'AUDIT_APPEND_OUTCOME_UNKNOWN'
+        && (e.cause as Error | undefined)?.message === 'PROBE_POST_COMMIT_THROW');
+    // والذاكرةُ رُدَّت كاملةً: لا نسبةَ جديدةَ ولا شاهدًا في الذاكرةِ ولا تاريخًا زائدًا
+    assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'الحالُ الحيُّ لم يتغيّر');
+    assert.equal(s.revenue.rateHistoryOf('compute_usage').length, 1, 'التاريخُ لم يزدد');
+    assert.equal(s.audit.find('rate_amended').length, 0, 'لا شاهدَ في الذاكرة');
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةٌ بعد الرد');
+    // لكنّ الوسيطَ الدائمَ يحملُ الشاهدَ — فالمجهولةُ تلتزمُ عند الاسترجاع: الإرجاعُ هو الحَكَم
+    assert.equal(durable.length, 1, 'الشاهدُ دُوّنَ في الوسيطِ قبل الرمي');
+    const report = rehydrateFiscalFromJournal(durable, { revenue: s.revenue }, 'ministry:data');
+    assert.equal(report.rateAmendments, 1, 'الإرجاعُ قبلَ الشاهدِ الدائم');
+    assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 40, 'المجهولةُ التزمت عند الاسترجاع');
+  } finally {
+    sc.clean();
+  }
+});
+
+test('T-53/مجلس 11ج: وسيطٌ يستدعي الإضافةَ أثناء التدوينِ يُرفض دخولُه — فرَدُّ القيدِ لا يفرقعَ قيدَ غيرِه (RATE_AMENDMENT_APPEND_ROLLBACK_POPS_WRONG_ENTRY)', () => {
+  const sc = scene();
+  try {
+    const s = sc.boot();
+    const at = T0 + 4 * 60_000; // ضمنَ نافذةِ حضورِ الملكِ — الرفضُ من الوسيطِ وحده
+    const cmd = s.king.issueCommand('amend_policy', 'economy:revenue',
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at);
+    // وسيطٌ يستدعي الإضافةَ من داخلِ record — عينُ مسبار grok في الجلسة 11
+    const reentrant: DurableSink = {
+      record: (kind, payload, at = 0) => {
+        if ((payload as { kind?: string } | undefined)?.kind === 'rate_amended') {
+          s.audit.append('authority:audit_bureau', 'inner_ok', { probe: true });
+        }
+        return { seq: 0, at, kind, payload, prevHash: '0', hash: '0' };
+      },
+    };
+    s.audit.attachSink(reentrant);
+    assert.throws(() => s.revenue.amendRate(cmd, 'compute_usage', 40, at),
+      (e: Error) => e.message === 'AUDIT_APPEND_OUTCOME_UNKNOWN'
+        && (e.cause as Error | undefined)?.message === 'APPEND_REENTRANCY_REFUSED',
+      'دخولُ الإضافةِ أثناء التدوينِ مرفوضٌ مسمًّى');
+    // لا شاهدَ تعديلٍ ولا قيدَ دخيلٍ في الذاكرة — فالردَّ فرقعَ قيدَ صاحبِه لا قيدَ الدخيل
+    assert.equal(s.audit.find('rate_amended').length, 0, 'لا شاهدَ في الذاكرة');
+    assert.equal(s.audit.find('inner_ok').length, 0, 'وقيدُ الدخيلِ لم يُدفع');
+    assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'الحالُ لم تتغيّر');
+    assert.equal(s.revenue.rateHistoryOf('compute_usage').length, 1, 'التاريخُ لم يزدد');
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةٌ بعد الرد');
+  } finally {
+    sc.clean();
+  }
+});
+
+test('T-53/مجلس 11هـ: شاهدُ إرجاعٍ بحاصلِ قراءاتٍ حيٍّ يُطبَّق على قراءتِه الأولى المفحوصة (RATE_AMENDMENT_PRIMITIVE_GUARD_REREAD_LIVE_REFERENCE)', () => {
+  const sc = scene();
+  try {
+    const s = sc.boot();
+    const D0 = s.revenue.rateFor('compute_usage')!.declaredAt;
+    const at = D0 + 8 * 60_000;
+    let reads = 0;
+    // شاهدٌ حيٌّ: قراءتُه الأولى سليمةٌ (25) وكلُّ قراءةٍ لاحقةٍ دخيلةٌ (999)
+    const tricky = {
+      base: 'compute_usage',
+      get from() { reads += 1; return reads === 1 ? 25 : 999; },
+      ratePerMille: 40,
+      previousDeclaredAt: D0,
+      declaredAt: at,
+      commandId: 'cmd:probe-reread',
+    } as unknown as RateAmendmentRecovery;
+    // القراءةُ الواحدةُ تجعلُ الفحصَ والدفعَ على القيمةِ نفسِها — فلا سلسلةً مكسورةً زورًا ولا حمولةً دخيلة
+    s.revenue.restoreRateAmendments([tricky], 'authority:audit_bureau');
+    assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 40, 'الشاهدُ بقراءتِه الأولى طُبِّق');
+    assert.equal(s.revenue.rateHistoryOf('compute_usage').length, 2, 'والتاريخُ ازدادَ إعلانًا واحدًا');
+    assert.ok(reads >= 1, 'قراءةٌ واحدةٌ تكفي');
   } finally {
     sc.clean();
   }

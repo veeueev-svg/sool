@@ -336,6 +336,10 @@ export class RevenueService {
     // وإذا نجحت فالتغييرُ بعدها لا يعرف الفشل. فلا يبقى تعديلٌ حيٌّ بلا سجلٍّ دائمٍ تفقدُه
     // إعادةُ التشغيل (الجلسة 9 · RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC — والإضافةُ في
     // AppendOnlyLog ذرّيّةٌ منذ الجلسة 9 نفسِها).
+    // رميُ الوسيطِ بعد الإضافةِ ليس فشلًا قاطعًا: السجلُ يرمي AUDIT_APPEND_OUTCOME_UNKNOWN
+    // (وعلةُ رميِ الوسيطِ في cause) لأنّ القيدَ قد يكونُ دُوّنَ ثم رمى — فالإرجاعُ بعد التشغيلِ
+    // هو الحَكَم، والاستدعاءُ يُخبَر أنّ النتيجةَ مجهولةٌ لا مرفوضةٌ (الجلسة 11 ·
+    // RATE_AMENDMENT_DURABLE_POSTCOMMIT_THROW_INCONSISTENT_ACK).
     const entry = this.deps.audit.append(this.actorId, 'rate_amended', {
       base,
       from: current.ratePerMille,

@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { REVENUE_TARGET, UNIT_TARGET, bootstrapState } from '../../src/index';
-import { RatePolicy } from '../../src/economy/rate_policy';
+import { RatePolicy, type RateDeclaration } from '../../src/economy/rate_policy';
 import type { RateAmendmentRecovery } from '../../src/economy/tax';
 import type { DurableSink } from '../../src/data/persistence';
 
@@ -338,14 +338,18 @@ test('**T-53/مجلس 9ج** — RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC: فش
   const before = s.audit.length;
   // وسيطٌ دائمٌ يرفض كتابة قيد rate_amended وحده — عينُ مسبار الجلسة 9
   const refusingSink: DurableSink = {
-    record: (_kind, payload) => {
+    record: (kind, payload, at = 0) => {
       if ((payload as { kind?: string } | undefined)?.kind === 'rate_amended') throw new Error('PROBE_DURABILITY_REFUSAL');
-      return null;
+      // غيرُ الشاهدِ يُدوَّن قيدًا صوريًّا: ردُّ null صار رفضًا مسمّى لا «التزامًا» صامتًا (الجلسة 11)
+      return { seq: 0, at, kind, payload, prevHash: '0', hash: '0' };
     },
   };
   s.audit.attachSink(refusingSink);
+  // رميُ الوسيط صار نتيجةً غير معلومةٍ (الجلسة 11): قد يكونُ دُوّنَ ثم رمى — والإرجاعُ الحَكَم
   assert.throws(() => s.revenue.amendRate(cmd, 'compute_usage', 40, T1),
-    /PROBE_DURABILITY_REFUSAL/, 'فشلُ الوسيط يُرمي لا يُبتلع');
+    (e: Error) => e.message === 'AUDIT_APPEND_OUTCOME_UNKNOWN'
+      && (e.cause as Error | undefined)?.message === 'PROBE_DURABILITY_REFUSAL',
+    'رميُ الوسيط يُرمي «مجهولَ النتيجة» بعلةٍ لا يُبتلع');
   // الحالُ رُدَّ كاملًا: لا نسبةَ جديدة ولا تاريخَ زائد ولا أمرًا محروقًا ولا قيدًا في الذاكرة
   assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'النسبةُ الحاكمة لم تتغير');
   assert.equal(s.revenue.rateHistoryOf('compute_usage').length, 1, 'التاريخُ لم يزدد');
@@ -355,10 +359,26 @@ test('**T-53/مجلس 9ج** — RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC: فش
   assert.equal(s.audit.length, before + 1, 'قيدُ rate_amended رُدّ ولم يبقَ إلا قيدُ البوابة');
   assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةٌ بعد الرد');
   // والأمرُ لم يُستهلك: بعد زوال السبب ينجحُ التعديلُ بالمعرّف نفسه
-  const okSink: DurableSink = { record: () => null };
+  const okSink: DurableSink = {
+    record: (kind, payload, at = 0) => ({ seq: 0, at, kind, payload, prevHash: '0', hash: '0' }),
+  };
   s.audit.attachSink(okSink);
   const retry = s.revenue.amendRate(cmd, 'compute_usage', 40, T1);
   assert.equal(retry.ok, true, 'إعادةُ الأمرِ بعد زوالِ سببِ الفشل تنجح');
   assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 40);
   assert.equal(s.audit.find('rate_amended').length, 1, 'وشاهدٌ واحدٌ لا اثنان');
+});
+
+test('**T-53/مجلس 11د** — RATE_AMENDMENT_PRIMITIVE_GUARD_REREAD_LIVE_REFERENCE: إعلانٌ حيٌّ يُخزَّنُ بقراءتِه الأولى المفحوصةِ لا بقراءةٍ لاحقةٍ دخيلة', () => {
+  let reads = 0;
+  // إعلانٌ بحاصلِ قراءاتٍ: الأولى سليمةٌ (25) تمرُّ الفحص، وكلُّ لاحقةٍ دخيلة (999)
+  const tricky = {
+    base: 'compute_usage',
+    get ratePerMille() { reads += 1; return reads === 1 ? 25 : 999; },
+    declaredAt: NOW,
+  } as unknown as RateDeclaration;
+  const policy = new RatePolicy([tricky]);
+  assert.equal(policy.currentFor('compute_usage')?.ratePerMille, 25, 'المخزَّنُ هو ما فُحِص — القراءةُ الأولى');
+  assert.equal(policy.historyOf('compute_usage')[0]?.ratePerMille, 25, 'والتاريخُ كذلك');
+  assert.ok(reads >= 1, 'قراءةٌ واحدةٌ تكفي');
 });
