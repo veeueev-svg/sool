@@ -1,0 +1,40 @@
+{
+  "item": "W-2026-065",
+  "commit": "e11214887c2e50afd79a3aebce9e1b16573ed243",
+  "scope_digest": "1bcaedf8c13afc62626a6b5256cf3a98524ac71429142a9b525ecc135f2ba296",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-09",
+  "session": 9,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-9-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-9-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-065-9-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC (gpt): في src/economy/tax.ts تقع markExecuted() ثم RatePolicy.append() قبل audit.append('rate_amended')؛ وفي AppendOnlyLog يُضاف القيد إلى الذاكرة أولًا ثم يستدعى الوسيط الدائم — فإذا رمى الوسيط عند كتابة قيد rate_amended فلا تراجعَ عن النسبة المضافة ولا عن معرّف الأمر المنفذ: تعديلٌ حيٌّ بلا سجلٍّ دائم، وإعادةُ التشغيل تفقد التعديل (قِيس بمسبارٍ على dist/ بوسيطٍ يرفض قيد rate_amended وحده: قبل إعادة التشغيل 40‰ وسجلّان، وبعدها 25‰ وسجلٌّ واحد). علاجُه في بند W-2026-065.",
+      "RATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE (grok): علاجُ الجلسة 8 (نسخُ الغلاف) أغلق مرجعَ الغلاف لا قيمةَ الحقل غير البدائي — بقي مسارُ تسريبِ مرجعٍ حيٍّ في declaredAt (وفي ratePerMille عبر المُنشئ) يُحرِّك السريان رجعيًّا وإلى المستقبل بعد اعتمادٍ واحد. علاجُه في بند W-2026-065.",
+      "قياسٌ مسجّل (gpt): npm test عند التجميد e112148 خرج 1 (2406/2407 — سقوط T-142/DC-04 في declaration_gate) في بيئة العضو gpt وتكرر ثلاثًا، وخرج 0 عند عضوين آخرين — تقلبٌ في بوابة الإعلان خارج نطاق البند (وسُمّي لاحقًا DECLARATION_GATE_PIPEFAIL_SIGPIPE_FLAKE في الجلسة 10 على W-2026-064)."
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "item": "W-2026-064",
+  "commit": "690c7da2a4a7511017e92b36ce2710435dd4d5b9",
+  "scope_digest": "d732eaeaa93db76215a9c57c4aa25839654ae37fb3d1ef190d08d22152096f12",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-09",
+  "session": 10,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-10-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-10-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-10-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "DOC_LINK_GUARD_PARENT_ESCAPE_BYPASS (gpt): brokenLinksIn يطبّع join(dirname(file), target) ثم يفحص الوجود بـ join(ROOT, p) من دون إثبات أن p لا يخرج من ROOT — رابطٌ نسبيٌّ يصل إلى ملفٍّ في والد المستودع ([x](../../W-2026-064-package.md)) يمرُّ صامتًا (قِيس: reported=[] وexistsOutsideRepo=true).",
+      "DOC_LINK_GUARD_TRAVERSAL_HOST_EXISTS_BYPASS (grok): الحارس لا يحصر المسار تحت جذر المستودع — [x](../../../../../../../../etc/passwd) و%2e%2e/ المكررة تمرُّ صامتةً إن وُجد الملف على المضيف (قِيس على /etc/passwd: brokenLinksIn أعاد []).",
+      "DOC_LINK_GUARD_CRLF_DESTINATION_BYPASS (gemini): scanInlineDestination لا يتعرف على \\r كفراغ — رابطٌ وجهتُه بعد كسر سطر CRLF ([x](\\r\\nmissing.md)) يعمى الحارس عنه كليًّا ويعيد [] (قِيس على dist/؛ مقابل LF الخالص يُكشف).",
+      "DOC_LINK_GUARD_ROOT_ABSOLUTE_FALSE_REJECT (grok · ملاحظة غير مُسقِطة وحدها): [x](/README.md) يُبلَّغ مكسورًا رغم أن GitHub ينسب الرابطَ الذي يبدأ بـ / إلى جذر المستودع.",
+      "PROGRESS_TEST_ROW_STALE (grok): صفُّ الاختبارات في PROGRESS.md يقول 2406 والمقيسُ 2407 (version.json يقول 2407) — الرقمُ المنقولُ في الصفِّ الذي يملكه معيارُ هذا البند يكذب بصمت.",
+      "GN05_REGEX_EOL_BYPASS (grok): باب [GN-05] يعتمد مرساة $ — حصيلةٌ ثانية أسطرها تنتهي بفراغٍ أو CR لا تُعدُّ فيرفض البابُ رفضَها فيُصدَّق رقمُ النتيجة الأولى.",
+      "TEST_TALLY_TRUNCATE_RACE (grok): كاتب Node يفتح الحصيلة بالقطع (w) — كاتبٌ متأخرٌ يترك حصيلةَ تشغيلٍ واحدٍ شكلًا (قِيس: ثمانية كتّاب متزامنين أنتجوا سطرًا واحدًا من كل نوع) فيصدّقها الفاحص.",
+      "OUT_OF_SCOPE_GENERATED_NUMBERS_TEST (grok · مخالفةُ حوكمةٍ مسجّلة): الالتزام 533a546 لمس tests/governance/generated_numbers.test.ts وهو محجوزٌ لبند W-2026-040 (REVIEW) — البوابةَ لا تعيد فحص التزاماتٍ ماضية؛ اللمسُ مقيسٌ في git show.",
+      "DECLARATION_GATE_PIPEFAIL_SIGPIPE_FLAKE (gemini · خارج نطاق البند): scripts/check_declaration.sh يفعّل pipefail وprintf | grep -qx يورث SIGPIPE 141 فيسقط npm test تقلبًا — يُقيَّد لصاحب مساره لا يُعالج هنا."
+    ]
+  }
+}
