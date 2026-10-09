@@ -243,11 +243,12 @@ if [ ! -f "$TALLY" ]; then
   exit 1
 fi
 
-# حصيلةٌ معياريةُ الأسطر (الجلسة 10 · GN05_REGEX_EOL_BYPASS): الأسطرُ تُقرأ بلا CR وبلا
-# فراغٍ زائدٍ في آخرها قبل كلِّ قياس — فسطرُ `# tests N` الذي ينتهي بـCR أو بفراغٍ زائد
-# سطرُ حصيلةٍ كاملُ الحقِّ يُعَدُّ ولا يُغفل، فلا يُصدَّقُ رقمُ نتيجةٍ أولى لأنّ الثانية
-# «لا تطابق المرساة». والمعايرةُ على نصٍّ لا على ملف — فلا يُلمس الملفُ الأصلي.
-TALLY_TEXT=$(tr -d '\r' < "$TALLY" | sed -e 's/[ \t]*$//')
+# حصيلةٌ معياريةُ الأسطر (الجلسة 10 · GN05_REGEX_EOL_BYPASS · والجلسة 12): الأسطرُ تُقرأ
+# بعدَ تطبيعِ الفواصلِ والذيول — فسطرُ `# tests N` الذي يفرّقه كاتبٌ عن سابقه بـCR وحدها أو
+# يختمه بـVT أو FF أو NBSP سطرُ حصيلةٍ كاملُ الحقِّ يُعَدُّ ولا يُغفل (لا حذفَ للـCR يلحم
+# سطرين، ولا ذيلَ للفراغاتِ يُعمي المرساة)، فلا يُصدَّقُ رقمُ نتيجةٍ أولى لأنّ الثانية
+# «لا تطابق النمط». والمعايرةُ على نصٍّ لا على ملف — فلا يُلمس الملفُ الأصلي.
+TALLY_TEXT=$(tr '\r\v\f' '\n' < "$TALLY" | sed -e 's/[ \t\xc2\xa0]*$//')
 
 RUN_TESTS=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# tests \([0-9][0-9]*\)$/\1/p' | tail -1)
 RUN_PASS=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# pass \([0-9][0-9]*\)$/\1/p' | tail -1)
@@ -267,7 +268,15 @@ TALLY_TESTS_LINES=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# tests \([0-9][0-9
 TALLY_PASS_LINES=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# pass \([0-9][0-9]*\)$/\1/p' | wc -l | tr -d ' ')
 TALLY_FAIL_LINES=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# fail \([0-9][0-9]*\)$/\1/p' | wc -l | tr -d ' ')
 
-if [ "$TALLY_TESTS_LINES" -gt 1 ] || [ "$TALLY_PASS_LINES" -gt 1 ] || [ "$TALLY_FAIL_LINES" -gt 1 ]; then
+# سطرٌ يشبه رمزَ الحصيلةِ ولا يطابقُ شكلَه المعلن (`# tests N`) يُرى ويُرفض — لا يُغفل
+# فتُصدَّقَ نتيجةُ أولى (الجلسة 12 · GN05_TOKEN_SHAPE_BYPASS): مسافةٌ قائدة أو مسافتان بين
+# الرمزِ والعددِ شكلٌ شاذٌّ يُسمّى لا صمتٌ يُتغاضى — فالحصيلةُ التي لا تُقرأ بثباتٍ لا تُصدَّق.
+TALLY_MALFORMED_LINES=$(printf '%s\n' "$TALLY_TEXT" | sed -n -E '/^[ \t]*#[ \t]*(tests|pass|fail)\b/{/^# (tests|pass|fail) [0-9]+$/!p}' | wc -l | tr -d ' ')
+
+if [ "$TALLY_MALFORMED_LINES" -gt 0 ]; then
+  echo "✗ [GN-05] حصيلةُ المُشغّل في $TALLY تحوي $TALLY_MALFORMED_LINES سطرًا يشبه رمزَ الحصيلة ولا يطابق شكلها المعلن (\`# tests N\`) — حصيلةٌ بصيغةٍ شاذةٍ لا تُقرأ بثباتٍ فلا تُصدَّق (GN05_TOKEN_SHAPE_BYPASS)"
+  FAIL=1
+elif [ "$TALLY_TESTS_LINES" -gt 1 ] || [ "$TALLY_PASS_LINES" -gt 1 ] || [ "$TALLY_FAIL_LINES" -gt 1 ]; then
   echo "✗ [GN-05] حصيلةُ المُشغّل في $TALLY ليست حصيلةَ تشغيلٍ واحد موثوقًا: $TALLY_TESTS_LINES سطر tests · $TALLY_PASS_LINES سطر pass · $TALLY_FAIL_LINES سطر fail — والرقمُ المقروء من تشغيلين متزامنين يكذب (TEST_TALLY_APPEND_RACE)"
   FAIL=1
 elif [ "$RUN_TESTS" -lt 0 ] || [ "$RUN_PASS" -lt 0 ] || [ "$RUN_FAIL" -lt 0 ]; then

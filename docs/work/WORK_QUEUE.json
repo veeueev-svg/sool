@@ -1360,7 +1360,7 @@
       "reviewer": "القيّم على المستودع (المالك) — ومجلس المراجعة (RULE-020)",
       "area": "التوثيق والحوكمة",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "قيس كلُّ رابطٍ نسبيٍّ في الوثائق: 34 مكسورًا خارج WORK_LOG.md",
         "أُصلحت 25 في نطاق هذا البند، و9 في نطاق W-2026-038 وW-2026-059 داخل بندَيهما (#32 · #33)",
@@ -1382,7 +1382,9 @@
         "2026-10-09 (الجلسة 104): الجلسة 10 — NOT_VERIFIED بإجماع (gpt REJECTED · grok REJECTED · gemini REJECTED). عاد إلى IN_PROGRESS بعيوبٍ مسمّاةٍ في حارس الروابط وأبواب الأرقام وصفّ الاختبارات. رفعٌ لاحقٌ إلى REVIEW بتغيّرٍ مقيسٍ بعد علاج العيوب في هذا البند.",
         "2026-10-09 (الجلسة 104): علاجُ عيوب الجلسة 10 داخل النطاق: حصرُ الوجهة تحت جذر المستودع في brokenLinksIn (DOC_LINK_GUARD_PARENT_ESCAPE_BYPASS · DOC_LINK_GUARD_TRAVERSAL_HOST_EXISTS_BYPASS) ونسبةُ /README.md إلى الجذر (DOC_LINK_GUARD_ROOT_ABSOLUTE_FALSE_REJECT) و\\r فراغٌ في الماسح (DOC_LINK_GUARD_CRLF_DESTINATION_BYPASS) ومعياريةُ أسطر الحصيلة في [GN-05] (GN05_REGEX_EOL_BYPASS) وتصحيحُ صف الاختبارات في PROGRESS.md 2406 ⇒ 2408 (PROGRESS_TEST_ROW_STALE) · +1 اختبار · أربعُ طفراتٍ مقتولة. الحال IN_PROGRESS حتى التزامة الرفع.",
         "2026-10-09 (الجلسة 104): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق تخالف بصمةَ محضر الجلسة 10 (d732eaea…) كما قِيست عند التزام العلاج. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
-        "2026-10-09 (الجلسة 105): الجلسة 12 — NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). عاد إلى IN_PROGRESS بأربعة عيوبٍ مسمّاةٍ في باب [GN-05] من حصيلة الاختبارات (VT وCR وفواصل VT/FF/NBSP وشكلُ الرمز). رفعٌ لاحقٌ إلى REVIEW بتغيّرٍ مقيسٍ بعد علاجها في هذا البند."
+        "2026-10-09 (الجلسة 105): الجلسة 12 — NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). عاد إلى IN_PROGRESS بأربعة عيوبٍ مسمّاةٍ في باب [GN-05] من حصيلة الاختبارات (VT وCR وفواصل VT/FF/NBSP وشكلُ الرمز). رفعٌ لاحقٌ إلى REVIEW بتغيّرٍ مقيسٍ بعد علاجها في هذا البند.",
+        "2026-10-09 (الجلسة 105 — علاج الجلسة 12): استلامٌ بأمر المالك (الأمرُ التشغيليُّ الدائم). وُسِّع النطاق بـtests/governance/gn05_tally_gate.test.ts (ملفٌ جديد لا يملكه بندٌ حي) قبل لمسه — اختباراتُ انحدارِ عيوب الجلسة 12 الأربعة لا تُوضع في tests/governance/generated_numbers.test.ts المحجوز لبند W-2026-040 (تداخلٌ محجوز). المعرّف لم يتبدّل (WORK_CONTROL §6).",
+        "2026-10-09 (الجلسة 105 — علاج الجلسة 12): عولجت عيوب الجلسة 12 الأربعة في scripts/check_generated_numbers.sh: CR وVT وFF فواصلُ أسطرٍ في تطبيع الحصيلة (لا حذفَ للـCR يلحم سطرين) وذيلُ NBSP يُقص، وسطرُ الحصيلةِ الشاذُّ الشكلِ يُرفضُ بالاسمِ لا أن يُغفل. +8 اختبارات انحدار (tests/governance/gn05_tally_gate.test.ts — توسيعُ النطاق قبل اللمس؛ generated_numbers.test.ts محجوزٌ لـW-2026-040). طفرةٌ مقتولةٌ بالقياس (إرجاعُ القديم ⇒ 7 من 8 تسقط). npm test 2419/2419 · check:numbers ✓ 2419. رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 1c33607c… (22 مسارًا) تخالف بصمةَ محضر الجلسة 12 (0dc9a55a…). رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020)."
       ],
       "dependencies": [
         "لا شيء"
@@ -1408,7 +1410,8 @@
         "docs/audit/criteria/C-20.md",
         "tests/governance/doc_links.test.ts",
         "scripts/check_generated_numbers.sh",
-        "docs/test-reports/phase-40-W-2026-064.md"
+        "docs/test-reports/phase-40-W-2026-064.md",
+        "tests/governance/gn05_tally_gate.test.ts"
       ],
       "excluded": [
         "C-08 · C-09 · C-11 · C-12 · C-13 · C-21 — محجوزةٌ لـW-2026-038 (أُصلحت في #32)",
@@ -1426,10 +1429,10 @@
         "docs/test-reports/phase-40-W-2026-064.md",
         "npm test 2367/2367 · npm run verify → 0"
       ],
-      "next_step": "علاجُ عيوب الجلسة 12 الأربعة المسمّاة في باب [GN-05] من scripts/check_generated_numbers.sh (فصلُ الأسطر بـCR/LF/CRLF ومحارف الفراغ والتحققُ من شكل الرمز) ثم الرفعُ إلى REVIEW بتغيّرٍ مقيس (الثابت 8) لعقد الجلسة 13.",
+      "next_step": "الجلسة 13 لمجلس المراجعة (RULE-020) على التزامة الرفع — جولةٌ واحدةٌ غير متزامنة، ولا تُعقد إلا بعد رفع W-2026-065 أيضًا أو بأمرٍ من المالك.",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-09",
-      "verification": "شُغِّل في 2026-10-09 (الجلسة 104) على التزامة العلاج eef2dae (على هذا الفرع): node --test dist/tests/governance/doc_links.test.js → pass 13 · fail 0 · npm test → 2408/2408 · npm run verify → EXIT=0 · أربعُ طفراتٍ مقتولة (بلا حصر الجذر · بلا \\r · بلا نسبة الجذر · قراءة GN-05 خامًا). بصمةُ النطاق (21 مسارًا) = 0dc9a55ab4682f8843b2551113abb58fb2ba4263e89b8f215ae37b68b2a03adb — قيست بعد التزام محتوى النطاق. تخالف بصمةَ محضر الجلسة 10 (d732eaea…) — الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-064.md. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
+      "verification": "شُغِّل في 2026-10-09 (الجلسة 105) على هذه الشجعة: node --test dist/tests/governance/gn05_tally_gate.test.js → pass 8 · fail 0 · npm test → 2419/2419 · npm run check:numbers → EXIT=0 (2419 مطابق بعد تحديث version.json بالمقيس) · npm run verify → EXIT=0 · قتلُ الطفرة: إرجاعُ التطبيعِ القديم وتعطيلُ كشفِ الشكل ⇒ 7 من 8 اختباراتِ الانحدارِ تسقط ثم تعودُ للنجاحِ بالعلاج. بصمةُ النطاق (22 مسارًا) = 1c33607c24215b2a88f3d27476625c410faab04064b4bed98cebc87231882773 — تخالف بصمةَ محضر الجلسة 12 (0dc9a55a…). الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-064.md.",
       "documentation_impact": [
         "ARCHITECTURE.md",
         "PROGRESS.md",

@@ -2,6 +2,8 @@
 
 ### حوكمة(40)
 
+- **W-2026-066 — الجلستان 11 و12 لمجلس المراجعة (RULE-020)**: عند `a41efbe` و`b9312885`: W-2026-065 **NOT_VERIFIED** (gpt REJECTED · grok REJECTED · gemini VERIFIED) بعيوب دوام الوسيط بعد التدوين وإعادة قراءة الحارس للمرجع الحي وردّ الذاكرة بالمُخرج الخطأ وقبول null، وW-2026-064 **NOT_VERIFIED** (gpt REJECTED · grok REJECTED · gemini VERIFIED) بعيوب باب [GN-05]: VT وCR وفواصل VT/FF/NBSP وشكلُ الرمز. المحضران `W-2026-065-11.json` و`W-2026-064-12.json` والتقاريرُ الخامُّ في `docs/work/council/`. والبندان عادا إلى `IN_PROGRESS`.
+- **W-2026-064 — علاجُ عيوب الجلسة 12**: تطبيعُ فواصل حصيلةِ المُشغّل في `scripts/check_generated_numbers.sh`: فصلُ الأسطرِ بـCR وVT وFF (لا حذفَ للـCR يلحم سطرين)، وذيلُ الفراغاتِ (فراغ · جدولة · NBSP) يُزال قبل القياس، وسطرُ الحصيلةِ الذي يشبه الرمزَ ولا يطابقُ شكلَه المعلن (`# tests N`) يُرفض بالاسم لا أن يُغفل — فلا تُصدَّقَ نتيجةُ أولى لأنّ الثانية «لا تطابق النمط». ثمانيةُ اختباراتِ انحدارٍ جديدة (`tests/governance/gn05_tally_gate.test.ts`) وطفرةٌ مقتولةٌ بالقياس. `npm test` 2419/2419.
 - **W-2026-064 · W-2026-065 — الجلستان 9 و10 لمجلس المراجعة (RULE-020)**: عند `690c7da` و`bdc2026`: W-2026-065 **NOT_VERIFIED** (gpt REJECTED · grok VERIFIED · gemini VERIFIED) بعيوب `RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC` و`RATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE`، وW-2026-064 **NOT_VERIFIED بإجماع** بعيوبِ حصرِ الجذر وكسر CRLF ومعيارية GN-05 وصفّ الاختبارات المتقادم. المحضران `W-2026-065-9.json` و`W-2026-064-10.json` والتقاريرُ الخامُّ في `docs/work/council/`. والبنودُ عادت إلى `IN_PROGRESS`.
 
 ### إصلاح(40)
