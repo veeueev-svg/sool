@@ -1,3 +1,13 @@
+## [غيرُ مُصدَر] — 2026-10-09
+
+### حوكمة(40)
+
+- **W-2026-064 · W-2026-065 — الجلستان 9 و10 لمجلس المراجعة (RULE-020)**: عند `690c7da` و`bdc2026`: W-2026-065 **NOT_VERIFIED** (gpt REJECTED · grok VERIFIED · gemini VERIFIED) بعيوب `RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC` و`RATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE`، وW-2026-064 **NOT_VERIFIED بإجماع** بعيوبِ حصرِ الجذر وكسر CRLF ومعيارية GN-05 وصفّ الاختبارات المتقادم. المحضران `W-2026-065-9.json` و`W-2026-064-10.json` والتقاريرُ الخامُّ في `docs/work/council/`. والبنودُ عادت إلى `IN_PROGRESS`.
+
+### إصلاح(40)
+
+- **W-2026-064 — علاجُ عيوبِ الجلسة 10** (`DOC_LINK_GUARD_PARENT_ESCAPE_BYPASS` · `DOC_LINK_GUARD_TRAVERSAL_HOST_EXISTS_BYPASS` · `DOC_LINK_GUARD_ROOT_ABSOLUTE_FALSE_REJECT` · `DOC_LINK_GUARD_CRLF_DESTINATION_BYPASS` · `GN05_REGEX_EOL_BYPASS` · `PROGRESS_TEST_ROW_STALE`): الوجهةُ النسبيّةُ تُحصر تحت جذرِ المستودعِ فالخروجُ يُبلَّغ ولا يُقاسُ وجودُه على المضيف، والرابطُ من `/` يُنسبُ إلى الجذرِ كما يعرضُه GitHub، و`\r` فراغٌ في ماسحِ الوجهة، وأسطرُ الحصيلةِ تُقاسُ معياريةً في [GN-05]، وصفُّ الاختبارات صُحّح بالقياس 2406 ⇒ 2408. و`TEST_TALLY_TRUNCATE_RACE` مروَّطٌ لصاحبِ `package.json` (W-2026-046). +1 اختبار (2408) · أربعُ طفراتٍ مقتولة. [التقرير](docs/test-reports/phase-40-W-2026-064.md)
+
 ## [غيرُ مُصدَر] — 2026-10-06
 
 ### حوكمة(40)

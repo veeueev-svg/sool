@@ -243,9 +243,15 @@ if [ ! -f "$TALLY" ]; then
   exit 1
 fi
 
-RUN_TESTS=$(sed -n 's/^# tests \([0-9][0-9]*\)$/\1/p' "$TALLY" | tail -1)
-RUN_PASS=$(sed -n 's/^# pass \([0-9][0-9]*\)$/\1/p' "$TALLY" | tail -1)
-RUN_FAIL=$(sed -n 's/^# fail \([0-9][0-9]*\)$/\1/p' "$TALLY" | tail -1)
+# حصيلةٌ معياريةُ الأسطر (الجلسة 10 · GN05_REGEX_EOL_BYPASS): الأسطرُ تُقرأ بلا CR وبلا
+# فراغٍ زائدٍ في آخرها قبل كلِّ قياس — فسطرُ `# tests N` الذي ينتهي بـCR أو بفراغٍ زائد
+# سطرُ حصيلةٍ كاملُ الحقِّ يُعَدُّ ولا يُغفل، فلا يُصدَّقُ رقمُ نتيجةٍ أولى لأنّ الثانية
+# «لا تطابق المرساة». والمعايرةُ على نصٍّ لا على ملف — فلا يُلمس الملفُ الأصلي.
+TALLY_TEXT=$(tr -d '\r' < "$TALLY" | sed -e 's/[ \t]*$//')
+
+RUN_TESTS=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# tests \([0-9][0-9]*\)$/\1/p' | tail -1)
+RUN_PASS=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# pass \([0-9][0-9]*\)$/\1/p' | tail -1)
+RUN_FAIL=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# fail \([0-9][0-9]*\)$/\1/p' | tail -1)
 [ -z "$RUN_TESTS" ] && RUN_TESTS=-1
 [ -z "$RUN_PASS" ] && RUN_PASS=-1
 [ -z "$RUN_FAIL" ] && RUN_FAIL=-1
@@ -257,9 +263,9 @@ echo "  المُشغّل: tests=$RUN_TESTS · pass=$RUN_PASS · fail=$RUN_FAIL"
 # موثوقًا. تشغيلان متزامنان يكتبان في ملفٍّ واحد فيُقرأ آخرُهما — والرقمُ المقروء من
 # اثنين يكذب. فلا يُختارُ واحدٌ بل يُرفض الفحصُ. والحصيلةُ الواحدةُ تتطلب سطر `# tests`
 # واحدًا وسطر `# pass` واحدًا وسطر `# fail` واحدًا — لا أكثر.
-TALLY_TESTS_LINES=$(sed -n 's/^# tests \([0-9][0-9]*\)$/\1/p' "$TALLY" | wc -l | tr -d ' ')
-TALLY_PASS_LINES=$(sed -n 's/^# pass \([0-9][0-9]*\)$/\1/p' "$TALLY" | wc -l | tr -d ' ')
-TALLY_FAIL_LINES=$(sed -n 's/^# fail \([0-9][0-9]*\)$/\1/p' "$TALLY" | wc -l | tr -d ' ')
+TALLY_TESTS_LINES=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# tests \([0-9][0-9]*\)$/\1/p' | wc -l | tr -d ' ')
+TALLY_PASS_LINES=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# pass \([0-9][0-9]*\)$/\1/p' | wc -l | tr -d ' ')
+TALLY_FAIL_LINES=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# fail \([0-9][0-9]*\)$/\1/p' | wc -l | tr -d ' ')
 
 if [ "$TALLY_TESTS_LINES" -gt 1 ] || [ "$TALLY_PASS_LINES" -gt 1 ] || [ "$TALLY_FAIL_LINES" -gt 1 ]; then
   echo "✗ [GN-05] حصيلةُ المُشغّل في $TALLY ليست حصيلةَ تشغيلٍ واحد موثوقًا: $TALLY_TESTS_LINES سطر tests · $TALLY_PASS_LINES سطر pass · $TALLY_FAIL_LINES سطر fail — والرقمُ المقروء من تشغيلين متزامنين يكذب (TEST_TALLY_APPEND_RACE)"
