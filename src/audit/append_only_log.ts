@@ -38,7 +38,7 @@ export class AppendOnlyLog {
     this.sink = sink;
   }
 
-  /** الإضافة هي العملية الوحيدة المسموحة */
+  /** الإضافة هي العملية الوحيدة المسموحة — **وذرّيّةٌ**: القيدُ يُدفع إلى الذاكرة ثم يُدوَّن في الوسيط الدائم؛ فإن رمى الوسيطُ رُدّ القيدُ من الذاكرة ورُمي الاستثناء — فلا يبقى قيدٌ في الذاكرة بلا أثرٍ دائمٍ يكذب على إعادة التشغيل (الجلسة 9 · RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC) */
   append(actor: EntityId, kind: string, detail: Record<string, unknown> = {}): AuditEntry {
     const prev = this.entries[this.entries.length - 1];
     const seq = this.entries.length + 1;
@@ -47,7 +47,12 @@ export class AppendOnlyLog {
     const hash = sha256(canonicalize({ seq, at, actor, kind, detail, prevHash }));
     const entry: AuditEntry = Object.freeze({ seq, at, actor, kind, detail, prevHash, hash });
     this.entries.push(entry);
-    this.sink?.record('audit_entry', entry, at);
+    try {
+      this.sink?.record('audit_entry', entry, at);
+    } catch (err) {
+      this.entries.pop();
+      throw err;
+    }
     return entry;
   }
 

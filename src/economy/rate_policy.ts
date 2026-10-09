@@ -58,6 +58,18 @@ function witnessKey(a: RateAmendmentRecovery): string {
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
+/**
+ * حقولُ الإعلانِ بدائيّةٌ أو رفضٌ مغلق (الجلسة 9 · RATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE):
+ * الكائنُ ذو `valueOf` يمرّ المقارناتِ إكراهًا ثم يُخزَّن **مرجعُه** فيُحرَّك السريانُ رجعيًا
+ * وإلى المستقبلِ بلا أمرٍ ملكيّ — فالنسخُ السطحيّ `{ ...x }` يشارك قيمةَ الحقلِ غيرِ البدائيّة.
+ */
+function assertPrimitiveDeclaration(rate: RateDeclaration): void {
+  if (typeof rate.base !== 'string' || rate.base.trim() === '' ||
+      !finite(rate.ratePerMille) || !finite(rate.declaredAt)) {
+    throw new Error('RATE_DECLARATION_NOT_PRIMITIVE');
+  }
+}
+
 /** سجلُّ النِّسَبِ وحرسُ الأوامرِ المنفَّذة — بلا تدوينٍ ولا اعتماد (RULE-004) */
 export class RatePolicy {
   private readonly history = new Map<string, RateDeclaration[]>();
@@ -65,7 +77,10 @@ export class RatePolicy {
   private readonly executed = new Map<string, string>();
 
   constructor(rates: readonly RateDeclaration[]) {
-    for (const rate of rates) this.history.set(rate.base, [{ ...rate }]);
+    for (const rate of rates) {
+      assertPrimitiveDeclaration(rate);
+      this.history.set(rate.base, [{ ...rate }]);
+    }
   }
 
   declaredBases(): readonly string[] { return [...this.history.keys()]; }
@@ -102,6 +117,7 @@ export class RatePolicy {
   /** يُلحقُ إعلانًا جديدًا بسلْسلةِ الوعاءِ — المنادي فحصَ القبولَ قبله */
   append(base: string, ratePerMille: number, declaredAt: number): RateDeclaration {
     const declaration: RateDeclaration = { base, ratePerMille, declaredAt };
+    assertPrimitiveDeclaration(declaration);
     const h = this.history.get(base);
     if (!h) throw new Error(`RATE_BASE_UNDECLARED:${base}`);
     h.push(declaration);

@@ -1472,7 +1472,9 @@
         "2026-10-07 (الجلسة 99): علاجُ عيب الجلسة 7 (RATE_AMENDMENT_HISTORY_MUTABLE_REFERENCE_ESCAPE) في src/economy/rate_policy.ts — historyOf وfirstOf وcurrentFor وeffectiveAt تُعيد نسخًا لا مراجع. +1 اختبار يقتل الطفرة (2405). ورُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق f5607542… (محضر الجلسة 7) ⇒ bde1d46e…. والدفعةُ الأولى للعلاج في #67 (6183d45) أسقطها CI بـRULE-000/008 (كودٌ بلا PROGRESS.md ولا تقرير) ولم تُدمج، وبصمتُها المكتوبة d8a6c6c1… لم تعد تصف الشجرة بعد إلحاق التقرير. رفعٌ للمراجعة لا ترقية.",
         "2026-10-07 (الجلسة 100): الجلسة 8 — NOT_VERIFIED بإجماع. gpt REJECTED · grok REJECTED · gemini REJECTED. العيب: RATE_AMENDMENT_APPEND_MUTABLE_REFERENCE_ESCAPE — RatePolicy.append() يدفع كائن RateDeclaration في مصفوفة التاريخ ويعيد المرجع ذاته؛ وRevenueService.amendRate() يعيد هذا المرجع الحي في result.declaration. علاج الجلسة 7 اقتصر على دوال الاستعلام الأربع وتجاهل append وamendRate. عاد إلى IN_PROGRESS.",
         "2026-10-07 (الجلسة 100): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 1bcaedf8… تخالف بصمةَ محضر الجلسة 8 (bde1d46e…). رفعٌ للمراجعة لا ترقية.",
-        "2026-10-09 (الجلسة 104): الجلسة 9 — NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). عاد إلى IN_PROGRESS بعيبَين مسمّيين في دوام تعديل النسبة. رفعٌ لاحقٌ إلى REVIEW بتغيّرٍ مقيسٍ بعد علاجهما في هذا البند."
+        "2026-10-09 (الجلسة 104): الجلسة 9 — NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). عاد إلى IN_PROGRESS بعيبَين مسمّيين في دوام تعديل النسبة. رفعٌ لاحقٌ إلى REVIEW بتغيّرٍ مقيسٍ بعد علاجهما في هذا البند.",
+        "2026-10-09 (الجلسة 104): علاجُ عيوب الجلسة 9 داخل النطاق: ذرّيةُ قيد السجل في AppendOnlyLog.append (فشلُ الوسيط الدائم يردُّ القيد ويرمي — RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC) وتقديمُ شاهد rate_amended على كل تغييرٍ في amendRate، وبدائيّةُ الإعلان في مُنشئ RatePolicy وappend مع رفضُ now غير الرقمي (RATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE) · +3 اختبارات · ثلاثُ طفراتٍ مقتولة. وتوسيعُ النطاق بـsrc/audit/append_only_log.ts (غير محجوزٍ لأحد). الحال IN_PROGRESS حتى التزامة الرفع.",
+        "2026-10-09 (الجلسة 104): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق (10 مسارات) تخالف بصمةَ محضر الجلسة 9 (1bcaedf8…) كما قِيست عند التزام العلاج. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020)."
       ],
       "dependencies": [
         "لا شيء"
@@ -1486,7 +1488,8 @@
         "src/economy/rate_policy.ts",
         "src/data/rehydrate_fiscal.ts",
         "tests/data/rehydrate_fiscal.test.ts",
-        "tests/data/rehydrate_fiscal_rate.test.ts"
+        "tests/data/rehydrate_fiscal_rate.test.ts",
+        "src/audit/append_only_log.ts"
       ],
       "excluded": [
         "src/economy/budget.ts وtreasury.ts وledger.ts — لا علاقة للبند بها؛ وledger.ts محجوزٌ لـW-2026-042",
@@ -1512,7 +1515,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "علاجُ عيبَي الجلسة 9 المسمّيين (ذرويّةُ كتابة شاهد rate_amended مع تعديل النسبة · قفلُ declaredAt وratePerMille نسخًا عميقة) داخل النطاق ثم الرفعُ إلى REVIEW بتغيّرٍ مقيس (الثابت 8) لعقد الجلسة 11.",
+      "next_step": "الجلسةُ الحادية عشرة لمجلس المراجعة (RULE-020) — البندُ في REVIEW بعلاجِ عيوب الجلسة 9 ملتزمًا وبصمةٍ تخالف محضرها.",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-09",
       "documentation_impact": [
