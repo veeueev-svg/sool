@@ -24,7 +24,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
-import { dirname, join, normalize } from 'node:path';
+import { dirname, isAbsolute, join, normalize } from 'node:path';
 
 const ROOT = process.cwd();
 const ROOT_RELATIVE = new Set(['docs/work/WORK_LOG.md']);
@@ -73,14 +73,16 @@ const TITLE_TAIL = new RegExp(String.raw`\s*` + TITLE + String.raw`\s*\)`, 'y');
 /** يقرأ وجهةَ رابطٍ مباشرٍ يبدأ عند `start` (بعد `](`) — أو null إن لم يكن رابطًا في CommonMark. */
 export function scanInlineDestination(text: string, start: number): string | null {
   let i = start;
-  while (i < text.length && /[ \t\n]/.test(text[i]!)) i += 1;
+  // فراغُ CommonMark كاملًا: المسافةُ والعلامةُ والسطرُ الجديدُ وVT وFF وCR — فكسرُ السطرِ CRLF
+  // قبل الوجهةِ لا يُعمي الحارسَ عنها (الجلسة 10 · DOC_LINK_GUARD_CRLF_DESTINATION_BYPASS)
+  while (i < text.length && /[ \t\n\v\f\r]/.test(text[i]!)) i += 1;
   let dest: string;
   if (text[i] === '<') {
     let j = i + 1;
     for (; j < text.length; j += 1) {
       const c = text[j]!;
       if (c === '\\' && j + 1 < text.length && ASCII_PUNCT.test(text[j + 1]!)) { j += 1; continue; }
-      if (c === '>' || c === '<' || c === '\n') break;
+      if (c === '>' || c === '<' || c === '\n' || c === '\r') break;
     }
     if (text[j] !== '>') return null;
     dest = text.slice(i + 1, j);
@@ -143,7 +145,18 @@ export function brokenLinksIn(file: string, text: string, exists: (p: string) =>
     if (link === '' || /^[a-z][a-z0-9+.-]*:/i.test(link)) return;
     let target = link;
     try { target = decodeURIComponent(link); } catch { /* يُقاس كما كُتب */ }
-    if (!exists(normalize(join(base, target)))) out.push(raw);
+    // الحصرُ تحت جذر المستودع (الجلسة 10 · DOC_LINK_GUARD_PARENT_ESCAPE_BYPASS ·
+    // DOC_LINK_GUARD_TRAVERSAL_HOST_EXISTS_BYPASS): الوجهةُ النسبيّةُ التي تخرجُ من الجذرِ
+    // مكسورةٌ تُبلَّغ — ولا يُقاسُ وجودُها على المضيفِ فالعرضُ يُقاسُ داخلَ الشجرةِ وحدها.
+    // والرابطُ الذي يبدأُ بـ`/` يُنسبُ إلى جذرِ المستودعِ كما يعرضُه GitHub
+    // (الجلسة 10 · DOC_LINK_GUARD_ROOT_ABSOLUTE_FALSE_REJECT) لا إلى مجلدِ الملف.
+    const rooted = target.startsWith('/');
+    const p = rooted ? normalize(target) : normalize(join(base, target));
+    if (!rooted && (p === '..' || p.startsWith('../') || isAbsolute(p))) {
+      out.push(raw);
+      return;
+    }
+    if (!exists(p)) out.push(raw);
   };
   const body = stripCode(text);
   for (let at = body.indexOf(']('); at >= 0; at = body.indexOf('](', at + 2)) {
@@ -330,4 +343,29 @@ test('حارسُ الروابط: الوجهةُ تُمسح لا تُطابَق �
   // سالبةُ الضبط: ما ليس رابطًا في CommonMark لا يُبلَّغ — قوسٌ لا يتوازن · فراغٌ في وجهةٍ عارية · زاويةٌ لا تُغلق
   assert.deepEqual(brokenLinksIn('docs/a.md', '[x](a(b.md) [y](foo bar.md) [z](<a.md)', none), []);
   assert.deepEqual(brokenLinksIn('docs/a.md', '[x](a(b(c(d(e)))).md) [y](foo\\(bar\\).md)', () => true), []);
+});
+
+test('حارسُ الروابط: الوجهةُ تُحصر تحت جذر المستودع ولا يُقاسُ وجودُها على المضيف — والرابطُ من الجذرِ يُنسبُ إليه وكسرُ CRLF لا يُعمي (الجلسة 10 · DOC_LINK_GUARD_PARENT_ESCAPE_BYPASS · DOC_LINK_GUARD_TRAVERSAL_HOST_EXISTS_BYPASS · DOC_LINK_GUARD_ROOT_ABSOLUTE_FALSE_REJECT · DOC_LINK_GUARD_CRLF_DESTINATION_BYPASS)', () => {
+  const none = (): boolean => false;
+  // exists تقول «موجود» لكل مسار — فالحارسَ هنا هو الحصرُ تحت الجذر لا قرصُ المضيف
+  const all = (): boolean => true;
+  // الخروجُ من الجذر يُبلَّغ ولو وُجد الملفُ على المضيف (مسابير gpt وgrok بحرفها)
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](../../../../../../../../etc/passwd)', all), ['../../../../../../../../etc/passwd']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](%2e%2e/%2e%2e/etc/passwd)', all), ['%2e%2e/%2e%2e/etc/passwd']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](foo/../../../../../../../../etc/passwd)', all), ['foo/../../../../../../../../etc/passwd']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](../../W-2026-064-package.md)', all), ['../../W-2026-064-package.md']);
+  assert.deepEqual(brokenLinksIn('README.md', '[x](../outside.md)', all), ['../outside.md']);
+  // سالبةُ الضبط: السليمُ داخل الجذر لا يُبلَّغ
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](../README.md) [y](b.md)', all), []);
+  // الرابطُ الذي يبدأُ بـ/ يُنسبُ إلى جذرِ المستودعِ كما يعرضُه GitHub — لا من مجلدِ الملف
+  const rootOnly = (p: string): boolean => p === '/README.md' || p === 'README.md';
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](/README.md)', rootOnly), []);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](/missing.md)', rootOnly), ['/missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[r]: /README.md', rootOnly), []);
+  // كسرُ السطر CRLF قبل الوجهةِ لا يُعمي الحارسَ (مسبار gemini بحرفه)
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](\r\nmissing.md)', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](\r\n<missing.md>)', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](\nmissing.md)', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](\rmissing.md)', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](\r\nmissing.md)', () => true), []);
 });

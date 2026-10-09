@@ -612,13 +612,16 @@
       ],
       "next_step": "المراجع: الإقرارُ أو الرفضُ بعيوبٍ مسمّاة، ثمّ النقلُ إلى WORK_LOG.md (RULE-004).",
       "created_at": "2026-10-02",
-      "updated_at": "2026-10-02",
+      "updated_at": "2026-10-09",
       "verification": "2026-10-02: npm test 2303/2303 · verify EXIT=0 · الحارسُ القديمُ ⇒ 19/20 · نزعُ مدةِ load_drill ⇒ 0/2.",
       "documentation_impact": [
         "PROGRESS.md",
         "CHANGELOG.md",
         "version.json",
         "ARCHITECTURE.md"
+      ],
+      "discoveries": [
+        "مروَّط من W-2026-064 (2026-10-09 · الجلسة 104): عيب TEST_TALLY_TRUNCATE_RACE (الجلسة 10) — كاتبٌ متأخرٌ يقطع ملفَ الحصيلة dist/.tests.tap فيترك سطرًا واحدًا من كل نوعٍ فيصدّقها فاحصُ الأرقام [GN-05]. علاجُه في package.json المحجوزِ لهذا البند: وجهةُ حصيلةٍ فريدةٌ ذرّيّة. من صاحب البند قرارُ علاجِه في نطاقه."
       ]
     },
     {
@@ -1357,7 +1360,7 @@
       "reviewer": "القيّم على المستودع (المالك) — ومجلس المراجعة (RULE-020)",
       "area": "التوثيق والحوكمة",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "قيس كلُّ رابطٍ نسبيٍّ في الوثائق: 34 مكسورًا خارج WORK_LOG.md",
         "أُصلحت 25 في نطاق هذا البند، و9 في نطاق W-2026-038 وW-2026-059 داخل بندَيهما (#32 · #33)",
@@ -1376,7 +1379,9 @@
         "2026-10-08 (الجلسة 101): استلامٌ بأمر المالك «ابدا» من (الجلسة 99) — المعرّف لم يتبدّل (WORK_CONTROL §6). علاجُ عيب الجلسة 7 (TEST_TALLY_APPEND_RACE) في scripts/check_generated_numbers.sh: بابٌ جديد [GN-05] يرفض الحصيلةَ متعددةَ النتائج — حصيلةٌ واحدةٌ موثوقةٌ تتطلب سطر `# tests` واحدًا وسطر `# pass` واحدًا وسطر `# fail` واحدًا. وتوسيعُ النطاق بـscripts/check_generated_numbers.sh. واختبارُ الانحدار في tests/governance/generated_numbers.test.ts (نطاق W-2026-040 لا W-2026-064 — تداخلٌ مُلحوظٌ ومُحلٌّ). الحال IN_PROGRESS حتى التزامة الرفع.",
         "2026-10-08 (الجلسة 101): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 540f6848… (محضر الجلسة 7) ⇒ d732eaea… على c1fc9a5. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده.",
         "2026-10-08 (الجلسة 102): استلامٌ بأمر المالك («ابدا + اعقد الجلسة السادسة لمجلس المراجعة…») من المساعد الآلي — Perplexity Computer (الجلسة 98). المعرّف لم يتبدّل (WORK_CONTROL §6). رُفع إلى REVIEW بتغيّرٍ مقيسٍ مِن IN_PROGRESS — بصمةُ النطاق d732eaea… تخالف بصمةَ محضر الجلسة 7 (540f6848…) كما قُيست عند التزام العلاج. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
-        "2026-10-09 (الجلسة 104): الجلسة 10 — NOT_VERIFIED بإجماع (gpt REJECTED · grok REJECTED · gemini REJECTED). عاد إلى IN_PROGRESS بعيوبٍ مسمّاةٍ في حارس الروابط وأبواب الأرقام وصفّ الاختبارات. رفعٌ لاحقٌ إلى REVIEW بتغيّرٍ مقيسٍ بعد علاج العيوب في هذا البند."
+        "2026-10-09 (الجلسة 104): الجلسة 10 — NOT_VERIFIED بإجماع (gpt REJECTED · grok REJECTED · gemini REJECTED). عاد إلى IN_PROGRESS بعيوبٍ مسمّاةٍ في حارس الروابط وأبواب الأرقام وصفّ الاختبارات. رفعٌ لاحقٌ إلى REVIEW بتغيّرٍ مقيسٍ بعد علاج العيوب في هذا البند.",
+        "2026-10-09 (الجلسة 104): علاجُ عيوب الجلسة 10 داخل النطاق: حصرُ الوجهة تحت جذر المستودع في brokenLinksIn (DOC_LINK_GUARD_PARENT_ESCAPE_BYPASS · DOC_LINK_GUARD_TRAVERSAL_HOST_EXISTS_BYPASS) ونسبةُ /README.md إلى الجذر (DOC_LINK_GUARD_ROOT_ABSOLUTE_FALSE_REJECT) و\\r فراغٌ في الماسح (DOC_LINK_GUARD_CRLF_DESTINATION_BYPASS) ومعياريةُ أسطر الحصيلة في [GN-05] (GN05_REGEX_EOL_BYPASS) وتصحيحُ صف الاختبارات في PROGRESS.md 2406 ⇒ 2408 (PROGRESS_TEST_ROW_STALE) · +1 اختبار · أربعُ طفراتٍ مقتولة. الحال IN_PROGRESS حتى التزامة الرفع.",
+        "2026-10-09 (الجلسة 104): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق تخالف بصمةَ محضر الجلسة 10 (d732eaea…) كما قِيست عند التزام العلاج. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020)."
       ],
       "dependencies": [
         "لا شيء"
@@ -1420,10 +1425,10 @@
         "docs/test-reports/phase-40-W-2026-064.md",
         "npm test 2367/2367 · npm run verify → 0"
       ],
-      "next_step": "علاجُ عيوب الجلسة 10 المسمّاة داخل النطاق (حارسُ الروابط: خروجُ المسار من جذر المستودع وCRLF · صفُّ الاختبارات المتقادم) ثم الرفعُ إلى REVIEW بتغيّرٍ مقيس (الثابت 8) لعقد الجلسة 11.",
+      "next_step": "الجلسةُ الحادية عشرة لمجلس المراجعة (RULE-020) — البندُ في REVIEW بعلاجِ عيوب الجلسة 10 ملتزمًا وبصمةٍ تخالف محضرها.",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-09",
-      "verification": "شُغِّل في 2026-10-08 (الجلسة 101) على التزامة العلاج 86450d2 (مدموج في هذا الفرع): npm run check:numbers → EXIT=0 (2407/2407) · npm run check:work → EXIT=0 · npm run check:size → EXIT=0 · node --test dist/tests/governance/doc_links.test.js → pass 12 · fail 0 · node --test dist/tests/governance/generated_numbers.test.js → pass 18 · fail 0 · npm test 2407/2407. بصمةُ النطاق (21 مسارًا) = d732eaeaa93db76215a9c57c4aa25839654ae37fb3d1ef190d08d22152096f12 — قيست بعد التزام محتوى النطاق. تخالف بصمةَ محضر الجلسة 7 (540f6848…) — الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-064.md. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
+      "verification": "شُغِّل في 2026-10-09 (الجلسة 104) على التزامة العلاج eef2dae (على هذا الفرع): node --test dist/tests/governance/doc_links.test.js → pass 13 · fail 0 · npm test → 2408/2408 · npm run verify → EXIT=0 · أربعُ طفراتٍ مقتولة (بلا حصر الجذر · بلا \\r · بلا نسبة الجذر · قراءة GN-05 خامًا). بصمةُ النطاق (21 مسارًا) = 0dc9a55ab4682f8843b2551113abb58fb2ba4263e89b8f215ae37b68b2a03adb — قيست بعد التزام محتوى النطاق. تخالف بصمةَ محضر الجلسة 10 (d732eaea…) — الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-064.md. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
       "documentation_impact": [
         "ARCHITECTURE.md",
         "PROGRESS.md",
@@ -1441,7 +1446,8 @@
         "مجلس المراجعة — الجلسة 6 (2026-10-06 · عند aaa117d): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini REJECTED). العيوب: DOC_LINK_GUARD_FOUR_LEVEL_PAREN_DESTINATION_BYPASS · DOC_LINK_GUARD_ESCAPED_PAREN_DESTINATION_BYPASS · DOC_LINK_GUARD_NESTING_ABOVE_THREE_BYPASS · DOC_LINK_GUARD_POINTY_ESCAPE_BYPASS",
         "مجلس المراجعة — الجلسة 7 (2026-10-06 · عند 7f3dcbd): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب: TEST_TALLY_APPEND_RACE (gpt) — ملفُ الحصيلة dist/.tests.tap ليس حصيلة تشغيل واحد موثوقًا، والفاحص يقرأ السطر الأخير فقط. والحارسُ نفسه يجتاز 12/12 وعيوب الجلسة 6 مغلقة. عيبُ بنيةٍ تحتيةٍ للاختبار لا في حارس الروابط.",
         "DISC (الجلسة 101): تداخلُ نطاقٍ مع W-2026-040 — tests/governance/generated_numbers.test.ts محجوزٌ لبند W-2026-040 (REVIEW) فلا يُضاف إلى نطاق هذا البند. وعلاجُ العيبِ في السكربت (scripts/check_generated_numbers.sh) نطاقُه هنا. واختبارُ الانحدار في الملفِّ ذي النطاقِ الآخر عُمل تحت سلطانِ بندِه لا هذا — فلا تداخل.",
-        "مجلس المراجعة — الجلسة 10 (2026-10-09 · عند 690c7da): NOT_VERIFIED بإجماع (gpt REJECTED · grok REJECTED · gemini REJECTED). العيوب المسمّاة: DOC_LINK_GUARD_PARENT_ESCAPE_BYPASS (gpt) · DOC_LINK_GUARD_TRAVERSAL_HOST_EXISTS_BYPASS (grok) · DOC_LINK_GUARD_CRLF_DESTINATION_BYPASS (gemini) · DOC_LINK_GUARD_ROOT_ABSOLUTE_FALSE_REJECT (grok · ملاحظة) · PROGRESS_TEST_ROW_STALE (grok) · GN05_REGEX_EOL_BYPASS (grok) · TEST_TALLY_TRUNCATE_RACE (grok) · OUT_OF_SCOPE_GENERATED_NUMBERS_TEST (grok · حوكمة) · DECLARATION_GATE_PIPEFAIL_SIGPIPE_FLAKE (gemini · خارج النطاق — يُقيَّد لصاحب مساره). المحضر: docs/work/council/W-2026-064-10.json"
+        "مجلس المراجعة — الجلسة 10 (2026-10-09 · عند 690c7da): NOT_VERIFIED بإجماع (gpt REJECTED · grok REJECTED · gemini REJECTED). العيوب المسمّاة: DOC_LINK_GUARD_PARENT_ESCAPE_BYPASS (gpt) · DOC_LINK_GUARD_TRAVERSAL_HOST_EXISTS_BYPASS (grok) · DOC_LINK_GUARD_CRLF_DESTINATION_BYPASS (gemini) · DOC_LINK_GUARD_ROOT_ABSOLUTE_FALSE_REJECT (grok · ملاحظة) · PROGRESS_TEST_ROW_STALE (grok) · GN05_REGEX_EOL_BYPASS (grok) · TEST_TALLY_TRUNCATE_RACE (grok) · OUT_OF_SCOPE_GENERATED_NUMBERS_TEST (grok · حوكمة) · DECLARATION_GATE_PIPEFAIL_SIGPIPE_FLAKE (gemini · خارج النطاق — يُقيَّد لصاحب مساره). المحضر: docs/work/council/W-2026-064-10.json",
+        "DISC (الجلسة 104): TEST_TALLY_TRUNCATE_RACE (مسبار الجلسة 10) علاجُه في package.json — وجهةُ حصيلةٍ فريدةٌ ذرّيّة — وهو محجوزٌ لبند W-2026-046 (REVIEW) فلا يُعالَج هنا ولا يُوسَّع النطاق إلى ملفٍّ محجوزٍ لغير هذا البند؛ رُوِّطَ لصاحبه (سُجِّل في بند W-2026-046 أيضًا)."
       ]
     },
     {
