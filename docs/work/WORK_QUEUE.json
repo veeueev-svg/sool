@@ -1429,7 +1429,7 @@
         "docs/test-reports/phase-40-W-2026-064.md",
         "npm test 2367/2367 · npm run verify → 0"
       ],
-      "next_step": "علاجُ عيوبِ الجلسة 13 الأربعة في scripts/check_generated_numbers.sh داخل النطاق (وبيئيةُ تقلّب المجموعة للمالك) ثم رفعٌ بتغيّرٍ مقيس (الثابت 8) لعقد الجلسة 14.",
+      "next_step": "علاجُ عيوب GN05 الثلاثة في scripts/check_generated_numbers.sh داخل النطاق باختبارات انحدار تغطّي المسلكين الجديدين (NBSP-داخل-الرمز · فواصل NEL/LS)؛ وفشلُ المجموعة (FULL_SUITE_NOT_GREEN) مآلُه مالكُ مسار الاختبارات والمعايرة لا هذا البند؛ ثم الرفعُ بتغيّرٍ مقيس (الثابت 8) لعقد الجلسة 14.",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-10",
       "verification": "شُغِّل في 2026-10-09 (الجلسة 105) على هذه الشجعة: node --test dist/tests/governance/gn05_tally_gate.test.js → pass 8 · fail 0 · npm test → 2419/2419 · npm run check:numbers → EXIT=0 (2419 مطابق بعد تحديث version.json بالمقيس) · npm run verify → EXIT=0 · قتلُ الطفرة: إرجاعُ التطبيعِ القديم وتعطيلُ كشفِ الشكل ⇒ 7 من 8 اختباراتِ الانحدارِ تسقط ثم تعودُ للنجاحِ بالعلاج. بصمةُ النطاق (22 مسارًا) = 1c33607c24215b2a88f3d27476625c410faab04064b4bed98cebc87231882773 — تخالف بصمةَ محضر الجلسة 12 (0dc9a55a…). الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-064.md.",
@@ -1453,9 +1453,9 @@
         "مجلس المراجعة — الجلسة 10 (2026-10-09 · عند 690c7da): NOT_VERIFIED بإجماع (gpt REJECTED · grok REJECTED · gemini REJECTED). العيوب المسمّاة: DOC_LINK_GUARD_PARENT_ESCAPE_BYPASS (gpt) · DOC_LINK_GUARD_TRAVERSAL_HOST_EXISTS_BYPASS (grok) · DOC_LINK_GUARD_CRLF_DESTINATION_BYPASS (gemini) · DOC_LINK_GUARD_ROOT_ABSOLUTE_FALSE_REJECT (grok · ملاحظة) · PROGRESS_TEST_ROW_STALE (grok) · GN05_REGEX_EOL_BYPASS (grok) · TEST_TALLY_TRUNCATE_RACE (grok) · OUT_OF_SCOPE_GENERATED_NUMBERS_TEST (grok · حوكمة) · DECLARATION_GATE_PIPEFAIL_SIGPIPE_FLAKE (gemini · خارج النطاق — يُقيَّد لصاحب مساره). المحضر: docs/work/council/W-2026-064-10.json",
         "DISC (الجلسة 104): TEST_TALLY_TRUNCATE_RACE (مسبار الجلسة 10) علاجُه في package.json — وجهةُ حصيلةٍ فريدةٌ ذرّيّة — وهو محجوزٌ لبند W-2026-046 (REVIEW) فلا يُعالَج هنا ولا يُوسَّع النطاق إلى ملفٍّ محجوزٍ لغير هذا البند؛ رُوِّطَ لصاحبه (سُجِّل في بند W-2026-046 أيضًا).",
         "مجلس المراجعة — الجلسة 12 (2026-10-09 · عند b9312885): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيوب المسمّاة: GN05_VERTICAL_TAB_EOL_BYPASS (gpt) · GN05_CR_ONLY_SEPARATOR_BYPASS (grok) · GN05_VT_FF_NBSP_EOL_BYPASS (grok) · GN05_TOKEN_SHAPE_BYPASS (grok). المحضر: docs/work/council/W-2026-064-12.json والتقاريرُ الخامُّ بجواره.",
-        "FULL_SUITE_NOT_GREEN (الجلسة 13 · gpt): npm test المقاس في عزل gpt خرج 2421/2423 ورمز 1 (ساقطان: T-127 · المعايرة: آلةٌ أبطأُ من السقف) وتبعه check:numbers يرفض بـ[GN-03]؛ وnpm run verify أعاد التشغيل فأعطى 2423/2423 ورمز 0. المجموعةُ غير قابلة لإعادة الإنتاج بثبات في هذه البيئة — لا يكفي الادعاء بأنها أخضر (المحضر W-2026-064-13.json).",
+        "FULL_SUITE_NOT_GREEN (الجلسة 13 · gpt): npm test المقاس في عزل gpt خرج 2421/2423 ورمز 1 (ساقطان: T-127 · المعايرة: آلةٌ أبطأُ من السقف) وتبعه check:numbers يرفض بـ[GN-03]؛ وnpm run verify أعاد التشغيل فأعطى 2423/2423 ورمز 0. المجموعةُ غير قابلة لإعادة الإنتاج بثبات في هذه البيئة — لا يكفي الادعاء بأنها أخضر. (تصحيحٌ بعد المراجعة: فُصل هذا العيبُ عن عيوب GN05 — مآلُه مالكُ مسار الاختبارات والمعايرة، وسببُ المعايرة غيرُ محسوم لا يُثبت القياسُ وحده أنه بيئيٌّ خالص.)",
         "GN05_NBSP_INTERNAL_SHAPE_BYPASS (الجلسة 13 · grok): سطر حصيلة ثانٍ متعارض بصيغة #<NBSP>tests N أو <NBSP># tests N يغفله كاشف الشكل (ASCII [ \\t] فقط) فيُصدّق رقم الأولى — قِيس بمسبار مستقل من جذر المستودع بلا تعديل (المحضر · التقرير الخام).",
-        "GN05_NEL_LS_SEPARATOR_BYPASS (الجلسة 13 · grok): فاصل الأسطر المعلن لا يشمل NEL (U+0085) ولا LS (U+2028) ولا PS (U+2029)؛ حصيلة ثانية مفصولة بهذه الفواصل تُغفَل ويخرج الفاحص 0 (قِيس).",
+        "GN05_NEL_LS_SEPARATOR_BYPASS (الجلسة 13 · grok): فاصل الأسطر المعلن لا يشمل NEL (U+0085) ولا LS (U+2028)؛ حصيلة ثانية مفصولة بهذه الفواصل تُغفَل ويخرج الفاحص 0 (قِيس). (تصحيحٌ بعد المراجعة: استُبعد PS (U+2029) — مسبار sep_PS خرج 1 ورُفض بـ[GN-05] فهو ضابط.)",
         "GN05_TOKEN_SHAPE_BYPASS_EXT (الجلسة 13 · grok): التعليق فوق كاشف الشكل يدّعي أن أي سطر يشبه الرمز يُرفض بالاسم — والقياس يخالف الدعوى: الأسطر بحروف NBSP/NEL/LS لا يراها الكاشف أصلًا (امتداد عيوب الجلسة 12 نفسها)."
       ]
     },
@@ -1717,7 +1717,7 @@
         "docs/test-reports/phase-40-W-2026-066.md",
         "docs/test-reports/phase-40-W-2026-066.md — الجلسة 2 (الأعضاء الثلاثة معزولين على حزم مجمّدة عند 1473992): البنود الثلاثة NOT_VERIFIED بعيوب مسمّاة"
       ],
-      "next_step": "كتابة محضر الجلسة 13 ومعالجة مآل W-2026-064 (NOT_VERIFIED · IN_PROGRESS) في التزامة لاحقة بأمر المالك (الخام أولًا).",
+      "next_step": "لا عملَ هندسيًّا مصرحًا به هنا حتى أمرٍ جديد من المالك: علاجُ عيوب GN05 الثلاثة داخل نطاق W-2026-064 (لا يحتاج مجلسًا أولًا — إصلاحٌ داخل البند ثم رفعٌ بتغيّرٍ مقيس)؛ وفشلُ المجموعة والمعايرة مآلُهما مالكُ مسار الاختبارات؛ وW-2026-067 (مزامنة الوثائق) يُنفَّذ بعد أمر المالك لا بالتزامن.",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-10",
       "documentation_impact": [
