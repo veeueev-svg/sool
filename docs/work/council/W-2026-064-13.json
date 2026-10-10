@@ -1,0 +1,41 @@
+{
+  "item": "W-2026-064",
+  "commit": "add523cbf19e88480d6fcc0757ad7ec8c3d73ae3",
+  "scope_digest": "1c33607c24215b2a88f3d27476625c410faab04064b4bed98cebc87231882773",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-10",
+  "session": 13,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-13-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-13-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-064-13-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "FULL_SUITE_NOT_GREEN (gpt): npm test المقاس في عزل gpt خرج 2421/2423 ورمز خروج 1 (ساقطان: T-127: الحاجز يمرّ على المستودع كما هو · المعايرة: آلةٌ أبطأُ من السقف) وتبعه check:numbers يرفض بـ[GN-03]؛ وnpm run verify لاحقًا أعاد التشغيل فأعطى 2423/2423 ورمز 0. المجموعةُ غير قابلة لإعادة الإنتاج بثبات في هذه البيئة — لا يكفي الادعاء بأنها أخضر.",
+      "GN05_NBSP_INTERNAL_SHAPE_BYPASS (grok): سطر حصيلة ثانٍ متعارض بصيغة #<NBSP>tests N أو <NBSP># tests N يغفله كاشف الشكل (ASCII [ \\t] فقط) فيُصدّق رقم الأولى (قِيس بمسبار مستقل: الخروج 0 مع حصيلتين متعارضتين).",
+      "GN05_NEL_LS_SEPARATOR_BYPASS (grok): فاصل الأسطر المعلن لا يشمل NEL (U+0085) ولا LS (U+2028) ولا PS (U+2029)؛ حصيلة ثانية مفصولة بهذه الفواصل تُغفَل ويخرج الفاحص 0 (قِيس).",
+      "GN05_TOKEN_SHAPE_BYPASS_EXT (grok · ضمن العيب الثاني): التعليق فوق كاشف الشكل يدّعي أن أي سطر يشبه الرمز يُرفض بالاسم — والقياس يخالف الدعوى: الأسطر بحروف NBSP/NEL/LS لا يراها الكاشف أصلًا (امتداد عيوب الجلسة 12 نفسها)."
+    ]
+  }
+}
