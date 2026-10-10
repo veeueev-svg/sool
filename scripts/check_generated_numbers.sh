@@ -243,12 +243,19 @@ if [ ! -f "$TALLY" ]; then
   exit 1
 fi
 
-# حصيلةٌ معياريةُ الأسطر (الجلسة 10 · GN05_REGEX_EOL_BYPASS · والجلسة 12): الأسطرُ تُقرأ
-# بعدَ تطبيعِ الفواصلِ والذيول — فسطرُ `# tests N` الذي يفرّقه كاتبٌ عن سابقه بـCR وحدها أو
-# يختمه بـVT أو FF أو NBSP سطرُ حصيلةٍ كاملُ الحقِّ يُعَدُّ ولا يُغفل (لا حذفَ للـCR يلحم
-# سطرين، ولا ذيلَ للفراغاتِ يُعمي المرساة)، فلا يُصدَّقُ رقمُ نتيجةٍ أولى لأنّ الثانية
-# «لا تطابق النمط». والمعايرةُ على نصٍّ لا على ملف — فلا يُلمس الملفُ الأصلي.
-TALLY_TEXT=$(tr '\r\v\f' '\n' < "$TALLY" | sed -e 's/[ \t\xc2\xa0]*$//')
+# حصيلةٌ معياريةُ الأسطر (الجلسة 10 · GN05_REGEX_EOL_BYPASS · والجلسة 12 · والجلسة 13): الأسطرُ
+# تُقرأ بعدَ تطبيعِ الفواصلِ والذيول — فسطرُ `# tests N` الذي يفرّقه كاتبٌ عن سابقه بفاصلٍ غيرِ
+# LF أو يختمه بذيلٍ من الفراغات سطرُ حصيلةٍ كاملُ الحقِّ يُعَدُّ ولا يُغفل، فلا يُصدَّقُ رقمُ
+# نتيجةٍ أولى لأنّ الثانية «لا تطابق النمط». والمعايرةُ على نصٍّ لا على ملف.
+#   · **الفواصلُ المعلنة** (W-2026-064 · الجلسة 13 · GN05_NEL_LS_SEPARATOR_BYPASS): كلُّ ما يعدّه
+#     Unicode وPython `str.splitlines` فاصلَ أسطر — CR · VT · FF · FS/GS/RS (0x1C–0x1E) · NEL
+#     (U+0085) · LS (U+2028) · PS (U+2029) — ومعها NUL (لا يحمله متغيّرُ bash فيلحم سطرين) ⇒ LF.
+#     تُقرأ بايتاتٍ في `LC_ALL=C`: تسلسلاتُ UTF-8 الثلاثةُ تبدأ ببايتٍ قائدٍ (C2 · E2) لا يقع
+#     تابعًا لحرفٍ آخر، فلا يُقطع حرفٌ عربيٌّ آخرُ بايتاته 0x85 (مثل «م» = D9 85).
+#   · **الذيلُ الحميد**: فراغٌ وجدولةٌ وNBSP (C2 A0) تسلسلًا كاملًا — لا بايتُ A0 وحده.
+TALLY_TEXT=$(LC_ALL=C tr '\000\r\v\f\034\035\036' '\n\n\n\n\n\n\n' < "$TALLY" \
+  | LC_ALL=C sed -e 's/\xc2\x85/\n/g' -e 's/\xe2\x80\xa8/\n/g' -e 's/\xe2\x80\xa9/\n/g' \
+  | LC_ALL=C sed -E -e 's/([ \t]|\xc2\xa0)+$//')
 
 RUN_TESTS=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# tests \([0-9][0-9]*\)$/\1/p' | tail -1)
 RUN_PASS=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# pass \([0-9][0-9]*\)$/\1/p' | tail -1)
@@ -268,13 +275,27 @@ TALLY_TESTS_LINES=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# tests \([0-9][0-9
 TALLY_PASS_LINES=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# pass \([0-9][0-9]*\)$/\1/p' | wc -l | tr -d ' ')
 TALLY_FAIL_LINES=$(printf '%s\n' "$TALLY_TEXT" | sed -n 's/^# fail \([0-9][0-9]*\)$/\1/p' | wc -l | tr -d ' ')
 
-# سطرٌ يشبه رمزَ الحصيلةِ ولا يطابقُ شكلَه المعلن (`# tests N`) يُرى ويُرفض — لا يُغفل
-# فتُصدَّقَ نتيجةُ أولى (الجلسة 12 · GN05_TOKEN_SHAPE_BYPASS): مسافةٌ قائدة أو مسافتان بين
-# الرمزِ والعددِ شكلٌ شاذٌّ يُسمّى لا صمتٌ يُتغاضى — فالحصيلةُ التي لا تُقرأ بثباتٍ لا تُصدَّق.
-TALLY_MALFORMED_LINES=$(printf '%s\n' "$TALLY_TEXT" | sed -n -E '/^[ \t]*#[ \t]*(tests|pass|fail)\b/{/^# (tests|pass|fail) [0-9]+$/!p}' | wc -l | tr -d ' ')
+# سطرٌ يشبه رمزَ الحصيلةِ ولا يطابقُ شكلَه المعلن (`# tests N`) يُرى ويُرفض — لا يُغفل فتُصدَّقَ
+# نتيجةُ أولى (الجلسة 12 · GN05_TOKEN_SHAPE_BYPASS · والجلسة 13 · GN05_NBSP_INTERNAL_SHAPE_BYPASS ·
+# GN05_TOKEN_SHAPE_BYPASS_EXT). كان الكاشفُ يعرف الفراغَ ASCII وحده (`[ \t]`)، فسطرٌ فيه NBSP
+# قبل `#` أو بعده لم يكن «يشبه الرمز» عنده — والتعليقُ ادّعى خلافَ ذلك. فصار الشَّبَهُ يُعرَّف
+# **بنقيضِ الحرفِ لا بقائمةِ الفراغات**: كلُّ بايتٍ ليس حرفًا أو رقمًا لاتينيًّا (`[^[:alnum:]]`
+# في `LC_ALL=C`) — فيدخل فيه NBSP وكلُّ فراغاتِ Unicode والفراغُ الصفريّ و«＃» العريضة — ودون
+# حسابِ حالةِ الحروف. والسطرُ يشبه الرمزَ إن:
+#   (أ) ورد فيه `#` تتلوه غيرُ الحروفِ ثمّ `tests|pass|fail` كلمةً تامّة — في أيّ موضعٍ من السطر؛ أو
+#   (ب) كانت أوّلُ كلمةٍ فيه `tests|pass|fail` تامّةً بعد بادئةٍ ليست حروفًا (ولو بلا `#`).
+# وكلُّ شبيهٍ لا يطابق `^# (tests|pass|fail) [0-9]+$` حرفًا يُعدّ ويُرفض ويُطبع أوّلُه مرئيًّا.
+# **حدُّه المعلن:** الرمزُ يُعرف بحروفه اللاتينية؛ رمزٌ بحروفٍ مشابهةٍ من نصٍّ آخر (مثل «е»
+# السيريلية في «tеsts») لا يُرى شبيهًا. ومقيسٌ على حصيلة 2423 الحقيقية: لا شبيهَ فيها غيرُ
+# الأسطرِ الثلاثةِ المطابقة — فالكاشفُ لا يرفض الصحيح القائم.
+TALLY_TOKENISH='#[^[:alnum:]]*(tests|pass|fail)([^[:alnum:]]|$)|^[^[:alnum:]]*(tests|pass|fail)([^[:alnum:]]|$)'
+TALLY_EXACT='^# (tests|pass|fail) [0-9]+$'
+TALLY_MALFORMED=$(printf '%s\n' "$TALLY_TEXT" | LC_ALL=C grep -a -i -E "$TALLY_TOKENISH" | LC_ALL=C grep -a -v -E "$TALLY_EXACT" || true)
+TALLY_MALFORMED_LINES=$(printf '%s' "$TALLY_MALFORMED" | LC_ALL=C grep -a -c '' || true)
 
 if [ "$TALLY_MALFORMED_LINES" -gt 0 ]; then
   echo "✗ [GN-05] حصيلةُ المُشغّل في $TALLY تحوي $TALLY_MALFORMED_LINES سطرًا يشبه رمزَ الحصيلة ولا يطابق شكلها المعلن (\`# tests N\`) — حصيلةٌ بصيغةٍ شاذةٍ لا تُقرأ بثباتٍ فلا تُصدَّق (GN05_TOKEN_SHAPE_BYPASS)"
+  printf '%s\n' "$TALLY_MALFORMED" | head -n 5 | LC_ALL=C cat -v | sed 's/^/    ✗ /'
   FAIL=1
 elif [ "$TALLY_TESTS_LINES" -gt 1 ] || [ "$TALLY_PASS_LINES" -gt 1 ] || [ "$TALLY_FAIL_LINES" -gt 1 ]; then
   echo "✗ [GN-05] حصيلةُ المُشغّل في $TALLY ليست حصيلةَ تشغيلٍ واحد موثوقًا: $TALLY_TESTS_LINES سطر tests · $TALLY_PASS_LINES سطر pass · $TALLY_FAIL_LINES سطر fail — والرقمُ المقروء من تشغيلين متزامنين يكذب (TEST_TALLY_APPEND_RACE)"
