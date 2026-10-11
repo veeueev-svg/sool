@@ -2,6 +2,7 @@
 
 ### إصلاح(40)
 
+- **W-2026-064 — علاجُ عيوبِ الجلسة 14** (`GN05_VALID_TAP_COMMENT_FALSE_REJECT` · `GN05_INTRAWORD_INVISIBLE_BYPASS` · `GN05_CSI_COMMAND_SHAPE_BYPASS`): باب [GN-05] في `scripts/check_generated_numbers.sh` يعرّف سطرَ الحصيلة بنحوِ TAP (الرمزُ يتلوه عدد) فلا يرفض تعليقًا مشروعًا كـ`# tests completed without failures`، ويقرأ الحصيلةَ في منظرَين: خامٍّ ومعروضٍ يحذف تسلسلاتِ ESC وضوابطَ C0/C1 وكلَّ نقاط Unicode `Default_Ignorable_Code_Point` — والشاذُّ ما خالف الشكلَ معروضًا أو خالف معروضُه خامَّه؛ وNUL علامةٌ خفيّةٌ لا فاصل. +6 اختبارات (2435) وثلاثُ طفراتٍ مقتولة. [التقرير](docs/test-reports/phase-40-W-2026-064.md)
 - **W-2026-064 — علاجُ عيوبِ الجلسة 13** بالأمر الملكي م-2026-107 (`GN05_NBSP_INTERNAL_SHAPE_BYPASS` · `GN05_NEL_LS_SEPARATOR_BYPASS` · `GN05_TOKEN_SHAPE_BYPASS_EXT`): في باب [GN-05] من `scripts/check_generated_numbers.sh` صارت فواصلُ Unicode كلُّها (NEL · LS · PS · FS/GS/RS) ومعها NUL فواصلَ أسطرٍ تُقرأ بايتاتٍ في `LC_ALL=C`، وصار الشَّبَهُ برمز الحصيلة يُعرَّف بنقيض الحرف لا بقائمة فراغات ASCII — فـNBSP وفراغاتُ Unicode و«＃» العريضةُ وحالةُ الحروف والرمزُ بلا علامة تُرى وتُرفض بالاسم. وPS قِيس يمرّ على الشفرة السابقة خلافَ تصحيح محضر الجلسة 13 (اكتشافٌ مقيّد). +6 اختبارات (2429) · طفرةٌ مقتولة. [التقرير](docs/test-reports/phase-40-W-2026-064.md)
 
 ## [غيرُ مُصدَر] — 2026-10-09
