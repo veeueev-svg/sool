@@ -1,0 +1,40 @@
+{
+  "item": "W-2026-064",
+  "commit": "1c8dcf0b9bc8571c82813e37913d05476d960ac2",
+  "scope_digest": "45d411dd3891cf67f6efa0da3f060cf9d9e4f80448573ca353b618b69a0bea60",
+  "executor_family": "Claude",
+  "convened_at": "2026-10-11",
+  "session": 15,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-15-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-15-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-064-15-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "GN05_ESCAPE_FINAL_EATEN_BYPASS (grok): صنفُ الوسيط في محو CSI وثنائيّة ESC مكتوبٌ [ -\\/] فيقرؤه GNU sed 4.9 مدىً من 0x20 إلى 0x5C (يشمل @–Z و\\) لا من الفراغ إلى «/»؛ فالمحورُ الجشع يبتلع النهائيَّ إن كان في @–\\ ويأكل أوّلَ حرفٍ من الكلمة التالية نهائيًّا. «# ESC A fail 1» بعد حصيلةٍ سليمة ⇒ المعروض «# ail 1» ⇒ رمز 0 وتصديقُ 2435؛ ومثلُه ESC[A · ESC[0@ · ESC[@ · ESC[Z وCSI الثمانيّ ثم A. والضابطان ESC a وESC[m ⇒ رمز 1. والتعليقُ والعقدُ يدّعيان حذفَ التسلسل حتى نهائيِّه — القياسُ يخالف الدعوى.",
+      "GN05_VALID_TAP_NUMERIC_COMMENT_FALSE_REJECT (gpt): تعليقُ TAP «# tests 2435 completed without failures» قبل حصيلةٍ سليمةٍ واحدة يُقرأ حصيلةً لأنّ الرمزَ يتلوه عدد، فيُرفض بـ[GN-05] رمز 1 — رفضُ الصحيح على تعليقٍ عدديّ (خارجَ علاج الجلسة 14 الذي غطّى التعليقَ غيرَ العدديّ).",
+      "ملاحظاتٌ غيرُ مُسقِطة: (gpt) npm run verify أُلغي في عزله قبل خرجه النهائيّ — لم يُسنَد إليه رمز. (grok) npm run verify ⇒ 0 · npm test 2435/2435 · البصمة 45d411dd… تطابق وتخالف محضر 14 (الثابت 8) · لا لمسَ خارج النطاق · قتلُ الطفرات الثلاث لم يُعَد. (gemini) VERIFIED. والأعضاءُ الثلاثة شُغّلوا معًا على آلةٍ واحدة (ظرفٌ معلن)."
+    ]
+  }
+}
