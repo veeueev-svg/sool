@@ -1813,6 +1813,44 @@
         "DISC (الجلسة 95): التزامةُ هذا البند 8efba7c (#44) أضافت إلى WORK_QUEUE.json مفتاحًا ثانيًا «items» (+1693 سطرًا) نسخةً من «work_items» بلا موجب. البوابةُ (check_work.mjs) والحارسُ (review_council.test.ts) وwork.mjs تقرأ work_items وحدها، فصارت items نسخةً متقادمةً تخالف مصدرَ الحقّ: بعد الجلسة 3 (97ac270) اختلفت عنه في أربعة بنود (W-2026-062 · 064 · 065 · 066 — next_step ما زال «الجلسة الثالثة»). وهذا خرقٌ لقاعدة «لكلّ سؤالٍ ملفٌّ واحد» (WORK_CONTROL §2) داخل الملفّ نفسِه. عولج بحذف items (الجلسة 95) — work_items لم يُلمس بهذا العلاج.",
         "DISC (الجلسة 95) — للمالك ولصاحب scripts/check_work.mjs (محجوزٌ لـW-2026-041/046/040): البوابةُ لا ترفض مفتاحًا أعلى غيرَ معلنٍ في WORK_QUEUE.json، فمرّت النسخةُ المكرّرة في CI أخضر. لم يُضَف حاجزٌ هنا لأنّ الملفّ محجوزٌ لغير هذا البند."
       ]
+    },
+    {
+      "id": "W-2026-068",
+      "title": "توثيقُ قياسِ خطِّ الأساسِ المحليِّ للجلسةِ الحاليّة",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 108)",
+      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلّ وفق RULE-019",
+      "area": "حوكمة/توثيق",
+      "phase": 40,
+      "status": "REVIEW",
+      "progress_items": [
+        "لا ينطبق"
+      ],
+      "dependencies": [
+        "لا شيء"
+      ],
+      "scope": [
+        "docs/test-reports/phase-40-W-2026-068.md"
+      ],
+      "excluded": [
+        "src/ · tests/ · scripts/ · config/ · .github/ · docs/work/council/ · docs/royal-orders/ · docs/audit/measurements/ — لا يُلمسُ شيءٌ منها في هذا البند (هو توثيقٌ لا إصلاح)"
+      ],
+      "acceptance": [
+        "يوجد الملف docs/test-reports/phase-40-W-2026-068.md",
+        "التقرير يذكر الالتزام a72992b والأمر المُشغَّل والعدد 2438 ورمز الخروج 0 وتاريخ 2026-10-11 والعقدة sandbox محليّة",
+        "التقرير يصرّح بأن القياس محلي لا يصادق على CI ولا على حكم مجلس المراجعة (RULE-004 · RULE-020)",
+        "PROGRESS.md يُحدَّث بجلسة 108 في جدول «ما تمّ»",
+        "npm run check:work ⇒ رمز 0"
+      ],
+      "evidence": [
+        "npm test ⇒ 2438/2438 رمز 0 (قياس محلي 2026-10-11)",
+        "npm run verify ⇒ EXIT=0 (سجل محفوظ /tmp/sool-verify-7r92eB.log)",
+        "git status --short ⇒ فارغ",
+        "تقرير docs/test-reports/phase-40-W-2026-068.md"
+      ],
+      "next_step": "الوكيل (الجلسة 108): كتابة التقرير في docs/test-reports/phase-40-W-2026-068.md، تحديث PROGRESS.md بجلسة 108، تشغيل npm run check:work، ثم الرفع إلى REVIEW. المراجع (القيّم على المستودع — ومراجع مستقل وفق RULE-019): الإقرار أو الرفض بعيوب مسمّاة، ثم الإغلاق بالنقل إلى WORK_LOG.md (RULE-004 · RULE-016).",
+      "created_at": "2026-10-11",
+      "updated_at": "2026-10-11",
+      "verification": "قياسُ خطِّ الأساسِ المحليّ على main عند a72992b (2026-10-11): npm test ⇒ 2438/2438 رمز 0 · npm run verify ⇒ EXIT=0 (سجل محفوظ /tmp/sool-verify-7r92eB.log) · git status نظيف · check:work ⇒ رمز 0 · تقرير docs/test-reports/phase-40-W-2026-068.md · PROGRESS.md صف الجلسة 108. القياس محلي ولا يصادق على CI ولا على حكم مجلس المراجعة (RULE-004 · RULE-020)."
     }
   ]
 }
