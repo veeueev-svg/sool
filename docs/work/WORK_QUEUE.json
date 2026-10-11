@@ -1360,7 +1360,7 @@
       "reviewer": "القيّم على المستودع (المالك) — ومجلس المراجعة (RULE-020)",
       "area": "التوثيق والحوكمة",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "قيس كلُّ رابطٍ نسبيٍّ في الوثائق: 34 مكسورًا خارج WORK_LOG.md",
         "أُصلحت 25 في نطاق هذا البند، و9 في نطاق W-2026-038 وW-2026-059 داخل بندَيهما (#32 · #33)",
@@ -1390,7 +1390,8 @@
         "2026-10-11 (الجلسة 106): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق (22 مسارًا) تخالف بصمةَ محضر الجلسة 13 (1c33607c…). رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
         "2026-10-11 (الجلسة 106): الجلسة 14 — NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). عيوبُ الجلسة 13 الثلاثة مغلقةٌ في مواضعها المسمّاة بقياس الأعضاء الثلاثة، وعيوبٌ جديدة في باب [GN-05]: GN05_VALID_TAP_COMMENT_FALSE_REJECT (gpt) · GN05_INTRAWORD_INVISIBLE_BYPASS (grok) · GN05_CSI_COMMAND_SHAPE_BYPASS (grok). عاد إلى IN_PROGRESS. المحضر: docs/work/council/W-2026-064-14.json.",
         "2026-10-11 (الجلسة 107): استلامٌ بأمر المالك التشغيليّ الدائم (2026-10-11) من المساعد الآلي — Perplexity Computer (الجلسة 106 — بالأمر الملكي م-2026-107) — المعرّفُ لم يتبدّل (WORK_CONTROL §6). علاجُ عيوب الجلسة 14 الثلاثة (GN05_VALID_TAP_COMMENT_FALSE_REJECT · GN05_INTRAWORD_INVISIBLE_BYPASS · GN05_CSI_COMMAND_SHAPE_BYPASS) في scripts/check_generated_numbers.sh وحده: سطرُ الحصيلة بنحوِ TAP (رمزٌ يتلوه عدد) ومنظرٌ معروضٌ يحذف تسلسلاتِ ESC والضوابطَ وكلَّ Default_Ignorable_Code_Point (Unicode 18.0.0)، والشاذُّ ما خالف الشكلَ معروضًا أو خالف معروضُه خامَّه؛ وNUL علامةٌ خفيّةٌ لا فاصل. +6 اختبارات في tests/governance/gn05_tally_gate.test.ts · ثلاثُ طفراتٍ مقتولة · npm test 2435/2435. ورُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 0e93bd9a… (محضر الجلسة 14) ⇒ 45d411dd…. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس وحده.",
-        "2026-10-11 (الجلسة 107): الجلسة 15 — NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). عاد إلى IN_PROGRESS بعيبَين مسمّيَين: GN05_ESCAPE_FINAL_EATEN_BYPASS · GN05_VALID_TAP_NUMERIC_COMMENT_FALSE_REJECT."
+        "2026-10-11 (الجلسة 107): الجلسة 15 — NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). عاد إلى IN_PROGRESS بعيبَين مسمّيَين: GN05_ESCAPE_FINAL_EATEN_BYPASS · GN05_VALID_TAP_NUMERIC_COMMENT_FALSE_REJECT.",
+        "2026-10-11 (الجلسة 107): علاجُ عيبَي الجلسة 15 في scripts/check_generated_numbers.sh: صنفُ الوسيط [ -\\/] (مدىً 0x20–0x5C عند GNU sed — عيبُ المنفّذ) صُحّح إلى [ -/] في المواضع الثلاثة (GN05_ESCAPE_FINAL_EATEN_BYPASS)، و«يُقرأ حصيلةً» صار الرمزَ ثمّ لا حرفَ لاتينيًّا إلى نهاية السطر (GN05_VALID_TAP_NUMERIC_COMMENT_FALSE_REJECT) — وحدُّه المعلنُ الجديد: «# tests 2418 x» تعليق. +3 اختبارات · طفرتان مقتولتان · npm test 2438/2438. ورُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 45d411dd… (محضر الجلسة 15) ⇒ a4115817…. رفعٌ للمراجعة لا ترقية."
       ],
       "dependencies": [
         "لا شيء"
@@ -1433,12 +1434,12 @@
       ],
       "evidence": [
         "docs/test-reports/phase-40-W-2026-064.md",
-        "npm test 2435/2435 · gn05_tally_gate 20/20 · npm run verify → انظر verification"
+        "npm test 2438/2438 · gn05_tally_gate 23/23 · npm run verify → انظر verification"
       ],
-      "next_step": "علاجُ عيبَي الجلسة 15 داخل النطاق (scripts/check_generated_numbers.sh · tests/governance/gn05_tally_gate.test.ts) ثم الرفعُ بتغيّرٍ مقيس (الثابت 8). وانعقادُ جلسةٍ 16 قرارُ المالك (أربعُ جلساتٍ متتالية على باب [GN-05] وحده).",
+      "next_step": "الجلسة 16 لمجلس المراجعة — بأمر المالك وحده (لم تُعقد). وقرارُ نطاقٍ للمالك قبلها: أربعُ جلساتٍ متتالية (12–15) أسقطت البندَ في باب [GN-05] وحده — أيبقى تصليبُه شرطًا لإغلاق هذا البند أم يُفصل بندًا مستقلًّا؟ وحدٌّ معلنٌ جديد يحتاج قبولَه: «# tests 2418 x» تعليقٌ لا حصيلة.",
       "created_at": "2026-10-03",
       "updated_at": "2026-10-11",
-      "verification": "شُغِّل في 2026-10-11 (الجلسة 107) على شجرة العلاج فوق fafebb1: node --test dist/tests/governance/gn05_tally_gate.test.js → pass 20 · fail 0 · npm test → 2435/2435 رمز 0 · قتلُ الطفرات: الشفرةُ السابقة ⇒ pass 15 · fail 5 · بلا حذفِ الخفيّ ⇒ fail 3 · بلا شرطِ المعروض=الخامّ ⇒ fail 4. المسابيرُ المسمّاة في الجلسة 14 قبلًا رمز 0 (والتعليقُ المشروعُ رمز 1) وبعدًا عكسُها. بصمةُ النطاق (22 مسارًا) = 45d411dd3891cf67f6efa0da3f060cf9d9e4f80448573ca353b618b69a0bea60 — تخالف بصمةَ محضر الجلسة 14 (0e93bd9a…). الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-064.md.",
+      "verification": "شُغِّل في 2026-10-11 (الجلسة 107) على شجرة العلاج فوق c556130: node --test dist/tests/governance/gn05_tally_gate.test.js → pass 23 · fail 0 · npm test → 2438/2438 رمز 0 · قتلُ الطفرات: شفرةُ 1c8dcf0 ⇒ pass 20 · fail 3 · إرجاعُ [ -\\/] وحده ⇒ fail 2. مسابيرُ الجلسة 15 قبلًا (ESC-final رمز 0 · التعليقُ العدديّ رمز 1) وبعدًا عكسُها. بصمةُ النطاق (22 مسارًا) = a41158175b1931404938f9d7b644b9c95deb82c497bf4fe1a2bc8a2dc26a75a7 — تخالف بصمةَ محضر الجلسة 15 (45d411dd…). الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-064.md.",
       "documentation_impact": [
         "ARCHITECTURE.md",
         "PROGRESS.md",
