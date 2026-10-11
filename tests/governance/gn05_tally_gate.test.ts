@@ -276,3 +276,39 @@ test('GN-05/14: أسماءُ اختباراتٍ فيها علاماتٌ خفيّ
   assert.equal(r.code, 0, `حصيلةٌ سليمةٌ بأسماءٍ فيها خفيٌّ رُفضت:\n${r.out}`);
   assert.match(r.out, /✓ عددُ الاختبارات/);
 });
+
+// ── عيبا الجلسة 15 (W-2026-064 · الجلسة 107) ──────────────────────────────────
+// المحضر: docs/work/council/W-2026-064-15.json. والمسابيرُ بحرفِ تقريرَي grok وgpt الخامَّين.
+
+test('GN-05/15: نهائيُّ التسلسل في @–\\ لا يأكل حرفَ البيانات بعده (GN05_ESCAPE_FINAL_EATEN_BYPASS)', () => {
+  for (const [label, shape] of [
+    ['ESC A', (w: string, v: number) => `# \u001bA${w} ${v}`],
+    ['ESC[A', (w: string, v: number) => `# \u001b[A${w} ${v}`],
+    ['ESC[0@', (w: string, v: number) => `# \u001b[0@${w} ${v}`],
+    ['ESC[@', (w: string, v: number) => `# \u001b[@${w} ${v}`],
+    ['ESC[Z', (w: string, v: number) => `# \u001b[Z${w} ${v}`],
+    ['ESC \\', (w: string, v: number) => `# \u001b\\${w} ${v}`],
+    ['CSI ثمانيّ ثم A', (w: string, v: number) => `# \u009bA${w} ${v}`],
+    ['ESC[A داخل الكلمة', (w: string, v: number) => `# ${w.slice(0, 2)}\u001b[A${w.slice(2)} ${v}`],
+  ] as const) {
+    const r = assertRejected(label, conflictingShaped(shape));
+    assert.match(r.out, /GN05_TOKEN_SHAPE_BYPASS/, `${label}: لم يُسمَّ العيب`);
+  }
+});
+
+test('GN-05/15: سطرُ fail واحدٌ مخفيٌّ بـESC A بعد حصيلةٍ سليمة يُرفض — لا يُصدَّق fail 0 (GN05_ESCAPE_FINAL_EATEN_BYPASS)', () => {
+  const n = declaredTests();
+  for (const esc of ['\u001bA', '\u001b[A']) {
+    assertRejected(`fail مخفيّ ${JSON.stringify(esc)}`, `TAP version 13\n# tests ${n}\n# pass ${n}\n# fail 0\n# ${esc}fail 1\n`);
+  }
+});
+
+test('GN-05/15: تعليقُ TAP عدديٌّ يتلوه كلامٌ لا يُرفض — الحصيلةُ يختمها العدد (GN05_VALID_TAP_NUMERIC_COMMENT_FALSE_REJECT)', () => {
+  const n = declaredTests();
+  for (const comment of [`# tests ${n} completed without failures`, `# pass 3 of the retry suite`, `# fail 0 expected here`]) {
+    const body = `TAP version 13\n${comment}\n# tests ${n}\n# pass ${n}\n# fail 0\n`;
+    const r = runCheck(body);
+    assert.equal(r.code, 0, `«${comment}» مع حصيلةٍ سليمةٍ رُفض:\n${r.out}`);
+    assert.match(r.out, /✓ عددُ الاختبارات/);
+  }
+});
