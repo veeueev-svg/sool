@@ -2,7 +2,7 @@
   "item": "W-2026-064",
   "commit": "e88d74a81d1023eda402de598eba4196fc71273f",
   "scope_digest": "a41158175b1931404938f9d7b644b9c95deb82c497bf4fe1a2bc8a2dc26a75a7",
-  "executor_family": "Claude",
+  "executor_family": "GLM",
   "convened_at": "2026-10-11",
   "session": 16,
   "verdicts": [
@@ -32,7 +32,7 @@
   "disposition": {
     "kind": "IN_PROGRESS",
     "discoveries": [
-      "DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS (الإجماع — gpt · grok · gemini): stripCode في tests/governance/doc_links.test.ts لا يعامل backtick المهرَّب (\\`) كحدِّ شفرةٍ فيحذفُ ما بينه وبين أول backtick عارٍ — فيعمى الحارسُ عن رابطٍ نسبيٍّ يعرضه CommonMark 0.31.2 §2.4/§6.1 وGitHub. المسبار الحرفي (بترتيب الوسائط الصحيح file, text, exists): brokenLinksIn('docs/a.md', 'See \\` [x](missing.md) ` end', none) ⇒ [] — والقياس المستقل عبر pandoc commonmark وgfm (grok) أكّد أن الرابط يُعرض. عيبا الجلسة 15 (GN05_ESCAPE_FINAL_EATEN_BYPASS · GN05_VALID_TAP_NUMERIC_COMMENT_FALSE_REJECT) عولجا فعلًا في 2f14a6c لا تُخطّيا.",
+      "DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS (الإجماع — gpt · grok · gemini): stripCode في tests/governance/doc_links.test.ts يعاملُ backtick المهرَّب (\\`) خطأً كحدِّ شفرةٍ — والصحيحُ أنّه محرفٌ حرفيٌّ في CommonMark 0.31.2 §2.4/§6.1 — فيحذفُ ما بينه وبين أول backtick عارٍ والرابطُ فيه، فيعمى الحارسُ عن رابطٍ نسبيٍّ يعرضهُ GitHub. المسبار الحرفي (بترتيب الوسائط الصحيح file, text, exists): brokenLinksIn('docs/a.md', 'See \\` [x](missing.md) ` end', none) ⇒ [] — والقياس المستقل عبر pandoc commonmark وgfm (grok) أكّد أن الرابط يُعرض. عيبا الجلسة 15 (GN05_ESCAPE_FINAL_EATEN_BYPASS · GN05_VALID_TAP_NUMERIC_COMMENT_FALSE_REJECT) عولجا فعلًا في 2f14a6c لا تُخطّيا.",
       "ملاحظةٌ غيرُ مُسقِطة (تشغيلُ المجموعة): gpt قاس npm test 2438/2438 رمز 0 وnpm run verify رمز 1 (فشلٌ في declaration_gate.test.js رقم 893 — DC-03 على C-21)؛ grok قاس npm test الأوّل 2434/2438 رمز 1 (أربعةُ سقوطٍ في declaration_gate.test.js) ثم المجموعة داخل verify 2438/2438 رمز 0؛ gemini قاس npm test وverify رمز 1 عند 2437/2438 (T-142). الأعضاءُ شُغّلوا معًا على الشجرة نفسها /tmp/sool (جذورُ التقارير منفصلةٌ والشجرةُ مشتركة) — سببُ اختلاف النتائج غيرُ محسوم: لا يُنسبُ إلى تزاحمٍ مُثبَت ولا يُوصفُ بأنه «متقلبٌ غيرُ متعلّق». المسار tests/governance/declaration_gate.test.js خارجَ نطاقِ W-2026-064.",
       "ملاحظةٌ غيرُ مُسقِطة (تصحيحُ مرجعٍ في خام gemini): تقريرُ gemini يُحيلُ إلى الالتزام 27ef5bf مرجعًا لتقرير grok للجلسة 5 — والقياسُ أنّ 27ef5bf التزامُ تجهيزٍ لا يحوي ملفَّ W-2026-064-5-grok.md؛ الملفُّ موجودٌ في رأس الفرع phase-40/council-session-5 عند 91839c7. الخامُ يُحفظ كما كُتب ولا يُعدَّل (ADR-0054 §4)."
     ]
