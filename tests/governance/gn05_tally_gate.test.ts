@@ -203,3 +203,76 @@ test('GN-05/13: الكاشفُ لا يرفض الصحيح — أسطرُ node ا
   assert.equal(r.code, 0, `حصيلةُ node السليمةُ رُفضت:\n${r.out}`);
   assert.match(r.out, /✓ عددُ الاختبارات/);
 });
+
+// ── عيوبُ الجلسة 14 (W-2026-064 · الجلسة 107) ─────────────────────────────────
+// المحضر: docs/work/council/W-2026-064-14.json. والمسابيرُ بحرفِ تقريرَي gpt وgrok الخامَّين.
+
+/** حصيلةٌ ثانيةٌ متعارضة يصنع كلَّ سطرٍ منها `shape(word, value)` — بعد حصيلةٍ أولى سليمة */
+function conflictingShaped(shape: (word: string, value: number) => string): string {
+  const n = declaredTests();
+  const first = `TAP version 13\n# tests ${n}\n# pass ${n}\n# fail 0\n`;
+  return `${first}TAP version 13\n${shape('tests', n - 11)}\n${shape('pass', n - 12)}\n${shape('fail', 1)}\n`;
+}
+
+test('GN-05/14: تعليقُ TAP مشروعٌ يبدأ بالرمز وتتلوه كلمةٌ لا عدد لا يُرفض (GN05_VALID_TAP_COMMENT_FALSE_REJECT)', () => {
+  const n = declaredTests();
+  for (const comment of ['# tests completed without failures', '# tests_total note', '# Pass-through suite ok']) {
+    const body = `TAP version 13\n${comment}\n# tests ${n}\n# pass ${n}\n# fail 0\n`;
+    const r = runCheck(body);
+    assert.equal(r.code, 0, `«${comment}» مع حصيلةٍ سليمةٍ رُفض:\n${r.out}`);
+    assert.match(r.out, /✓ عددُ الاختبارات/);
+  }
+});
+
+test('GN-05/14: الرمزُ يتلوه عددٌ ولو بلا فراغٍ أو بعد علامات — يُقرأ حصيلةً فيُرفض شاذُّه (حدُّ نحوِ TAP)', () => {
+  for (const [label, shape] of [
+    ['ملتصق', (w: string, v: number) => `# ${w}${v}`],
+    ['نقطتان', (w: string, v: number) => `# ${w}: ${v}`],
+  ] as const) {
+    const r = assertRejected(label, conflictingShaped(shape));
+    assert.match(r.out, /GN05_TOKEN_SHAPE_BYPASS/, `${label}: لم يُسمَّ العيب`);
+  }
+});
+
+test('GN-05/14: علامةٌ خفيّةٌ داخل الكلمة (ZWSP · WJ · SHY · BOM · RLM · NUL) تُرى وتُرفض (GN05_INTRAWORD_INVISIBLE_BYPASS)', () => {
+  for (const [label, mark] of [
+    ['ZWSP', '\u200B'], ['WJ', '\u2060'], ['SHY', '\u00AD'], ['BOM', '\uFEFF'], ['RLM', '\u200F'],
+    ['TAG', '\u{E0041}'], ['NUL', '\u0000'],
+  ] as const) {
+    const r = assertRejected(label, conflictingShaped((w, v) => `# ${w.slice(0, 1)}${mark}${w.slice(1)} ${v}`));
+    assert.match(r.out, /GN05_TOKEN_SHAPE_BYPASS/, `${label}: لم يُسمَّ العيب`);
+  }
+});
+
+test('GN-05/14: تسلسلاتُ ESC وCSI والضوابطُ لا تُعمي الكاشف (GN05_CSI_COMMAND_SHAPE_BYPASS)', () => {
+  for (const [label, shape] of [
+    ['ESC[m', (w: string, v: number) => `# \u001b[m${w} ${v}`],
+    ['ESC[0m', (w: string, v: number) => `# \u001b[0m${w} ${v}`],
+    ['ESC[1;31m داخل', (w: string, v: number) => `# ${w.slice(0, 2)}\u001b[1;31m${w.slice(2)} ${v}`],
+    ['OSC', (w: string, v: number) => `# \u001b]0;t\u0007${w} ${v}`],
+    ['CSI ثمانيّ', (w: string, v: number) => `# \u009bm${w} ${v}`],
+    ['BS فوق حرف', (w: string, v: number) => `# ${w.slice(0, 2)}X\b${w.slice(2)} ${v}`],
+    ['DEL', (w: string, v: number) => `# ${w.slice(0, 2)}\u007f${w.slice(2)} ${v}`],
+  ] as const) {
+    const r = assertRejected(label, conflictingShaped(shape));
+    assert.match(r.out, /GN05_TOKEN_SHAPE_BYPASS/, `${label}: لم يُسمَّ العيب`);
+  }
+});
+
+test('GN-05/14: سطرٌ مطابقٌ معروضًا وفي خامِّه خفيٌّ يُرفض ولو كانت الحصيلةُ واحدة — المعروضُ لا يكفي', () => {
+  const n = declaredTests();
+  const body = `TAP version 13\n# tests ${n}\n# \u001b[0mpass ${n}\n# fail 0\n`;
+  const r = runCheck(body);
+  assert.equal(r.code, 1, `سطرٌ فيه CSI خفيٌّ قُبل:\n${r.out}`);
+  assert.match(r.out, /GN05_TOKEN_SHAPE_BYPASS/);
+  assert.match(r.out, /\^\[\[0m/, 'السطرُ الشاذُّ لا يُطبع مرئيًّا (cat -v)');
+});
+
+test('GN-05/14: أسماءُ اختباراتٍ فيها علاماتٌ خفيّةٌ وتسلسلاتٌ لا تشبه الحصيلة تمرّ — الكاشفُ لا يرفض الصحيح', () => {
+  const n = declaredTests();
+  const body = `TAP version 13\nok 1 - اسمٌ\u200Cعربيٌّ \u001b[32mملوّن\u001b[0m\n# Subtest: tests\u200B of pass/fail\n`
+    + `1..${n}\n# tests ${n}\n# suites 0\n# pass ${n}\n# fail 0\n# cancelled 0\n# duration_ms 2.5\n`;
+  const r = runCheck(body);
+  assert.equal(r.code, 0, `حصيلةٌ سليمةٌ بأسماءٍ فيها خفيٌّ رُفضت:\n${r.out}`);
+  assert.match(r.out, /✓ عددُ الاختبارات/);
+});
