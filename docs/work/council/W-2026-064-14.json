@@ -1,0 +1,41 @@
+{
+  "item": "W-2026-064",
+  "commit": "1f18c8b96ccd481e091d5579250d1305078f0934",
+  "scope_digest": "0e93bd9a830e4e383707aeba8a5ad2b01b41a72f6d2fe0d2e08917796f481a95",
+  "executor_family": "Claude",
+  "convened_at": "2026-10-11",
+  "session": 14,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-14-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-14-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-064-14-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "GN05_VALID_TAP_COMMENT_FALSE_REJECT (gpt): حصيلةٌ سليمةٌ واحدة (2429/2429/0) معها تعليقُ TAP مشروع «# tests completed without failures» — وهو شكلٌ يخرجه مشغّل node نفسه بمسبار العضو — تُرفض بـ[GN-05] (رمز 1)؛ والضابطُ بلا التعليق رمز 0. الكاشفُ يعدّ كلَّ «#»+كلمة tests|pass|fail شبيهًا ولو لم يتلُها عدد، فيرفض الصحيح ويخالف دعوى «لا يرفض الصحيح».",
+      "GN05_INTRAWORD_INVISIBLE_BYPASS (grok): علامةُ تنسيقٍ غيرُ مرئية داخل الكلمة — U+200B (t+ZWSP+ests) · U+2060 · U+00AD — أو NUL داخل الكلمة (te\\x00sts: التحويلُ NUL⇒LF يمزّقها) في حصيلةٍ ثانيةٍ متعارضة (2418/2417/1) ⇒ رمز 0 وتصديقُ 2429. خارج الحدّ المعلن (الحروفُ المشابهة من نصٍّ آخر).",
+      "GN05_CSI_COMMAND_SHAPE_BYPASS (grok): «# »+ESC[m أو ESC[0m ثمّ الكلمة في حصيلةٍ ثانيةٍ متعارضة ⇒ رمز 0 وتصديقُ 2429 — [^[:alnum:]]* يقف عند حرف الأمر أو رقم الوسيط فلا يبلغ الكلمة، والطرفيةُ تعرض السطر «# tests N».",
+      "ملاحظاتٌ غيرُ مُسقِطة: (gpt) npm run verify في عزله مرّتين ⇒ رمز 1 و2427/2429 بساقطَي declaration_gate (DC-03 C-12/T-23 · DC-04 C-09/T-16) و npm test ⇒ 2429/2429 — لم يُنسب سببًا ولم يُسمَّ عيبًا في GN-05؛ مآلُه بندُ تشخيص فشل المجموعة (الأمر الملكي م-2026-107، المادة الثانية). (grok) ذيلُ EM SPACE/ZWSP على حصيلةٍ سليمة يُرفض · «# tests_total» و«# tests.» تُرفض (كامنٌ لا واقع) · رقمُ «2423» في تعليق الكاشف متقادم (الحصيلةُ 2429) · قتلُ الطفرة لم يُعَد عبر node --test بل بالحالات نفسها على e3b9204 — اتّجاهُ الدعوى صادق."
+    ]
+  }
+}
