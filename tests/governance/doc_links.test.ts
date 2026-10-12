@@ -32,25 +32,22 @@ const PENDING: ReadonlyMap<string, string> = new Map<string, string>([]);
  */
 const VERBATIM = /^docs\/work\/council\/W-\d{4}-\d{3}(-\d+)?-[a-z0-9]+\.md$/;
 
-/**
- * ماسحُ الشفرةِ المضمّنةِ (الجلسة 16 · CommonMark 0.31.2 §6.1): سطرًا سطرًا. خارجَ الشفرةِ `\\`
- * تأكلُ ما بعدها — فالعلامةُ المهرَّبةُ لا delimiterٌ؛ وداخلَها لا تُعالَجُ الشرطةُ.
- */
+/** ماسحُ الشفرةِ المضمّنةِ (الجلسة 16 · الجلسة 17 · CommonMark 0.31.2 §6.1): شرطةُ تهريبٍ خارجَ الشفرة، وspanٌ يعبرُ الأسطرَ داخلَ الفقرةِ (مثال 337) لا يعبرُ سطرًا فارغًا. */
 export function removeInlineCode(text: string): string {
-  return text.split('\n').map(removeInlineCodeLine).join('\n');
+  return text.split(/\n\s*\n/).map(removeInlineCodeBlock).join('\n\n');
 }
-function removeInlineCodeLine(line: string): string {
+function removeInlineCodeBlock(block: string): string {
   let out = '';
   let i = 0;
-  while (i < line.length) {
-    if (line[i] === '\\') { out += line.slice(i, i + 2); i += 2; continue; } // تهريب
-    if (line[i] === '`') {
-      let j = i; while (line[j] === '`') j++;
-      const run = line.slice(i, j);
+  while (i < block.length) {
+    if (block[i] === '\\') { out += block.slice(i, i + 2); i += 2; continue; } // تهريب
+    if (block[i] === '`') {
+      let j = i; while (block[j] === '`') j++;
+      const run = block.slice(i, j);
       let k = j, close = -1;
-      while (k < line.length) {
-        if (line[k] === '`') {
-          let m = k; while (line[m] === '`') m++;
+      while (k < block.length) {
+        if (block[k] === '`') {
+          let m = k; while (block[m] === '`') m++;
           if (m - k === run.length) { close = k; k = m; break; }
           k = m;
         } else k++;
@@ -58,7 +55,7 @@ function removeInlineCodeLine(line: string): string {
       if (close >= 0) { i = k; continue; } // الشفرةُ تُسقَطُ
       out += run; i = j; continue; // بلا مقابلٍ ⇒ حرفيّةٌ
     }
-    out += line[i]; i++;
+    out += block[i]; i++;
   }
   return out;
 }
@@ -218,19 +215,22 @@ test('حارسُ الروابط: ما في الشفرة نصٌّ لا رابط �
   assert.deepEqual(brokenLinksIn('docs/a.md', t, none), ['nope3.md']);
 });
 test('حارسُ الروابط: backtick المهرَّبُ محرفٌ لا حدَّ شفرة — والرابطُ معه يُقاس لا يُغفَل (الجلسة 16 · DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS)', () => {
-  // مسبرُ الجلسة 16 بحرفه (gpt) + عائلتُه:
-  assert.deepEqual(brokenLinksIn('docs/a.md', 'See \\` [x](missing.md) ` end', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', 'a`[x](m.md)` b \\` [y](n.md) ` c', none), ['n.md']);
-  // مسابيرُ CommonMark 0.31.2 (محرّكٌ مرجعيٌّ — القياسُ في التقرير): شرطةٌ واحدةٌ تهريبٌ؛ زوجيةٌ حرفيّة.
-  assert.deepEqual(brokenLinksIn('docs/a.md', 'single \\` backtick before [l1](u1.md)', none), ['u1.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', 'double \\\\` backticks [l2](u2.md)', none), ['u2.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', 'text \\\\\\` [l5](u5.md) and `span` [l6](u6.md)', none), ['u5.md', 'u6.md']);
-  // شرطةٌ داخلَ شفرةٍ محصَّنة (مِن روابطِ المُشغّلِ نفسِهِ): لا تُفتحُ ولا تُغلقُ شفرةً.
-  assert.deepEqual(brokenLinksIn('docs/a.md', '``code with ` inside`` [l4](u4.md)', none), ['u4.md']);
-  // (أ) شرطتان قبل علامةِ الفتحِ + إغلاقٌ لاحق ⇒ العلامةُ عاريةٌ تفتحُ شفرةً والرابطُ يُحجب.
-  assert.deepEqual(brokenLinksIn('docs/a.md', 'See \\\\` [x](missing.md) ` end', none), []);
-  // (ب) شرطةٌ واحدةٌ قبلَ علامةِ الإغلاقِ داخلَ شفرةٍ مضمّنة ⇒ delimiterٌ يغلقُها والرابطُ يُبلَّغ.
-  assert.deepEqual(brokenLinksIn('docs/a.md', '`code \\` [x](missing.md) ` end', none), ['missing.md']);
+  const eq = (t: string, expected: string[]) => assert.deepEqual(brokenLinksIn('docs/a.md', t, none), expected, t);
+  // مسبرُ الجلسة 16 بحرفه (gpt) + عائلتُه + مسابيرُ CommonMark 0.31.2 (شرطةٌ تهريبٌ، زوجيةٌ حرفيّةٌ) + (أ)/(ب).
+  eq('See \\` [x](missing.md) ` end', ['missing.md']);
+  eq('a`[x](m.md)` b \\` [y](n.md) ` c', ['n.md']);
+  eq('single \\` backtick before [l1](u1.md)', ['u1.md']);
+  eq('double \\\\` backticks [l2](u2.md)', ['u2.md']);
+  eq('text \\\\\\` [l5](u5.md) and `span` [l6](u6.md)', ['u5.md', 'u6.md']);
+  eq('``code with ` inside`` [l4](u4.md)', ['u4.md']); // شرطةٌ داخل شفرةٍ محصَّنة
+  eq('See \\\\` [x](missing.md) ` end', []); // (أ)
+  eq('`code \\` [x](missing.md) ` end', ['missing.md']); // (ب)
+});
+test('حارسُ الروابط: الشفرةُ المضمّنةُ العابرةُ للأسطرِ داخلَ الفقرةِ تُسقَطُ ولا يقترنُ ما بعدَ الفقرةِ بها (الجلسة 17 · SESSION17_INLINE_CODE_CROSSLINE_STATE_BYPASS)', () => {
+  // مسابرُ الجلسة 17 (gpt · grok) بحرفها + حدُّ الفقرة (سطرٌ فارغ) + ضابطُ span بلا إغلاق
+  const cases = ['`\n` [x](missing.md) `', 'See `foo\nbar` [x](missing.md) `baz`', '`foo\r\n` [x](missing.md) `', '``foo\n`` [x](missing.md)``',
+    'The helper `removeInlineCode\n` strips [inline code](missing.md) before `scan`.', 'odd ` tick\n\n[x](missing.md)', 'no closer ` here\n\n[x](missing.md)'];
+  for (const t of cases) assert.deepEqual(brokenLinksIn('docs/a.md', t, none), ['missing.md'], t);
 });
 test('حارسُ الروابط: الرابطُ يُحسب من مجلدِ ملفِّه، ومُرمَّزُ النسبة يُفكّ', () => {
   const seen: string[] = [];
