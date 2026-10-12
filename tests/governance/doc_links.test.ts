@@ -215,6 +215,13 @@ test('حارسُ الروابط: backtick المهرَّبُ محرفٌ لا ح�
   // عائلةُ العيب نفسه: backtick المهرَّبُ لا يفتحُ ولا يغلقُ شفرةً — فالرابطُ الذي قبلهُ يُقاس
   // ولا يُحجبُ عن القياس، والشيفرةُ الحقيقيةُ المحصَّنةُ لا تتأثرُ بالمهرَّبِ المجاور. 
   assert.deepEqual(brokenLinksIn('docs/a.md', 'a`[x](m.md)` b \\` [y](n.md) ` c', none), ['n.md']);
+  // مسابيرُ CommonMark 0.31.2 (commonmark-1.0.0 · محرّكٌ مرجعيٌّ خارجيٌّ — القياس في التقرير):
+  // الشرطةُ قبلَ backtick ليست هيروبًا إلا إذا كانت شرطةً واحدة، والشرطتان تُخرجان حرفًا حرفيًّا.
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'single \\` backtick before [l1](u1.md)', none), ['u1.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'double \\\\` backticks [l2](u2.md)', none), ['u2.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'text \\\\\\` [l5](u5.md) and `span` [l6](u6.md)', none), ['u5.md', 'u6.md']);
+  // شرطةٌ داخلَ شفرةٍ محصَّنة: لا تُفتحُ ولا تُغلقُ شفرةً (مِن روابطِ المُشغّلِ نفسِهِ — القياسُ الفعليُّ عندَ سيرِ الـ commonmark على هذا).
+  assert.deepEqual(brokenLinksIn('docs/a.md', '``code with ` inside`` [l4](u4.md)', none), ['u4.md']);
 });
 test('حارسُ الروابط: الرابطُ يُحسب من مجلدِ ملفِّه، ومُرمَّزُ النسبة يُفكّ', () => {
   const seen: string[] = [];
