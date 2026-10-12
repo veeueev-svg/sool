@@ -78,13 +78,13 @@ function removeInlineCodeBlock(block: string): string {
 export function stripCode(text: string): string {
   // سورٌ بلا قافلةٍ يبتلعُ ما بعدَه (§4.5)؛ وكتلةُ HTML (§4.6) حتى سطرٍ فارغٍ — بشرطِ ألّا تكونَ داخلَ سورٍ
   const HTML = /^ {0,3}<\/?(?:address|article|aside|blockquote|body|center|dd|details|dialog|div|dl|dt|fieldset|figure|footer|form|h[1-6]|header|hr|html|li|main|nav|ol|p|pre|script|section|style|summary|table|tbody|td|tfoot|th|thead|tr|ul)(?=[\s/>]|$)/i;
-  const out: string[] = []; let inFence: string | null = null, inHtml = false, openIdx = -1;
+  const out: string[] = []; let inFence: string | null = null, inHtml = false, htmlClose: string | null = null, openIdx = -1;
   for (const ln of text.split('\n')) {
     const f = ln.match(/^[ \t]*(```|~~~)/);
-    if (inHtml) { if (ln.trim() === '') inHtml = false; out.push(''); continue; }
+    if (inHtml) { if (ln.trim() === '' || (htmlClose !== null && ln.toLowerCase().includes(htmlClose))) { inHtml = false; htmlClose = null; } out.push(''); continue; }
     if (f) { if (inFence && ln.match(new RegExp('^[ \\t]*' + inFence))) { inFence = null; openIdx = -1; } else if (inFence === null) { openIdx = out.length; inFence = f[1] ?? ''; } out.push(''); continue; }
     if (inFence) { out.push(''); continue; }
-    if (HTML.test(ln)) { inHtml = true; out.push(''); continue; }
+    if (HTML.test(ln)) { inHtml = true; const raw = ln.match(/^ {0,3}<(script|style|pre)\b/i); if (raw) htmlClose = '</' + (raw[1] ?? '').toLowerCase() + '>'; out.push(''); continue; }
     out.push(ln);
   }
   if (openIdx >= 0) return removeInlineCode(out.slice(0, openIdx).join('\n'));
