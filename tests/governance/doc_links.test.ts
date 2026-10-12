@@ -3,22 +3,17 @@
  * المالك: القيّم على المستودع
  * المدخلات: كلُّ ملفِّ Markdown متتبَّعٍ في git
  * المخرجات: تأكيدٌ أنّ كلَّ رابطٍ نسبيٍّ يصل إلى ملفٍّ موجود
- * التبعيات: `node:child_process` (قائمةُ git) · `node:fs` · `node:path`
- * الصلاحيات (RULE-004): يقرأ ولا يكتب
- * السجلات: لا شيء
- * حالات الفشل المُغطّاة: رابطٌ إلى ملفٍّ نُقل (`config/module_limits.yaml` ⇒ `scripts/limits/`) ·
- *   رابطٌ يُحسب من جذرٍ غيرِ مجلدِ ملفِّه · رابطٌ إلى ملفٍّ لم يوجد قطّ
+ * التبعيات: `node:child_process` · `node:fs` · `node:path` · الصلاحيات (RULE-004): يقرأ ولا يكتب · السجلات: لا شيء
+ * حالات الفشل المُغطّاة: ملفٌّ نُقل (`config/module_limits.yaml` ⇒ `scripts/limits/`) · جذرٌ غيرُ مجلدِ الملف · ملفٌّ لم يوجد قطّ
  * اختبار القبول: هذا الملف نفسه — `npm test`
  * الوثيقة المرتبطة: docs/test-reports/phase-40-W-2026-064.md
  *
  * ثوابت هذا الملف:
  *
- * 1) **الرابطُ يُحسب من مجلدِ ملفِّه** كما يعرضه GitHub — إلّا `docs/work/WORK_LOG.md` فروابطُه
- *    من جذر المستودع **بعقدِ البوابة**: `scripts/check_work.mjs` يتحقّق من وجودِ تقريرِ كلِّ صفٍّ
- *    بالمسارِ نفسِه من الجذر (RULE-014)، والسجلُّ يُذيَّل ولا يُعدَّل — فيُقاس كما تقيسه البوابة.
- * 2) **قائمةُ الانتظار مغلقةٌ ومسمّاة**: ملفٌّ فيه رابطٌ مكسورٌ ونطاقُه محجوزٌ لبندٍ حيٍّ آخر لا
- *    يُصلَح من خارج بندِه (RULE-011)، فيُسمّى هنا ببندِه. والقائمةُ تُفرَّغ ولا تُزاد؛ وملفٌّ فيها
- *    صار سليمًا يُسقط الاختبارَ حتى يُحذف منها — فلا يبقى استثناءٌ بلا موجب.
+ * 1) **الرابطُ يُحسب من مجلدِ ملفِّه** كما يعرضه GitHub — إلّا `WORK_LOG.md` فروابطُه من الجذر
+ *    (بعقدِ البوابة: `check_work.mjs` يتحقّق من تقريرِ كلِّ صفٍّ من الجذر — RULE-014).
+ * 2) **قائمةُ الانتظار مغلقةٌ ومسمّاة** (RULE-011): ملفٌّ فيه رابطٌ مكسورٌ ونطاقُه محجوزٌ لبندٍ حيٍّ
+ *    آخر يُسمّى هنا ببندِه؛ والقائمةُ تُفرَّغ ولا تُزاد.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -30,36 +25,62 @@ const ROOT = process.cwd();
 const ROOT_RELATIVE = new Set(['docs/work/WORK_LOG.md']);
 /** ملفٌّ ⇒ البندُ الحيُّ الذي يحجزه (يُفرَّغ بإصلاحه داخل بندِه). */
 const PENDING: ReadonlyMap<string, string> = new Map<string, string>([]);
-
 /**
  * التقاريرُ الخامُّ لأعضاء مجلس المراجعة تُحفظ حرفًا بحرف (ADR-0054 §4 · RULE-020) ولا تُعدَّل —
- * وفيها روابطُ مكسورةٌ عمدًا هي نصُّ مسابير الطفرة نفسِها. فتُستثنى **بنمطِ اسمٍ مغلق** لا بمجلد:
- * المحاضرُ (`.json`) و`README.md` في المجلد نفسِه تبقى محروسة.
+ * وفيها روابطُ مكسورةٌ عمدًا (مسابيرُ الطفرة). فتُستثنى **بنمطِ اسمٍ مغلق** لا بمجلد: المحاضرُ (`.json`)
+ * و`README.md` في المجلد نفسِه تبقى محروسة.
  */
 const VERBATIM = /^docs\/work\/council\/W-\d{4}-\d{3}(-\d+)?-[a-z0-9]+\.md$/;
 
-/** يُزيل الشفرةَ المسوّرةَ والمضمّنة: ما بين علامات الشفرة نصٌّ لا رابط (كما يعرضه GitHub). */
-export function stripCode(text: string): string {
-  return text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, '').replace(/(`+)[^`\n]*?\1/g, '');
+/**
+ * ماسحُ الشفرةِ المضمّنةِ (الجلسة 16 · CommonMark 0.31.2 §6.1): سطرًا سطرًا. خارجَ الشفرةِ `\\`
+ * تأكلُ ما بعدها — فالعلامةُ المهرَّبةُ لا delimiterٌ؛ وداخلَها لا تُعالَجُ الشرطةُ.
+ */
+export function removeInlineCode(text: string): string {
+  return text.split('\n').map(removeInlineCodeLine).join('\n');
+}
+function removeInlineCodeLine(line: string): string {
+  let out = '';
+  let i = 0;
+  while (i < line.length) {
+    if (line[i] === '\\') { out += line.slice(i, i + 2); i += 2; continue; } // تهريب
+    if (line[i] === '`') {
+      let j = i; while (line[j] === '`') j++;
+      const run = line.slice(i, j);
+      let k = j, close = -1;
+      while (k < line.length) {
+        if (line[k] === '`') {
+          let m = k; while (line[m] === '`') m++;
+          if (m - k === run.length) { close = k; k = m; break; }
+          k = m;
+        } else k++;
+      }
+      if (close >= 0) { i = k; continue; } // الشفرةُ تُسقَطُ
+      out += run; i = j; continue; // بلا مقابلٍ ⇒ حرفيّةٌ
+    }
+    out += line[i]; i++;
+  }
+  return out;
 }
 
 /**
- * شفرةُ العنوان كما يعرفُها CommonMark: "…" أو '…' أو (…) — بعد فراغٍ بعد الوجهة، وفي كلٍّ منها
- * **التهريبُ بالشرطة المائلة** (`\"` · `\'` · `\(` `\)`) حرفٌ من العنوان لا خاتمةٌ له.
- * (الجلسة 2 · DOC_LINK_GUARD_REFERENCE_STYLE_BYPASS: العنوانُ المفردُ والقوسيُّ كانا يعميانِ الحارس ·
- *  الجلسة 3 · DOC_LINK_GUARD_TITLE_ESCAPE_BYPASS: عنوانٌ فيه تهريبٌ كان يُفشل المطابقةَ كلَّها فتختفي الوجهة)
+ * يُزيل الشفرةَ المسوّرةَ والمضمّنة: ما بين علامات الشفرة نصٌّ لا رابط (كما يعرضه GitHub).
+ * (الجلسة 16 · DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS: backtick المهرَّب محرفٌ حرفيٌّ
+ *  في CommonMark 0.31.2 §2.4/§6.1 لا حدَّ شفرة — يعالجُه الماسحُ `removeInlineCode` بالسياق:
+ *  خارجَ الشفرةِ محرفٌ، وداخلَها delimiterٌ — لا باستبدالٍ عالميٍّ قبل معرفةِ السياق.)
+ */
+export function stripCode(text: string): string {
+  return removeInlineCode(text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, ''));
+}
+
+/**
+ * شفرةُ العنوان كما يعرفُها CommonMark: "…" أو '…' أو (…) — بعد فراغٍ بعد الوجهة، والتهريبُ حرفٌ منه.
+ * (الجلسة 2 · REFERENCE_STYLE_BYPASS · الجلسة 3 · TITLE_ESCAPE_BYPASS)
  */
 const TITLE = String.raw`(?:\s+(?:"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|\((?:[^()\\]|\\[\s\S])*\)))?`;
 /**
- * الروابطُ المباشرة: `](وجهة …)` — **ماسحٌ لا نمط** (الجلسة 6). أخفقت الأنماطُ الثابتةُ العمق جلستين
- * متتاليتين: مستوىً واحدٌ من الأقواس (الجلسة 5)، ثمّ ثلاثةٌ عَمِيت عن الرابع وعن القوسِ المهرَّب
- * وعن زاويةٍ مهرَّبة (الجلسة 6 · DOC_LINK_GUARD_FOUR_LEVEL_PAREN_DESTINATION_BYPASS ·
- * DOC_LINK_GUARD_NESTING_ABOVE_THREE_BYPASS · DOC_LINK_GUARD_ESCAPED_PAREN_DESTINATION_BYPASS ·
- * DOC_LINK_GUARD_POINTY_ESCAPE_BYPASS). فالوجهةُ تُقرأ حرفًا حرفًا بقواعد CommonMark 0.31.2 §6.3:
- *   - **الزاويّة** `<…>`: حتى أوّلِ `>` غيرِ مهرَّب؛ ولا سطرَ جديدًا ولا `<` غيرَ مهرَّب فيها.
- *   - **العارية**: حتى فراغٍ أو محرفِ تحكّم؛ القوسُ المهرَّب (`\(` `\)`) حرفٌ منها، والقوسُ غيرُ المهرَّب
- *     يُعدّ عمقًا بلا سقفٍ ثابتٍ إلّا سقفَ cmark-gfm الذي يعرض به GitHub (32 مستوى)؛ وما لم يتوازن
- *     فليس رابطًا في CommonMark أصلًا (نصٌّ يُعرض لا وجهة).
+ * الروابطُ المباشرة: `](وجهة …)` — **ماسحٌ لا نمط** (الجلسة 6: الأنماطُ عَمِيت عن الأعمقِ والمهرَّب جلستين).
+ * الوجهةُ تُقرأ حرفًا حرفًا بقواعد §6.3:
  *   - بعدها عنوانٌ اختياريٌّ (`TITLE`) ثمّ `)` — وإلّا فليس رابطًا.
  * والوجهةُ تُفكّ قبل قياسِ وجودِها كما يفكّها العارض: التهريبُ بالشرطة المائلة ثمّ مراجعُ المحارف
  * الرقميّةُ والخمسُ المسمّاةُ (`&amp;` `&lt;` `&gt;` `&quot;` `&apos;`) ثمّ ترميزُ النسبة.
@@ -73,8 +94,7 @@ const TITLE_TAIL = new RegExp(String.raw`\s*` + TITLE + String.raw`\s*\)`, 'y');
 /** يقرأ وجهةَ رابطٍ مباشرٍ يبدأ عند `start` (بعد `](`) — أو null إن لم يكن رابطًا في CommonMark. */
 export function scanInlineDestination(text: string, start: number): string | null {
   let i = start;
-  // فراغُ CommonMark كاملًا: المسافةُ والعلامةُ والسطرُ الجديدُ وVT وFF وCR — فكسرُ السطرِ CRLF
-  // قبل الوجهةِ لا يُعمي الحارسَ عنها (الجلسة 10 · DOC_LINK_GUARD_CRLF_DESTINATION_BYPASS)
+  // فراغُ CommonMark كاملًا (CRLF قبل الوجهة لا يُعمي — الجلسة 10 · CRLF_DESTINATION_BYPASS)
   while (i < text.length && /[ \t\n\v\f\r]/.test(text[i]!)) i += 1;
   let dest: string;
   if (text[i] === '<') {
@@ -118,14 +138,8 @@ export function unescapeDestination(raw: string): string {
 }
 
 /**
- * تعريفاتُ الروابط المرجعية: [وسم]: وجهة أو <وجهة بفراغات> — في أوّل السطر **أو بعد بادئةِ حاوية**:
- * علاماتُ الاقتباس `>` (ولو متداخلةً أو مُزاحة) وعلاماتُ القائمة (`-` `*` `+` `1.` `1)`) وأيُّ إزاحةٍ
- * لقائمةٍ متداخلة. (الجلسة 3 · DOC_LINK_GUARD_CONTAINER_REFERENCE_BYPASS: التثبيتُ بـ`^ {0,3}\[` كان
- * يُعمي الحارسَ عن تعريفٍ داخل اقتباسٍ أو قائمة.) والحدُّ المعلن: إزاحةٌ بأربعةِ فراغاتٍ خارجَ قائمةٍ
- * شفرةٌ في CommonMark — فتعريفٌ فيها يُقاس هنا وقد لا يكون رابطًا: إنذارٌ زائدٌ يُرى لا عمًى صامت.
- * (الجلسة 4 · DOC_LINK_GUARD_BLOCKQUOTE_NOSPACE_BYPASS: علامةُ الاقتباس `>` **لا يلزمها فراغٌ بعدها**
- *  — CommonMark 0.31.2 §5.1 — فـ`>[r]:` و`>>[r]:` و`> >[r]:` تعريفاتٌ؛ والفراغُ شرطٌ لعلامةِ القائمة وحدها،
- *  فـ`-[r]:` ليس قائمةً ولا تعريفًا.)
+ * تعريفاتُ الروابط المرجعية: [وسم]: وجهة — في أوّل السطر أو بعد بادئةِ حاوية (اقتباسٍ أو قائمة).
+ * (الجلسة 3 · CONTAINER_BYPASS · الجلسة 4 · BLOCKQUOTE_NOSPACE_BYPASS: `>` لا يلزمه فراغٌ بعده — §5.1.)
  */
 const CONTAINER = String.raw`(?:[ \t]*(?:>|(?:[-*+]|\d{1,9}[.)])(?=[ \t]|$))[ \t]?)*[ \t]*`;
 /**
@@ -202,6 +216,21 @@ test('حارسُ الروابط: المرساةُ تُنزع والملفُّ ي
 test('حارسُ الروابط: ما في الشفرة نصٌّ لا رابط · وما خارجها يُقاس', () => {
   const t = '`[a](nope.md)`\n```\n[b](nope2.md)\n```\n[c](nope3.md)';
   assert.deepEqual(brokenLinksIn('docs/a.md', t, none), ['nope3.md']);
+});
+test('حارسُ الروابط: backtick المهرَّبُ محرفٌ لا حدَّ شفرة — والرابطُ معه يُقاس لا يُغفَل (الجلسة 16 · DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS)', () => {
+  // مسبرُ الجلسة 16 بحرفه (gpt) + عائلتُه:
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'See \\` [x](missing.md) ` end', none), ['missing.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'a`[x](m.md)` b \\` [y](n.md) ` c', none), ['n.md']);
+  // مسابيرُ CommonMark 0.31.2 (محرّكٌ مرجعيٌّ — القياسُ في التقرير): شرطةٌ واحدةٌ تهريبٌ؛ زوجيةٌ حرفيّة.
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'single \\` backtick before [l1](u1.md)', none), ['u1.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'double \\\\` backticks [l2](u2.md)', none), ['u2.md']);
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'text \\\\\\` [l5](u5.md) and `span` [l6](u6.md)', none), ['u5.md', 'u6.md']);
+  // شرطةٌ داخلَ شفرةٍ محصَّنة (مِن روابطِ المُشغّلِ نفسِهِ): لا تُفتحُ ولا تُغلقُ شفرةً.
+  assert.deepEqual(brokenLinksIn('docs/a.md', '``code with ` inside`` [l4](u4.md)', none), ['u4.md']);
+  // (أ) شرطتان قبل علامةِ الفتحِ + إغلاقٌ لاحق ⇒ العلامةُ عاريةٌ تفتحُ شفرةً والرابطُ يُحجب.
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'See \\\\` [x](missing.md) ` end', none), []);
+  // (ب) شرطةٌ واحدةٌ قبلَ علامةِ الإغلاقِ داخلَ شفرةٍ مضمّنة ⇒ delimiterٌ يغلقُها والرابطُ يُبلَّغ.
+  assert.deepEqual(brokenLinksIn('docs/a.md', '`code \\` [x](missing.md) ` end', none), ['missing.md']);
 });
 test('حارسُ الروابط: الرابطُ يُحسب من مجلدِ ملفِّه، ومُرمَّزُ النسبة يُفكّ', () => {
   const seen: string[] = [];
