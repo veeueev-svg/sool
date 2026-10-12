@@ -38,9 +38,15 @@ const PENDING: ReadonlyMap<string, string> = new Map<string, string>([]);
  */
 const VERBATIM = /^docs\/work\/council\/W-\d{4}-\d{3}(-\d+)?-[a-z0-9]+\.md$/;
 
-/** يُزيل الشفرةَ المسوّرةَ والمضمّنة: ما بين علامات الشفرة نصٌّ لا رابط (كما يعرضه GitHub). */
+/**
+ * يُزيل الشفرةَ المسوّرةَ والمضمّنة: ما بين علامات الشفرة نصٌّ لا رابط (كما يعرضه GitHub).
+ * (الجلسة 16 · DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS: backtick المهرَّب — `\\`` —
+ *  محرفٌ حرفيٌّ في CommonMark 0.31.2 §2.4/§6.1، لا حدَّ شفرة. فقبل تطبيقِ إزالةِ الشفرةِ
+ *  تُستبدلُ كلُّ علامةٍ مهرَّبةٍ بمحرفٍ بديلٍ لا يُفتحُ به ما قبلها ولا يُغلقُ ما بعدها.)
+ */
 export function stripCode(text: string): string {
-  return text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, '').replace(/(`+)[^`\n]*?\1/g, '');
+  const withEscapedBacktickHidden = text.replace(/\\`/g, '\u0001');
+  return withEscapedBacktickHidden.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, '').replace(/(`+)[^`\n]*?\1/g, '').replace(/\u0001/g, '');
 }
 
 /**
@@ -202,6 +208,13 @@ test('حارسُ الروابط: المرساةُ تُنزع والملفُّ ي
 test('حارسُ الروابط: ما في الشفرة نصٌّ لا رابط · وما خارجها يُقاس', () => {
   const t = '`[a](nope.md)`\n```\n[b](nope2.md)\n```\n[c](nope3.md)';
   assert.deepEqual(brokenLinksIn('docs/a.md', t, none), ['nope3.md']);
+});
+test('حارسُ الروابط: backtick المهرَّبُ محرفٌ لا حدَّ شفرة — والرابطُ معه يُقاس لا يُغفَل (الجلسة 16 · DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS)', () => {
+  // مسبرُ الجلسة 16 بحرفه (gpt):
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'See \\` [x](missing.md) ` end', none), ['missing.md']);
+  // عائلةُ العيب نفسه: backtick المهرَّبُ لا يفتحُ ولا يغلقُ شفرةً — فالرابطُ الذي قبلهُ يُقاس
+  // ولا يُحجبُ عن القياس، والشيفرةُ الحقيقيةُ المحصَّنةُ لا تتأثرُ بالمهرَّبِ المجاور. 
+  assert.deepEqual(brokenLinksIn('docs/a.md', 'a`[x](m.md)` b \\` [y](n.md) ` c', none), ['n.md']);
 });
 test('حارسُ الروابط: الرابطُ يُحسب من مجلدِ ملفِّه، ومُرمَّزُ النسبة يُفكّ', () => {
   const seen: string[] = [];
