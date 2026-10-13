@@ -1,0 +1,43 @@
+{
+  "item": "W-2026-064",
+  "commit": "98a7bb8e023ee49df43898b250b9c205972d86f7",
+  "scope_digest": "fa7bdb1508f3235630af47f794877684a0c83a262869fe628d69f40992ab559f",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-12",
+  "session": 17,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-17-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-17-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-064-17-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "خلافٌ (الجلسة 17 · 2026-10-12): عيبُ الجلسة 16 (DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS) عولج فعلًا — اتفق الثلاثة: مسبار العيش يعيد [\"missing.md\"] واختبار الانحدار الثماني ناجح وstripCode يستعمل removeInlineCode لا النمط القديم. العيبُ الجديد: الماسح removeInlineCode يقسم على \\n ويزاوج داخل السطر وحده، فإغلاقُ الشفرةِ المضمّنةِ العابرةِ للأسطر (CommonMark 0.31.2 §6.1) يُعاد فتحُه في السطر التالي فيسقط رابطٌ يعرضه المحركُ المرجعي. سمّاه gpt: SESSION17_INLINE_CODE_CROSSLINE_STATE_BYPASS؛ وسمّاه grok: SESSION17_REMOVEINLINECODE_CROSSLINE_REOPEN_BYPASS — وصفانِ للسبب نفسه لا عيبانِ مستقلان. أعاد المنفّذ المسبار الحرفي على النتائج المجمّدة: الحارس ⇒ [] والمحرك المرجعي (commonmark) ⇒ [\"missing.md\"] — عيبٌ مؤكَّدٌ قابلٌ للتكرار. gemini أجرى 27 حالةً عبر pandoc gfm لم يجد التفافًا — لكن تعميمه لا يشمل حالة العبور للأسطر فلا يثبت بقاءها.",
+      "عيوبٌ مسمّاةٌ إضافيةٌ من grok لم يتحقق منها أحدٌ بعد (لا يُبتُّ بها هنا): SESSION17_REMOVEINLINECODE_EQUAL_PRECEDENCE_BACKTICK_BYPASS (أسبقيةٌ متساويةٌ بين الروابط الآلية وحدود الشفرة — §6.1 مثال 346) · SESSION17_STRIPCODE_FENCE_INFO_BACKTICK_BYPASS (سورٌ بمعلومةٍ فيها backtick — §4.5). خُطّط للتحقق في علاج الجلسة 17. مسبارُ الرابطِ الآليِّ ذي الـ backtick (EQUAL_PRECEDENCE) أُعيد إنتاجُه بالفعل: الحارسُ [] والمحركُ المرجعيُّ [\"missing.md\"]؛ أما وسمُ HTML والسورُ فلم يُتحقّق منهما بعد.",
+      "ملاحظاتٌ غيرُ مُسقِطة (تشغيلُ المجموعة · كما في الجلسة 16): gpt قاس npm test 2437/2439 رمز 1 وverify 2436/2439 رمز 1 — الساقطان في declaration_gate.test.js (T-127 · T-142)؛ grok قاس npm test 2439/2439 رمز 0 وverify رمز 1 مرتين (ساقطان في declaration_gate.test.js في كل مرة) ثم رمز 0 في التشغيل الثالث؛ gemini قاس npm test 2439/2439 رمز 0 وverify رمز 0. الأعضاءُ شُغّلوا في ثلاث بيئات معزولة (ثلاث clones منفصلة عند 98a7bb8) لا شجرةً واحدة. المسار tests/governance/declaration_gate.test.js خارجَ نطاق W-2026-064 ولا يُسند إليه رفض. اختلافُ النتائجِ غيرُ محسوم: لا يُنسبُ إلى تزاحمٍ مُثبَت.",
+      "ملاحظةٌ إجرائية: الحزمةُ المجمّدة وُضعت في جذر أبٍ مشترك (../BRIEF.md) لا داخل جذر كل عضو كما يشترط REVIEW_COUNCIL.md §2.1 — لم يُمنع أيُّ عضوٍ من قراءتها؛ سُجّل الإخفاق ولا يُصلح بأثرٍ رجعي.",
+      "ملاحظةٌ خارجَ نطاقِ البند: دمجُ PR #105 إلى main (1532589 · 2026-10-12T11:24:52Z · الدامج veeueev-svg) — الفاعلُ مالكٌ مقيس، لكن استثناءً مسجلًا من إجراء WORK_CONTROL (الدمج بعد VERIFIED) لم يُقَس؛ لا يُجزم بأنه سبق انعقاد الجلسة 17 دون قياس توقيت الانعقاد؛ وتسجيلُ أثرِ الدمج الكامل (الخطوة 6) مسؤوليةُ الدامج لا المنفّذ.",
+      "ملاحظةٌ إجرائية: الحزمةُ المجمّدة وُضعت في جذر أبٍ مشترك (../BRIEF.md) لا داخل جذر كل عضو كما يشترط REVIEW_COUNCIL.md §2.1 — لم يُمنع أيُّ عضوٍ من قراءتها؛ سُجّل الإخفاق ولا يُصلح بأثرٍ رجعي. وواقعةُ الدفع: دُفع فرعٌ بعيدٌ برأس 078c9a9 قبل اكتشاف واقعة الدمج — الدفعةُ اعتمدت حالةً بعيدةً قديمةً (REVIEW بلا محضر 17)؛ سُجّلت ولا تُخفى."
+    ]
+  }
+}

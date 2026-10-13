@@ -7,9 +7,7 @@
  * حالات الفشل المُغطّاة: ملفٌّ نُقل (`config/module_limits.yaml` ⇒ `scripts/limits/`) · جذرٌ غيرُ مجلدِ الملف · ملفٌّ لم يوجد قطّ
  * اختبار القبول: هذا الملف نفسه — `npm test`
  * الوثيقة المرتبطة: docs/test-reports/phase-40-W-2026-064.md
- *
  * ثوابت هذا الملف:
- *
  * 1) **الرابطُ يُحسب من مجلدِ ملفِّه** كما يعرضه GitHub — إلّا `WORK_LOG.md` فروابطُه من الجذر
  *    (بعقدِ البوابة: `check_work.mjs` يتحقّق من تقريرِ كلِّ صفٍّ من الجذر — RULE-014).
  * 2) **قائمةُ الانتظار مغلقةٌ ومسمّاة** (RULE-011): ملفٌّ فيه رابطٌ مكسورٌ ونطاقُه محجوزٌ لبندٍ حيٍّ
@@ -32,25 +30,35 @@ const PENDING: ReadonlyMap<string, string> = new Map<string, string>([]);
  */
 const VERBATIM = /^docs\/work\/council\/W-\d{4}-\d{3}(-\d+)?-[a-z0-9]+\.md$/;
 
-/**
- * ماسحُ الشفرةِ المضمّنةِ (الجلسة 16 · CommonMark 0.31.2 §6.1): سطرًا سطرًا. خارجَ الشفرةِ `\\`
- * تأكلُ ما بعدها — فالعلامةُ المهرَّبةُ لا delimiterٌ؛ وداخلَها لا تُعالَجُ الشرطةُ.
- */
+/** ماسحُ الشفرةِ المضمّنةِ (الجلسة 16 · الجلسة 17 · CommonMark 0.31.2 §6.1): شرطةُ تهريبٍ خارجَ الشفرة، وspanٌ يعبرُ الأسطرَ داخلَ وحدةِ النصِّ (مثال 337) لا يعبرُ حدَّ كتلةٍ (سطرًا فارغًا أو بدءَ عنوانٍ/قائمةٍ/اقتباسٍ/سورٍ/فاصلٍ). */
+const BOUNDARY = /^ {0,3}(?:#{1,6}(?:[\t ]|$)|[-*+][\t ]|\d{1,9}[.)][\t ]|>|```|~~~|<!--|<[a-zA-Z/]|([-_*])( *)\1\2\1)/;
+const SINGLE = /^ {0,3}(?:#{1,6}(?:[\t ]|$)|([-_*])( *)\1\2\1[-_* ]*$|<!--[\s\S]*?-->|<[a-zA-Z/!]|[a-zA-Z-]+:[\t ]*$|(?:=+|-+)[\t ]*$)/;
 export function removeInlineCode(text: string): string {
-  return text.split('\n').map(removeInlineCodeLine).join('\n');
+  const lines = text.split('\n'), out: string[] = [];
+  let unit: string[] = [];
+  for (let n = 0; n < lines.length; n++) {
+    const l = lines[n] ?? '', p = lines[n - 1] ?? '';
+    if (n > 0 && (/^\s*$/.test(l) || (BOUNDARY.test(l) && !/^\s*$/.test(p)))) {
+      if (unit.length) { out.push(removeInlineCodeBlock(unit.join('\n'))); unit = []; }
+      out.push(l);
+    } else unit.push(l);
+    if (SINGLE.test(l)) { out.push(removeInlineCodeBlock(unit.join('\n'))); unit = []; } // كتلةٌ من سطرٍ واحد تنتهي بسطرها
+  }
+  if (unit.length) out.push(removeInlineCodeBlock(unit.join('\n')));
+  return out.join('\n');
 }
-function removeInlineCodeLine(line: string): string {
+function removeInlineCodeBlock(block: string): string {
   let out = '';
   let i = 0;
-  while (i < line.length) {
-    if (line[i] === '\\') { out += line.slice(i, i + 2); i += 2; continue; } // تهريب
-    if (line[i] === '`') {
-      let j = i; while (line[j] === '`') j++;
-      const run = line.slice(i, j);
+  while (i < block.length) {
+    if (block[i] === '\\') { out += block.slice(i, i + 2); i += 2; continue; } // تهريب
+    if (block[i] === '`') {
+      let j = i; while (block[j] === '`') j++;
+      const run = block.slice(i, j);
       let k = j, close = -1;
-      while (k < line.length) {
-        if (line[k] === '`') {
-          let m = k; while (line[m] === '`') m++;
+      while (k < block.length) {
+        if (block[k] === '`') {
+          let m = k; while (block[m] === '`') m++;
           if (m - k === run.length) { close = k; k = m; break; }
           k = m;
         } else k++;
@@ -58,25 +66,32 @@ function removeInlineCodeLine(line: string): string {
       if (close >= 0) { i = k; continue; } // الشفرةُ تُسقَطُ
       out += run; i = j; continue; // بلا مقابلٍ ⇒ حرفيّةٌ
     }
-    out += line[i]; i++;
+    out += block[i]; i++;
   }
   return out;
 }
 
-/**
- * يُزيل الشفرةَ المسوّرةَ والمضمّنة: ما بين علامات الشفرة نصٌّ لا رابط (كما يعرضه GitHub).
- * (الجلسة 16 · DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS: backtick المهرَّب محرفٌ حرفيٌّ
+/** يُزيل الشفرةَ المسوّرةَ والمضمّنة: ما بين علامات الشفرة نصٌّ لا رابط (كما يعرضه GitHub). (الجلسة 16 · DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS: backtick المهرَّب محرفٌ حرفيٌّ
  *  في CommonMark 0.31.2 §2.4/§6.1 لا حدَّ شفرة — يعالجُه الماسحُ `removeInlineCode` بالسياق:
  *  خارجَ الشفرةِ محرفٌ، وداخلَها delimiterٌ — لا باستبدالٍ عالميٍّ قبل معرفةِ السياق.)
  */
 export function stripCode(text: string): string {
-  return removeInlineCode(text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, ''));
+  // سورٌ بلا قافلةٍ يبتلعُ ما بعدَه (§4.5)؛ وكتلةُ HTML (§4.6) حتى سطرٍ فارغٍ — بشرطِ ألّا تكونَ داخلَ سورٍ
+  const HTML = /^ {0,3}<\/?(?:address|article|aside|blockquote|body|center|dd|details|dialog|div|dl|dt|fieldset|figure|footer|form|h[1-6]|header|hr|html|li|main|nav|ol|p|pre|script|section|style|summary|table|tbody|td|tfoot|th|thead|tr|ul)(?=[\s/>]|$)/i;
+  const out: string[] = []; let inFence: string | null = null, inHtml = false, htmlClose: string | null = null, openIdx = -1;
+  for (const ln of text.split('\n')) {
+    const f = ln.match(/^[ \t]*(```|~~~)/);
+    if (inHtml) { if (ln.trim() === '' || (htmlClose !== null && ln.toLowerCase().includes(htmlClose))) { inHtml = false; htmlClose = null; } out.push(''); continue; }
+    if (f) { if (inFence && ln.match(new RegExp('^[ \\t]*' + inFence))) { inFence = null; openIdx = -1; } else if (inFence === null) { openIdx = out.length; inFence = f[1] ?? ''; } out.push(''); continue; }
+    if (inFence) { out.push(''); continue; }
+    if (HTML.test(ln)) { inHtml = true; const raw = ln.match(/^ {0,3}<(script|style|pre)\b/i); if (raw) htmlClose = '</' + (raw[1] ?? '').toLowerCase() + '>'; out.push(''); continue; }
+    out.push(ln);
+  }
+  if (openIdx >= 0) return removeInlineCode(out.slice(0, openIdx).join('\n'));
+  return removeInlineCode(out.join('\n').replace(/^[ \t]*(```|~~~)[^\n]*\n[\s\S]*?^[ \t]*\1[^\n]*(?:\n|$)/gm, '\n'));
 }
 
-/**
- * شفرةُ العنوان كما يعرفُها CommonMark: "…" أو '…' أو (…) — بعد فراغٍ بعد الوجهة، والتهريبُ حرفٌ منه.
- * (الجلسة 2 · REFERENCE_STYLE_BYPASS · الجلسة 3 · TITLE_ESCAPE_BYPASS)
- */
+/** شفرةُ العنوان كما يعرفُها CommonMark: "…" أو '…' أو (…) — بعد فراغٍ بعد الوجهة، والتهريبُ حرفٌ منه. (الجلسة 2 · REFERENCE_STYLE_BYPASS · الجلسة 3 · TITLE_ESCAPE_BYPASS) / */
 const TITLE = String.raw`(?:\s+(?:"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|\((?:[^()\\]|\\[\s\S])*\)))?`;
 /**
  * الروابطُ المباشرة: `](وجهة …)` — **ماسحٌ لا نمط** (الجلسة 6: الأنماطُ عَمِيت عن الأعمقِ والمهرَّب جلستين).
@@ -137,15 +152,9 @@ export function unescapeDestination(raw: string): string {
     });
 }
 
-/**
- * تعريفاتُ الروابط المرجعية: [وسم]: وجهة — في أوّل السطر أو بعد بادئةِ حاوية (اقتباسٍ أو قائمة).
- * (الجلسة 3 · CONTAINER_BYPASS · الجلسة 4 · BLOCKQUOTE_NOSPACE_BYPASS: `>` لا يلزمه فراغٌ بعده — §5.1.)
- */
+/** تعريفاتُ الروابط المرجعية: [وسم]: وجهة — في أوّل السطر أو بعد بادئةِ حاوية (اقتباسٍ أو قائمة). (الجلسة 3 · CONTAINER_BYPASS · الجلسة 4 · BLOCKQUOTE_NOSPACE_BYPASS: `>` لا يلزمه فراغٌ بعده — §5.1.) / */
 const CONTAINER = String.raw`(?:[ \t]*(?:>|(?:[-*+]|\d{1,9}[.)])(?=[ \t]|$))[ \t]?)*[ \t]*`;
-/**
- * الوسم: ينتهي عند أوّلِ `]` **غيرِ مهرَّب** — فالتهريبُ بالشرطة المائلة حرفٌ منه لا خاتمةٌ له.
- * (الجلسة 4 · DOC_LINK_GUARD_ESCAPED_LABEL_BYPASS: `[foo\]bar]:` كان يقف عند أوّلِ `]` فيفلت التعريف.)
- */
+/** الوسم: ينتهي عند أوّلِ `]` **غيرِ مهرَّب** — فالتهريبُ بالشرطة المائلة حرفٌ منه لا خاتمةٌ له. (الجلسة 4 · DOC_LINK_GUARD_ESCAPED_LABEL_BYPASS: `[foo\]bar]:` كان يقف عند أوّلِ `]` فيفلت التعريف.) / */
 const LABEL = String.raw`\[(?:[^\]\\]|\\[\s\S])+\]`;
 /** وجهةُ التعريفِ الزاويّة: التهريبُ حرفٌ منها (`\>` لا يُغلقها) — الجلسة 6 · DOC_LINK_GUARD_POINTY_ESCAPE_BYPASS */
 const REFERENCE_DEF = new RegExp(String.raw`^` + CONTAINER + LABEL + String.raw`:\s*(?:<((?:[^<>\\\n]|\\[\s\S])*)>|(\S+))`, 'gm');
@@ -159,11 +168,7 @@ export function brokenLinksIn(file: string, text: string, exists: (p: string) =>
     if (link === '' || /^[a-z][a-z0-9+.-]*:/i.test(link)) return;
     let target = link;
     try { target = decodeURIComponent(link); } catch { /* يُقاس كما كُتب */ }
-    // الحصرُ تحت جذر المستودع (الجلسة 10 · DOC_LINK_GUARD_PARENT_ESCAPE_BYPASS ·
-    // DOC_LINK_GUARD_TRAVERSAL_HOST_EXISTS_BYPASS): الوجهةُ النسبيّةُ التي تخرجُ من الجذرِ
-    // مكسورةٌ تُبلَّغ — ولا يُقاسُ وجودُها على المضيفِ فالعرضُ يُقاسُ داخلَ الشجرةِ وحدها.
-    // والرابطُ الذي يبدأُ بـ`/` يُنسبُ إلى جذرِ المستودعِ كما يعرضُه GitHub
-    // (الجلسة 10 · DOC_LINK_GUARD_ROOT_ABSOLUTE_FALSE_REJECT) لا إلى مجلدِ الملف.
+    // الحصرُ تحت جذر المستودع (الجلسة 10): الخروجُ يُبلَّغ ولا يُقاسُ وجودُه على المضيف، و`/` تُنسبُ إلى الجذرِ كما يعرضُه GitHub.
     const rooted = target.startsWith('/');
     const p = rooted ? normalize(target) : normalize(join(base, target));
     if (!rooted && (p === '..' || p.startsWith('../') || isAbsolute(p))) {
@@ -218,19 +223,23 @@ test('حارسُ الروابط: ما في الشفرة نصٌّ لا رابط �
   assert.deepEqual(brokenLinksIn('docs/a.md', t, none), ['nope3.md']);
 });
 test('حارسُ الروابط: backtick المهرَّبُ محرفٌ لا حدَّ شفرة — والرابطُ معه يُقاس لا يُغفَل (الجلسة 16 · DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS)', () => {
-  // مسبرُ الجلسة 16 بحرفه (gpt) + عائلتُه:
-  assert.deepEqual(brokenLinksIn('docs/a.md', 'See \\` [x](missing.md) ` end', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', 'a`[x](m.md)` b \\` [y](n.md) ` c', none), ['n.md']);
-  // مسابيرُ CommonMark 0.31.2 (محرّكٌ مرجعيٌّ — القياسُ في التقرير): شرطةٌ واحدةٌ تهريبٌ؛ زوجيةٌ حرفيّة.
-  assert.deepEqual(brokenLinksIn('docs/a.md', 'single \\` backtick before [l1](u1.md)', none), ['u1.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', 'double \\\\` backticks [l2](u2.md)', none), ['u2.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', 'text \\\\\\` [l5](u5.md) and `span` [l6](u6.md)', none), ['u5.md', 'u6.md']);
-  // شرطةٌ داخلَ شفرةٍ محصَّنة (مِن روابطِ المُشغّلِ نفسِهِ): لا تُفتحُ ولا تُغلقُ شفرةً.
-  assert.deepEqual(brokenLinksIn('docs/a.md', '``code with ` inside`` [l4](u4.md)', none), ['u4.md']);
-  // (أ) شرطتان قبل علامةِ الفتحِ + إغلاقٌ لاحق ⇒ العلامةُ عاريةٌ تفتحُ شفرةً والرابطُ يُحجب.
-  assert.deepEqual(brokenLinksIn('docs/a.md', 'See \\\\` [x](missing.md) ` end', none), []);
-  // (ب) شرطةٌ واحدةٌ قبلَ علامةِ الإغلاقِ داخلَ شفرةٍ مضمّنة ⇒ delimiterٌ يغلقُها والرابطُ يُبلَّغ.
-  assert.deepEqual(brokenLinksIn('docs/a.md', '`code \\` [x](missing.md) ` end', none), ['missing.md']);
+  const eq = (t: string, expected: string[]) => assert.deepEqual(brokenLinksIn('docs/a.md', t, none), expected, t);
+  eq('See \\` [x](missing.md) ` end', ['missing.md']);
+  eq('a`[x](m.md)` b \\` [y](n.md) ` c', ['n.md']);
+  eq('single \\` backtick before [l1](u1.md)', ['u1.md']);
+  eq('double \\\\` backticks [l2](u2.md)', ['u2.md']);
+  eq('text \\\\\\` [l5](u5.md) and `span` [l6](u6.md)', ['u5.md', 'u6.md']);
+  eq('``code with ` inside`` [l4](u4.md)', ['u4.md']);
+  eq('See \\\\` [x](missing.md) ` end', []);
+  eq('`code \\` [x](missing.md) ` end', ['missing.md']);
+});
+test('حارسُ الروابط: الشفرةُ المضمّنةُ العابرةُ للأسطرِ داخلَ الفقرةِ تُسقَطُ ولا يقترنُ ما بعدَ الفقرةِ بها (الجلسة 17 · SESSION17_INLINE_CODE_CROSSLINE_STATE_BYPASS)', () => {
+  // مسابرُ الجلسة 17 بحرفها + حدُّ الفقرة + حدُّ الكتلة (عنوان/قائمة/اقتباس/سور/فاصل) + ضابطُ span بلا إغلاق
+  const cases = ['`\n` [x](missing.md) `', 'See `foo\nbar` [x](missing.md) `baz`', '`foo\r\n` [x](missing.md) `', '``foo\n`` [x](missing.md)``',
+    'The helper `removeInlineCode\n` strips [inline code](missing.md) before `scan`.', 'odd ` tick\n\n[x](missing.md)', 'no closer ` here\n\n[x](missing.md)',
+    '`open\n# [x](missing.md) `', '`open\n- [x](missing.md) `', '`open\n1. [x](missing.md) `', '`open\n> [x](missing.md) `', '`open\n---\n[x](missing.md) `', '`open\n===\n[x](missing.md) `',
+    '`open\n<!-- c -->\n[x](missing.md) `', '# `open\n[x](missing.md) `'];
+  for (const t of cases) assert.deepEqual(brokenLinksIn('docs/a.md', t, none), ['missing.md'], t);
 });
 test('حارسُ الروابط: الرابطُ يُحسب من مجلدِ ملفِّه، ومُرمَّزُ النسبة يُفكّ', () => {
   const seen: string[] = [];
@@ -284,40 +293,29 @@ test('حارسُ الروابط: الصيغُ المرجعيةُ والعناو�
 });
 
 test('حارسُ الروابط: العنوانُ المُهرَّبُ وتعريفُ الحاوية يُقاسان — لا مخرجَ صامتًا (الجلسة 3 · DOC_LINK_GUARD_TITLE_ESCAPE_BYPASS · DOC_LINK_GUARD_CONTAINER_REFERENCE_BYPASS)', () => {
-  // مسابيرُ grok في الجلسة 3 بحرفها — كانت كلُّها []
-  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](missing.md "say \\"hi\\"")', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', "[x](missing.md 'it\\'s gone')", none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](missing.md (title \\(with\\) parens))', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](<my file.md> "say \\"hi\\"")', none), ['my file.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '> [r]: missing.md\n>\n> [x][r]', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '   > [r]: missing.md', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '- item\n  - nested\n\n    [r]: missing.md', none), ['missing.md']);
-  // حاوياتٌ أخرى من العائلة نفسِها
-  assert.deepEqual(brokenLinksIn('docs/a.md', '> > [r]: missing.md', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '- [r]: missing.md', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '1. [r]: missing.md\n2) [s]: gone.md', none), ['missing.md', 'gone.md']);
-  // سالبةُ الضبط: الصيغُ نفسُها سليمةً لا تُبلَّغ، ومربّعُ المهمّة ليس تعريفًا
+  // مسابيرُ grok في الجلسة 3 بحرفها (كانت كلُّها []) + حاوياتُ العائلة + سالبةُ الضبط (مربّعُ المهمّة ليس تعريفًا)
+  for (const [t, e] of [['[x](missing.md "say \\"hi\\"")', ['missing.md']], ["[x](missing.md 'it\\'s gone')", ['missing.md']],
+    ['[x](missing.md (title \\(with\\) parens))', ['missing.md']], ['[x](<my file.md> "say \\"hi\\"")', ['my file.md']],
+    ['> [r]: missing.md\n>\n> [x][r]', ['missing.md']], ['   > [r]: missing.md', ['missing.md']],
+    ['- item\n  - nested\n\n    [r]: missing.md', ['missing.md']], ['> > [r]: missing.md', ['missing.md']],
+    ['- [r]: missing.md', ['missing.md']], ['1. [r]: missing.md\n2) [s]: gone.md', ['missing.md', 'gone.md']]] as [string, string[]][])
+    assert.deepEqual(brokenLinksIn('docs/a.md', t, none), e, t);
   const all = (): boolean => true;
-  assert.deepEqual(brokenLinksIn('docs/a.md', '[x](../README.md "say \\"hi\\"") > [r]: ../README.md', all), []);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '- [ ] مهمّة\n- [x] منجزة', none), []);
+  assert.deepEqual(brokenLinksIn('docs/a.md', "[x](../README.md 't') [y](<../README.md>)", all), []);
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[r]: ../README.md', all), []);
+  // وجهةٌ مخطّطةٌ أو مرساةٌ خالصةٌ تُتركان
+  assert.deepEqual(brokenLinksIn('docs/a.md', '[r]: https://x.y/z [c](#anchor)', none), []);
 });
 
 test('حارسُ الروابط: الاقتباسُ بلا فراغٍ والوسمُ المهرَّب يُقاسان — لا مخرجَ صامتًا (الجلسة 4 · DOC_LINK_GUARD_BLOCKQUOTE_NOSPACE_BYPASS · DOC_LINK_GUARD_ESCAPED_LABEL_BYPASS)', () => {
   const none = (): boolean => false;
   // مسابيرُ grok في الجلسة 4 بحرفها — كانت كلُّها []
-  assert.deepEqual(brokenLinksIn('docs/a.md', '>[r]: missing.md', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', ' >[r]: missing.md', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '   >[r]: missing.md', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '>> [r]: missing.md', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '>>[r]: missing.md', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '> >[r]: missing.md', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '>[r]: missing.md "title"', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '>[r]: <missing file.md>', none), ['missing file.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '[foo\\]bar]: missing.md', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '> [foo\\]bar]: missing.md', none), ['missing.md']);
-  assert.deepEqual(brokenLinksIn('docs/a.md', '[a\\]b]: gone.md', none), ['gone.md']);
-  // العيبان معًا
-  assert.deepEqual(brokenLinksIn('docs/a.md', '>[a\\]b]: gone.md', none), ['gone.md']);
+  for (const [t, e] of [['>[r]: missing.md', ['missing.md']], [' >[r]: missing.md', ['missing.md']], ['   >[r]: missing.md', ['missing.md']],
+    ['>> [r]: missing.md', ['missing.md']], ['>>[r]: missing.md', ['missing.md']], ['> >[r]: missing.md', ['missing.md']],
+    ['>[r]: missing.md "title"', ['missing.md']], ['>[r]: <missing file.md>', ['missing file.md']], ['[foo\\]bar]: missing.md', ['missing.md']],
+    ['> [foo\\]bar]: missing.md', ['missing.md']], ['[a\\]b]: gone.md', ['gone.md']], ['>[a\\]b]: gone.md', ['gone.md']]] as [string, string[]][])
+    assert.deepEqual(brokenLinksIn('docs/a.md', t, none), e, t);
+
   // سالبةُ الضبط: `-[r]:` ليس قائمةً (علامتُها يلزمها فراغ) ولا نصٌّ يسبقه حرفٌ قبل `>`؛ والسليمُ لا يُبلَّغ
   assert.deepEqual(brokenLinksIn('docs/a.md', '-[r]: missing.md', none), []);
   assert.deepEqual(brokenLinksIn('docs/a.md', 'a > [r]: missing.md', none), []);
