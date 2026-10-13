@@ -1955,7 +1955,7 @@
       "reviewer": "القيّم على المستودع (المالك)",
       "area": "التوثيق والحوكمة",
       "phase": 40,
-      "status": "PROPOSED",
+      "status": "CLAIMED",
       "progress_items": [
         "لا ينطبق"
       ],
@@ -1964,7 +1964,10 @@
       ],
       "scope": [
         "tests/governance/declaration_gate.test.ts",
-        "tests/governance/criteria_status.test.ts"
+        "tests/governance/criteria_status.test.ts",
+        "docs/test-reports/phase-40-W-2026-070.md",
+        "docs/audit/measurements/phase-40-W-2026-070-verify-variance.md",
+        "docs/work/orders/W-2026-070.md"
       ],
       "excluded": [
         "يُملأ عند الاستلام: ما لن يُلمس ولو بدا قريبًا"
