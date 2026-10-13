@@ -1,0 +1,46 @@
+{
+  "item": "W-2026-064",
+  "commit": "bee63a825cd3c3822fb21de3436654b7f3d2c9bb",
+  "scope_digest": "c8ecef63d11ad32b969267c9492b10a468ca742abe3f8dc90e657956a5775aa4",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-13",
+  "session": 18,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-18-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-18-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-064-18-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "إجماعٌ (الجلسة 18 · 2026-10-13): العيوبُ الستةُ المعروضةُ على الجلسةَ (بقرار المالك 2026-10-13) مثبتةٌ بالإجماع — الثلاثةُ القطعيةُ تفويتًا (EQUAL_PRECEDENCE بمسبارَي gpt وgrok · FENCE_INFO_BACKTICK · SCRIPT_SAMELINE_CLOSE_MISS — الحارس [] والمحرك المرجعي [\"missing.md\"]) والبلاغاتُ الزائدةُ الثلاثةُ (SCRIPT_BLANK_EARLY_EXIT_FP · HEADING_INLINE_CODE_FP · الحاوياتُ الثمانية 8/111132 كلها زيادة بلاغ) — فالبندُ يُعاد إلى IN_PROGRESS لا إلى VERIFIED ولا إلى CLOSED.",
+      "ملاحظةٌ إجرائية لا تُسقط الحكم: الأعضاءُ الثلاثةُ أعلنوا إعلانًا ذاتيًا لا توثيقَ منشأ — gpt (GPT-5.6 Terra · OpenAI) · grok (Grok · xAI) · gemini (Gemini 3.8 Flash · Google). جميعُ الأعضاء من عائلاتٍ مختلفةٍ عن عائلة المنفّذ (GLM). الحزمةُ المجمّدةُ وُضعت داخل جذر كل عضو كما يشترط REVIEW_COUNCIL.md §2.1 — إصلاحُ إخفاق الجلسات 16 · 17 (لا تكرارٌ له).",
+      "ملاحظةٌ لا تخفي الفشل: النسخةُ المرجعية commonmark@1.0.0 غير متوفرة في npm — قِيس التفاضل على commonmark@0.31.2 (إعلانٌ ذاتي من العضو gemini لا يُخفى ولا يُقبل كخفضٍ للشدة). جمِعَ الأعضاءُ على هذا القيد. لا يُنسبُ الرفضُ إلى القيد: الحكمُ على الحارسِ لا على المحركِ المرجعي.",
+      "ملاحظةٌ لا تخفي الفشل: gemini أعلن فشلَ حالتينِ في npm test عند التشغيل المتوازي (declaration_gate.test.js · T-16/DC-04) وعادت نجاحًا عند التشغيل منفردًا وverify 2440/2440 رمز 0 — إعلانٌ لا إخفاءٌ (نمط مُقيَّد في جلسة 17 و16). grok أعلن فشل npm test وverify 1 (2439/2440 · الفشل نفسه غير حتمي عند إعادة الفحص منفردًا) — إعلانٌ لا إخفاء. المسار tests/governance/declaration_gate.test.js خارج نطاق W-2026-064 ولم يُسند إليه رفض.",
+      "ملاحظةٌ خارج نطاق البند (تُسجَّل لا تُعالَج هنا): شُغِّل المجلس بتنفيذ Perplexity Computer (الجلسة 112 تابع) وفق الأمر التشغيلي الدائم من الجلسة 111 — والتنفيذُ على أعضاء من عائلاتٍ مختلفةٍ (GPT · Grok · Gemini) لا يخفي أن الاستدعاءَ بنفس العائلة. الاستقلالُ النظاميُّ مُعلَنٌ لا مُثبَتٌ بمنشأ — والقيودُ مسجّلة. الحزمةُ داخل جذر كل عضو — إصلاحُ إخفاق الجلسات 16 · 17."
+    ],
+    "open_items": [
+      "العيوبُ الستةُ مثبتةٌ بالإجماع — لا تُعالَج في هذا البند (قرار المالك 2026-10-13). الطريقُ إلى علاجها في بندٍ مستقلٍّ بقرار المالك.",
+      "لا يُرفعُ البند إلى VERIFIED ولا CLOSED — الإجماعُ شرطُ VERIFIED (RULE-020) — والقرارُ بيد المالك."
+    ]
+  }
+}
