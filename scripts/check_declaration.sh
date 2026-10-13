@@ -52,6 +52,21 @@
 #    يُبتلع به بندٌ مفتوحٌ في إعلان، ولأنّ نموذجَ وزنٍ لا يحرسه حسابٌ يفترق عن حسابه بصمت.
 set -euo pipefail
 
+# ── العضويّةُ بلا أنبوب (W-2026-071) ─────────────────────────────────────────────
+# كان «هل السطرُ في القائمة؟» يُسأل بـ`printf '%s\n' "$list" | grep -qx "$x"`. وتحت pipefail
+# يخرج grep -q عند أوّل تطابق فيتلقّى printf ‏SIGPIPE ويخرج بـ141، فيصير **التطابقُ الموجودُ
+# جوابًا بالنفي** — يقع ذلك بحسب جدولة المعالج لا بحسب المدخل (قيس: 32/200 تشغيلًا متوازيًا
+# أسقطت البوابةَ على شجرةٍ واحدة — docs/audit/measurements/phase-40-W-2026-071-membership-stress.md).
+# فالسؤالُ يُجاب هنا داخل الصدفة بمساواةٍ حرفيّة للسطر كاملًا (عينُ معنى -x لمعرّفاتٍ بلا
+# محارفِ تعبيرٍ نمطيّ) ولا أنبوبَ فيه ولا عمليّةَ فرعيّة — فلا SIGPIPE يُقلب به الجواب.
+in_lines() {
+  local needle="$1" line
+  while IFS= read -r line; do
+    [ "$line" = "$needle" ] && return 0
+  done <<< "$2"
+  return 1
+}
+
 cd "${SOOL_DECL_ROOT:-$(dirname "$0")/..}"
 VERSION_FILE="version.json"
 CRITERIA_FILE="COMPLETION_CRITERIA.md"
@@ -150,7 +165,7 @@ while IFS= read -r row; do
   case "$vp" in "$VERDICTS_DIR"/*)
     if [ -f "$vp" ]; then
       for v in $(grep -o 'T-[0-9]\+' "$vp" | sort -u || true); do
-        if ! printf '%s\n' "$cell_ids" | grep -qx "$v"; then
+        if ! in_lines "$v" "$cell_ids"; then
           echo "✗ [DC-03] $cid: حكمُ التدقيق في $vp يذكر $v وخانةُ «البند المفتوح» لا تذكره"
           echo "  والحكمُ سندُ الصفّ، فبندٌ يسمّيه الحكمُ ويُسقطه كاتبُ الخانةِ عائقٌ يُبتلع بسهوٍ لا بقرار"
           fail=1
@@ -169,7 +184,7 @@ while IFS= read -r row; do
         }
         END { exit !found }'; then
       open_named="$open_named $t"
-    elif printf '%s\n' "$closed_ids" | grep -qx "$t"; then
+    elif in_lines "$t" "$closed_ids"; then
       closed_named="$closed_named $t"
     else
       # [DC-04] معرَّفٌ لا يُقابل صفًّا في §2 — لا مفتوحًا ولا مشطوبًا
@@ -366,7 +381,7 @@ elif ! awk -v a="$w_total" -v b="$percent" 'BEGIN{exit !((a-b < 0.01) && (b-a < 
   fail=1
 fi
 for p in $partial_phases; do
-  if printf '%s\n' "$complete_phases" | grep -qx "$p"; then
+  if in_lines "$p" "$complete_phases"; then
     echo "✗ المرحلة $p في phases_partial وphases_complete معًا — والجزئيُّ لا يكون مُغلقًا"
     fail=1
   fi
