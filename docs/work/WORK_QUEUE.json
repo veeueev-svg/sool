@@ -1955,9 +1955,10 @@
       "reviewer": "القيّم على المستودع (المالك)",
       "area": "التوثيق والحوكمة",
       "phase": 40,
-      "status": "CLAIMED",
+      "status": "IN_PROGRESS",
       "progress_items": [
-        "لا ينطبق"
+        "لا ينطبق",
+        "2026-10-13 (الجلسة 112 تابع): CLAIMED ⇒ IN_PROGRESS — بدءُ التشخيص لا بالتوازي مع خام الجلسة 19 (المعالجة نُشرت بالكامل في فرع #112). الخطوة الأولى للقياس: تشغيلاتٌ معزولةٌ ومتزامنةٌ لـdeclaration_gate وcriteria_status على الشجرة نفسها برمز خروجٍ مقبوضٍ مباشرة، وخامُّ القياس يُحفظ في docs/audit/measurements/phase-40-W-2026-070-verify-variance.md لا في /tmp."
       ],
       "dependencies": [
         "لا شيء"
@@ -1970,13 +1971,18 @@
         "docs/work/orders/W-2026-070.md"
       ],
       "excluded": [
-        "يُملأ عند الاستلام: ما لن يُلمس ولو بدا قريبًا"
+        "حارسُ الروابط tests/governance/doc_links.test.ts ومسابير الجلسة 19 الستة — محجوزةٌ لـW-2026-064",
+        "docs/work/WORK_QUEUE.json وdocs/work/orders/ — تُحدَّث بآليات السجل الحي",
+        "أيُّ بندٍ آخر في REVIEW"
       ],
       "acceptance": [
-        "يُملأ في العقد §4 قبل أوّلِ سطرٍ من العمل"
+        "تشخيصٌ مقيسٌ لسبب تباين نتائج التشغيل الكامل بين البيئات على الالتزام نفسه — بحكمٍ قابلٍ للتحقق من قياسٍ خام",
+        "إما إصلاحٌ موثقٌ داخل نطاق البند أو قيدٌ مسجّلٌ بأن الإصلاح يحتاج سلطةً أعلى — لا حلٌّ وسيطٌ ولا تسوية",
+        "npm test ⇒ عددٌ صريح بلا فشل · npm run verify ⇒ EXIT=0"
       ],
       "evidence": [
-        "يُملأ عند التشغيل: خرج npm test بعددٍ صريح · تقريرٌ في docs/test-reports/"
+        "docs/test-reports/phase-40-W-2026-070.md",
+        "docs/audit/measurements/phase-40-W-2026-070-verify-variance.md"
       ],
       "next_step": "جهةٌ تستلمه فتنقله إلى CLAIMED",
       "created_at": "2026-10-13",
