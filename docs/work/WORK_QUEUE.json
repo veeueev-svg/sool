@@ -2028,6 +2028,42 @@
     "2026-10-14 (SECOND_SOURCE_CONSTRAINT_NOT_LITERALLY_REGISTERED — الجلسة 22 · grok): مصدرُ التباين الثاني (SCALE_P99_SUITE_FLAKE) لم يُسجَّل بصيغة «الإصلاح يحتاج سلطةً أعلى» كما يشترط معيار القبول الثاني حرفيًّا — سُجّل اكتشافًا فقط. العلاج: بندُ تشخيصٍ مستقل أو توسيعُ نطاق هذا البند بقرار المالك.",
     "2026-10-14 (INCOMPLETE_SECOND_SOURCE_DIAGNOSIS — الجلسة 22 · grok): عضوٌ عاين بنفسه تباين npm test على شجرة التجميد 7d5874a (2444/2445 فشل scale_lifecycle p99 في بيئته مقابل 2445/2445 EXIT=0 في بيئة المنفّذ) — هذا المصدر الثاني للتباين بين البيئات لم يُشخَّص ضمن البند. يشترك مع SCALE_P99_SUITE_FLAKE المُقيَّد اكتشافًا لقرار المالك."
    ]
+  },
+  {
+   "id": "W-2026-072",
+   "title": "عزلُ قياسِ زمنِ البوابة في قبول «خمسون ألف هوية» عن تزاحمِ المعالج الخارجي — SCALE_P99_SUITE_FLAKE (بلا رفعِ عتبةٍ ولا إعادةِ محاولةٍ ولا تعطيل)",
+   "owner": "المساعد الآلي — Perplexity Computer (الجلسة 117 — بتفويض المالك 2026-10-15)",
+   "reviewer": "القيّم على المستودع (المالك) — والحكمُ لمجلس المراجعة (RULE-020)",
+   "area": "الاختبارات والقياس",
+   "phase": 40,
+   "status": "PROPOSED",
+   "progress_items": [
+    "لا ينطبق"
+   ],
+   "dependencies": [
+    "W-2026-059",
+    "W-2026-070"
+   ],
+   "scope": [
+    "docs/work/orders/W-2026-072.md",
+    "docs/test-reports/phase-40-W-2026-072.md"
+   ],
+   "excluded": [
+    "tests/scale/scale_lifecycle.test.ts و config/scale.yaml وسكربتات bench_scale — محجوزةٌ لـW-2026-059 حتى إغلاقه",
+    "رفعُ gateway_p99_ms أو gateway_max_ms أو خفضُ acceptance_headroom_percent — إضعافٌ لشرط قبولٍ ممنوع",
+    "إعادةُ المحاولة أو إسقاطُ العيّنات الشاذّة أو تعطيلُ الاختبار أو تخطّيه — إخفاءُ فشلٍ ممنوع"
+   ],
+   "acceptance": [
+    "الاختبارُ يمرّ معزولًا ≥20/20 وتحت حملٍ خارجيٍّ (8 حلقاتِ انشغالٍ على nproc 2) ≥20/20 برمز خروجٍ مقبوضٍ مباشرة — دون تغيير gateway_p99_ms (10) ولا gateway_max_ms (25) ولا acceptance_headroom_percent (20) ولا عددِ العيّنات (200)",
+    "اختبارٌ سلبيٌّ: تباطؤٌ حقيقيٌّ محقونٌ في مسار البوابة (عملُ معالجٍ إضافيٌّ ≥ 8 م.ث للنداء) يُسقط الحارسَ معزولًا وتحت الحمل — الحارسُ لا يُعمى",
+    "npm test ⇒ عددٌ صريح بلا فشل · npm run verify ⇒ EXIT=0 (على رأس العمل)"
+   ],
+   "evidence": [
+    "يُملأ عند التشغيل: خامُّ القياس قبل/بعد في docs/audit/measurements/ · تقريرٌ في docs/test-reports/phase-40-W-2026-072.md"
+   ],
+   "next_step": "ينتظر إغلاقَ W-2026-059 (REVIEW — يحجز tests/scale/scale_lifecycle.test.ts و config/scale.yaml و scripts/bench_scale*.ts) أو تحريرَ مساراته (RULE-012)؛ والتشخيصُ المقيس في W-2026-070 (خامُّه docs/audit/measurements/phase-40-W-2026-070-scale-p99.md). ثمّ يستلمه الوكيلُ المسؤول (PROPOSED ⇒ CLAIMED) ويوسّع نطاقَه إلى tests/scale/scale_lifecycle.test.ts قبل أوّلِ لمس (RULE-011). لا يُعمل قبل ذلك.",
+   "created_at": "2026-10-15",
+   "updated_at": "2026-10-15"
   }
  ]
 }
