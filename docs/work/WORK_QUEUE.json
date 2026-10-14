@@ -1787,7 +1787,11 @@
     "docs/work/council/W-2026-070-22.json",
     "docs/work/council/W-2026-070-22-gpt.md",
     "docs/work/council/W-2026-070-22-grok.md",
-    "docs/work/council/W-2026-070-22-gemini.md"
+    "docs/work/council/W-2026-070-22-gemini.md",
+    "docs/work/council/W-2026-070-23-gpt.md",
+    "docs/work/council/W-2026-070-23-grok.md",
+    "docs/work/council/W-2026-070-23-gemini.md",
+    "docs/work/council/W-2026-070-23.json"
    ],
    "excluded": [
     "تعديلُ أيِّ تقريرٍ خامٍّ لعضو — يُحفظ كما كتبه",
@@ -1804,9 +1808,9 @@
     "docs/test-reports/phase-40-W-2026-066.md",
     "docs/test-reports/phase-40-W-2026-066.md — الجلسة 2 (الأعضاء الثلاثة معزولين على حزم مجمّدة عند 1473992): البنود الثلاثة NOT_VERIFIED بعيوب مسمّاة"
    ],
-   "next_step": "انعقدت الجلسة 22 (2026-10-14 · على شجرة التجميد 7d5874a · بصمة النطاق 0ca98d9d… — الأحكام gpt VERIFIED · grok REJECTED · gemini VERIFIED ⇒ خلافٌ ⇒ NOT_VERIFIED بمآل DISC · البند W-2026-070 يبقى REVIEW — سابقة الجلسة 19: الثابت 8 لا يقيّد مآل DISC). لا جلسةَ تالية إلّا بأمر المالك — جولةٌ واحدةٌ غير متزامنة · الخامُّ أولًا ثم المحضر والمعالجة. الاكتشافان مقيّدان في discoveries بصفّ W-2026-070 (INCOMPLETE_SECOND_SOURCE_DIAGNOSIS · SECOND_SOURCE_CONSTRAINT_NOT_LITERALLY_REGISTERED).",
+   "next_step": "2026-10-15 (الجلسة 117 — بتفويض المالك): الجلسة 23 لمجلس المراجعة على W-2026-070 وحده — التزام التجميد d1bf1acaef5bcf993d837c1d8435ab680b3c628e (دمج #128) · بصمة نطاق W-2026-070 على شجرة التجميد 5f43962d46316d2e2b488764bf56ff090bee6799c76e7ddf8b935264352b8790 (14 مسارًا · تخالف 0ca98d9d… للجلسة 22). جولةٌ واحدة، الأعضاءُ متتابعون (gpt ثم grok ثم gemini) لأنّ اختبار scale_lifecycle يسقط تحت تزاحم المعالج (W-2026-070 §12.6) والأعضاءُ يتشاركون العقدة؛ الخامُّ يُدفع أوّلًا ثم المحضر في التزامٍ مستقلّ ثم المعالجة. لا جلسةَ أخرى قبل انتهاء هذه.",
    "created_at": "2026-10-04",
-   "updated_at": "2026-10-14",
+   "updated_at": "2026-10-15",
    "documentation_impact": [
     "PROGRESS.md — مدخلُ الجلسة 91",
     "CHANGELOG.md — مدخلُ أوّلِ انعقادٍ للمجلس"
