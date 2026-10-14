@@ -2022,9 +2022,11 @@
     "docs/test-reports/phase-40-W-2026-070.md",
     "docs/audit/measurements/phase-40-W-2026-070-verify-variance.md",
     "docs/audit/measurements/phase-40-W-2026-070-remeasure.md",
-    "docs/audit/measurements/phase-40-W-2026-070-remeasure-npm-verify.txt"
+    "docs/audit/measurements/phase-40-W-2026-070-remeasure-npm-verify.txt",
+    "docs/audit/measurements/phase-40-W-2026-070-scale-p99.md",
+    "docs/audit/measurements/phase-40-W-2026-070-scale-p99-raw.txt"
    ],
-   "next_step": "2026-10-15 (الجلسة 117 — بتفويض المالك): REVIEW ⇒ IN_PROGRESS لعلاج عيبي الجلسة 22 (INCOMPLETE_SECOND_SOURCE_DIAGNOSIS · SECOND_SOURCE_CONSTRAINT_NOT_LITERALLY_REGISTERED). القرارُ نيابةً عن المالك: (1) تشخيصُ المصدر الثاني SCALE_P99_SUITE_FLAKE قياسًا داخل هذا البند بخامٍّ محفوظٍ في docs/audit/measurements/phase-40-W-2026-070-scale-p99*؛ (2) الإصلاحُ بندٌ مستقلٌّ W-2026-072 (PROPOSED بتبعيةٍ على W-2026-059 الذي يحجز tests/scale/scale_lifecycle.test.ts و config/scale.yaml) — لا يُلمس هنا. التالي: حفظُ الخامّ وتسجيلُ القيد الحرفي ثم IN_PROGRESS ⇒ REVIEW ثم الجلسة 23 لمجلس المراجعة على هذا البند وحده.",
+   "next_step": "2026-10-15 (الجلسة 117 — بتفويض المالك): علاجُ عيبي الجلسة 22 محفوظ — تشخيصُ SCALE_P99 (docs/audit/measurements/phase-40-W-2026-070-scale-p99.md · الخامّ بجواره) والقيدُ الحرفي «الإصلاح يحتاج سلطةً أعلى» ومسارُه W-2026-072. التالي: تشغيلُ البوابات على هذا الرأس ثم IN_PROGRESS ⇒ REVIEW ثم الجلسة 23 لمجلس المراجعة على هذا البند وحده.",
    "created_at": "2026-10-13",
    "updated_at": "2026-10-15",
    "verification": "دعوى المنفّذ بعد علاج الجلسة 20 (لينكس · Node v20.20.2 · nproc 2 · بناءٌ نظيف): على cb394e7 (بعد دمج W-2026-071) — check_declaration.sh 0/400 متوازيًا (25×8 مرتين) و0/40 متتابعًا · npm run verify رمز 0 مقبوضًا مباشرةً · 2445/2445. ضبطٌ على 7f81def: 37/200 غيرُ صفريّ (15 DC-03 · 23 DC-04) و0/40 متتابعًا في هذه البيئة (grok قاس 6/40 في بيئته). الخام: docs/audit/measurements/phase-40-W-2026-070-remeasure.md. الحكمُ لمجلس المراجعة (RULE-020) لا للمنفّذ.",
