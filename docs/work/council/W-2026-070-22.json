@@ -1,0 +1,15 @@
+{
+  "item": "W-2026-070",
+  "commit": "7d5874a7591d62711cbb42509e09ae57c88c3748",
+  "scope_digest": "0ca98d9d4ab4b1fcdcff1180848790fdf1dd2415d80abc98b1a9d775cef41080",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-14",
+  "session": 22,
+  "verdicts": [
+    {"member": "gpt", "model": "GPT 5.6 Terra", "runtime_id": "gpt_5_6_terra", "verdict": "VERIFIED", "report": "docs/work/council/W-2026-070-22-gpt.md"},
+    {"member": "grok", "model": "Grok 4.7", "runtime_id": "grok_4_7", "verdict": "REJECTED", "report": "docs/work/council/W-2026-070-22-grok.md"},
+    {"member": "gemini", "model": "Gemini 3.8 Flash", "runtime_id": "gemini_3_8_flash", "verdict": "VERIFIED", "report": "docs/work/council/W-2026-070-22-gemini.md"}
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {"kind": "DISC", "ref": "خلافٌ — gpt VERIFIED · grok REJECTED · gemini VERIFIED ⇒ NOT_VERIFIED (لا إجماع). عيوب grok المسمّاة (2): (1) INCOMPLETE_SECOND_SOURCE_DIAGNOSIS — عاين بنفسه تباين npm test على شجرة التجميد نفسها (2444/2445 فشل scale_lifecycle p99 في بيئته) ولم يُشخَّص هذا المصدر الثاني ضمن البند — سُجّل SCALE_P99_SUITE_FLAKE اكتشافًا لا تشخيصًا. (2) SECOND_SOURCE_CONSTRAINT_NOT_LITERALLY_REGISTERED — المصدر الثاني لم يُسجَّل بصيغة «الإصلاح يحتاج سلطةً أعلى» كما يشترط المعيار الثاني حرفيًّا. كلاهما يعود إلى المصدر المُقيَّد اكتشافًا لقرار المالك — خارج نطاق البند ولم يُعالَج. علاج SIGPIPE (153/172/369 · 0/400 و0/40 · verify EXIT=0 و2445/2445) شهد له العضوان بتطابقٍ حرفي."}
+}
