@@ -1,0 +1,36 @@
+{
+  "item": "W-2026-070",
+  "commit": "7f81defb22b10edeb6a6d35394dfb3aec7c72ab3",
+  "scope_digest": "70f016d3c4beb1bcf9361dd0743f2052bb01dd2bcff9c074fa7f81b434263497",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-14",
+  "session": 20,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-070-20-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-070-20-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-070-20-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "ref": "إجماعٌ على الرفض. العيوبُ المُجمَع عليها: (1) التشخيصُ ناقص — موضعٌ ثانٍ بالآليّة نفسها في scripts/check_declaration.sh السطر 153 ([DC-03]) لم يُسمَّ (gpt INCOMPLETE_PIPEFAIL_SITE_INVENTORY · grok MISSED_DC03_SIGPIPE_SITE · gemini INCOMPLETE_DIAGNOSIS) وموضعٌ ثالثٌ كامنٌ في السطر 369 (grok LATENT_SIGPIPE_SITE_369 · gpt). (2) معيارُ «npm run verify ⇒ EXIT=0» غيرُ متحقّقٍ على الالتزام المجمّد (gpt ACCEPTANCE_VERIFY_ZERO_FALSE · grok VERIFY_EXIT_NOT_ZERO · gemini CRITERION_UNMET_VERIFY_EXIT_NONZERO). ومن عضوٍ واحد: grok SEQUENTIAL_ZERO_CLAIM_FALSE (6 فشلاتٍ في 40 تشغيلًا متتابعًا) · STALE_FIRST_ATTEMPT_CLAIM · SCALE_P99_SUITE_FLAKE (مصدرُ تباينٍ آخر في tests/scale/scale_lifecycle) · gpt EVIDENCE_COMMIT_MISMATCH · RAW_EVIDENCE_NAMING_CONTRADICTION. مقاييسُ الإجهاد عند الأعضاء: gpt 19/200 · grok 14/200 غيرُ صفريّ."
+  }
+}
