@@ -1971,7 +1971,7 @@
   {
    "id": "W-2026-070",
    "title": "تشخيصُ تباينِ نتائجِ التشغيل الكاملِ بين البيئاتِ وبوابةُ الإعلانِ — القياسُ على verify وdeclaration_gate غيرُ حاسمٍ بين بيئات",
-   "owner": "المساعد الآلي — Perplexity Computer (الجلسة 116 — استلامًا بالأمر التشغيلي الدائم · معالجة عيوب الجلسة 22)",
+   "owner": "المساعد الآلي — Perplexity Computer (الجلسة 117 — استلامًا بتفويض المالك 2026-10-15 · معالجة عيوب الجلسة 22)",
    "reviewer": "القيّم على المستودع (المالك)",
    "area": "التوثيق والحوكمة",
    "phase": 40,
@@ -1986,7 +1986,9 @@
     "2026-10-14 (الجلسة 114 تابع): علاجُ عيوب الجلسة 20 — جردُ المواضع الثلاثة (153 · 172 · 369) · سحبُ دعوى «صفر فشل متتابعًا» خاصّيّةً · علاماتُ تصحيح «في أول محاولة» في PROGRESS وCHANGELOG والسجل · تصحيحُ تسمية الخام · إعادةُ القياس كلّها على cb394e7 (الحاجز 0/400 متوازيًا · 0/40 متتابعًا · verify رمز 0 · 2445/2445) وضبطٌ على 7f81def (37/200) · تسجيلُ SCALE_P99_SUITE_FLAKE اكتشافًا. IN_PROGRESS ⇒ REVIEW.",
     "2026-10-14 (الجلسة 22 لمجلس المراجعة · RULE-020): انعقدت على شجرة التجميد 7d5874a (بصمة النطاق 0ca98d9d… مطابقة مستقلة) — gpt VERIFIED · grok REJECTED · gemini VERIFIED ⇒ خلافٌ NOT_VERIFIED بمآل DISC. عيبا grok: تشخيصُ المصدر الثاني ناقص والقيدُ غير حرفي — كلاهما يعود إلى SCALE_P99_SUITE_FLAKE المُقيَّد اكتشافًا لقرار المالك. المحضر: docs/work/council/W-2026-070-22.json · الخام: docs/work/council/W-2026-070-22-{gpt,grok,gemini}.md. البند IN_PROGRESS.",
     "2026-10-14 (الجلسة 22 لمجلس المراجعة · RULE-020): انعقدت على شجرة التجميد 7d5874a (بصمة النطاق 0ca98d9d… مطابقة مستقلة) — gpt VERIFIED · grok REJECTED · gemini VERIFIED ⇒ خلافٌ NOT_VERIFIED بمآل DISC. عيبا grok: تشخيصُ المصدر الثاني ناقص والقيدُ غير حرفي — كلاهما يعود إلى SCALE_P99_SUITE_FLAKE المُقيَّد اكتشافًا لقرار المالك. المحضر: docs/work/council/W-2026-070-22.json · الخام: docs/work/council/W-2026-070-22-{gpt,grok,gemini}.md. البندُ يبقى REVIEW (سابقة الجلسة 19 — الثابت 8 لا يقيّد مآل DISC).",
-    "2026-10-14 (الجلسة 116 · تصحيحات توثيق الجلسة 22 في العقد والتقرير): صُحّح خطآن توثيقيان معلَّلان (قياسُ gpt في التقرير §11 · حالةُ البند في العقد §10 — البند يبقى REVIEW بسابقة الجلسة 19) · سُجّل سندُ الاستلام (الجلسة 116 · الأمر التشغيلي الدائم)."
+    "2026-10-14 (الجلسة 116 · تصحيحات توثيق الجلسة 22 في العقد والتقرير): صُحّح خطآن توثيقيان معلَّلان (قياسُ gpt في التقرير §11 · حالةُ البند في العقد §10 — البند يبقى REVIEW بسابقة الجلسة 19) · سُجّل سندُ الاستلام (الجلسة 116 · الأمر التشغيلي الدائم).",
+    "2026-10-15 (الجلسة 117 — بتفويض المالك): REVIEW ⇒ IN_PROGRESS — علاجُ عيبي الجلسة 22 · توسيعُ النطاق بأربعة مسارات خامّ قبل اللمس (RULE-011).",
+    "2026-10-15 (الجلسة 117): IN_PROGRESS ⇒ REVIEW — npm test 2445/2445 و verify رمز 0 على e4c4b55."
    ],
    "dependencies": [
     "لا شيء"
@@ -2001,7 +2003,11 @@
     "docs/audit/measurements/phase-40-W-2026-070-npm-verify.txt",
     "docs/audit/measurements/phase-40-W-2026-070-sigpipe-probe.sh",
     "docs/audit/measurements/phase-40-W-2026-070-remeasure.md",
-    "docs/audit/measurements/phase-40-W-2026-070-remeasure-npm-verify.txt"
+    "docs/audit/measurements/phase-40-W-2026-070-remeasure-npm-verify.txt",
+    "docs/audit/measurements/phase-40-W-2026-070-scale-p99.md",
+    "docs/audit/measurements/phase-40-W-2026-070-scale-p99-probe.mjs",
+    "docs/audit/measurements/phase-40-W-2026-070-scale-p99-run.sh",
+    "docs/audit/measurements/phase-40-W-2026-070-scale-p99-raw.txt"
    ],
    "excluded": [
     "حارسُ الروابط tests/governance/doc_links.test.ts ومسابير الجلسة 19 الستة — محجوزةٌ لـW-2026-064",
@@ -2017,12 +2023,14 @@
     "docs/test-reports/phase-40-W-2026-070.md",
     "docs/audit/measurements/phase-40-W-2026-070-verify-variance.md",
     "docs/audit/measurements/phase-40-W-2026-070-remeasure.md",
-    "docs/audit/measurements/phase-40-W-2026-070-remeasure-npm-verify.txt"
+    "docs/audit/measurements/phase-40-W-2026-070-remeasure-npm-verify.txt",
+    "docs/audit/measurements/phase-40-W-2026-070-scale-p99.md",
+    "docs/audit/measurements/phase-40-W-2026-070-scale-p99-raw.txt"
    ],
-   "next_step": "البندُ يبقى REVIEW — لا يُرفع إلى VERIFIED (لا إجماع · الجلسة 22: gpt VERIFIED · grok REJECTED · gemini VERIFIED ⇒ خلافٌ ⇒ NOT_VERIFIED بمآل DISC) ولا يُعاد إلى IN_PROGRESS (الثابت 8 لا يقيّد مآل DISC — سابقة الجلسة 19). الاكتشافان مقيّدان في discoveries بصفّ البند (INCOMPLETE_SECOND_SOURCE_DIAGNOSIS · SECOND_SOURCE_CONSTRAINT_NOT_LITERALLY_REGISTERED). القرارُ التالي للمالك: (أ) تشخيصُ مصدر التباين الثاني SCALE_P99_SUITE_FLAKE (توسيعُ نطاقٍ أو بندٌ مستقل) · (ب) تسجيلُ القيد الحرفي · (ج) أيُّ مسارٍ آخر — لا جولتان متزامنتان.\\n\\n2026-10-14 (علاجُ حادثةِ الدمج #123 — استلامٌ بالأمر التشغيلي الدائم): سقطت بوابةُ ضبط العمل على main عند التزامِ الدمج f6152c4 (تشغيل 38626359825) — مِذيالُه Work: W-2026-066 لكنّ فرقَه يشمل مسارًا مملوكًا لهذا البند (docs/test-reports/phase-40-W-2026-070.md وعقدُه) فمُنع (RULE-011). عُولج بالتزامةٍ إصلاحيةٍ لاحقةٍ لا إعادةِ كتابةِ تاريخٍ (سابقةُ حادثَي #35 و#50 · اكتشاف MERGE_TRAILER_SCOPE_CROSSING_ON_123 مقيَّد في discoveries بصفّ W-2026-066) — التزامُ الفرع ad05a10 والدمجُ 5c17a04 على main بمِذيال Work: W-2026-070 (الملكيةُ نُقلت للجلسة 116 بأمر المالك التشغيلي الدائم). القياسُ بعد الدمج: node scripts/check_work.mjs ⇒ ✓ (البندُ المُعلَن W-2026-070 · فرقٌ مسارًا واحدًا) · CI على 5c17a04 أخضر (تشغيل 38633146371 · بوابةُ التاج success · شاهدُ الحصر success) · npm test 2445/2445 · pass 2445. لم يُغيَّر الحكمُ ولا حالُ البنود ولا الخامّ. تغيّرت بصمةُ محتوى النطاق الحالي (0ca98d9d… ⇒ e2cc8cad…) بإضافة هذا التوثيق — لا تتغير قيمةُ البصمة التاريخية في محضر الجلسة 22. العلاجُ الجذري (منعُ التزاماتٍ متعددةِ الصِّراف على فرعٍ واحد) بندٌ مستقلٌ بقرار المالك — لم يُفتح.\\n",
+   "next_step": "2026-10-15 (الجلسة 117 — بتفويض المالك): IN_PROGRESS ⇒ REVIEW بعد علاج عيبي الجلسة 22 (التشخيص docs/audit/measurements/phase-40-W-2026-070-scale-p99.md · القيد الحرفي ومساره W-2026-072). التالي: الجلسة 23 لمجلس المراجعة على هذا البند وحده — على التزام دمجٍ في main وبصمةِ نطاقٍ تُحسب على شجرة التجميد يومَ الانعقاد · جولةٌ واحدةٌ غير متزامنة · الخامُّ أولًا ثم المحضر ثم المعالجة.",
    "created_at": "2026-10-13",
-   "updated_at": "2026-10-14",
-   "verification": "دعوى المنفّذ بعد علاج الجلسة 20 (لينكس · Node v20.20.2 · nproc 2 · بناءٌ نظيف): على cb394e7 (بعد دمج W-2026-071) — check_declaration.sh 0/400 متوازيًا (25×8 مرتين) و0/40 متتابعًا · npm run verify رمز 0 مقبوضًا مباشرةً · 2445/2445. ضبطٌ على 7f81def: 37/200 غيرُ صفريّ (15 DC-03 · 23 DC-04) و0/40 متتابعًا في هذه البيئة (grok قاس 6/40 في بيئته). الخام: docs/audit/measurements/phase-40-W-2026-070-remeasure.md. الحكمُ لمجلس المراجعة (RULE-020) لا للمنفّذ.",
+   "updated_at": "2026-10-15",
+   "verification": "دعوى المنفّذ بعد علاج عيبي الجلسة 22 (الجلسة 117 · لينكس · Node v20.20.2 · nproc 2): على e4c4b55 — npm test رمز 0 مقبوضًا مباشرةً · # tests 2445 · # pass 2445 · # fail 0 · npm run verify رمز 0 (السلسلة كاملة حتى check:work ✓) · 2026-10-14T21:39:39Z–21:49:02Z UTC. تشخيصُ SCALE_P99 على b05545a6 (شفرته = main 28b8753): معزولًا شرطُ p99≤8 م.ث 10/10 والاختبار الحقيقي 10/10 رمز 0؛ تحت حمل 2/4/8 حلقات المسبار 2/9 والاختبار تحت 8 حلقات 9/10 رمز 1؛ الوسيط 0.93–1.01 م.ث وزمن المعالج p99 ≤4.49 م.ث تحت الحمل ⇒ إزاحةُ مُجدوِل. علاجُ SIGPIPE السابق (cb394e7: 0/400 · 0/40) لم يُمسّ. الحكمُ لمجلس المراجعة (RULE-020).",
    "discoveries": [
     "2026-10-14 (SCALE_P99_SUITE_FLAKE — الجلسة 20 · grok): tests/scale/scale_lifecycle «قبول: خمسون ألف هوية مسجلة وقياس البوابة تحت عتبة التهيئة بهامش معلن» (percentile(samples, 0.99) <= limit · config/scale.yaml gateway_p99_ms: 10 · acceptance_headroom_percent: 20) نجح 10/10 معزولًا وسقط 5/5 تحت حِمل 8 نسخٍ من check_declaration.sh على cb394e7 — مصدرٌ ثانٍ لتباين npm test بين البيئات والأحمال. خارجُ نطاق هذا البند ولم يُعالَج؛ وأيُّ تغييرٍ في العتبة أو الاختبار إضعافٌ محتملٌ لاختبار قبول ⇒ قرارُ المالك (فتحُ بندٍ أو قبولُه قيدًا بيئيًّا). الخام: docs/audit/measurements/phase-40-W-2026-070-remeasure.md §4.",
     "2026-10-14 (SECOND_SOURCE_CONSTRAINT_NOT_LITERALLY_REGISTERED — الجلسة 22 · grok): مصدرُ التباين الثاني (SCALE_P99_SUITE_FLAKE) لم يُسجَّل بصيغة «الإصلاح يحتاج سلطةً أعلى» كما يشترط معيار القبول الثاني حرفيًّا — سُجّل اكتشافًا فقط. العلاج: بندُ تشخيصٍ مستقل أو توسيعُ نطاق هذا البند بقرار المالك.",
