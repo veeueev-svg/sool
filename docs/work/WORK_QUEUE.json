@@ -1769,7 +1769,11 @@
         "docs/work/council/W-2026-065-gpt.md",
         "docs/work/council/W-2026-065-grok.md",
         "docs/work/council/W-2026-065.json",
-        "docs/work/orders/W-2026-066.md"
+        "docs/work/orders/W-2026-066.md",
+        "docs/work/council/W-2026-070-20-gpt.md",
+        "docs/work/council/W-2026-070-20-grok.md",
+        "docs/work/council/W-2026-070-20-gemini.md",
+        "docs/work/council/W-2026-070-20.json"
       ],
       "excluded": [
         "تعديلُ أيِّ تقريرٍ خامٍّ لعضو — يُحفظ كما كتبه",
@@ -1788,7 +1792,7 @@
       ],
       "next_step": "لا جلسةَ تالية إلّا بأمر المالك (W-2026-064 بعد علاج عيب الجلسة 16 — DOC_LINK_GUARD_ESCAPED_BACKTICK_STRIP_BYPASS). وبقيّةُ ترتيب الأمر الملكي م-2026-107 (المادة الخامسة): إغلاقُ W-2026-067 (مراجعتُه للمالك) ثمّ T-83 — وقراراتُ المالك المعلّقة: تقييدُ الأمر في docs/royal-orders/ (auditId) · royal_approval · قيدُ مخالفة «الخام أولًا» · معرّفُ بندِ تشخيصِ فشلِ المجموعة.",
       "created_at": "2026-10-04",
-      "updated_at": "2026-10-11",
+      "updated_at": "2026-10-14",
       "documentation_impact": [
         "PROGRESS.md — مدخلُ الجلسة 91",
         "CHANGELOG.md — مدخلُ أوّلِ انعقادٍ للمجلس"
