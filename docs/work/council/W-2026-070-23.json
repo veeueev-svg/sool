@@ -6,10 +6,31 @@
   "convened_at": "2026-10-15",
   "session": 23,
   "verdicts": [
-    {"member": "gpt", "model": "GPT 5.6 Terra", "runtime_id": "gpt_5_6_terra", "verdict": "VERIFIED", "report": "docs/work/council/W-2026-070-23-gpt.md"},
-    {"member": "grok", "model": "Grok 4.7", "runtime_id": "grok_4_7", "verdict": "VERIFIED", "report": "docs/work/council/W-2026-070-23-grok.md"},
-    {"member": "gemini", "model": "Gemini 3.8 Flash", "runtime_id": "gemini_3_8_flash", "verdict": "VERIFIED", "report": "docs/work/council/W-2026-070-23-gemini.md"}
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-070-23-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-070-23-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-070-23-gemini.md"
+    }
   ],
   "decision": "VERIFIED",
-  "disposition": {"kind": "VERIFIED", "ref": "إجماعٌ — gpt VERIFIED · grok VERIFIED · gemini VERIFIED ⇒ VERIFIED (RULE-020). البندُ W-2026-070 ينتقل من REVIEW إلى VERIFIED · بصمةُ النطاق 5f43962d… مطابقةٌ (الثابت 6) · تغيّرٌ مقيسٌ عن بصمة محضر الرفض الأخير (الجلسة 22 · 0ca98d9d… — الثابت 8). عيبا الجلسة 22 أُغلقَا عند الثلاثة: (1) INCOMPLETE_SECOND_SOURCE_DIAGNOSIS — تشخيصُ المصدر الثاني (SCALE_P99_SUITE_FLAKE) خامٌّ قابلٌ للإعادة يثبت الآليّة (الوسيطُ لا يتحرّك تحت الحمل · زمنُ المعالج p99 تحت الحدّ في كلّ المحاولات · زمنُ الساعة p99 وحده يقفز تحت الحمل) — كتبه العضوُّ الثلاثة أنفسُهم بقياسٍ مستقلٍّ أعادوه. (2) SECOND_SOURCE_CONSTRAINT_NOT_LITERALLY_REGISTERED — القيدُ «الإصلاح يحتاج سلطةً أعلى» مسجّلٌ حرفيًّا في phase-40-W-2026-070-scale-p99.md §6 ومسارُ الإصلاح المسمّى W-2026-072 (PROPOSED · بتبعيةٍ على W-2026-059 وW-2026-070) — قرأه الثلاثة في عقدِه. سلامةُ علاج SIGPIPE (المصدر الأول) شهِد لها الثلاثة: حاجزُ الإعلان أخضرُ 0/200 تحت الحمل، وnpm test وnpm run verify خرجا 0 (2445/2445) على شجرة التجميد d1bf1ac. أقرَّ العضوُّ الثلاثة صراحةً أنّهم يعملون على شجرةٍ واحدةٍ (d1bf1ac في /tmp/council23-worktree) بجذورِ تقاريرَ منفصلة، والعزلُ الفعليُّ إقرارٌ ذاتيٌّ لا مُثبَت (حدٌّ قبله المالك — ADR-0054 §4) — ظرفٌ معلَنٌ لا كذبٌ. التنبيهُ الواردُ في الهدف («إن سقط scale_lifecycle في بيئة العضو تحت حملٍ مقيسٍ فذلك قياسٌ يُسجَّل كما هو») لم يُفعّل عند الثلاثة: كلٌّ شغّل اختبارَ الملف الحقيقي معزولًا 10/10 رمز 0، وتحت حمل 8 حلقات سقط 9-10 من 10 — مسجّلٌ كما قِيسَ لا كما يُتوقّع (قياسُ الطرفِ الظرفيّ لا يُحوَّل). التالي: إغلاقُ W-2026-070 بالنقل إلى WORK_LOG.md (المعجمُ المغلق — WORK_CONTROL §3)."}
+  "disposition": {
+    "kind": "VERIFIED",
+    "ref": "إجماعٌ — gpt VERIFIED · grok VERIFIED · gemini VERIFIED ⇒ VERIFIED (RULE-020). البندُ W-2026-070 ينتقل من REVIEW إلى VERIFIED · بصمةُ النطاق 5f43962d… مطابقةٌ (الثابت 6) · تغيّرٌ مقيسٌ عن بصمة محضر الرفض الأخير (الجلسة 22 · 0ca98d9d… — الثابت 8). عيبا الجلسة 22 أُغلقَا عند الثلاثة: (1) INCOMPLETE_SECOND_SOURCE_DIAGNOSIS — تشخيصُ المصدر الثاني (SCALE_P99_SUITE_FLAKE) خامٌّ قابلٌ للإعادة يثبت الآليّة (الوسيطُ لا يتحرّك تحت الحمل · زمنُ المعالج p99 تحت الحدّ في كلّ المحاولات · زمنُ الساعة p99 وحده يقفز تحت الحمل) — كتبه العضوُّ الثلاثة أنفسُهم بقياسٍ مستقلٍّ أعادوه. (2) SECOND_SOURCE_CONSTRAINT_NOT_LITERALLY_REGISTERED — القيدُ «الإصلاح يحتاج سلطةً أعلى» مسجّلٌ حرفيًّا في phase-40-W-2026-070-scale-p99.md §6 ومسارُ الإصلاح المسمّى W-2026-072 (PROPOSED · بتبعيةٍ على W-2026-059 وW-2026-070) — قرأه الثلاثة في عقدِه. سلامةُ علاج SIGPIPE (المصدر الأول) شهِد لها الثلاثة: حاجزُ الإعلان أخضرُ 0/200 تحت الحمل، وnpm test وnpm run verify خرجا 0 (2445/2445) على شجرة التجميد d1bf1ac. أقرَّ العضوُّ الثلاثة صراحةً أنّهم يعملون على شجرةٍ واحدةٍ (d1bf1ac في /tmp/council23-worktree) بجذورِ تقاريرَ منفصلة، والعزلُ الفعليُّ إقرارٌ ذاتيٌّ لا مُثبَت (حدٌّ قبله المالك — ADR-0054 §4) — ظرفٌ معلَنٌ لا كذبٌ. التنبيهُ الواردُ في الهدف («إن سقط scale_lifecycle في بيئة العضو تحت حملٍ مقيسٍ فذلك قياسٌ يُسجَّل كما هو») **فُعّل عند الثلاثة بعدّين اثنين مختلفَين — لا يُسوّى**: اختبارُ الملف الحقيقي معزولًا 10/10 رمز 0 عند الثلاثة. تحت حمل 8 حلقات: gpt سقط 10/10 (rc: 1×10) · grok سقط 9/10 (rc: 1×9 · 0×1) · gemini سقط 8/10 (rc: 1×8 · 0×2) — ثلاثةُ قياساتٍ كما قِيسَت لا كما تُتوقّع (قياسُ الطرفِ الظرفيّ لا يُحوَّل). التالي: إغلاقُ W-2026-070 بالنقل إلى WORK_LOG.md (المعجمُ المغلق — WORK_CONTROL §3)."
+  }
 }
