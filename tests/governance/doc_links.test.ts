@@ -38,12 +38,15 @@ const VERBATIM = /^docs\/work\/council\/W-\d{4}-\d{3}(-\d+)?-[a-z0-9]+\.md$/;
  * والحاويات). وبلا تبعيّة (ADR-0001): المحرّكُ المرجعيُّ أداةُ قياسٍ خارجَ المستودع لا تبعيّةٌ فيه.
  */
 const NAMED: Readonly<Record<string, string>> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
-/** فكُّ الوجهة كما يفكّها العارض: تهريبٌ ثمّ مراجعُ محارف (CommonMark §2.4 · §2.5) */
+/** فكُّ وجهةِ الرابط — **مسحةٌ واحدةٌ** (الجلسة 120 · علاجُ الجولة 25 · DOC_LINK_GUARD_ESCAPE_RECONSTITUTES_ENTITY):
+ *  التهريبُ والكياناتُ يُعالجان في مسحةٍ واحدةٍ من اليسار — فالتهريبُ يُنتجُ محرفًا حرفيًّا لا يُعادُ مسحُه
+ *  كيانًا (CommonMark 0.31.2 §2.4/§6.1: `\&` محرفٌ حرفيٌّ لا يبدأُ كيانًا): استهلاكُ التهريبِ `\&`
+ *  يمنعُ قراءةَ ما بعده كيانًا — والمسحُ لا يعودُ على ما فكّه. */
 export function unescapeDestination(raw: string): string {
-  return raw
-    .replace(/\\([!-/:-@[-`{-~])/g, '$1')
-    .replace(/&(?:#(\d{1,7})|#[xX]([0-9a-fA-F]{1,6})|([a-zA-Z]+));/g, (m: string, dec?: string, hex?: string, name?: string) => {
-      if (name !== undefined) return NAMED[name] ?? m;
+  return raw.replace(/\\([!-/:-@[-`{-~])|&(?:#(\d{1,7})|#[xX]([0-9a-fA-F]{1,6})|([a-zA-Z]+));/g,
+    (_m: string, esc?: string, dec?: string, hex?: string, name?: string) => {
+      if (esc !== undefined) return esc; // تهريبٌ: المحرفُ حرفيٌّ — ولا يُعادُ مسحُه كيانًا
+      if (name !== undefined) return NAMED[name] ?? _m;
       const cp = dec !== undefined ? parseInt(dec, 10) : parseInt(hex ?? '', 16);
       return cp > 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : '\uFFFD';
     });
@@ -122,12 +125,22 @@ test('حارسُ الروابط: backtick المهرَّبُ محرفٌ لا ح�
   eq('`code \\` [x](missing.md) ` end', ['missing.md']);
 });
 test('حارسُ الروابط: الشفرةُ المضمّنةُ العابرةُ للأسطرِ داخلَ الفقرةِ تُسقَطُ ولا يقترنُ ما بعدَ الفقرةِ بها (الجلسة 17 · SESSION17_INLINE_CODE_CROSSLINE_STATE_BYPASS)', () => {
-  // مسابرُ الجلسة 17 بحرفها + حدُّ الفقرة + حدُّ الكتلة (عنوان/قائمة/اقتباس/سور/فاصل) + ضابطُ span بلا إغلاق
   const cases = ['`\n` [x](missing.md) `', 'See `foo\nbar` [x](missing.md) `baz`', '`foo\r\n` [x](missing.md) `', '``foo\n`` [x](missing.md)``',
     'The helper `removeInlineCode\n` strips [inline code](missing.md) before `scan`.', 'odd ` tick\n\n[x](missing.md)', 'no closer ` here\n\n[x](missing.md)',
     '`open\n# [x](missing.md) `', '`open\n- [x](missing.md) `', '`open\n1. [x](missing.md) `', '`open\n> [x](missing.md) `', '`open\n---\n[x](missing.md) `', '`open\n===\n[x](missing.md) `',
     '`open\n<!-- c -->\n[x](missing.md) `', '# `open\n[x](missing.md) `'];
   for (const t of cases) assert.deepEqual(brokenLinksIn('docs/a.md', t, none), ['missing.md'], t);
+});
+test('حارسُ الروابط: التهريبُ لا يُعادُ تكوينُه كيانًا — وجهةُ `\&` تُقاس حرفيةً كما يحلّها commonmark@0.31.2 لا تُفكّ كيانًا ثانيا (الجلسة 120 · الجولة 25 · DOC_LINK_GUARD_ESCAPE_RECONSTITUTES_ENTITY)', () => {
+  // مسابيرُ grok بحرفها: exists يرى README.md وحده موجودًا — فالوجهةُ الحرفيةُ READ&#77;E.md لا تُفتح
+  const readmeOnly = (p: string): boolean => p === 'docs/README.md';
+  const eq = (t: string, expected: string[], exists = readmeOnly) => assert.deepEqual(brokenLinksIn('docs/a.md', t, exists), expected, t);
+  eq('[x](READ\\&#77;E.md)', ['READ\\&#77;E.md']);
+  eq('[x](READ\\&#x4d;E.md)', ['READ\\&#x4d;E.md']);
+  eq('[x](READ\\&ME.md)', ['READ\\&ME.md']);
+  eq('[x](READ\\&#77;E.md)', [], (p) => p === 'docs/READ&'); // مسارُ الوجهةِ الحرفيةِ بعد قصّ المرساة (`#` يبدأ الجزءَ كمرساة URL) — موجود ⇒ لا بلاغ
+  eq('[x](&#77;E.md)', ['&#77;E.md']); // بلا تهريبٍ يُفكُّ الكيانُ إلى ME.md — الضابطُ بلا تغيير
+  eq('[x](&#x4d;E.md)', ['&#x4d;E.md']);
 });
 test('حارسُ الروابط: الرابطُ يُحسب من مجلدِ ملفِّه، ومُرمَّزُ النسبة يُفكّ', () => {
   const seen: string[] = [];
