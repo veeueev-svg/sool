@@ -74,14 +74,15 @@
         "docs/audit/criteria/C-12.md",
         "docs/audit/criteria/C-13.md",
         "docs/audit/criteria/C-21.md",
-        "docs/audit/independence",
         "docs/audit/measurements/W-2026-038-baseline.txt",
         "docs/audit/measurements/W-2026-038-bundle-manifest.txt",
         "docs/audit/measurements/W-2026-038-evidence-package.md",
         "docs/audit/measurements/W-2026-038-gpt-review.txt",
         "docs/audit/measurements/W-2026-038-grok-review.txt",
         "docs/test-reports/phase-39-W-2026-038.md",
-        "COMPLETION_CRITERIA.md"
+        "COMPLETION_CRITERIA.md",
+        "docs/audit/independence/README.md",
+        "docs/audit/independence/model-council-2026-09-08-W-2026-038.md"
       ],
       "excluded": [
         "src/ و tests/ و scripts/ — بندُ حكمٍ لا بندُ إصلاح: لا تُلمس شفرةٌ ليمرَّ حكم",
@@ -112,12 +113,14 @@
       ],
       "next_step": "يُعرض البندُ على المدقّقِ أو المالكِ للإقرار — فالمنفِّذُ لا يُصادق على عملِ نفسِه (RULE-004 · RULE-016). وعلى المُقرِّ أن يحكمَ في العللِ الستِّ المسمّاةِ وفي تعارضِ ADR-0029: أتُفتح بنودًا أم تبقى دَينًا معلنًا.",
       "created_at": "2026-09-08",
-      "updated_at": "2026-10-03",
+      "updated_at": "2026-10-16",
       "discoveries": [
         "انحرافٌ عن RULE-019 (الشرط 3): لم يُعلن أيُّ مراجعٍ اسمَ نموذجِه وإصدارَه إعلانًا ذاتيًّا كاملًا — الأولُ قال إنّه ChatGPT من OpenAI بلا معرّفٍ داخليّ، والثاني امتنع عن التسمية. فالهويّةُ موثّقةٌ من جهةِ الإرسالِ لا من إقرارِ المراجع. ولمّا كانت الحصيلةُ صفرَ ترقياتٍ فالانحرافُ لم يُغيّر حكمًا — ويُعلن ولا يُسكت عنه.",
         "تعارضٌ اتّفق عليه المراجعان: ADR-0029 يُعلن ستّةَ أشكالٍ لقيدِ الوسائط و src/security/intent_plan.ts فيه ثلاثةٌ وترويستُه تنفي رابعًا. أحدُ النصَّين خاطئٌ — وحسمُه قرارُ عقدٍ لا لمسةُ منفِّذ (RULE-004).",
         "ADR-0030 يستشهد بـ phase-39-T122-T123.txt و src/data/rehydrate_state.ts ولم يُعثر عليهما في الحزمةِ المجمّدة — نقصُ دليلٍ سمّاه المراجعان معًا.",
-        "ستُّ عللٍ مسمّاةٍ في الشفرةِ استُخرجت من المراجعة: IPV6_EGRESS_BLIND_SPOT · PROCESS_LOCAL_RESERVATION_SCOPE · RUNTIME_IDENTITY_NOT_VERIFIED · SEMANTIC_INTENT_AND_COVERT_CHANNEL_COVERAGE_GAP · JOURNAL_REHYDRATE_NOT_FULL_STATE · DECLARED_CONFIGURATION_STILL_CAPS_AT_ONE_MILLION."
+        "ستُّ عللٍ مسمّاةٍ في الشفرةِ استُخرجت من المراجعة: IPV6_EGRESS_BLIND_SPOT · PROCESS_LOCAL_RESERVATION_SCOPE · RUNTIME_IDENTITY_NOT_VERIFIED · SEMANTIC_INTENT_AND_COVERT_CHANNEL_COVERAGE_GAP · JOURNAL_REHYDRATE_NOT_FULL_STATE · DECLARED_CONFIGURATION_STILL_CAPS_AT_ONE_MILLION.",
+        "عيبُ نطاقٍ يمنعُ بصمةَ المجلس (اكتُشف عند تجهيز الجولة 32 · الجلسة 128 · 2026-10-16): مدخلُ الدليل `docs/audit/independence` في `scope` يُفشِلُ خوارزميةَ `scopeDigest` (رمز EISDIR — قراءةُ دليلٍ كملفٍ) فلا يمكنُ قيدُ `scope_digest` في محضرِ أيِّ جولةٍ للبند. المسبارُ القابلُ للإعادة: تشغيلُ خوارزميةِ scopeDigest على نطاقِ الصفِّ ⇒ EISDIR. العلاجُ: تضييقٌ معلنٌ مؤرَّخٌ للمدخلِ إلى ملفَّي الدليلِ الفعليَّين (سابقةُ التضييقِ 2026-10-03 في §2) — في هذا الالتزام.",
+        "ملاحظةُ ملفٍ معلنٍ غيرِ موجود: §6 من العقدِ يسمّي `docs/audit/independence/attestation-2026-09-08-W-2026-038.md` «شهادةَ المراجعة» ولا وجودَ للملفِ في الشجرةِ ولا في تاريخِ git أصلًا — الخامّانِ المحفوظانِ هما `W-2026-038-gpt-review.txt` و`W-2026-038-grok-review.txt` (من نطاقِ البند). تُقيَّد ملاحظةً لا يُختلَقُ الملفُ بعدَ الوقائع (الجلسة 128 · 2026-10-16)."
       ],
       "documentation_impact": [
         "PROGRESS.md",
