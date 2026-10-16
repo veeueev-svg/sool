@@ -1800,47 +1800,6 @@
       ]
     },
     {
-      "id": "W-2026-068",
-      "title": "توثيقُ قياسِ خطِّ الأساسِ المحليِّ للجلسةِ الحاليّة",
-      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 108)",
-      "reviewer": "القيّم على المستودع (المالك) — ومراجعٌ مستقلّ وفق RULE-019",
-      "area": "حوكمة/توثيق",
-      "phase": 40,
-      "status": "VERIFIED",
-      "progress_items": [
-        "لا ينطبق"
-      ],
-      "dependencies": [
-        "لا شيء"
-      ],
-      "scope": [
-        "docs/test-reports/phase-40-W-2026-068.md"
-      ],
-      "excluded": [
-        "src/ · tests/ · scripts/ · config/ · .github/ · docs/work/council/ · docs/royal-orders/ · docs/audit/measurements/ — لا يُلمسُ شيءٌ منها في هذا البند (هو توثيقٌ لا إصلاح)"
-      ],
-      "acceptance": [
-        "يوجد الملف docs/test-reports/phase-40-W-2026-068.md",
-        "التقرير يذكر الالتزام a72992b والأمر المُشغَّل والعدد 2438 ورمز الخروج 0 وتاريخ 2026-10-11 والعقدة sandbox محليّة",
-        "التقرير يصرّح بأن القياس محلي لا يصادق على CI ولا على حكم مجلس المراجعة (RULE-004 · RULE-020)",
-        "PROGRESS.md يُحدَّث بجلسة 108 في جدول «ما تمّ»",
-        "npm run check:work ⇒ رمز 0"
-      ],
-      "evidence": [
-        "npm test ⇒ 2438/2438 رمز 0 (قياس محلي 2026-10-11)",
-        "npm run verify ⇒ EXIT=0 (سجل محفوظ /tmp/sool-verify-7r92eB.log)",
-        "git status --short ⇒ فارغ",
-        "تقرير docs/test-reports/phase-40-W-2026-068.md"
-      ],
-      "next_step": "الإغلاق بالنقل إلى WORK_LOG.md (WORK_CONTROL §3 · RULE-016) — استُوفي إجماع الجولة 29 (VERIFIED) — مع تصويبٍ معلنٍ بالإلحاق لرقم الإصدار في التقرير (ملاحظة grok).",
-      "created_at": "2026-10-11",
-      "updated_at": "2026-10-16",
-      "verification": "قياسُ خطِّ الأساسِ المحليّ على main عند a72992b (2026-10-11): npm test ⇒ 2438/2438 رمز 0 · npm run verify ⇒ EXIT=0 (سجل محفوظ /tmp/sool-verify-7r92eB.log) · git status نظيف · check:work ⇒ رمز 0 · تقرير docs/test-reports/phase-40-W-2026-068.md · PROGRESS.md صف الجلسة 108. القياس محلي ولا يصادق على CI ولا على حكم مجلس المراجعة (RULE-004 · RULE-020). ثم مجلسُ المراجعة: الجولة 29 (2026-10-16 · محضر docs/work/council/W-2026-068-29.json · تجميد d5077c1 · بصمة نطاق 579604aa…) — إجماع VERIFIED (gpt · grok · gemini) ⇒ VERIFIED (RULE-020).",
-      "discoveries": [
-        "2026-10-16 (الجولة 29 · ملاحظة grok غير المسقطة): DOC_STATED_VERSION_NOT_IN_VERSION_JSON — التقرير يدّعي أنّ version.json عند القياس يعلن 0.70.0 والمسبار الحرفيّ git show a72992b:version.json يعيد 0.70.2 مع tests.total 2438 — لا يسقط معيار قبولٍ (معيار القبول الثاني لا يطلب رقم الإصدار) — مآله: تصويبٌ معلنٌ بالإلحاق عند الإغلاق (قُيّد في المحضر open_items)."
-      ]
-    },
-    {
       "id": "W-2026-069",
       "title": "DISC: تسجيلُ اكتشافِ عيبِ ESCAPED_BACKTICK في حارسِ الروابطِ على main",
       "owner": "المساعد الآلي — Perplexity Computer (الجلسة 125)",
