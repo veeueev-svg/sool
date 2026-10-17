@@ -369,6 +369,41 @@ test('**T-53/مجلس 9ج** — RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC: فش
   assert.equal(s.audit.find('rate_amended').length, 1, 'وشاهدٌ واحدٌ لا اثنان');
 });
 
+test('**T-53/مجلس 11ب** — RATE_AMENDMENT_SINK_NULL_ACCEPTED_AS_COMMIT: ردُّ الوسيطِ null رفضٌ مسمّى لا التزامٌ صامت (الجلسة 133)', () => {
+  const { s, royal } = revenueState();
+  const cmd = royal(REVENUE_TARGET, T1, 'compute_usage', 40);
+  const before = s.audit.length;
+  // وسيطٌ يردُّ null للشاهدِ الدائمِ وحده بلا رمي — عينُ مسبارِ الجلسة 11 المسدودِ سابقًا:
+  // القبولُ الصامتُ كان يُمرِّرُ التعديلَ بلا شاهدٍ دائمٍ (ok=true · durableKept=[])
+  const decliningSink: DurableSink = {
+    record: (kind, payload, at = 0) => {
+      if ((payload as { kind?: string } | undefined)?.kind === 'rate_amended') return null;
+      // غيرُ الشاهدِ يُدوَّن قيدًا صوريًّا كما في 9ج — فالمقصودُ عينُ الرفضِ الصامتِ للشاهدِ
+      return { seq: 0, at, kind, payload, prevHash: '0', hash: '0' };
+    },
+  };
+  s.audit.attachSink(decliningSink);
+  assert.throws(() => s.revenue.amendRate(cmd, 'compute_usage', 40, T1),
+    (e: Error) => e.message === 'AUDIT_SINK_DECLINED_RECORD',
+    'ردُّ null رفضٌ مسمّى لا التزامٌ صامت');
+  // الحالُ رُدَّ كاملًا: لا نسبةَ جديدةَ ولا تاريخَ زائدًا ولا شاهدًا في الذاكرة
+  assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'النسبةُ الحاكمة لم تتغير');
+  assert.equal(s.revenue.rateHistoryOf('compute_usage').length, 1, 'التاريخُ لم يزدد');
+  assert.equal(s.audit.find('rate_amended').length, 0, 'لا شاهدَ تعديلٍ في الذاكرة');
+  // قيدُ اعتمادِ البوابةِ وحده بقي — وقيدها رُدَّ، فالإضافةُ ذرّيّة
+  assert.equal(s.audit.length, before + 1, 'قيدُ rate_amended رُدَّ ولم يبقَ إلا قيدُ البوابة');
+  assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةٌ بعد الرد');
+  // والأمرُ لم يُحرق: بعد وسيطٍ سليمٍ ينجحُ التعديلُ بالمعرّفِ نفسِه — فالرفضُ المسمّى لا يستهلكُ الأمر
+  const okSink: DurableSink = {
+    record: (kind, payload, at = 0) => ({ seq: 0, at, kind, payload, prevHash: '0', hash: '0' }),
+  };
+  s.audit.attachSink(okSink);
+  const retry = s.revenue.amendRate(cmd, 'compute_usage', 40, T1);
+  assert.equal(retry.ok, true, 'إعادةُ الأمرِ بعد وسيطٍ سليم تنجح');
+  assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 40);
+  assert.equal(s.audit.find('rate_amended').length, 1, 'وشاهدٌ واحدٌ لا اثنان');
+});
+
 test('**T-53/مجلس 11د** — RATE_AMENDMENT_PRIMITIVE_GUARD_REREAD_LIVE_REFERENCE: إعلانٌ حيٌّ يُخزَّنُ بقراءتِه الأولى المفحوصةِ لا بقراءةٍ لاحقةٍ دخيلة', () => {
   let reads = 0;
   // إعلانٌ بحاصلِ قراءاتٍ: الأولى سليمةٌ (25) تمرُّ الفحص، وكلُّ لاحقةٍ دخيلة (999)

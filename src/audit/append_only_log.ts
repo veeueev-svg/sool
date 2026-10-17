@@ -46,11 +46,13 @@ export class AppendOnlyLog {
    * 1) **لا دخولَ أثناء التدوين** (`APPEND_REENTRANCY_REFUSED`): وسيطٌ يستدعي الإضافةَ من داخلِ `record`
    *    يُرفض قبل أن يُدفَع قيدُه — فرَدُّ القيدِ (`entries.pop()`) لا يفرقعَ إلا قيدَ هذه الإضافةِ حتمًا
    *    لا قيدَ الإضافةِ الداخلةِ عنه (الجلسة 11 · RATE_AMENDMENT_APPEND_ROLLBACK_POPS_WRONG_ENTRY).
-   * 2) **رفضُ الوسيطِ المُقيَّدِ null مصمَّمٌ ومُقيسٌ لكنه مسدودٌ لا معالَج** (الجلسة 11 ·
-   *    RATE_AMENDMENT_SINK_NULL_ACCEPTED_AS_COMMIT): ردُّ `null` عقدُه «لم يُدوَّن» فقبولُه التزامًا
-   *    عيبٌ — وعلاجُه (رميُ AUDIT_SINK_DECLINED_RECORD مع ردِّ القيد) صُمم وقُتلت طفرتُه، لكنّ مسارًا
-   *    محجوزًا لبندٍ حيّ (tests/data/rehydrate_roundtrip.test.ts لمالك W-2026-040) يعتمدُ في قياسِه على
-   *    ابتلاعِ null صمتًا، فلمسُه ممنوعٌ (WORK_CONTROL §6) — القرارُ للمالك، والتفصيلُ في عقدِ البند.
+   * 2) **رفضُ الوسيطِ المُقيَّدِ null رفضٌ مسمّى (الجلسة 133 · تنفيذُ علاجِ
+   *    RATE_AMENDMENT_SINK_NULL_ACCEPTED_AS_COMMIT بقرارِ المالكِ المفوَّض):** ردُّ `null`
+   *    عقدُه «لم يُدوَّن» فقبولُه التزامًا عيبٌ — فالإضافةُ الآن ترفضُه باسمٍ وتردُّ القيدَ
+   *    (`AUDIT_SINK_DECLINED_RECORD`)، والمسارُ الذي كان يعتمدُ على ابتلاعِ null صمتًا (محاكاةُ
+   *    rehydrate_roundtrip لمالكِ W-2026-040) حُدِّث بقرارِ المالكِ المفوَّضِ في التزامِه لا هنا.
+   *    والسجلُّ المذيَّلُ باليوميّةِ الحقيقيّةِ لا يعرفُ هذا الرفض: قيودُه كلُّها بصنفِ `audit_entry`
+   *    وهو داخلَ النطاقِ المعلنِ، فلا يكسرُ الحارسُ إقلاعًا سليمًا.
    * 3) **رميُ الوسيط نتيجةٌ غير معلومة** (`AUDIT_APPEND_OUTCOME_UNKNOWN` وعلةُ الرميِ في cause): الوسيطُ قد
    *    يكونُ دوّنَ ثم رمى — والذاكرةُ تُرَدّ، لكنّ الوسيطَ الدائمَ قد يحملُ القيدَ، والإرجاعُ بعد التشغيلِ
    *    هو الحَكَم. فلا يُعَدّ الرميُ «فشلًا قاطعًا» يكذبُ عليه الاستدعاءُ — بل «مجهولَ النتيجة» قد يلتزمُ عند
@@ -67,13 +69,21 @@ export class AppendOnlyLog {
     const entry: AuditEntry = Object.freeze({ seq, at, actor, kind, detail, prevHash, hash });
     this.entries.push(entry);
     this.appending = true;
+    let recorded: ReturnType<DurableSink['record']> | undefined;
     try {
-      this.sink?.record('audit_entry', entry, at);
+      recorded = this.sink?.record('audit_entry', entry, at);
     } catch (err) {
       this.rollback(entry);
       throw new Error('AUDIT_APPEND_OUTCOME_UNKNOWN', { cause: err });
     } finally {
       this.appending = false;
+    }
+    // الوسيطُ المُقيَّدُ ردَّ null: عقدُه «لم يُدوَّن» — فالإضافةُ تُرفَض باسمٍ وتُرَدُّ القيدُ ولا
+    // يُقبل التزامٌ بلا شاهدٍ دائمٍ (الجلسة 133 · RATE_AMENDMENT_SINK_NULL_ACCEPTED_AS_COMMIT).
+    // وبلا وسيطٍ أصلًا (`undefined`) لا يُقاس هذا — فالسلوكُ السابقُ بحرفِه.
+    if (recorded === null) {
+      this.rollback(entry);
+      throw new Error('AUDIT_SINK_DECLINED_RECORD');
     }
     return entry;
   }
