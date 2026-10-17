@@ -30,12 +30,15 @@ import { SovereignViolation } from '../../src/kernel/types';
 import {
   APPOINTMENT_EXECUTOR, ROYAL_COURT, UNIT_TARGET, bootstrapState,
 } from '../../src/index';
+import { createHash } from 'node:crypto';
 import { REHYDRATE_CLAIMS } from '../../src/data/rehydrate_census';
 import type { DurableKind } from '../../src/kernel/config/persistence';
 import type { DurableRecord, StateJournal } from '../../src/data/persistence';
 import { rehydrateFromJournal } from '../../src/data/persistence';
 import { rehydrateStateFromJournal } from '../../src/data/rehydrate_state';
 import { rehydrateFiscalFromJournal } from '../../src/data/rehydrate_fiscal';
+/** بدايةُ السلسلةِ في اليوميّة كما تُبنى: 64 صفرًا (قيمةُ GENESIS فيها خاصةٌ غيرُ مُصدَّرة) */
+const JOURNAL_GENESIS = '0'.repeat(64);
 import { rehydrateGovernanceFromJournal } from '../../src/data/rehydrate_governance';
 
 /** بعد أحدثِ `declared_at` في نِسَبِ الجباية المعلنة — الجبايةُ الرجعيّة مرفوضة */
@@ -191,16 +194,31 @@ const FAMILY_OF: Readonly<Record<string, Family>> = {
 };
 
 /**
- * يوميّةٌ صوريّةٌ للقراءةِ: `rehydrateFromJournal` يقرأ بـ`read()`، والوحداتُ التي يُملأها
- * قد تُدوّن أثرَ الملءِ فيُبلَع `record` صراحةً — فالمقيسُ هنا التقريرُ لا أثرُ الملء.
+ * يوميّةٌ صوريّةٌ للقراءةِ والقبولِ: `rehydrateFromJournal` يقرأ بـ`read()`، والوحداتُ التي يُملأها
+ * قد تُدوّن أثرَ الملءِ عبرَ السجلّ المذيّلِ بها. وردُّ `null` من وسيطٍ مُقيَّدٍ صار رفضًا
+ * مسمّى لا التزامًا صامتًا (الجلسة 133 · علاجُ W-2026-065 لعيبِ
+ * RATE_AMENDMENT_SINK_NULL_ACCEPTED_AS_COMMIT بقرارِ المالكِ المفوَّض)، فالصوريُّ هنا
+ * يقبلُ القيدَ في الذاكرةِ ويردُّ قيدًا مكتملَ الشكلِ بصيغةِ السجلّ نفسِها — والمقيسُ يبقى
+ * التقريرَ لا أثرَ الملء.
  */
-const asJournal = (entries: readonly DurableRecord[]): StateJournal => ({
-  read: () => entries,
-  record: () => null,
-  covers: () => false,
-  get droppedOutOfScope() { return 0; },
-  droppedByKind: () => new Map<string, number>(),
-} as unknown as StateJournal);
+const asJournal = (entries: readonly DurableRecord[]): StateJournal => {
+  let seq = entries.length;
+  let lastHash = entries.length > 0 ? entries[entries.length - 1]!.hash : JOURNAL_GENESIS;
+  return {
+    read: () => entries,
+    record: (kind: DurableKind, payload: unknown, at: number) => {
+      const base = { seq: seq + 1, at, kind, payload, prevHash: lastHash };
+      const hash = createHash('sha256').update(JSON.stringify(base)).digest('hex');
+      const entry = { ...base, hash } as DurableRecord;
+      seq = entry.seq;
+      lastHash = hash;
+      return entry;
+    },
+    covers: () => false,
+    get droppedOutOfScope() { return 0; },
+    droppedByKind: () => new Map<string, number>(),
+  } as unknown as StateJournal;
+};
 
 function reportOf(family: Family, entries: readonly DurableRecord[], s: State): unknown {
   if (family === 'core') {
