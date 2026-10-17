@@ -46,8 +46,8 @@
     39
   ],
   "tests": {
-    "total": 2447,
-    "passing": 2447,
+    "total": 2449,
+    "passing": 2449,
     "command": "npm test"
   },
   "declared_by": "القيّم على المستودع",

@@ -27,6 +27,15 @@ export class AppendOnlyLog {
   private sink: DurableSink | null;
   /** حارسُ الدخول: لا إضافةً أثناء تدوينِ إضافةٍ — فرَدُّ القيدِ لا يفرقعَ إلا قيدَ صاحبه */
   private appending = false;
+  /**
+   * إقفالُ النتيجةِ المجهولة (الجلسة 37 · علاجُ الجلسة 134): بعد رميِ الوسيطِ بعد الدفعِ لا يعودُ
+   * هذا الكائنُ يقبلُ إلحاقًا جديدًا أبدًا — فأيَّ إلحاقٍ لاحقٍ إمّا يعيدُ رقمَ تسلسلٍ قد تحملُه
+   * اليوميّةُ (كسرُ الإقلاع: تكرار) أو يتركُ فجوةً إن لم تحمله (كسرُ الإقلاع: نقص) — والإقلاعُ
+   * من اليوميّةِ هو الحَكَمُ الوحيد. تبديلُ الوسيطِ لا يرفعُه، و`replaceFrom` بلقطةٍ قديمةٍ لا يرفعُه
+   * (اللقطةُ تُثبتُ سلامةَ سلسلتِها لا حسمَ الكتابةِ المجهولة) — والاستئنافُ بإقلاعٍ جديدٍ يبني
+   * كائنًا جديدًا من اليوميّةِ الدائمة، لا بإعادةِ فتحِ هذا الكائن.
+   */
+  private outcomeUnknown = false;
 
   constructor(sink?: DurableSink) {
     this.sink = sink ?? null;
@@ -58,9 +67,17 @@ export class AppendOnlyLog {
    *    هو الحَكَم. فلا يُعَدّ الرميُ «فشلًا قاطعًا» يكذبُ عليه الاستدعاءُ — بل «مجهولَ النتيجة» قد يلتزمُ عند
    *    الاسترجاع (الجلسة 11 · RATE_AMENDMENT_DURABLE_POSTCOMMIT_THROW_INCONSISTENT_ACK). ومنعُ هذا الانقسامِ
    *    كليًّا يحتاجُ عقدًا للوسيطِ يُخبرُ بحالِه بعد الرمي — ومسارُ العقدِ محجوزٌ لبندٍ آخر فلا يُوسَّع إليه النطاق.
+   * 4) **الإقفالُ بعد المجهولة (الجلسة 37 · علاجُ الجلسة 134):** رميُ الوسيطِ بعد الدفعِ يقفلُ الإلحاقَ على هذا
+   *    الكائنِ إقفالًا دائمًا (`AUDIT_APPEND_OUTCOME_UNRESOLVED` لكلِّ إلحاقٍ لاحق) — فمتابعةُ التشغيلِ على الغموضِ
+   *    قيسَت مفسدةً للإقلاعِ مرتين: إعادةُ تسلسلٍ مستهلكٍ في اليوميّةِ (الجلسة 37 · grok) وإعادةُ أمرٍ
+   *    ملكيٍّ بنتيجةٍ مجهولةٍ فشاهدانِ لأمرٍ واحد (الجلسة 37 · gpt). لا رفعَ للإقفالِ على الكائنِ نفسِه؛
+   *    الاستئنافُ إقلاعٌ جديدٌ من اليوميّةِ الدائمة (الاسترجاعُ هو الحَكَم). ورفضُ null المعروفُ لا يقفلُ —
+   *    فحالُه معلومٌ («لم يُدوَّن») وإعادةُ المحاولةِ بعدَه آمنةٌ بحرفِ عقده.
    */
   append(actor: EntityId, kind: string, detail: Record<string, unknown> = {}): AuditEntry {
     if (this.appending) throw new Error('APPEND_REENTRANCY_REFUSED');
+    // النتيجةُ المجهولةُ أقفلت هذا الكائن: لا إلحاقَ جديدَ عليه — الاستئنافُ إقلاعٌ جديدٌ لا استمرار.
+    if (this.outcomeUnknown) throw new Error('AUDIT_APPEND_OUTCOME_UNRESOLVED');
     const prev = this.entries[this.entries.length - 1];
     const seq = this.entries.length + 1;
     const at = Date.now();
@@ -73,6 +90,8 @@ export class AppendOnlyLog {
     try {
       recorded = this.sink?.record('audit_entry', entry, at);
     } catch (err) {
+      // الإقفالُ قبلَ التراجعِ: فشلُ التراجعِ نفسِه لا يجوزُ أن يُبقيَ الكائنَ مفتوحًا للإلحاق.
+      this.outcomeUnknown = true;
       this.rollback(entry);
       throw new Error('AUDIT_APPEND_OUTCOME_UNKNOWN', { cause: err });
     } finally {

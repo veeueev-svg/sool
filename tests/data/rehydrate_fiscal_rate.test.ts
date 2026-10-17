@@ -177,9 +177,28 @@ test('T-53/مجلس 11أ: رميُ الوسيطِ بعد التدوينِ نتي
     assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةٌ بعد الرد');
     // لكنّ الوسيطَ الدائمَ يحملُ الشاهدَ — فالمجهولةُ تلتزمُ عند الاسترجاع: الإرجاعُ هو الحَكَم
     assert.equal(durable.length, 1, 'الشاهدُ دُوّنَ في الوسيطِ قبل الرمي');
-    const report = rehydrateFiscalFromJournal(durable, { revenue: s.revenue }, 'ministry:data');
+    // الجلسة 37 · علاجُ الجلسة 134: الإقفالُ بعد المجهولةِ يجعلُ الاستئنافَ إقلاعًا جديدًا من الوسيطِ الدائم —
+    // فالإرجاعُ يُقاسُ على كائناتٍ جديدةٍ (والإقلاعُ الكاملُ من اليوميّةِ الحقيقيةِ بمشهدِ 37أ في
+    // tax_rate_amendment_sink). الإرجاعُ بعدَ التشغيلِ هو الحَكَم — بحرفِ ثابتِه.
+    const recovered = bootstrapState({ now: T0 + DAY });
+    const report = rehydrateFiscalFromJournal(durable, { revenue: recovered.revenue }, 'ministry:data');
     assert.equal(report.rateAmendments, 1, 'الإرجاعُ قبلَ الشاهدِ الدائم');
-    assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 40, 'المجهولةُ التزمت عند الاسترجاع');
+    assert.equal(recovered.revenue.rateFor('compute_usage')?.ratePerMille, 40, 'المجهولةُ التزمت عند الاسترجاع');
+    // والكائنُ المقفلُ باقيًا مقفلًا على الإلحاقِ: الإرجاعُ الحيُّ عليه يرمي عند إلحاقِ شاهدِ الاستعادةِ —
+    // والقياسُ الأمينُ للأثرِ: التعديلُ قد يدخلُ الذاكرةَ قبلَ الرميِ (أثرٌ عابرٌ على كائنٍ لا استئنافَ عليه)،
+    // فشاهدُ الاستعادةِ لا يُدوَّنُ عليه أبدًا، والاستئنافُ الحقيقيُّ إقلاعٌ جديدٌ حيثُ يُلحقُ الشاهدُ على سلسلةٍ جديدة.
+    const liveBefore = s.revenue.rateFor('compute_usage')?.ratePerMille;
+    assert.throws(() => rehydrateFiscalFromJournal(durable, { revenue: s.revenue }, 'ministry:data'),
+      (e: Error) => e.message === 'AUDIT_APPEND_OUTCOME_UNRESOLVED',
+      'إلحاقُ شاهدِ الاستعادةِ على الكائنِ المقفلِ مرفوض — الإقفالُ باقٍ');
+    const liveAfter = s.revenue.rateFor('compute_usage')?.ratePerMille;
+    assert.equal(s.audit.find('rate_amendments_restored').length, 0, 'شاهدُ الاستعادةِ لم يُدوَّن على المقفل');
+    assert.ok(liveBefore !== undefined && liveAfter !== undefined, 'الحالةُ الحيّةُ مقيسةٌ قبلَ الرمي وبعده');
+    if (liveAfter !== liveBefore) {
+      // أثرٌ عابرٌ معلنٌ لا يُخفى: التعديلُ دخلَ الذاكرةَ قبلَ رميِ الإلحاق — والكائنُ لا يُستأنفُ عليه؛
+      // لا ادعاءَ هنا بأنّ الإقفالَ يمنعُ كلَّ أثر — الإقفالُ للإلحاقِ واليوميّةِ، والاستئنافُ إقلاعٌ جديد.
+      assert.equal(liveAfter, 40, 'الأثرُ العابرُ معلنٌ كما وقع: التعديلُ في الذاكرةِ بلا شاهدِ استعادة');
+    }
   } finally {
     sc.clean();
   }
