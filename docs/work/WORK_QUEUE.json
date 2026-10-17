@@ -1312,11 +1312,11 @@
     {
       "id": "W-2026-065",
       "title": "مسارٌ ملكيٌّ لتعديل سعر الرسم مع حفظ تاريخ الإعلان — لا أثر رجعيًّا (T-53)",
-      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 134) — استلامًا من الجلسة 133 بالأمر التشغيلي الدائم (نقلٌ معلنٌ مؤرَّخ في هذا الالتزام — المعرّفُ لم يتبدّل · WORK_CONTROL §6 · RULE-015)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 136) — استلامًا من الجلسة 134 بالأمر التشغيلي الدائم (نقلٌ معلنٌ مؤرَّخ في هذا الالتزام — المعرّفُ لم يتبدّل · WORK_CONTROL §6 · RULE-015)",
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "الاقتصاد والمالية",
       "phase": 40,
-      "status": "REVIEW",
+      "status": "IN_PROGRESS",
       "progress_items": [
         "T-53",
         "2026-10-05 (الجلسة 95): استلامٌ بأمر المالك («عالج العيوب وحل التعارضات وواصل العمل») من المساعد الآلي — Perplexity Computer (الجلسة 90)، وعلاجُ RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS داخل النطاق (src/data/rehydrate_fiscal.ts · src/economy/rate_policy.ts · tests/data/rehydrate_fiscal.test.ts).",
@@ -1377,9 +1377,9 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "2026-10-17 (الجلسة 134): تجهيزُ الجولة 38 للمجلس على البند (RULE-020 · جولةٌ واحدة لا متزامنة) — البصمةُ المقيسة تخالف محضر الجلسة 37 (الثابت 8)",
+      "next_step": "2026-10-18 (الجلسة 136): العلاجُ الهندسيُّ لعيب الجولة 38 داخل نطاق البند — ألّا يُكتب تقديرٌ دائمٌ على كائنٍ مقفلٍ أو ألّا يُعاد عند الإقلاع بلا شاهد levy_assessed — مع اختبارٍ يقرأ outstanding() وقيود tax_levy · ثم تجهيزُ الجولة 39 (جولةٌ واحدة لا متزامنة · نصُّ إطلاقٍ واحدٌ حرفيًّا)",
       "created_at": "2026-10-04",
-      "updated_at": "2026-10-17",
+      "updated_at": "2026-10-18",
       "documentation_impact": [
         "ARCHITECTURE.md — صفُّ src/economy/ بالقياسِ الجديد",
         "PROGRESS.md — مدخلُ الجلسةِ 90 وتحديثُ صفِّ T-53 (REVIEW لا VERIFIED — RULE-004)",
@@ -1400,9 +1400,10 @@
         "مجلس المراجعة — الجلسة 9 (2026-10-09 · عند e112148): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان المسمّيان: RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC (gpt) — فشلُ كتابة شاهد rate_amended الدائم يترك تعديلًا حيًّا بلا سجلٍّ ويفقده إعادةُ التشغيل؛ وRATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE (grok) — بقي تسريبُ مرجعٍ حيٍّ في declaredAt يحرّك السريان رجعيًّا. المحضر: docs/work/council/W-2026-065-9.json",
         "مجلس المراجعة — الجلسة 11 (2026-10-09 · عند a41efbe): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيوب المسمّاة: RATE_AMENDMENT_DURABLE_POSTCOMMIT_THROW_INCONSISTENT_ACK (gpt) · RATE_AMENDMENT_PRIMITIVE_GUARD_REREAD_LIVE_REFERENCE (grok) · RATE_AMENDMENT_APPEND_ROLLBACK_POPS_WRONG_ENTRY (grok) · RATE_AMENDMENT_SINK_NULL_ACCEPTED_AS_COMMIT (grok) · وفشلُ npm run verify على الالتزام المجمد عند gpt (DC-03/C-12/T-23 — خارج مسارات البند، لصاحبِ مساره). المحضر: docs/work/council/W-2026-065-11.json والتقاريرُ الخامُّ بجواره.",
         "2026-10-17 (الجلسة 37 للمجلس · خلاف ⇒ NOT_VERIFIED): عيبان مانعان مقيسان — gpt: RATE_AMENDMENT_OUTCOME_UNKNOWN_RETRY_CORRUPTS_AUDIT_RECOVERY (إعادةُ الأمرِ بعد نتيجةٍ غيرِ معلومةٍ تفسدُ استعادةَ اليوميّة) · grok: RATE_AMENDMENT_POSTCOMMIT_SEQ_REUSE_UNBOOTABLE (ردُّ الذاكرةِ يعيدُ رقمَ تسلسلِ اليوميّةِ المستهلكَ في الملف فتنكسرَ سلسلةُ الإقلاع) — gemini: VERIFIED",
-        "2026-10-17 (الجلسة 134 · علاجُ عيبَي الجلسة 37): الإقفالُ الدائمُ بعد المجهولة في append_only_log.ts (AUDIT_APPEND_OUTCOME_UNRESOLVED) — الاستئنافُ إقلاعٌ جديدٌ من اليوميّة لا استمرار"
+        "2026-10-17 (الجلسة 134 · علاجُ عيبَي الجلسة 37): الإقفالُ الدائمُ بعد المجهولة في append_only_log.ts (AUDIT_APPEND_OUTCOME_UNRESOLVED) — الاستئنافُ إقلاعٌ جديدٌ من اليوميّة لا استمرار",
+        "2026-10-18 (الجولة 38 للمجلس · خلاف ⇒ NOT_VERIFIED): عيبا الجولة 37 مغلقانِ بحرفِ هجومهما بشهادةِ الثلاثة؛ وعيبٌ مانعٌ جديدٌ مقيس — grok: RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY (assess يكتب tax_levy دائمًا بنسبةٍ بائدةٍ قبل أن يرفض السجلُّ المقفلُ levy_assessed، والإقلاعُ يعيده بلا شاهدِ تدقيق) — المحضر docs/work/council/W-2026-065-38.json"
       ],
-      "blocked_reason": ""
+      "blocked_reason": "الجولة 38 (2026-10-18): العيبُ المانعُ RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY المقيّدُ في discoveries — علاجُه داخل نطاق البند (tax.ts · rehydrate_fiscal.ts · append_only_log.ts واختباراتُها) شرطُ العودةِ إلى REVIEW"
     },
     {
       "id": "W-2026-066",
@@ -1511,7 +1512,8 @@
         "2026-10-17 (الجلسة 134 · تتمة): محضرُ الجلسة 37 ومعالجتُها — W-2026-065-37.json (خلاف ⇒ NOT_VERIFIED · مآل IN_PROGRESS): عاد البندُ إلى العملِ والعيبانِ المانعانِ مقيّدانِ في discoveries بتسميةِ أصحابِهما (gpt · grok) — لا جولةَ أخرى نشطة",
         "2026-10-17 (الجلسة 134 · تتمة ثالثة): علاجُ عيبَي الجلسة 37 داخل نطاق W-2026-065 — الإقفالُ الدائمُ بعد المجهولة (e6583e7..قبل هذا الالتزام) والبندُ عاد إلى REVIEW بتغيّرٍ مقيس",
         "2026-10-17 (الجلسة 134 · تتمة رابعة): تجهيزُ الجولة 38 على W-2026-065 بعد علاجِ عيبَي الجلسة 37 (1524b6d) — ملفاتُ الجولة الأربعة محجوزةٌ في النطاق بهذا الالتزام (§13.71)",
-        "2026-10-18 (الجلسة 136): الجولة 38 للمجلس على W-2026-065 وحده (نقطة الاستئناف §13.72) — الخامُّ أوّلًا (§13.73): gpt VERIFIED · grok REJECTED (RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY) · gemini VERIFIED ⇒ خلاف ⇒ NOT_VERIFIED — وعيبٌ إجرائيٌّ معلنٌ في تكليفِ gemini (COUNCIL38_TASKING_ASYMMETRY)"
+        "2026-10-18 (الجلسة 136): الجولة 38 للمجلس على W-2026-065 وحده (نقطة الاستئناف §13.72) — الخامُّ أوّلًا (§13.73): gpt VERIFIED · grok REJECTED (RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY) · gemini VERIFIED ⇒ خلاف ⇒ NOT_VERIFIED — وعيبٌ إجرائيٌّ معلنٌ في تكليفِ gemini (COUNCIL38_TASKING_ASYMMETRY)",
+        "2026-10-18 (الجلسة 136 · تتمة): محضرُ الجولة 38 ومعالجتُها — W-2026-065-38.json (خلاف ⇒ NOT_VERIFIED · مآل IN_PROGRESS): عاد W-2026-065 إلى العمل وعيبُ grok مقيّدٌ في discoveries، والعيبُ الإجرائيُّ COUNCIL38_TASKING_ASYMMETRY مقيّدٌ في المحضر — لا جولةَ أخرى نشطة"
       ],
       "dependencies": [
         "W-2026-062"
@@ -1743,7 +1745,7 @@
         "docs/test-reports/phase-40-W-2026-066.md",
         "docs/test-reports/phase-40-W-2026-066.md — الجلسة 2 (الأعضاء الثلاثة معزولين على حزم مجمّدة عند 1473992): البنود الثلاثة NOT_VERIFIED بعيوب مسمّاة"
       ],
-      "next_step": "2026-10-18 (الجلسة 136): محضرُ الجولة 38 (W-2026-065-38.json — خلاف ⇒ NOT_VERIFIED) ومعالجتُها في التزامٍ مستقل: عودُ W-2026-065 إلى IN_PROGRESS بعيبِ grok مقيّدًا في discoveries ثم إعادةُ تقييمِ الترتيب — لا جولةَ أخرى قبل تمامِ هذه",
+      "next_step": "2026-10-18 (الجلسة 136 · تتمة): العلاجُ الهندسيُّ لعيب الجولة 38 في نطاق W-2026-065 ثم تجهيزُ الجولة 39 عليه — وبعدها جولةُ W-2026-040 المعلنة · W-2026-038 ينتظرُ القرارَ السياديَّ للمالك",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-18",
       "documentation_impact": [

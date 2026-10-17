@@ -1,0 +1,39 @@
+{
+  "item": "W-2026-065",
+  "commit": "1524b6d877149bc50789de6603851311571b1f20",
+  "scope_digest": "23b6dcaa8fbef728fbaa92f8a1f58d5a9a72200f3aeda78ae570a7394e02239d",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-18",
+  "session": 38,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-065-38-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-38-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-065-38-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY (grok · مقيس): بعد نتيجةٍ مجهولةٍ لـ amendRate (الملفُّ يحمل شاهدَ rate_amended من 25 إلى 40 والحيُّ 25) يدفع RevenueService.assess في src/economy/tax.ts قيدَ tax_levy إلى اليوميّة الدائمة قبل audit.append('levy_assessed')، فيرمي السجلُّ المقفلُ AUDIT_APPEND_OUTCOME_UNRESOLVED بعد أن كُتب التقديرُ بنسبةٍ بائدة (25‰ لواقعةٍ بعد سريان 40) — ويبقى outstanding() = levy:1 assessed، وrehydrate_fiscal.ts يعيد tax_levy عند الإقلاع بلا اشتراط شاهد levy_assessed فيُعاد التقديرُ البائدُ قابلًا للتحصيل ويخالف السريانَ الذي استرجعه الشاهدُ نفسُه. collect على الكائن المقفل يرفض قبل الكتابة. اختبار 37أ يكتفي برمز الرمي ولا يقرأ outstanding ولا قيود tax_levy فيمرّ والعيبُ صامت.",
+      "COUNCIL38_TASKING_ASYMMETRY (إجرائيٌّ · المنفّذ يعلنه على نفسه): نصُّ إطلاقِ gemini زاد جملةً توجيهيّةً («مستدعو audit.append الآخرون بعد إقفالِ السجل») كُتبت بعد قراءةِ خامِّ grok — تسرّبُ اتجاهٍ يخالف شرطَ التكليفِ الواحد. لا أثرَ على القرار (رفضُ grok وحدَه يمنع الإجماع)؛ ولا يُعتدُّ بحكمِ gemini في هذه الجولةِ شاهدًا مستقلًّا. العلاجُ الإجرائيُّ: نصُّ إطلاقٍ واحدٌ حرفيًّا يُحفظ في الحزمة في الجولة التالية (§13.73)."
+    ]
+  }
+}
