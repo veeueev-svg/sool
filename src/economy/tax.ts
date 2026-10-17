@@ -27,6 +27,9 @@
  *      إعلانٌ بالإقلاعِ ولا يُنفَّذ أمرٌ نُفِّذ قبلَه. وما لا يُصدَّق يُرفضُ
  *      برمزٍ مغلقٍ لا يُخمَّن: وعاءٌ دخيلٌ · نسبةٌ غيرُ سليمةٍ · إعلانٌ يرجعُ
  *      بالزمنِ · تعديلٌ بلا تغييرٍ دخيل
+ *  10) **لا أثرَ دائمًا على كائنٍ مقفل** (الجولة 38 · RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY):
+ *      بعد نتيجةٍ مجهولةٍ يُقفلُ السجلّ، فالتقديرُ والتحصيلُ والإعفاءُ تُرفضُ قبل قيد tax_levy لا بعده —
+ *      وإلّا كُتب تقديرٌ بنسبةٍ بائدةٍ يُعيده الإقلاعُ بلا شاهد. الاستئنافُ إقلاعٌ جديد
  * حالات الفشل (كلها مغلقة): وعاء غير معلن ⇒ رفض؛ واقعة سابقة للإعلان ⇒ رفض؛
  *   تحصيل بلا تقدير أو مكرَّر ⇒ رفض؛ فشل القيد ⇒ لا تحصيل؛ إعفاء ذاتي ⇒ رفض
  * اختبار القبول: tests/economy/economy_lifecycle.test.ts
@@ -41,37 +44,14 @@ import { isValidRatePerMille } from '../kernel/config/economy';
 import { RatePolicy } from './rate_policy';
 import type { DurableSink } from '../data/persistence';
 import type { RateAmendmentRecovery, RateDeclaration } from './rate_policy';
+import type { Levy, LevyResult, RateAmendmentResult } from './tax_types';
 
 export type { RateAmendmentRecovery, RateDeclaration };
 
 /** هدف الأمر الملكي لكل إعفاء */
 export const REVENUE_TARGET: EntityId = 'economy:revenue';
 
-export type LevyStatus = 'assessed' | 'collected' | 'waived';
-
-export interface Levy {
-  readonly levyId: string;
-  readonly base: string;
-  readonly payer: EntityId;
-  readonly amountBase: number;
-  readonly ratePerMille: number;
-  readonly levied: number;
-  readonly status: LevyStatus;
-  readonly occurredAt: number;
-  readonly assessedAt: number;
-  readonly collectedAt: number | null;
-  readonly receiptEntryId: string | null;
-  readonly waiveReason: string | null;
-}
-
-export type LevyResult =
-  | { readonly ok: true; readonly levy: Levy; readonly auditId: string }
-  | { readonly ok: false; readonly reason: string; readonly auditId: string };
-
-/** نتيجةُ تعديلِ النسبةِ الملكيّ (T-53): الإعلانُ الجديدُ والسابقُ معًا أو رفضٌ بسببٍ موثّق */
-export type RateAmendmentResult =
-  | { readonly ok: true; readonly declaration: RateDeclaration; readonly previous: RateDeclaration; readonly auditId: string }
-  | { readonly ok: false; readonly reason: string; readonly auditId: string };
+export type { Levy, LevyResult, LevyStatus, RateAmendmentResult } from './tax_types';
 
 export interface RevenueDeps {
   readonly audit: AppendOnlyLog;
@@ -106,8 +86,12 @@ export class RevenueService {
   /** T-125: يُربط بعد الإرجاع لا قبله — وإلا دُوِّن المُستعادُ ثانيةً كلَّ إقلاع */
   attachJournal(sink: DurableSink): void { this.sink = sink; }
 
-  /** كلُّ تغييرٍ على التزامٍ يمرّ من هنا: يُخزَّن ثم يُدوَّن (T-125) */
+  /**
+   * كلُّ تغييرٍ على التزامٍ يمرّ من هنا: يُخزَّن ثم يُدوَّن (T-125). والسجلُّ المقفلُ بعد نتيجةٍ مجهولةٍ
+   * يرفضُ هنا **قبل** أيِّ أثرٍ في الذاكرةِ أو اليوميّة (ثابت 10) — لا بعد أن يُكتبَ التقديرُ بنسبةٍ بائدة.
+   */
   private commit(levy: Levy): void {
+    this.deps.audit.assertAppendable();
     this.levies.set(levy.levyId, levy);
     this.sink?.record('tax_levy', { levy, sequence: this.sequence });
   }

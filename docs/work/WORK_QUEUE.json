@@ -1316,7 +1316,7 @@
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "الاقتصاد والمالية",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "T-53",
         "2026-10-05 (الجلسة 95): استلامٌ بأمر المالك («عالج العيوب وحل التعارضات وواصل العمل») من المساعد الآلي — Perplexity Computer (الجلسة 90)، وعلاجُ RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS داخل النطاق (src/data/rehydrate_fiscal.ts · src/economy/rate_policy.ts · tests/data/rehydrate_fiscal.test.ts).",
@@ -1335,7 +1335,8 @@
         "2026-10-09 (الجلسة 104): علاجُ عيوب الجلسة 9 داخل النطاق: ذرّيةُ قيد السجل في AppendOnlyLog.append (فشلُ الوسيط الدائم يردُّ القيد ويرمي — RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC) وتقديمُ شاهد rate_amended على كل تغييرٍ في amendRate، وبدائيّةُ الإعلان في مُنشئ RatePolicy وappend مع رفضُ now غير الرقمي (RATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE) · +3 اختبارات · ثلاثُ طفراتٍ مقتولة. وتوسيعُ النطاق بـsrc/audit/append_only_log.ts (غير محجوزٍ لأحد). الحال IN_PROGRESS حتى التزامة الرفع.",
         "2026-10-09 (الجلسة 104): رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق (10 مسارات) تخالف بصمةَ محضر الجلسة 9 (1bcaedf8…) كما قِيست عند التزام العلاج. رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
         "2026-10-09 (الجلسة 105): الجلسة 11 — NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). عاد إلى IN_PROGRESS بأربعة عيوبٍ مسمّاةٍ في دوام تعديل النسبة (دوامُ الوسيط بعد التدوين · إعادةُ قراءة الحارس للمرجع الحيّ · ردُّ الذاكرة يُخرج القيد الخطأ · وقبولُ null بوصفه التزامًا) وفشلِ verify على الالتزام المجمد (DC-03 خارج النطاق). رفعٌ لاحقٌ إلى REVIEW بتغيّرٍ مقيسٍ بعد علاجها في هذا البند.",
-        "2026-10-09 (الجلسة 105 — علاج الجلسة 11): عولجت ثلاثةٌ من عيوب الجلسة 11: حارسُ دخولٍ في AppendOnlyLog.append (APPEND_REENTRANCY_REFUSED — رَدُّ القيدِ بتحقّقِ الهُويّةِ لا يفرقعَ قيدَ غيرِه) ورميُ الوسيطِ يُغلَّفُ بـAUDIT_APPEND_OUTCOME_UNKNOWN (نتيجةٌ غير معلومةٍ — الإرجاعُ الحَكَم) وقراءةٌ واحدةٌ لكلِّ حقلٍ في rate_policy (لقطةٌ مجمّدة — ما فُحِص هو ما يُخزَّن). +4 اختبارات (11أ · 11ج · 11د · 11هـ) و3 طفراتٍ مقتولة. وعيبُ رفضِ null علاجُه مصمَّمٌ ومُقيسٌ لكنه مسدودٌ بمحاكاةٍ في مسارٍ محجوزٍ لبندٍ حيّ (tests/data/rehydrate_roundtrip.test.ts · W-2026-040) فسُحب — تناقضٌ موثق قرارُه للمالك. npm test 2423/2423 · check:numbers ✓. رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 87f5bb97… (10 مسارات) تخالف بصمةَ محضر الجلسة 11 (e8304c9a…). رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020)."
+        "2026-10-09 (الجلسة 105 — علاج الجلسة 11): عولجت ثلاثةٌ من عيوب الجلسة 11: حارسُ دخولٍ في AppendOnlyLog.append (APPEND_REENTRANCY_REFUSED — رَدُّ القيدِ بتحقّقِ الهُويّةِ لا يفرقعَ قيدَ غيرِه) ورميُ الوسيطِ يُغلَّفُ بـAUDIT_APPEND_OUTCOME_UNKNOWN (نتيجةٌ غير معلومةٍ — الإرجاعُ الحَكَم) وقراءةٌ واحدةٌ لكلِّ حقلٍ في rate_policy (لقطةٌ مجمّدة — ما فُحِص هو ما يُخزَّن). +4 اختبارات (11أ · 11ج · 11د · 11هـ) و3 طفراتٍ مقتولة. وعيبُ رفضِ null علاجُه مصمَّمٌ ومُقيسٌ لكنه مسدودٌ بمحاكاةٍ في مسارٍ محجوزٍ لبندٍ حيّ (tests/data/rehydrate_roundtrip.test.ts · W-2026-040) فسُحب — تناقضٌ موثق قرارُه للمالك. npm test 2423/2423 · check:numbers ✓. رُفع إلى REVIEW بتغيّرٍ مقيس — بصمةُ النطاق 87f5bb97… (10 مسارات) تخالف بصمةَ محضر الجلسة 11 (e8304c9a…). رفعٌ للمراجعة لا ترقية؛ وVERIFIED قرارُ المجلس بالإجماع (RULE-020).",
+        "2026-10-18 (الجلسة 136): علاجُ عيبِ الجولة 38 RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY — assertAppendable أوّلَ commit · تفكيكُ الأنواع إلى tax_types.ts (توسيعُ نطاقٍ معلن) · اختبارُ 38أ بالإقلاع — والبندُ عاد إلى REVIEW بتغيّرٍ مقيسٍ في بصمةِ النطاق (الثابت 8)"
       ],
       "dependencies": [
         "لا شيء"
@@ -1351,7 +1352,8 @@
         "tests/data/rehydrate_fiscal.test.ts",
         "tests/data/rehydrate_fiscal_rate.test.ts",
         "src/audit/append_only_log.ts",
-        "tests/economy/tax_rate_amendment_sink.test.ts"
+        "tests/economy/tax_rate_amendment_sink.test.ts",
+        "src/economy/tax_types.ts"
       ],
       "excluded": [
         "src/economy/budget.ts وtreasury.ts وledger.ts — لا علاقة للبند بها؛ وledger.ts محجوزٌ لـW-2026-042",
@@ -1377,7 +1379,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "2026-10-18 (الجلسة 136): العلاجُ الهندسيُّ لعيب الجولة 38 داخل نطاق البند — ألّا يُكتب تقديرٌ دائمٌ على كائنٍ مقفلٍ أو ألّا يُعاد عند الإقلاع بلا شاهد levy_assessed — مع اختبارٍ يقرأ outstanding() وقيود tax_levy · ثم تجهيزُ الجولة 39 (جولةٌ واحدة لا متزامنة · نصُّ إطلاقٍ واحدٌ حرفيًّا)",
+      "next_step": "2026-10-18 (الجلسة 136): الجولة 39 للمجلس على هذا البند وحده بعد تجميدِ هذا الالتزام — حزمةٌ محايدة ونصُّ إطلاقٍ واحدٌ حرفيًّا للأعضاء الثلاثة متتابعين",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-18",
       "documentation_impact": [
@@ -1403,7 +1405,7 @@
         "2026-10-17 (الجلسة 134 · علاجُ عيبَي الجلسة 37): الإقفالُ الدائمُ بعد المجهولة في append_only_log.ts (AUDIT_APPEND_OUTCOME_UNRESOLVED) — الاستئنافُ إقلاعٌ جديدٌ من اليوميّة لا استمرار",
         "2026-10-18 (الجولة 38 للمجلس · خلاف ⇒ NOT_VERIFIED): عيبا الجولة 37 مغلقانِ بحرفِ هجومهما بشهادةِ الثلاثة؛ وعيبٌ مانعٌ جديدٌ مقيس — grok: RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY (assess يكتب tax_levy دائمًا بنسبةٍ بائدةٍ قبل أن يرفض السجلُّ المقفلُ levy_assessed، والإقلاعُ يعيده بلا شاهدِ تدقيق) — المحضر docs/work/council/W-2026-065-38.json"
       ],
-      "blocked_reason": "الجولة 38 (2026-10-18): العيبُ المانعُ RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY المقيّدُ في discoveries — علاجُه داخل نطاق البند (tax.ts · rehydrate_fiscal.ts · append_only_log.ts واختباراتُها) شرطُ العودةِ إلى REVIEW"
+      "blocked_reason": null
     },
     {
       "id": "W-2026-066",
@@ -1745,7 +1747,7 @@
         "docs/test-reports/phase-40-W-2026-066.md",
         "docs/test-reports/phase-40-W-2026-066.md — الجلسة 2 (الأعضاء الثلاثة معزولين على حزم مجمّدة عند 1473992): البنود الثلاثة NOT_VERIFIED بعيوب مسمّاة"
       ],
-      "next_step": "2026-10-18 (الجلسة 136 · تتمة): العلاجُ الهندسيُّ لعيب الجولة 38 في نطاق W-2026-065 ثم تجهيزُ الجولة 39 عليه — وبعدها جولةُ W-2026-040 المعلنة · W-2026-038 ينتظرُ القرارَ السياديَّ للمالك",
+      "next_step": "2026-10-18 (الجلسة 136 · تتمة ثانية): تجهيزُ الجولة 39 على W-2026-065 بعد علاجِ عيبِ الجولة 38 — حجزُ ملفاتِ الجولة قبل اللمس · نصُّ إطلاقٍ واحدٌ حرفيًّا · جولةٌ واحدة لا متزامنة",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-18",
       "documentation_impact": [

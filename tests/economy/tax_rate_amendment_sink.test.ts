@@ -6,6 +6,8 @@
  * الجلسة 134 (علاجُ عيبَي الجلسة 37): 9ج صار يثبتُ الإقفالَ الدائمَ بعد المجهولةِ لا نجاحَ إعادةِ
  * المحاولةِ قبلَ الاستعادةِ (قيسَت مفسدةً للإقلاع: gpt شاهدانِ لأمرٍ واحد · grok تكرارُ تسلسلٍ مستهلك) —
  * وأُضيف 37أ و37ب بمشهدِ اليوميّةِ الحقيقيةِ (إقلاعٌ جديدٌ هو الاستئنافُ الوحيد).
+ * الجلسة 136 (علاجُ عيبِ الجولة 38 · grok): 38أ — التقديرُ والإعفاءُ والتحصيلُ على الكائنِ المقفلِ تُرفضُ قبل
+ * أيِّ أثرٍ دائم، ويُقاسُ بالإقلاعِ: outstanding() وشهودُ levy_assessed — لا رمزُ الرمي وحده.
  * المالك: وزارة المالية تحت التاج | يوثّق في: docs/test-reports/phase-40-W-2026-065.md
  */
 import { test } from 'node:test';
@@ -225,6 +227,54 @@ test('**T-53/مجلس 37ب** — RATE_AMENDMENT_OUTCOME_UNKNOWN_RETRY_CORRUPTS_A
     assert.equal(retry.ok, true, 'التعديلُ نفسُه ينجحُ بعدَ إقلاعٍ من يوميّةٍ لم تشهد — لا أثرَ يمنعُه');
     assert.equal(second.revenue.rateFor('compute_usage')?.ratePerMille, 40);
     assert.equal(second.audit.find('rate_amended').length, 1, 'وشاهدٌ واحدٌ لا اثنان');
+  } finally {
+    sc.clean();
+  }
+});
+
+test('**T-53/مجلس 38أ** — RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY: الكائنُ المقفلُ يرفضُ التقديرَ والإعفاءَ قبلَ أيِّ أثرٍ دائم — لا تقديرَ بائدًا يُعادُ بالإقلاع (الجلسة 136)', () => {
+  const sc = journalScene();
+  try {
+    const first = sc.boot();
+    const journal = first.journal;
+    assert.ok(journal, 'اليوميّةُ الحقيقيةُ شرطُ المسبار');
+    const payer = 'external:compute-provider';
+    // تقديرٌ سليمٌ قبل المجهولة — ليُمتحنَ الإعفاءُ على الكائنِ المقفلِ أيضًا
+    const pre = first.revenue.assess('compute_usage', payer, 1_000_000, NOW + 1_000, NOW + 1_000);
+    assert.equal(pre.ok, true);
+    const at = NOW + 60_000;
+    const cmd = first.king.issueCommand('amend_policy', 'economy:revenue',
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at);
+    first.audit.attachSink({
+      record: (kind, payload, t = 0) => {
+        const rec = journal.record(kind, payload, t);
+        if ((payload as { kind?: string } | undefined)?.kind === 'rate_amended') throw new Error('PROBE_POST_COMMIT_THROW');
+        return rec;
+      },
+    });
+    assert.throws(() => first.revenue.amendRate(cmd, 'compute_usage', 40, at),
+      (e: Error) => e.message === 'AUDIT_APPEND_OUTCOME_UNKNOWN');
+    const before = first.revenue.outstanding().length;
+    // عينُ مسبارِ grok: واقعةٌ بعد سريانِ 40 — والحيُّ 25 بائد
+    assert.throws(() => first.revenue.assess('compute_usage', payer, 2_000_000, at + 1, at + 1),
+      (e: Error) => e.message === 'AUDIT_APPEND_OUTCOME_UNRESOLVED');
+    assert.equal(first.revenue.outstanding().length, before, 'لا تقديرَ في الذاكرةِ بعد الرفض');
+    const waive = first.king.issueCommand('amend_policy', 'economy:revenue', { kind: 'economy' }, at + 2);
+    assert.throws(() => first.revenue.waive(waive, pre.ok ? pre.levy.levyId : '', 'إعفاء', at + 2),
+      (e: Error) => e.message === 'AUDIT_APPEND_OUTCOME_UNRESOLVED');
+    assert.equal(first.revenue.outstanding().length, before, 'الإعفاءُ المرفوضُ لم يغيّر الحالَ الحيّ');
+    assert.throws(() => first.revenue.collect(pre.ok ? pre.levy.levyId : '', at + 3),
+      (e: Error) => e.message === 'AUDIT_APPEND_OUTCOME_UNRESOLVED', 'والتحصيلُ مرفوضٌ مسمّى على الكائنِ المقفل');
+    assert.equal(first.revenue.outstanding()[0]?.status, 'assessed', 'والتقديرُ السابقُ لم يُحصَّل في الذاكرة');
+    // الإقلاعُ حَكَم: لا تقديرَ بائدًا ولا إعفاءَ بلا شاهد — التقديرُ السابقُ وحدَه قائم
+    const second = sc.boot(NOW + 24 * 60 * 60_000);
+    assert.equal(second.revenue.rateFor('compute_usage')?.ratePerMille, 40);
+    const open = second.revenue.outstanding();
+    assert.equal(open.length, 1, 'تقديرٌ واحدٌ قائم: السابقُ للمجهولة — لا تقديرَ بائدًا مُعادًا');
+    assert.equal(open[0]?.amountBase, 1_000_000);
+    assert.equal(open[0]?.status, 'assessed', 'ولا إعفاءَ كُتب على الكائنِ المقفل');
+    assert.equal(second.audit.find('levy_assessed').length, 1, 'شاهدٌ واحدٌ لتقديرٍ واحد');
+    assert.equal(second.audit.verifyIntegrity().valid, true);
   } finally {
     sc.clean();
   }

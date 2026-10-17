@@ -74,6 +74,14 @@ export class AppendOnlyLog {
    *    الاستئنافُ إقلاعٌ جديدٌ من اليوميّةِ الدائمة (الاسترجاعُ هو الحَكَم). ورفضُ null المعروفُ لا يقفلُ —
    *    فحالُه معلومٌ («لم يُدوَّن») وإعادةُ المحاولةِ بعدَه آمنةٌ بحرفِ عقده.
    */
+  /**
+   * الإقفالُ مقروءٌ قبل الأثر (الجولة 38 · RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY): مَن يكتبُ أثرًا
+   * دائمًا قبل إلحاقِ شاهدِه يسألُ هنا أولًا — فيُرفضُ على الكائنِ المقفلِ قبل أن يكتب لا بعد.
+   */
+  assertAppendable(): void {
+    if (this.outcomeUnknown) throw new Error('AUDIT_APPEND_OUTCOME_UNRESOLVED');
+  }
+
   append(actor: EntityId, kind: string, detail: Record<string, unknown> = {}): AuditEntry {
     if (this.appending) throw new Error('APPEND_REENTRANCY_REFUSED');
     // النتيجةُ المجهولةُ أقفلت هذا الكائن: لا إلحاقَ جديدَ عليه — الاستئنافُ إقلاعٌ جديدٌ لا استمرار.
