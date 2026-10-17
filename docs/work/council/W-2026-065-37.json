@@ -1,0 +1,39 @@
+{
+  "item": "W-2026-065",
+  "commit": "da68ac253096e8a19c91e85c60082c10ee2a0d91",
+  "scope_digest": "4468c7377bc91773803afa340f9e43ff2de136755f81df3edbdf2cd16fec79ed",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-17",
+  "session": 37,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-37-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-37-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-065-37-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "RATE_AMENDMENT_OUTCOME_UNKNOWN_RETRY_CORRUPTS_AUDIT_RECOVERY (gpt · مقيس): العلاجُ يردُّ قيدَ التدقيقِ من الذاكرةِ عند رميِ الوسيطِ بعد التدوين فلا يستدعي amendRate لا markExecuted ولا RatePolicy.append — ثم يسمحُ بإعادةِ الأمرِ الملكيِّ نفسِه على الحالةِ الحيّةِ رغمَ أنّ نتيجةَ المحاولةِ الأولىِ معلنةٌ غيرُ معلومةٍ وقد تكونُ مثبتةً في اليوميّة (قِيس: الإعادةُ عادت ok:true وصارت النسبةُ الحيّةُ 40‰ واليوميّةُ تحملُ شاهدَي rate_amended للأمرِ نفسِه · الإقلاعُ من اليوميّةِ الحقيقيةِ فشل «نسخة سجل فاسدة: تسلسل مفقود أو معاد ترتيبه عند 44» · rehydrateFiscalFromJournal طبّق الشاهد الأول ورفض الثاني بـ RECOVERY_RATE_COMMAND_CONFLICT) — يلزم حجزُ/تعريفُ حالةِ الأمرِ غيرِ المعلومِ ومنعُ إعادةِ تنفيذِه حتى تُحسمَ بالاستعادة أو بروتوكولُ التزامٍ يميّز الشاهدَ الموجودَ قبل إعادة المحاولة.",
+      "RATE_AMENDMENT_POSTCOMMIT_SEQ_REUSE_UNBOOTABLE (grok · مقيس): AppendOnlyLog.append يردُّ القيدَ من الذاكرةِ بعد أن يتمّ StateJournal المضمّنُ الكتابةَ ويرفعَ تسلسلَ اليوميّةِ في الملف — فالإضافةُ التاليةُ تأخذُ رقمَ التسلسلِ وprevHash نفسيهما اللذين كُتبا أصلًا، والملفُّ يجمعُ الحمولتين، وreplaceFrom عند الإقلاعِ يرفضُ السلسلة (قِيس بثلاثةِ مسبارات: مسارُ assess الطبيعيُّ بعد المجهول · إضافةٌ لاحقةٌ صريحة · إعادةُ الأمرِ نفسِه بتاريخٍ لاحق — كلُّها «تسلسل مفقود أو معاد ترتيبه» وقيدُ الضبطِ الصامتُ بعد المجهولِ يقلع) — فمتابعةُ التشغيلِ بعد رميِ ما بعدَ التدوينِ (وتقديرُ الرسمِ في tax.ts يكفي) تجعلُ الإقلاعَ التاليَ يرفضُ السلسلةَ ولا يُعادُ سجلُّ النِّسَب، والإرجاعُ الذي جُعلَ حَكَمًا لا يستطيعُ الحكمَ لأنّ الدولةَ لا تقلع — العيبُ في ردِّ الذاكرةِ الذي لا يردُّ رقمَ التسلسلِ المستهلكَ في الملف."
+    ]
+  }
+}

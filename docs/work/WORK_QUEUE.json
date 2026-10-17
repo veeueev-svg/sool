@@ -1312,11 +1312,11 @@
     {
       "id": "W-2026-065",
       "title": "مسارٌ ملكيٌّ لتعديل سعر الرسم مع حفظ تاريخ الإعلان — لا أثر رجعيًّا (T-53)",
-      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 133) — استلامًا من الجلسة 98 بالأمر التشغيلي الدائم (نقلٌ معلنٌ مؤرَّخ في هذا الالتزام — المعرّفُ لم يتبدّل · WORK_CONTROL §6 · RULE-015)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 134) — استلامًا من الجلسة 133 بالأمر التشغيلي الدائم (نقلٌ معلنٌ مؤرَّخ في هذا الالتزام — المعرّفُ لم يتبدّل · WORK_CONTROL §6 · RULE-015)",
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "الاقتصاد والمالية",
       "phase": 40,
-      "status": "REVIEW",
+      "status": "IN_PROGRESS",
       "progress_items": [
         "T-53",
         "2026-10-05 (الجلسة 95): استلامٌ بأمر المالك («عالج العيوب وحل التعارضات وواصل العمل») من المساعد الآلي — Perplexity Computer (الجلسة 90)، وعلاجُ RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS داخل النطاق (src/data/rehydrate_fiscal.ts · src/economy/rate_policy.ts · tests/data/rehydrate_fiscal.test.ts).",
@@ -1377,7 +1377,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "2026-10-17 (الجلسة 133): جولةُ مجلسِ المراجعةِ (RULE-020 · الجلسة 37 للمجلس — جولةٌ واحدةٌ لا متزامنة) — البندُ في REVIEW بتغيّرٍ مقيسٍ (بصمةُ a9edf248… تخالف محضرَ الرفض).",
+      "next_step": "2026-10-17 (الجلسة 134): علاجُ العيبين المانعين (الجلسة 37) داخل نطاق البند — مسارا append_only_log.ts وrate_policy.ts/tax.ts — ثم تجهيزُ الجولة 38 على البند (جولةٌ واحدة لا متزامنة)",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-17",
       "documentation_impact": [
@@ -1386,7 +1386,7 @@
         "CHANGELOG.md — مدخلُ البند",
         "version.json — tests.total بالمقيس"
       ],
-      "verification": "شُغِّل في 2026-10-09 (الجلسة 105) على هذه الشجعة: node --test dist/tests/economy/tax_rate_amendment.test.js → 22/22 · node --test dist/tests/data/rehydrate_fiscal_rate.test.js → 6/6 · node --test dist/tests/data/rehydrate_roundtrip.test.js → 3/3 (المسارُ المحجوزُ بلا أثرٍ بعد سحبِ علاجِ null) · npm test → 2423/2423 · npm run check:numbers → EXIT=0 (2423 مطابق) · npm run verify → EXIT=0 · قتلُ الطفرات: إلغاءُ التغليفِ ⇒ سقوطُ 11أ و9ج · إلغاءُ اللقطاتِ ⇒ سقوطُ 11د و11هـ · إلغاءُ الحارسِ ⇒ سقوطُ 11ج · إلغاءُ فرعِ null ⇒ سقوطُ 11ب (قبل سحبه) — كلُّها مقتولة. بصمةُ النطاق (10 مسارات) = 87f5bb976f3eebe46bad2f592be96a4f7fc838259437fe30e66c695837941194 — تخالف بصمةَ محضر الجلسة 11 (e8304c9a…). الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-065.md.\n2026-10-17 (الجلسة 133 · علاجُ عيبِ null بقرارِ المالكِ المفوَّض): محاكاةُ W-2026-040 حُدّثت في التزامِ مالكِه (6fcf099) ثم العلاجُ هنا — AUDIT_SINK_DECLINED_RECORD في src/audit/append_only_log.ts مع الاختبار 11ب والطفرةِ مقتولةً قياسًا (بنزعِ الفحص pass 22 · fail 1) · ملفّاتُ البند 37/37 · مساراتُ الوسائطِ الأخرى 42/42 · npm test وnpm run verify يقاسان على فرقِ التزامِ العلاج بعد دفعِه · بصمةُ النطاق a9edf248204a168c76f564bb3b605071f124214133734462ef5bb68c5b985a1d تخالف محضرَ الجلسة 11 (e8304c9a…) — الثابت 8.\n2026-10-17 (الجلسة 133 · تفكيكٌ لسقفِ الوحدة): اختبارانِ (9ج · 11ب) نُقلا إلى tests/economy/tax_rate_amendment_sink.test.ts (توسيعُ نطاقٍ معلنٌ مؤرَّخٌ في §2 — الاختباراتُ نفسُها) — الملفُّ الأصلُّ 347 سطرًا والجديدُ 95 · node --test ⇒ 23/23.",
+      "verification": "شُغِّل في 2026-10-09 (الجلسة 105) على هذه الشجعة: node --test dist/tests/economy/tax_rate_amendment.test.js → 22/22 · node --test dist/tests/data/rehydrate_fiscal_rate.test.js → 6/6 · node --test dist/tests/data/rehydrate_roundtrip.test.js → 3/3 (المسارُ المحجوزُ بلا أثرٍ بعد سحبِ علاجِ null) · npm test → 2423/2423 · npm run check:numbers → EXIT=0 (2423 مطابق) · npm run verify → EXIT=0 · قتلُ الطفرات: إلغاءُ التغليفِ ⇒ سقوطُ 11أ و9ج · إلغاءُ اللقطاتِ ⇒ سقوطُ 11د و11هـ · إلغاءُ الحارسِ ⇒ سقوطُ 11ج · إلغاءُ فرعِ null ⇒ سقوطُ 11ب (قبل سحبه) — كلُّها مقتولة. بصمةُ النطاق (10 مسارات) = 87f5bb976f3eebe46bad2f592be96a4f7fc838259437fe30e66c695837941194 — تخالف بصمةَ محضر الجلسة 11 (e8304c9a…). الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-065.md.\n2026-10-17 (الجلسة 133 · علاجُ عيبِ null بقرارِ المالكِ المفوَّض): محاكاةُ W-2026-040 حُدّثت في التزامِ مالكِه (6fcf099) ثم العلاجُ هنا — AUDIT_SINK_DECLINED_RECORD في src/audit/append_only_log.ts مع الاختبار 11ب والطفرةِ مقتولةً قياسًا (بنزعِ الفحص pass 22 · fail 1) · ملفّاتُ البند 37/37 · مساراتُ الوسائطِ الأخرى 42/42 · npm test وnpm run verify يقاسان على فرقِ التزامِ العلاج بعد دفعِه · بصمةُ النطاق a9edf248204a168c76f564bb3b605071f124214133734462ef5bb68c5b985a1d تخالف محضرَ الجلسة 11 (e8304c9a…) — الثابت 8.\n2026-10-17 (الجلسة 133 · تفكيكٌ لسقفِ الوحدة): اختبارانِ (9ج · 11ب) نُقلا إلى tests/economy/tax_rate_amendment_sink.test.ts (توسيعُ نطاقٍ معلنٌ مؤرَّخٌ في §2 — الاختباراتُ نفسُها) — الملفُّ الأصلُّ 347 سطرًا والجديدُ 95 · node --test ⇒ 23/23. — الجلسة 37 (خلاف ⇒ NOT_VERIFIED · محضر docs/work/council/W-2026-065-37.json): gpt REJECTED · grok REJECTED · gemini VERIFIED ⇒ عاد البندُ إلى العمل.",
       "discoveries": [
         "مجلس المراجعة — الجلسة 1 (2026-10-04 · عند 5bfd61f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان: (1) إعادةُ الأمر الملكيّ نفسِه تُنفّذ تعديلًا ثانيًا لأنّ بوابةَ التاج idempotent تُعيد قرارَها السابق allowed=true وamendRate لا يميّز الإعادة — grok؛ (2) RATE_AMENDMENT_COMMAND_NOT_PARAMETER_BOUND: الأمرُ لا يربط الوعاءَ ولا النسبة، فتوقيعٌ واحدٌ يعدّل كلَّ الأوعية — gpt. وعولجا من الجذر في الجلسة 91 (انظر verification).",
         "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب RATE_AMENDMENT_HISTORY_NOT_DURABLE (gpt): سجلُّ النِّسَبِ (rateHistory) ومعرّفاتُ الأوامرِ المنفَّذةِ (amendmentCommands) في الذاكرة وحدها — restore لا يسترجعُهما ومسارُ rehydrate_fiscal.ts لا يمررُهما لخدمةِ الإيراد، فإعادةُ تشغيلِ الدولة تمحو الإعلاناتِ التشغيليةَ من سجلِ النِّسَب (قيسها المسبارُ: الإعلانُ 40‰ يختفي بعد إعادةِ البناء) وتفقدُ منعَ إعادةِ الأمرِ نفسِه عبرَ حدودِ إعادةِ التشغيل.",
@@ -1398,8 +1398,10 @@
         "مجلس المراجعة — الجلسة 7 (2026-10-06 · عند 7f3dcbd): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب: RATE_AMENDMENT_HISTORY_MUTABLE_REFERENCE_ESCAPE (gpt) — RatePolicy.historyOf() ينسخ المصفوفة فقط ولا ينسخ كائنات RateDeclaration، فيستطيع المستدعي تعديل الإعلان التاريخي بلا أمر ملكي.",
         "مجلس المراجعة — الجلسة 8 (2026-10-07 · عند cce53c3): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini REJECTED). العيب: RATE_AMENDMENT_APPEND_MUTABLE_REFERENCE_ESCAPE — علاج الجلسة 7 اقتصر على دوال الاستعلام الأربع (historyOf · firstOf · currentFor · effectiveAt) وتجاهل RatePolicy.append() وRevenueService.amendRate(). المحضر: docs/work/council/W-2026-065-8.json",
         "مجلس المراجعة — الجلسة 9 (2026-10-09 · عند e112148): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان المسمّيان: RATE_AMENDMENT_DURABILITY_COMMIT_NONATOMIC (gpt) — فشلُ كتابة شاهد rate_amended الدائم يترك تعديلًا حيًّا بلا سجلٍّ ويفقده إعادةُ التشغيل؛ وRATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE (grok) — بقي تسريبُ مرجعٍ حيٍّ في declaredAt يحرّك السريان رجعيًّا. المحضر: docs/work/council/W-2026-065-9.json",
-        "مجلس المراجعة — الجلسة 11 (2026-10-09 · عند a41efbe): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيوب المسمّاة: RATE_AMENDMENT_DURABLE_POSTCOMMIT_THROW_INCONSISTENT_ACK (gpt) · RATE_AMENDMENT_PRIMITIVE_GUARD_REREAD_LIVE_REFERENCE (grok) · RATE_AMENDMENT_APPEND_ROLLBACK_POPS_WRONG_ENTRY (grok) · RATE_AMENDMENT_SINK_NULL_ACCEPTED_AS_COMMIT (grok) · وفشلُ npm run verify على الالتزام المجمد عند gpt (DC-03/C-12/T-23 — خارج مسارات البند، لصاحبِ مساره). المحضر: docs/work/council/W-2026-065-11.json والتقاريرُ الخامُّ بجواره."
-      ]
+        "مجلس المراجعة — الجلسة 11 (2026-10-09 · عند a41efbe): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيوب المسمّاة: RATE_AMENDMENT_DURABLE_POSTCOMMIT_THROW_INCONSISTENT_ACK (gpt) · RATE_AMENDMENT_PRIMITIVE_GUARD_REREAD_LIVE_REFERENCE (grok) · RATE_AMENDMENT_APPEND_ROLLBACK_POPS_WRONG_ENTRY (grok) · RATE_AMENDMENT_SINK_NULL_ACCEPTED_AS_COMMIT (grok) · وفشلُ npm run verify على الالتزام المجمد عند gpt (DC-03/C-12/T-23 — خارج مسارات البند، لصاحبِ مساره). المحضر: docs/work/council/W-2026-065-11.json والتقاريرُ الخامُّ بجواره.",
+        "2026-10-17 (الجلسة 37 للمجلس · خلاف ⇒ NOT_VERIFIED): عيبان مانعان مقيسان — gpt: RATE_AMENDMENT_OUTCOME_UNKNOWN_RETRY_CORRUPTS_AUDIT_RECOVERY (إعادةُ الأمرِ بعد نتيجةٍ غيرِ معلومةٍ تفسدُ استعادةَ اليوميّة) · grok: RATE_AMENDMENT_POSTCOMMIT_SEQ_REUSE_UNBOOTABLE (ردُّ الذاكرةِ يعيدُ رقمَ تسلسلِ اليوميّةِ المستهلكَ في الملف فتنكسرَ سلسلةُ الإقلاع) — gemini: VERIFIED"
+      ],
+      "blocked_reason": "الجلسة 37 (2026-10-17): العيبانِ المانعانِ المقيّدانِ في discoveries — علاجُهما داخلَ نطاقِ البندِ (حجزُ التسلسل/حالةُ الأمرِ غيرِ المعلومِ قبل إعادة المحاولة) شرطُ العودةِ إلى REVIEW"
     },
     {
       "id": "W-2026-066",
@@ -1504,7 +1506,8 @@
         "2026-10-17 (الجلسة 133 · حادثة CI معلنة): فشلٌ عابرٌ في اختبارِ توقيتٍ على التزامِ المحضرِ a5999be — CHAOS_STOP_TOO_SLOW في «القبول: القطوعُ الأربعةُ تُنتجُ توقفًا آمنًا» (chaos_lifecycle · المحاولةُ الأولىُ 39011449109 فشل: pass 2445 · fail 1) ثم نجحت المحاولةُ المعادةُ قياسًا (39011449109 success · 39011449110 success) — الالتزامُ لم يمس كودًا (4 ملفاتِ حوكمةٍ فقط) والفشلُ محفوظٌ في تاريخِ CI ولا يُمحى. قُرئ حكمُ البوابتين بعد الإعادة: نجاح.",
         "2026-10-17 (الجلسة 133 · تتمة ثانية): سلسلةُ W-2026-065/W-2026-040 نُفّذت بالقرارِ المفوَّض — المحاكاةُ حُدّثت (6fcf099) وعيبُ null عولج بـ AUDIT_SINK_DECLINED_RECORD والاختبارِ 11ب والطفرةِ المقتولة (49da1a6) والأرقامُ صُوّبت (bf55c9d) والتفكيكُ لسقفِ الوحدة (f95499c) — verify ⇒ 0 (2447/2447) · حادثةُ RULE-000 معلنة (39015265244 أسقط الدفعةَ الأولى — كودٌ بلا PROGRESS.md في الالتزام نفسه) واستُدرك التوثيقُ · تجهيزُ الجلسة 37 على W-2026-065 وحده: حجزُ ملفّاتِها الأربعةِ وتسجيلُ الهدف (§13.68) — التجميدُ هذا الالتزام",
         "2026-10-17 (تصويب البصمة): سطرُ بصمةِ نطاق W-2026-065 في §13.68 ومدخل PROGRESS صُوّب بالإعلان — a9edf248… كان قياسَ ما قبل التفكيك (10 مسارات) والصواب على شجرة da68ac2 هو 4468c737… (11 مسارًا · قيس مقيسًا بعد التصويب فلم يتغير) · حادثةُ RULE-015 معلنة: التزامُ التصويب الأول مسّ مسارين محكومين بلا أثرٍ في السجل (الصف) فرفضته بوابة ضبط العمل — يُستدرك بهذا الالتزام (تحديثُ الصف مع العمل لا بعده)",
-        "2026-10-17 (الجلسة 134): الجلسة 37 للمجلس على W-2026-065 وحده (نقطة الاستئناف §13.68) — الخامُّ أوّلًا (§13.69): رفضان (gpt · grok) وقبولٌ (gemini) ⇒ خلاف ⇒ NOT_VERIFIED"
+        "2026-10-17 (الجلسة 134): الجلسة 37 للمجلس على W-2026-065 وحده (نقطة الاستئناف §13.68) — الخامُّ أوّلًا (§13.69): رفضان (gpt · grok) وقبولٌ (gemini) ⇒ خلاف ⇒ NOT_VERIFIED",
+        "2026-10-17 (الجلسة 134 · تتمة): محضرُ الجلسة 37 ومعالجتُها — W-2026-065-37.json (خلاف ⇒ NOT_VERIFIED · مآل IN_PROGRESS): عاد البندُ إلى العملِ والعيبانِ المانعانِ مقيّدانِ في discoveries بتسميةِ أصحابِهما (gpt · grok) — لا جولةَ أخرى نشطة"
       ],
       "dependencies": [
         "W-2026-062"
@@ -1731,7 +1734,7 @@
         "docs/test-reports/phase-40-W-2026-066.md",
         "docs/test-reports/phase-40-W-2026-066.md — الجلسة 2 (الأعضاء الثلاثة معزولين على حزم مجمّدة عند 1473992): البنود الثلاثة NOT_VERIFIED بعيوب مسمّاة"
       ],
-      "next_step": "2026-10-17 (الجلسة 134): محضرُ الجلسة 37 (W-2026-065-37.json — خلاف ⇒ NOT_VERIFIED) ومعالجتُها في التزامٍ مستقل: عودُ W-2026-065 إلى IN_PROGRESS بعيوبٍ مسمّاةٍ مقيدةٍ في discoveries بتسميةِ أصحابها ثم إعادةُ تقييمِ الترتيب — لا جولةَ أخرى قبل تمامِ هذه (جولةٌ واحدة لا متزامنة)",
+      "next_step": "2026-10-17 (الجلسة 134 · تتمة): العلاجُ الهندسيُّ للعيبين المانعين داخل نطاق W-2026-065 (عودٌ إلى العمل) ثم تجهيزُ الجولة 38 عليه — وبعدها جولةُ W-2026-040 المعلنة (جولةٌ واحدة لا متزامنة) · W-2026-038 ما زال ينتظرُ القرارَ السياديَّ للمالك",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-17",
       "documentation_impact": [
