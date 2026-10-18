@@ -4197,3 +4197,7 @@ bash scripts/check_documentation.sh HEAD~1   # يجب أن يقول: التوث�
 ## الجلسة 144 — §13.106 — الجولة 46 على W-2026-065 وحده: الخامُّ أوّلًا — خلافٌ ⇒ NOT_VERIFIED (2026-10-19)
 
 استلمت الجلسة 144 (Claude Opus 5.5) من الجلسة 143 بالأمر التشغيلي الدائم عند §13.105 — نقلٌ معلَنٌ مؤرَّخٌ في هذا الالتزام (WORK_CONTROL §6 · RULE-015). **قياساتُ الاستلام خضراء** على الرأس `95a6221` (بوابتا التاج والحصر 39164886235 · 39164886319 · `npm run verify` ⇒ EXIT=0 · 2462/2462 · البصمة `e518299b…` على التجميد والرأسين). انعقدت الجولة 46 على التجميد `f30de79` بأعضائها متتابعين لا متزامنين: **gpt VERIFIED · grok NOT_VERIFIED** (`RATE_AMENDMENT_IDEMPOTENT_APPROVAL_NOT_PAYLOAD_BOUND`: إعادةُ `commandId` معتمدٍ لفعلٍ آخر تمرّر تعديلَ نسبةٍ وإعفاءً بتوقيعٍ مزوّر وتنجو الإقلاع — أعاده المنفّذ فتكرّر) **· gemini VERIFIED** ⇒ خلافٌ ⇒ **NOT_VERIFIED**. الخامُّ مدفوعٌ بحروفه؛ المحضرُ والمعالجةُ التزامٌ مستقلٌّ لاحق (§13.106).
+
+## الجلسة 144 — §13.107 — محضرُ الجولة 46 ومعالجتُها: NOT_VERIFIED ⇒ IN_PROGRESS (2026-10-19)
+
+المحضرُ `W-2026-065-46.json` (gpt VERIFIED · grok REJECTED · gemini VERIFIED ⇒ NOT_VERIFIED · المآل IN_PROGRESS)؛ W-2026-065 من REVIEW إلى IN_PROGRESS والعيبُ `RATE_AMENDMENT_IDEMPOTENT_APPROVAL_NOT_PAYLOAD_BOUND` في discoveries. التالي: العلاجُ داخلَ `src/economy/tax.ts` بلا لمسِ `crown_gateway.ts` (خارجَ النطاق).
