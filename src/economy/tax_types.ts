@@ -2,6 +2,8 @@
  * src/economy/tax_types.ts — أنواعُ الرسوم: التقديرُ ونتيجتُه ونتيجةُ تعديلِ النسبة (المرحلة 25 · T-53)
  * فُكِّكت من src/economy/tax.ts لسقفِ الوحدةِ 400 سطرًا (الجلسة 136 · W-2026-065 — سابقةُ T-125 وrate_policy):
  * الأنواعُ نفسُها بحروفِها بلا تغييرٍ في الشكلِ أو المعنى، ويُعيدُ tax.ts تصديرَها فلا يتغيّرُ مستوردٌ.
+ * الجلسة 139 (علاجُ عيبَي الجولة 41 · W-2026-065): أُضيفَ هنا معقّمُ القيدِ auditPrimitive
+ * لسقفِ tax.ts نفسِه (399/400): قيدُ الرفضِ لا يحملُ مرجعًا حيًّا (ثابت 12) — وكلُّ مُسندٍ باقٍ بحروفِه.
  * المالك: وزارة المالية تحت التاج | القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md
  */
 import { EntityId } from '../kernel/types';
@@ -32,3 +34,11 @@ export type LevyResult =
 export type RateAmendmentResult =
   | { readonly ok: true; readonly declaration: RateDeclaration; readonly previous: RateDeclaration; readonly auditId: string }
   | { readonly ok: false; readonly reason: string; readonly auditId: string };
+
+/** ثابت 12 (الجولة 41 · علاجُ الجلسة 139): المدخلُ غيرُ البدائيِّ لا يُخزَّنُ مرجعُه الحيُّ في قيدِ
+ *  الرفض — يُقنَّعُ برمزٍ مغلقٍ قبلَ التدوينِ فلا يعبثُ المستدعي بالسلسلةِ بعدَ الرفضِ ولا يُقتلُ الإقلاع */
+export function auditPrimitive(value: unknown): unknown {
+  return value === null || ['string', 'number', 'boolean'].includes(typeof value)
+    ? value
+    : 'مدخلٌ غيرُ بدائيٍّ — لا يُخزَّنُ مرجعُهُ الحيُّ (ثابت 12)';
+}

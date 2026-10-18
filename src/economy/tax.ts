@@ -32,6 +32,7 @@
  *      وإلّا كُتب تقديرٌ بنسبةٍ بائدةٍ يُعيده الإقلاعُ بلا شاهد. الاستئنافُ إقلاعٌ جديد
  *  11) **بدائيّةُ المداخلِ وعزلُ الوسيطِ عن الحال** (الجولة 40 · عيباها المسمّاة): لا مرجعٌ حيٌّ
  *      يُخزَّنُ ولا وسيطٌ يمسكُ كائنَ الحالِ — الخريطةُ والوسيطُ لقطتانِ منفصلتان
+ * 12) **قيدُ الرفضِ لا يحملُ مرجعًا حيًّا** (الجولة 41): غيرُ البدائيِّ يُقنَّعُ (auditPrimitive)
  * حالات الفشل (كلها مغلقة): وعاء غير معلن ⇒ رفض؛ واقعة سابقة للإعلان ⇒ رفض؛
  *   تحصيل بلا تقدير أو مكرَّر ⇒ رفض؛ فشل القيد ⇒ لا تحصيل؛ إعفاء ذاتي ⇒ رفض
  * اختبار القبول: tests/economy/economy_lifecycle.test.ts
@@ -46,7 +47,7 @@ import { isValidRatePerMille } from '../kernel/config/economy';
 import { RatePolicy } from './rate_policy';
 import type { DurableSink } from '../data/persistence';
 import type { RateAmendmentRecovery, RateDeclaration } from './rate_policy';
-import type { Levy, LevyResult, RateAmendmentResult } from './tax_types';
+import { auditPrimitive, type Levy, type LevyResult, type RateAmendmentResult } from './tax_types';
 
 export type { RateAmendmentRecovery, RateDeclaration };
 
@@ -133,7 +134,7 @@ export class RevenueService {
   ): LevyResult {
     const refuse = (reason: string, extra: Record<string, unknown> = {}): LevyResult => {
       const entry = this.deps.audit.append(this.actorId, 'levy_refused', {
-        base, payer, amountBase, reason, mode: 'assess', ...extra,
+        base: auditPrimitive(base), payer: auditPrimitive(payer), amountBase: auditPrimitive(amountBase), reason, mode: 'assess', ...extra,
       });
       return { ok: false, reason, auditId: entry.hash };
     };
@@ -190,7 +191,7 @@ export class RevenueService {
   collect(levyId: string, now = Date.now()): LevyResult {
     const refuse = (reason: string, extra: Record<string, unknown> = {}): LevyResult => {
       const entry = this.deps.audit.append(this.actorId, 'levy_refused', {
-        levyId, reason, mode: 'collect', ...extra,
+        levyId: auditPrimitive(levyId), reason, mode: 'collect', ...extra,
       });
       return { ok: false, reason, auditId: entry.hash };
     };
@@ -225,7 +226,7 @@ export class RevenueService {
   ): LevyResult {
     const refuse = (why: string, extra: Record<string, unknown> = {}): LevyResult => {
       const entry = this.deps.audit.append(this.actorId, 'levy_refused', {
-        levyId, reason: why, mode: 'waive', ...extra,
+        levyId: auditPrimitive(levyId), reason: why, mode: 'waive', ...extra,
       });
       return { ok: false, reason: why, auditId: entry.hash };
     };
@@ -270,7 +271,7 @@ export class RevenueService {
   ): RateAmendmentResult {
     const refuse = (reason: string, extra: Record<string, unknown> = {}): RateAmendmentResult => {
       const entry = this.deps.audit.append(this.actorId, 'rate_amendment_refused', {
-        base, requestedRatePerMille: newRatePerMille, reason, ...extra,
+        base: auditPrimitive(base), requestedRatePerMille: auditPrimitive(newRatePerMille), reason, ...extra,
       });
       return { ok: false, reason, auditId: entry.hash };
     };
@@ -314,7 +315,7 @@ export class RevenueService {
     const params = command.payload.params ?? {};
     if (params['base'] !== base || params['ratePerMille'] !== newRatePerMille) {
       return refuse('الأمر لا يسمّي هذا التعديل: params.base وparams.ratePerMille الموقَّعتان يجب أن تطابقا الوعاءَ والنسبة', {
-        signedBase: params['base'] ?? null, signedRatePerMille: params['ratePerMille'] ?? null,
+        signedBase: auditPrimitive(params['base']) ?? null, signedRatePerMille: auditPrimitive(params['ratePerMille']) ?? null,
       });
     }
     // أمرٌ نُفّذ مرّةً لا يُنفَّذ ثانيةً: البوابةُ تُعيد قرارَها السابق للإعادة (idempotent)

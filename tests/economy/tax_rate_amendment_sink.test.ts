@@ -8,6 +8,8 @@
  * وأُضيف 37أ و37ب بمشهدِ اليوميّةِ الحقيقيةِ (إقلاعٌ جديدٌ هو الاستئنافُ الوحيد).
  * الجلسة 136 (علاجُ عيبِ الجولة 38 · grok): 38أ — التقديرُ والإعفاءُ والتحصيلُ على الكائنِ المقفلِ تُرفضُ قبل
  * أيِّ أثرٍ دائم، ويُقاسُ بالإقلاعِ: outstanding() وشهودُ levy_assessed — لا رمزُ الرمي وحده.
+ * الجلسة 139 (علاجُ عيبَي الجولة 41): أُضيف 41 — قيدُ الرفضِ لا يحملُ مرجعًا حيًّا (ثابت 12): عبثُ
+ * المستدعي بعدَ الرفضِ لا يكسرُ السلسلةَ، والإقلاعُ من اليوميّةِ الحقيقيةِ بعدَ الرفضِ الكائنِ سليم.
  * المالك: وزارة المالية تحت التاج | يوثّق في: docs/test-reports/phase-40-W-2026-065.md
  */
 import { test } from 'node:test';
@@ -16,6 +18,7 @@ import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { REVENUE_TARGET, UNIT_TARGET, bootstrapState } from '../../src/index';
+import type { EntityId } from '../../src/kernel/types';
 import type { DurableSink } from '../../src/data/persistence';
 
 const NOW = Date.now();
@@ -323,4 +326,53 @@ test('**T-53/مجلس 40أ** — TAX_LEVY_SINK_MUTABLE_REFERENCE_ESCAPE: الو�
   assert.equal(s.audit.find('levy_assessed').length, 1, 'شاهدُ تقديرٍ واحد');
   assert.equal(s.audit.find('levy_collected').length, 1, 'وشاهدُ تحصيلٍ واحد');
   assert.equal(s.audit.verifyIntegrity().valid, true, 'والسلسلةُ سليمة');
+});
+
+test('**T-53/مجلس 41** — TAX_LEVY_REFUSAL_AUDIT_LIVE_REFERENCE (وعينُ gpt: TAX_LEVY_REJECTED_INPUT_AUDIT_MUTABLE_REFERENCE_ESCAPE): قيدُ الرفضِ لا يحملُ مرجعًا حيًّا — عبثُ المستدعي بعدَ الرفضِ لا يكسرُ السلسلةَ، والإقلاعُ من اليوميّةِ الحقيقيةِ بعده سليم (علاجُ الجلسة 139)', () => {
+  const sc = journalScene();
+  try {
+    const first = sc.boot();
+    // مسبار gpt: مكلَّفٌ كائنٌ — القيدُ المسجَّلُ لا يحملُ مرجعَهُ الحيَّ
+    const payer = { marker: 'before', trim: () => 'agent:bad' } as unknown as EntityId;
+    const refused = first.revenue.assess('compute_usage', payer, 1_000_000, NOW, NOW);
+    assert.equal(refused.ok, false, 'الكائنُ غيرُ البدائيِّ مرفوضٌ (ثابت 11)');
+    assert.equal(first.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةٌ قبلَ العبث');
+    (payer as unknown as { marker: string }).marker = 'after';
+    assert.equal(first.audit.verifyIntegrity().valid, true, 'العبثُ بعدَ الرفضِ لا يكسرُ السلسلة — لا مرجعٌ حيٌّ في القيد (ثابت 12)');
+    const entries = first.audit.find('levy_refused');
+    assert.equal(entries.length, 1, 'قيدُ رفضٍ واحد');
+    assert.equal((entries[0]!.detail as { payer?: unknown }).payer,
+      'مدخلٌ غيرُ بدائيٍّ — لا يُخزَّنُ مرجعُهُ الحيُّ (ثابت 12)',
+      'القيدُ يحملُ الرمزَ المغلقَ لا كائنَ المستدعي');
+    // وأساسٌ كائنٌ (مسبار gpt الثاني): الرفضُ المسجَّلُ لا يحملُ مرجعَه
+    const amount = { valueOf: () => 1_000_000 } as unknown as number;
+    const refusedAmount = first.revenue.assess('compute_usage', 'external:compute-provider', amount, NOW + 1_000, NOW + 1_000);
+    assert.equal(refusedAmount.ok, false, 'الأساسُ الكائنُ مرفوض');
+    (amount as unknown as { valueOf: () => number }).valueOf = () => 2_000_000;
+    assert.equal(first.audit.verifyIntegrity().valid, true, 'قلبُ الكائنِ المرفوضِ بعدَ الرفضِ لا يمسُّ السلسلة');
+    // مسبار grok: الإقلاعُ من اليوميّةِ الحقيقيةِ بعدَ الرفضِ الكائن — لا رميَ ولا تسميمَ قرصٍ ولا «نسخةَ سجلٍّ فاسدة»
+    const second = sc.boot(NOW + 60_000);
+    assert.equal(second.audit.verifyIntegrity().valid, true, 'الإقلاعُ بعدَ رفضٍ كائنٍ سليم');
+    assert.equal(second.audit.find('levy_refused').length, 2, 'قيدا الرفضِ استُرجعا من اليوميّة');
+    // والتقديرُ البدائيُّ اللاحقُ ينجحُ — الرفضُ لم يُقفلِ السجلَّ ولم يُستهلك شيئًا
+    const assessed = second.revenue.assess('compute_usage', 'external:compute-provider', 1_000_000, NOW + 61_000, NOW + 61_000);
+    assert.equal(assessed.ok, true, 'تقديرٌ بدائيٌّ لاحقٌ ينجح');
+    const levyId = assessed.ok ? assessed.levy.levyId : '';
+    // ومعرّفُ تحصيلٍ كائنٌ: رفضٌ بلا مرجعٍ حيٍّ في القيد
+    const objId = { toString: () => levyId } as unknown as string;
+    const refusedCollect = second.revenue.collect(objId, NOW + 62_000);
+    assert.equal(refusedCollect.ok, false, 'معرّفٌ كائنٌ مرفوض');
+    assert.equal(second.audit.verifyIntegrity().valid, true, 'رفضُ المعرّفِ الكائنِ لا يكسرُ السلسلة');
+    // ومعرّفُ إعفاءٍ كائنٌ كذلك (الإعفاءُ بأمرٍ ملكيٍّ وحده)
+    const royalWaive = second.king.issueCommand('amend_policy', 'economy:revenue', { kind: 'economy' }, NOW + 63_000);
+    const refusedWaive = second.revenue.waive(royalWaive, objId, 'إعفاء معلن', NOW + 63_000);
+    assert.equal(refusedWaive.ok, false, 'إعفاءٌ بمعرّفٍ كائنٍ مرفوض');
+    assert.equal(second.audit.verifyIntegrity().valid, true, 'رفضُ إعفاءِ المعرّفِ الكائنِ لا يكسرُ السلسلة');
+    // والإقلاعُ الثالثُ بعدَ الرفوضِ الكائنةِ سليم — اليوميّةُ لا تُسمَّمُ أبدًا بمرجعٍ حيٍّ
+    const third = sc.boot(NOW + 120_000);
+    assert.equal(third.audit.verifyIntegrity().valid, true, 'إقلاعٌ ثالثٌ سليم');
+    assert.equal(third.audit.find('levy_refused').length, 4, 'قيودُ الرفضِ الأربعةُ في السلسلةِ المستعادة');
+  } finally {
+    sc.clean();
+  }
 });
