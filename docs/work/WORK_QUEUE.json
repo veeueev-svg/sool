@@ -1316,7 +1316,7 @@
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "الاقتصاد والمالية",
       "phase": 40,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "T-53",
         "2026-10-05 (الجلسة 95): استلامٌ بأمر المالك («عالج العيوب وحل التعارضات وواصل العمل») من المساعد الآلي — Perplexity Computer (الجلسة 90)، وعلاجُ RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS داخل النطاق (src/data/rehydrate_fiscal.ts · src/economy/rate_policy.ts · tests/data/rehydrate_fiscal.test.ts).",
@@ -1379,7 +1379,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "2026-10-18 (الجلسة 137): علاجُ عيبِ الجولة 39 داخل نطاق W-2026-065 (TAX_LEVY_MUTABLE_REFERENCE_ESCAPE — نسخٌ عميقٌ في get()/outstanding() في src/economy/tax.ts مع اختبارِ المرجعِ الحيِّ) ثم الرفعُ إلى REVIEW بتغيّرٍ مقيسٍ (الثابت 8) وتجهيزُ الجولة 40 — جولةٌ واحدةٌ لا متزامنة · نصُّ إطلاقٍ واحدٌ حرفيٌّ (LAUNCH.txt) · الخامُّ أوّلًا ثم المحضرُ والمعالجة.",
+      "next_step": "2026-10-18 (الجلسة 137 · تتمة ثانية): تجهيزُ الجولة 40 في W-2026-066 (جولةٌ واحدةٌ لا متزامنة) — البندُ في REVIEW بتغيّرٍ مقيس ينتظرُ حكمَ المجلسِ بالإجماع (RULE-020)",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-18",
       "documentation_impact": [
@@ -1388,7 +1388,7 @@
         "CHANGELOG.md — مدخلُ البند",
         "version.json — tests.total بالمقيس"
       ],
-      "verification": "شُغِّل في 2026-10-09 (الجلسة 105) على هذه الشجعة: node --test dist/tests/economy/tax_rate_amendment.test.js → 22/22 · node --test dist/tests/data/rehydrate_fiscal_rate.test.js → 6/6 · node --test dist/tests/data/rehydrate_roundtrip.test.js → 3/3 (المسارُ المحجوزُ بلا أثرٍ بعد سحبِ علاجِ null) · npm test → 2423/2423 · npm run check:numbers → EXIT=0 (2423 مطابق) · npm run verify → EXIT=0 · قتلُ الطفرات: إلغاءُ التغليفِ ⇒ سقوطُ 11أ و9ج · إلغاءُ اللقطاتِ ⇒ سقوطُ 11د و11هـ · إلغاءُ الحارسِ ⇒ سقوطُ 11ج · إلغاءُ فرعِ null ⇒ سقوطُ 11ب (قبل سحبه) — كلُّها مقتولة. بصمةُ النطاق (10 مسارات) = 87f5bb976f3eebe46bad2f592be96a4f7fc838259437fe30e66c695837941194 — تخالف بصمةَ محضر الجلسة 11 (e8304c9a…). الثابت 8. التقرير: docs/test-reports/phase-40-W-2026-065.md.\n2026-10-17 (الجلسة 133 · علاجُ عيبِ null بقرارِ المالكِ المفوَّض): محاكاةُ W-2026-040 حُدّثت في التزامِ مالكِه (6fcf099) ثم العلاجُ هنا — AUDIT_SINK_DECLINED_RECORD في src/audit/append_only_log.ts مع الاختبار 11ب والطفرةِ مقتولةً قياسًا (بنزعِ الفحص pass 22 · fail 1) · ملفّاتُ البند 37/37 · مساراتُ الوسائطِ الأخرى 42/42 · npm test وnpm run verify يقاسان على فرقِ التزامِ العلاج بعد دفعِه · بصمةُ النطاق a9edf248204a168c76f564bb3b605071f124214133734462ef5bb68c5b985a1d تخالف محضرَ الجلسة 11 (e8304c9a…) — الثابت 8.\n2026-10-17 (الجلسة 133 · تفكيكٌ لسقفِ الوحدة): اختبارانِ (9ج · 11ب) نُقلا إلى tests/economy/tax_rate_amendment_sink.test.ts (توسيعُ نطاقٍ معلنٌ مؤرَّخٌ في §2 — الاختباراتُ نفسُها) — الملفُّ الأصلُّ 347 سطرًا والجديدُ 95 · node --test ⇒ 23/23. — الجلسة 37 (خلاف ⇒ NOT_VERIFIED · محضر docs/work/council/W-2026-065-37.json): gpt REJECTED · grok REJECTED · gemini VERIFIED ⇒ عاد البندُ إلى العمل. — الجلسة 134 (علاجُ عيبَي الجلسة 37): الإقفالُ الدائمُ + 37أ/37ب · npm test ⇒ 2449/2449 · الطفرةُ مقتولة (3 سقوط) — التقرير phase-40-W-2026-065.md (إلحاق الجلسة 134).",
+      "verification": "تجميدُ الجولة 39 مُدقَّقٌ وعُولج (الجلسة 137): علاجُ TAX_LEVY_MUTABLE_REFERENCE_ESCAPE — الأبوابُ الخمسةُ نسخٌ مجمّدةٌ (tax.ts 393 سطرًا) · 39أ بمسبارِ gpt · طفرةٌ مقتولة (21/1 مقابل 22/0) · verify ⇒ 0 (2451/2451) · الأرقامُ بالمقيس (src/economy 2121 · tests.total 2451) · البصمةُ 22f63b3b… تخالف محضرَ الجولة 39 (a84992db…) — تغيّرٌ مقيس (الثابت 8)",
       "discoveries": [
         "مجلس المراجعة — الجلسة 1 (2026-10-04 · عند 5bfd61f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان: (1) إعادةُ الأمر الملكيّ نفسِه تُنفّذ تعديلًا ثانيًا لأنّ بوابةَ التاج idempotent تُعيد قرارَها السابق allowed=true وamendRate لا يميّز الإعادة — grok؛ (2) RATE_AMENDMENT_COMMAND_NOT_PARAMETER_BOUND: الأمرُ لا يربط الوعاءَ ولا النسبة، فتوقيعٌ واحدٌ يعدّل كلَّ الأوعية — gpt. وعولجا من الجذر في الجلسة 91 (انظر verification).",
         "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب RATE_AMENDMENT_HISTORY_NOT_DURABLE (gpt): سجلُّ النِّسَبِ (rateHistory) ومعرّفاتُ الأوامرِ المنفَّذةِ (amendmentCommands) في الذاكرة وحدها — restore لا يسترجعُهما ومسارُ rehydrate_fiscal.ts لا يمررُهما لخدمةِ الإيراد، فإعادةُ تشغيلِ الدولة تمحو الإعلاناتِ التشغيليةَ من سجلِ النِّسَب (قيسها المسبارُ: الإعلانُ 40‰ يختفي بعد إعادةِ البناء) وتفقدُ منعَ إعادةِ الأمرِ نفسِه عبرَ حدودِ إعادةِ التشغيل.",

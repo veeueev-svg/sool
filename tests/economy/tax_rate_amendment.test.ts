@@ -345,3 +345,49 @@ test('**T-53/مجلس 11د** — RATE_AMENDMENT_PRIMITIVE_GUARD_REREAD_LIVE_REFE
   assert.equal(policy.historyOf('compute_usage')[0]?.ratePerMille, 25, 'والتاريخُ كذلك');
   assert.ok(reads >= 1, 'قراءةٌ واحدةٌ تكفي');
 });
+
+test('**T-53/مجلس 39** — TAX_LEVY_MUTABLE_REFERENCE_ESCAPE: حالُ الرسومِ لا يخرجُ حيًّا من أيِّ بابٍ بلا أمرٍ ملكي', () => {
+  const { s } = revenueState();
+  const assessed = s.revenue.assess('compute_usage', 'agent:external', 1_000_000, NOW, NOW);
+  assert.equal(assessed.ok, true, 'التقديرُ سليم');
+  if (!assessed.ok) return;
+  const auditBefore = s.audit.find('levy_refused').length + s.audit.find('levy_assessed').length;
+  // 1) مسبارُ get(): تحويلُ التقديرِ إلى محصَّلٍ بلا أمرٍ ملكي
+  const escaped = s.revenue.get(assessed.levy.levyId) as unknown as Record<string, unknown>;
+  assert.ok(escaped, 'التقديرُ موجود');
+  escaped.status = 'collected'; escaped.levied = 777777; escaped.ratePerMille = 999;
+  assert.equal(s.revenue.get(assessed.levy.levyId)?.status, 'assessed', 'الحالُ الداخليُّ لم يتغيّر');
+  assert.equal(s.revenue.outstanding().length, 1, 'ما زال في الخارجِ تقديرٌ واحد');
+  assert.equal(s.revenue.report().collected, 0, 'التقريرُ لا يعرفُ تحصيلًا لم يقع');
+  assert.equal(s.revenue.report().collectedTotal, 0, 'ولا مبلغًا دخيلًا');
+  assert.equal(s.audit.find('levy_refused').length + s.audit.find('levy_assessed').length, auditBefore, 'السجلُّ لم يشهد أمرًا لم يُؤمر به');
+  // 2) مسبارُ outstanding(): عنصرُ القائمةِ نسخةٌ لا مرجعٌ حيّ
+  const list = s.revenue.outstanding();
+  const item = list[0] as unknown as Record<string, unknown>;
+  item.status = 'collected'; item.levied = 555555;
+  assert.equal(s.revenue.get(assessed.levy.levyId)?.status, 'assessed', 'القائمةُ لم تُسرِّب الأصل');
+  assert.equal(s.revenue.report().assessed, 1, 'والتقريرُ صادق');
+  // 3) مسبارُ نتيجةِ assess(): المرجعُ المُعادُ نسخةٌ لا الكائنَ الداخليَّ
+  const resultRef = assessed.levy as unknown as Record<string, unknown>;
+  resultRef.status = 'waived'; resultRef.ratePerMille = 888;
+  assert.equal(s.revenue.get(assessed.levy.levyId)?.status, 'assessed', 'نتيجةُ التقديرِ نسخةٌ لا أصل');
+  assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'والنسبةُ الداخليةُ لم تُمسّ');
+  // 4) التحصيلُ الحقيقيُّ نتيجتُه نسخةٌ لا مرجعٌ حيّ
+  const collected = s.revenue.collect(assessed.levy.levyId, NOW + 1_000);
+  assert.equal(collected.ok, true, 'التحصيلُ سليم');
+  if (!collected.ok) return;
+  (collected.levy as unknown as Record<string, unknown>).levied = 999999;
+  assert.equal(s.revenue.report().collectedTotal, 25_000, 'المبلغُ الداخليُّ لم يتغيّر بمسبارِ المستدعي');
+  // 5) والإعفاءُ الملكيُّ نتيجتُه نسخةٌ كذلك
+  const second = s.revenue.assess('compute_usage', 'agent:external-2', 400_000, NOW, NOW + 2_000);
+  assert.equal(second.ok, true);
+  if (!second.ok) return;
+  const waived = s.revenue.waive(
+    s.king.issueCommand('amend_policy', REVENUE_TARGET, { kind: 'economy' }, NOW + 3_000),
+    second.levy.levyId, 'سبب معلن للاختبار', NOW + 3_000);
+  assert.equal(waived.ok, true, 'الإعفاءُ سليم');
+  if (!waived.ok) return;
+  (waived.levy as unknown as Record<string, unknown>).status = 'assessed';
+  assert.equal(s.revenue.get(second.levy.levyId)?.status, 'waived', 'نتيجةُ الإعفاءِ نسخةٌ لا أصل');
+  assert.equal(s.revenue.outstanding().length, 0, 'والمعفيُّ لا يعودُ إلى الخارجِ بمسبارٍ');
+});

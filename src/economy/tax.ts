@@ -178,7 +178,8 @@ export class RevenueService {
       levyId: levy.levyId, base, payer, amountBase, ratePerMille: levy.ratePerMille,
       levied, occurredAt, declaredAt: rate.declaredAt,
     });
-    return { ok: true, levy, auditId: entry.hash };
+    // 39أ (الجولة 39): النتيجةُ نسخةٌ مجمّدةٌ لا الكائنَ الداخليَّ الحيَّ الذي دفعته commit
+    return { ok: true, levy: { ...levy }, auditId: entry.hash };
   }
 
   /** 2) التحصيل: مرة واحدة، بقيد مزدوج وإيصال (ثوابت 4 و5 و7) */
@@ -209,7 +210,8 @@ export class RevenueService {
       levyId, base: levy.base, payer: levy.payer, levied: levy.levied,
       receiptEntryId: collected.receiptEntryId,
     });
-    return { ok: true, levy: collected, auditId: entry.hash };
+    // 39أ (الجولة 39): النتيجةُ نسخةٌ مجمّدةٌ لا الكائنَ الداخليَّ الحيَّ
+    return { ok: true, levy: { ...collected }, auditId: entry.hash };
   }
 
   /** 3) الإعفاء: بأمر ملكي وحده، ولا يُعفي المكلَّف نفسه (ثابت 6) */
@@ -245,7 +247,8 @@ export class RevenueService {
       levyId, payer: levy.payer, levied: levy.levied, reason: waived.waiveReason,
       commandId: command.payload.commandId,
     });
-    return { ok: true, levy: waived, auditId: entry.hash };
+    // 39أ (الجولة 39): النتيجةُ نسخةٌ مجمّدةٌ لا الكائنَ الداخليَّ الحيَّ
+    return { ok: true, levy: { ...waived }, auditId: entry.hash };
   }
 
   /**
@@ -354,9 +357,15 @@ export class RevenueService {
     return this.rates.currentFor(base);
   }
 
-  get(levyId: string): Levy | null { return this.levies.get(levyId) ?? null; }
+  get(levyId: string): Levy | null {
+    // 39أ (الجولة 39 · TAX_LEVY_MUTABLE_REFERENCE_ESCAPE): لا يخرجُ كائنُ الحالِ
+    // الداخليُّ حيًّا من بابِ الاستعلام — نسخةٌ مجمّدةٌ لا أصلٌ قابلٌ للتعديل
+    const levy = this.levies.get(levyId);
+    return levy ? { ...levy } : null;
+  }
   outstanding(): readonly Levy[] {
-    return [...this.levies.values()].filter((l) => l.status === 'assessed');
+    // 39أ: عناصرُ القائمةِ نسخٌ لا مراجعَ حيّة — فلا تقديرَ يُعدّلُه المستدعي بلا أمر
+    return [...this.levies.values()].filter((l) => l.status === 'assessed').map((l) => ({ ...l }));
   }
 
   collectedTotal(): number {
