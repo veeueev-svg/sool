@@ -228,13 +228,13 @@ export class RevenueService {
     if (levy.status === 'collected') return refuse('لا إعفاء بعد التحصيل: التصحيح بقيد معاكس معلن');
     if (levy.status === 'waived') return refuse('معفيّ سابقًا');
     if (reason.trim().length < 3) return refuse('لا إعفاء بلا سبب معلن (RULE-006)');
-    if (command.payload.issuedBy === levy.payer) {
+    if (witness.command.payload.issuedBy === levy.payer) { // الجولة 45: الفحصُ منَ اللقطةِ لا الحيّة
       return refuse('لا يُعفي المكلَّف نفسه (ثابت 6 و RULE-005)', { payer: levy.payer });
     }
-    if (command.payload.action !== 'amend_policy') {
+    if (witness.command.payload.action !== 'amend_policy') {
       return refuse('الإعفاء بفعل amend_policy وحده');
     }
-    if (command.payload.target !== REVENUE_TARGET) {
+    if (witness.command.payload.target !== REVENUE_TARGET) {
       return refuse(`هدف الأمر يجب أن يكون ${REVENUE_TARGET}`);
     }
     const authorized = this.deps.gateway.authorize(witness.command, now);
@@ -303,15 +303,16 @@ export class RevenueService {
         requestedEffectiveAt: now, latestDeclaredAt: current.declaredAt,
       });
     }
-    if (command.payload.action !== 'amend_policy') {
+    // الجولة 45: فحوصُ السياسةِ والربطُ منَ اللقطةِ (guarded.payload) لا الحمولةِ الحيّة (الموقَّعُ 40 لا ينفّذُ 80).
+    if (guarded.payload.action !== 'amend_policy') {
       return refuse('تعديل النسبة بفعل amend_policy وحده');
     }
-    if (command.payload.target !== REVENUE_TARGET) {
+    if (guarded.payload.target !== REVENUE_TARGET) {
       return refuse(`هدف الأمر يجب أن يكون ${REVENUE_TARGET}`);
     }
     // الأمرُ يُوقَّع على التعديلِ بعينِه لا على تفويضٍ مفتوح (مجلس المراجعة · الجلسة 1 ·
     // RATE_AMENDMENT_COMMAND_NOT_PARAMETER_BOUND): الوعاءُ والنسبةُ في params الموقَّعة
-    const params = command.payload.params ?? {};
+    const params = guarded.payload.params ?? {};
     if (params['base'] !== base || params['ratePerMille'] !== newRatePerMille) {
       return refuse('الأمر لا يسمّي هذا التعديل: params.base وparams.ratePerMille الموقَّعتان يجب أن تطابقا الوعاءَ والنسبة', {
         signedBase: auditPrimitive(params['base']) ?? null, signedRatePerMille: auditPrimitive(params['ratePerMille']) ?? null,

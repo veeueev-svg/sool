@@ -276,3 +276,124 @@ test('**T-53/مجلس 44ج** — RATE_AMENDMENT_AUDIT_WITNESS_MUTABLE_REFERENCE_
   }
 });
 
+
+/** عدةُ الجولة 45: حمولةٌ بواصفٍ منقلبٍ — القراءةُ الأولى للقطةِ والثانيةُ للفحصِ الحيِّ */
+function flippingPayloadProp<P extends string>(cmd: SignedRoyalCommand, prop: P, first: unknown, second: unknown): SignedRoyalCommand {
+  let reads = 0;
+  const payload = { ...cmd.payload } as Record<string, unknown>;
+  const base = payload[prop];
+  Object.defineProperty(payload, prop, {
+    get: () => {
+      reads += 1;
+      return reads === 1 ? first : second;
+    },
+    configurable: true,
+    enumerable: true,
+  });
+  void base;
+  return { ...cmd, payload } as unknown as SignedRoyalCommand;
+}
+
+test('**T-53/مجلس 45أ** — RATE_AMENDMENT_WITNESS_TOCTOU_PARAMS_RAW_READ (gpt · الجولة 45): فحوصُ السياسةِ والربطُ تقرأُ لقطةَ الشاهدِ لا الحمولةَ الحيّةَ — أمرٌ موقّعٌ على 40 بقارئةٍ منقلبةٍ لا ينفّذُ 60/80 ولا غيرَ الموقّعِ أبدًا (علاجُ الجلسة 143)', () => {
+  const sc = journalScene();
+  try {
+    const at = NOW + 60_000;
+    const s = sc.boot();
+    // المسبار الحرفي من خامّ gpt: أمرٌ موقّعٌ على compute_usage/40 وواصفُ params يقلبُ بعدَ القراءةِ الأولى
+    const cmd = s.king.issueCommand('amend_policy', REVENUE_TARGET,
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at);
+    const forged = flippingPayloadProp(cmd, 'params', cmd.payload.params,
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 80 });
+    const refused = s.revenue.amendRate(forged, 'compute_usage', 80, at);
+    assert.equal(refused.ok, false, 'التعديلُ غيرُ الموقَّعِ مرفوض');
+    assert.ok(!refused.ok && refused.reason.includes('لا يسمّي هذا التعديل'), `رفضٌ مسمّى: ${!refused.ok ? refused.reason : ''}`);
+    assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'النسبةُ ما زالت 25 — لا تنفيذَ لغيرِ الموقَّع');
+    assert.equal(s.audit.find('rate_amended').length, 0, 'لا شاهدَ تعديلٍ لغيرِ الموقَّع');
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةُ بعدَ الرفض');
+    // والصورةُ الثانيةُ من خامّ grok (P2): التوقيعُ على وعاءٍ والتنفيذُ على وعاءٍ آخر — مرفوضةٌ كذلك
+    const cmd2 = s.king.issueCommand('amend_policy', REVENUE_TARGET,
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at + 1_000);
+    const forged2 = flippingPayloadProp(cmd2, 'params', cmd2.payload.params,
+      { kind: 'economy', base: 'artifact_import', ratePerMille: 40 });
+    const refused2 = s.revenue.amendRate(forged2, 'artifact_import', 40, at + 1_000);
+    assert.equal(refused2.ok, false, 'وعاءُ التنفيذِ غيرُ الموقَّعِ مرفوض');
+    assert.equal(s.revenue.rateFor('artifact_import')?.ratePerMille, 50, 'وعاءُ التوقيعِ لم يُمسّ');
+    // والطريقُ القويمُ يعملُ: أمرٌ موقّعٌ على 40 ينفّذُ 40 قراءةً واحدةً
+    const good = s.revenue.amendRate(cmd, 'compute_usage', 40, at + 2_000);
+    assert.equal(good.ok, true, 'الأمرُ الموقَّعُ الصادقُ ينجح');
+    assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 40, 'النسبةُ 40 بالموقَّع');
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'والسلسلةُ سليمة');
+    // والإقلاعُ من اليوميّةِ: لا أثرَ للقارئةِ المنقلبةِ ولا للرفضِ المسجَّلِ غيرِ الموقَّع
+    const s2 = sc.boot(at + 60_000);
+    assert.equal(s2.revenue.rateFor('compute_usage')?.ratePerMille, 40, '40 بعد الإقلاع');
+    assert.equal(s2.revenue.rateFor('artifact_import')?.ratePerMille, 50, 'ووعاءُ القلبِ بحالِه');
+    assert.equal(s2.audit.verifyIntegrity().valid, true, 'الإقلاعُ سليم');
+  } finally {
+    sc.clean();
+  }
+});
+
+test('**T-53/مجلس 45ب** — RATE_AMENDMENT_POLICY_CHECKS_REREAD_LIVE_PAYLOAD (grok · الجولة 45): هدفُ الأمرِ وفحوصُ السياسةِ في التعديلِ والإعفاءِ منَ اللقطةِ — أمرٌ موقّعٌ على غيرِ هدفِ الإيرادِ لا يعدّلُ ولا يُعفي بقارئةٍ منقلبة (علاجُ الجلسة 143)', () => {
+  const sc = journalScene();
+  try {
+    const at = NOW + 60_000;
+    const s = sc.boot();
+    const assessed = s.revenue.assess('compute_usage', 'external:compute-provider', 1_000_000, at, at);
+    assert.ok(assessed.ok, 'التقديرُ السليمُ ينجح');
+    const levyId = assessed.ok ? assessed.levy.levyId : '';
+    // P3 من خامّ grok: الأمرُ موقّعٌ على population:agents والقارئةُ تعيدُ economy:revenue في الفحصِ الحيِّ
+    const cmd = s.king.issueCommand('amend_policy', 'population:agents', { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at + 1_000);
+    const forged = flippingPayloadProp(cmd, 'target', cmd.payload.target, REVENUE_TARGET);
+    const refused = s.revenue.amendRate(forged, 'compute_usage', 40, at + 1_000);
+    assert.equal(refused.ok, false, 'التعديلُ بهدفٍ غيرِ الموقَّعِ مرفوض');
+    assert.ok(!refused.ok && refused.reason.includes('هدف الأمر يجب أن يكون'), `رفضٌ مسمّى: ${!refused.ok ? refused.reason : ''}`);
+    assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'النسبةُ ما زالت 25');
+    assert.equal(s.audit.find('rate_amended').length, 0, 'لا شاهدَ تعديل');
+    // P4: الإعفاءُ بالقلبِ نفسِه — الهدفُ الحيُّ يعيدُ هدفَ الإيرادِ في الفحصِ
+    const waiveCmd = s.king.issueCommand('amend_policy', 'population:agents', { kind: 'economy' }, at + 2_000);
+    const forgedWaive = flippingPayloadProp(waiveCmd, 'target', waiveCmd.payload.target, REVENUE_TARGET);
+    const refusedWaive = s.revenue.waive(forgedWaive, levyId, 'إعفاء ملكي', at + 2_000);
+    assert.equal(refusedWaive.ok, false, 'الإعفاءُ بهدفٍ غيرِ الموقَّعِ مرفوض');
+    assert.ok(!refusedWaive.ok && refusedWaive.reason.includes('هدف الأمر يجب أن يكون'), 'رفضٌ مسمّى');
+    assert.equal(s.revenue.get(levyId)?.status, 'assessed', 'الرسمُ ما زال معلّقًا');
+    assert.equal(s.audit.find('levy_waived').length, 0, 'لا شاهدَ إعفاء');
+    // وشاهدُ الضبط (الطريقُ القويمُ): الهدفُ نفسُه يُرفضُ أيضًا لأنّهُ ليسَ هدفَ الإيراد — والفرقُ أنّ القلبَ كان سيُمرّرُه
+    const s2 = sc.boot(at + 60_000);
+    assert.equal(s2.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'لا أثرَ رجعيًّا ولا حاليًّا');
+    assert.equal(s2.audit.verifyIntegrity().valid, true, 'الإقلاعُ سليم');
+  } finally {
+    sc.clean();
+  }
+});
+
+test('**T-53/مجلس 45ج** — AUDIT_ACTOR_LIVE_REFERENCE_UNBOOTABLE (grok · الجولة 45): المُصدِرُ يُحرسُ نصًّا في الشاهدِ والفاعلُ في السجلِّ الأبديِّ لا يُخزَّنُ مرجعًا حيًّا — فلا كسرَ سلسلةَ ولا قتلَ إقلاعَ (علاجُ الجلسة 143)', () => {
+  const sc = journalScene();
+  try {
+    const at = NOW + 60_000;
+    const s = sc.boot();
+    // P5 من خامّ grok بحرفه: issuedBy كائنٌ صريحٌ على أمرٍ سليمِ البقية — يُرفضُ مسمًّى قبلَ أيِّ شاهدٍ دائمٍ فلا يصلُ المرجعُ الحيُّ قيودَ sovereign_violation وcommand_denied
+    const cmd = s.king.issueCommand('amend_policy', REVENUE_TARGET,
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at);
+    const forged = { ...cmd, payload: { ...cmd.payload, issuedBy: { marker: 'before' } } } as unknown as SignedRoyalCommand;
+    const refused = s.revenue.amendRate(forged, 'compute_usage', 40, at);
+    assert.equal(refused.ok, false, 'الأمرُ بمُصدِرٍ غيرِ نصّيٍّ مرفوض');
+    assert.ok(!refused.ok && refused.reason.includes('مُصدِرُ الأمرِ نص'), `رفضٌ مسمّى: ${!refused.ok ? refused.reason : ''}`);
+    assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'النسبةُ لم تتغيّر');
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمة');
+    // والبابُ العامُّ في السجلِّ الأبديّ: الفاعلُ غيرُ النصّيِّ يُرفضُ رميًا مسمًّى قبلَ الدفعِ والتجزئةِ
+    assert.throws(() => s.audit.append({ marker: 'live' } as unknown as never, 'council45_probe', {}),
+      /AUDIT_ACTOR_MUST_BE_NONEMPTY_TEXT/, 'الرميُ المسمّى');
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةُ بعدَ الرمي');
+    const before = s.audit.length;
+    const entry = s.audit.append('council45-king', 'council45_probe', { v: 1 });
+    assert.equal(s.audit.length, before + 1, 'الإلحاقُ السليمُ بعدَ الرميِ يعمل');
+    assert.equal(entry.actor, 'council45-king', 'والفاعلُ نصٌّ');
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'والسلسلةُ سليمة');
+    // والإقلاعُ من اليوميّةِ: لا أثرَ للكائنِ الحيِّ ولا للرمي
+    const s2 = sc.boot(at + 60_000);
+    assert.equal(s2.audit.verifyIntegrity().valid, true, 'الإقلاعُ سليم');
+    assert.equal(s2.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'النسبةُ 25');
+  } finally {
+    sc.clean();
+  }
+});

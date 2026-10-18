@@ -112,6 +112,12 @@ export class AppendOnlyLog {
     if (this.appending) throw new Error('APPEND_REENTRANCY_REFUSED');
     // النتيجةُ المجهولةُ أقفلت هذا الكائن: لا إلحاقَ جديدَ عليه — الاستئنافُ إقلاعٌ جديدٌ لا استمرار.
     if (this.outcomeUnknown) throw new Error('AUDIT_APPEND_OUTCOME_UNRESOLVED');
+    // الجولة 45 (grok · AUDIT_ACTOR_LIVE_REFERENCE_UNBOOTABLE): الفاعلُ يُحرسُ نصًّا
+    // قبلَ الدفعِ والتجزئةِ — فالكائنُ الحيُّ كان يُخزَّنُ مرجعًا في القيدِ الدائمِ فيكسرُ
+    // قلبُه السلسلةَ ويقتلُ toJSON الإقلاعَ التالي.
+    if (typeof actor !== 'string' || actor.length === 0) {
+      throw new Error('AUDIT_ACTOR_MUST_BE_NONEMPTY_TEXT');
+    }
     const prev = this.entries[this.entries.length - 1];
     const seq = this.entries.length + 1;
     const at = Date.now();

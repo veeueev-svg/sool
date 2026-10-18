@@ -92,10 +92,17 @@ export function royalCommandWitness(
   if (typeof commandId !== 'string' || commandId.trim().length === 0) {
     return { ok: false, reason: 'معرّفُ الأمرِ نصٌّ محددٌ غيرُ فارغ — فغيرُ النصّيِّ يُدوَّنُ خامًّا في السجلِّ فيكسرُه العبثُ بعدَ النجاحِ ويقتلُ الإقلاعَ' };
   }
+  // الجولة 45 (grok · AUDIT_ACTOR_LIVE_REFERENCE_UNBOOTABLE): المُصدِرُ يُقرأُ قراءةً
+  // واحدةً ويُحرسُ نصًّا — فالكائنُ الحيُّ كان يصلُ شاهدَ sovereign_violation وcommand_denied
+  // مرجعًا فيكسرُ قلبُه السلسلةَ ويقتلُ toJSON الإقلاعَ.
+  const issuedBy = payload.issuedBy;
+  if (typeof issuedBy !== 'string' || issuedBy.trim().length === 0) {
+    return { ok: false, reason: 'مُصدِرُ الأمرِ نصٌّ محددٌ — فالمرجعُ الحيُّ يُدوَّنُ في قيودِ البوابةِ الدائمةِ فيكسرُه العبثُ بعدَ الرفضِ ويقتلُ الإقلاعَ' };
+  }
   const params = payload.params;
   const payloadSnapshot: RoyalCommandPayload = {
     commandId,
-    issuedBy: payload.issuedBy,
+    issuedBy,
     action: payload.action,
     target: payload.target,
     params: params ? { ...params } : params,
