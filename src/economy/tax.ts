@@ -47,26 +47,14 @@ import { isValidRatePerMille } from '../kernel/config/economy';
 import { RatePolicy } from './rate_policy';
 import type { DurableSink } from '../data/persistence';
 import type { RateAmendmentRecovery, RateDeclaration } from './rate_policy';
-import { auditPrimitive, type Levy, type LevyResult, type RateAmendmentResult } from './tax_types';
+import { auditPrimitive, type Levy, type LevyResult, type RateAmendmentResult, type RevenueDeps } from './tax_types';
 
 export type { RateAmendmentRecovery, RateDeclaration };
 
 /** هدف الأمر الملكي لكل إعفاء */
 export const REVENUE_TARGET: EntityId = 'economy:revenue';
 
-export type { Levy, LevyResult, LevyStatus, RateAmendmentResult } from './tax_types';
-
-export interface RevenueDeps {
-  readonly audit: AppendOnlyLog;
-  readonly gateway: CrownGateway;
-  readonly treasury: Treasury;
-  readonly revenueAccount: string;
-  /** النِسَب المعلنة في config/economy.yaml (ثابت 1) */
-  readonly rates: readonly RateDeclaration[];
-  /** هل يُسمح بالأثر الرجعي؟ معلن في التهيئة، وقيمته الملزمة: لا (ثابت 2) */
-  readonly retroactiveAllowed: boolean;
-  readonly actorId?: EntityId;
-}
+export type { Levy, LevyResult, LevyStatus, RateAmendmentResult, RevenueDeps } from './tax_types';
 
 export class RevenueService {
   private readonly levies = new Map<string, Levy>();
@@ -281,6 +269,14 @@ export class RevenueService {
     if (typeof now !== 'number' || !Number.isFinite(now)) {
       return refuse('تاريخُ السريانِ رقمٌ محددٌ لا كائنٌ يُكرَه عند المقارنة — وذاك مرجعٌ حيٌّ يحرّك السريان بلا أمرٍ ملكي');
     }
+    // الجولة 43 (grok · RATE_AMENDMENT_COMMAND_ISSUED_AT_UNGUARDED): لحظةُ إصدارِ الأمرِ
+    // تُقرأ قراءةً واحدةً وتُرفضُ مسمّاةً إن لم تكن عددًا محددًا — فالكائنُ ذا valueOf
+    // يمرُّ بوابةَ التاجِ (العمرُ بالطرحِ) ويُدوَّنُ مرجعًا حيًّا في rate_amended فيكسرُ
+    // العبثُ بعدَ النجاحِ سلامةَ السلسلةِ ويقتلُ الإقلاعَ؛ والمقروءُ يُخزَّنُ لا المرجعُ.
+    const commandIssuedAt = command.payload.issuedAt;
+    if (typeof commandIssuedAt !== 'number' || !Number.isFinite(commandIssuedAt)) {
+      return refuse('لحظةُ إصدارِ الأمرِ رقمٌ محددٌ لا كائنٌ يُكرَه عند حسابِ العمرِ — وذاك مرجعٌ حيٌّ يُدوَّنُ في السجلِّ فيكسرُه');
+    }
     if (!this.rates.declares(base)) {
       return refuse('وعاء غير معلن — لا تعديل لما لا نصّ له (ثابت 1)', {
         declared: this.rates.declaredBases(),
@@ -341,14 +337,14 @@ export class RevenueService {
       previousDeclaredAt: current.declaredAt,
       effectiveFrom: now,
       commandId: command.payload.commandId,
-      commandIssuedAt: command.payload.issuedAt,
+      commandIssuedAt,
     });
     // الحمولةُ القانونيّةُ نفسُها تُسجَّل للأمرِ المنفَّذ وتُدوَّن شاهدًا — فإرجاعٌ لاحقٌ
     // بالمعرّفِ نفسِه يُقابَل بها لا بالمعرّفِ وحده (الجلسة 6 · RATE_AMENDMENT_LIVE_EXECUTED_CONFLICT_SILENT_SKIP)
     this.rates.markExecuted({
       base, from: current.ratePerMille, ratePerMille: newRatePerMille,
       previousDeclaredAt: current.declaredAt, declaredAt: now,
-      commandId: command.payload.commandId, commandIssuedAt: command.payload.issuedAt,
+      commandId: command.payload.commandId, commandIssuedAt,
     });
 
     const declaration = this.rates.append(base, newRatePerMille, now);

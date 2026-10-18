@@ -4,12 +4,30 @@
  * الأنواعُ نفسُها بحروفِها بلا تغييرٍ في الشكلِ أو المعنى، ويُعيدُ tax.ts تصديرَها فلا يتغيّرُ مستوردٌ.
  * الجلسة 139 (علاجُ عيبَي الجولة 41 · W-2026-065): أُضيفَ هنا معقّمُ القيدِ auditPrimitive
  * لسقفِ tax.ts نفسِه (399/400): قيدُ الرفضِ لا يحملُ مرجعًا حيًّا (ثابت 12) — وكلُّ مُسندٍ باقٍ بحروفِه.
+ * الجلسة 141 (علاجُ عيبِ الجولة 43 · W-2026-065): نُقلَ حرفيًا إلى هنا واجهةُ RevenueDeps
+ * لسقفِ tax.ts نفسِه (الواجهةُ بحروفِها بلا تغييرٍ — سابقةُ الجلستين 133 و136) مع حارسِ issuedAt.
  * المالك: وزارة المالية تحت التاج | القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md
  */
 import { EntityId } from '../kernel/types';
+import type { AppendOnlyLog } from '../audit/append_only_log';
+import type { CrownGateway } from '../crown/crown_gateway';
+import type { Treasury } from './treasury';
 import type { RateDeclaration } from './rate_policy';
 
 export type LevyStatus = 'assessed' | 'collected' | 'waived';
+
+/** واجهةُ تبعياتِ خدمةِ الرسوم (فُكِّكت من tax.ts بحروفِها — الجلسة 141 · لسقفِ الوحدة) */
+export interface RevenueDeps {
+  readonly audit: AppendOnlyLog;
+  readonly gateway: CrownGateway;
+  readonly treasury: Treasury;
+  readonly revenueAccount: string;
+  /** النِسَب المعلنة في config/economy.yaml (ثابت 1) */
+  readonly rates: readonly RateDeclaration[];
+  /** هل يُسمح بالأثر الرجعي؟ معلن في التهيئة، وقيمته الملزمة: لا (ثابت 2) */
+  readonly retroactiveAllowed: boolean;
+  readonly actorId?: EntityId;
+}
 
 export interface Levy {
   readonly levyId: string;
