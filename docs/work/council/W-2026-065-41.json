@@ -1,0 +1,39 @@
+{
+  "item": "W-2026-065",
+  "commit": "9398481bc62d4cfcdadc14cecbf45871f2f84c8e",
+  "scope_digest": "3819cf1e6f10d4306462ecfafe5898780d2e47e8ad6204af6bb7c22b937f7daf",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-18",
+  "session": 41,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-41-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-41-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-065-41-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "TAX_LEVY_REJECTED_INPUT_AUDIT_MUTABLE_REFERENCE_ESCAPE (gpt · مقيس): إغلاقُ الرفضِ في assess() يبني قيدَ levy_refused حاملًا مراجعَ مدخلاتِ المستدعي (base · payer · amountBase) قبل حارسِ البدائيةِ نفسِه (الأسطر 134–141)، فالكائنُ الذي رُفض كي لا يُخزَّن يُخزَّن مرجعُه الحيُّ في قيدِ الرفض، وcollect()/waive() كذلك تدوّنان levyId غيرَ البدائي في قيدِ الرفض (191–195 · 226–230) بلا حارسِ بدائيّة. مسبارُ gpt على dist/: عبثُ المستدعي بحقلِ الكائنِ المرفوضِ بعدَ الرفضِ يكسرُ سلامةَ سلسلةِ التدقيقِ (integrityBefore=true ثم integrityAfter=false) بلا قيدِ تدقيقٍ جديد — الرفضُ الآمنُ يفسدُ دليلَ التدقيقِ الحي. العلاجُ الأدنى: لا تحملُ حمولةُ refuse مرجعًا حيًّا — بدائيّةٌ أو رموزٌ مغلقةٌ قبلَ تكوينِ القيد، داخل src/economy/tax.ts.",
+      "TAX_LEVY_REFUSAL_AUDIT_LIVE_REFERENCE (grok · مقيس — عينُ علّةِ gpt بحرفِ هجومٍ أشدّ): إغلاقُ refuse في assess يدوّنُ مرجعَ المستدعي في levy_refused فتُحسبُ بصمةُ القيدِ على شكلٍ (canonicalize يرى مفاتيحَ الدوالّ) ويكتبُ JSON.stringify شكلًا آخر (يسقطُ الدوالّ ويستدعي toJSON) — نداءُ assess واحدٌ بكائنٍ من جنسِ الجولة 40 لا ينشئ رسمًا ويقتلُ الإقلاعَ التالي: اليوميةُ تحمل payer={} والإقلاعُ يرمي «نسخةُ سجلٍّ فاسدة: محتوى السجل مُعدَّل عند 39» (ومع toJSON يحملُ القرصُ forged-via-toJSON ويرمي الإقلاعُ الحرفَ نفسَه) — و40ب لا يرى هذا لأنه بلا persistenceDir. شاهدُ الضبط: قيدُ الرفضِ بمدخلٍ عدديّ يُقلعُ سليمًا. العلاجُ الأدنى: قيدُ الرفضِ لا يحملُ payer/base/amountBase إلا إن كانت بدائيّةً أو يحملُ رموزًا مغلقة، من جنسِ amendRate — داخل src/economy/tax.ts."
+    ]
+  }
+}
