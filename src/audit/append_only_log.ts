@@ -22,6 +22,32 @@ export interface IntegrityReport {
   readonly reason: string;
 }
 
+/**
+ * لقطةُ التفصيلِ العميقةُ المجمّدةُ (الجولة 44 · gpt · RATE_AMENDMENT_AUDIT_WITNESS_MUTABLE_REFERENCE_ESCAPE):
+ * الإضافةُ كانت تُجمّدُ غلافَ القيدِ وحده — و`detail` كائنُ المستدعي الحيُّ بقي بابَ وصولٍ يُعدّلُ بعدَ
+ * النجاحِ فتنكسرُ السلسلةُ بالمقيسِ (مسبارُ الجولة 44: rateAfterMutation=999 · integrity=false). فالإضافةُ
+ * تخزّنُ لقطةً عميقةً مجمّدةً يُحسبُ التجزئةُ عليها، والقراءةُ (find/snapshot) تعيدُ نسخةً عميقةً
+ * مجمّدةً — فلا مرجعًا حيًّا يصلُ الشاهدَ الدائمَ لا من كائنِ المستدعي ولا من القارئِ.
+ */
+function detailSnapshot(detail: Record<string, unknown>): Record<string, unknown> {
+  return deepFreeze(structuredClone(detail), new Set<object>());
+}
+
+function deepFreeze<T>(value: T, seen: Set<object>): T {
+  if (value && typeof value === 'object' && !seen.has(value)) {
+    seen.add(value);
+    if (Array.isArray(value)) value.forEach((v) => deepFreeze(v, seen));
+    else Object.values(value).forEach((v) => deepFreeze(v, seen));
+    Object.freeze(value);
+  }
+  return value;
+}
+
+/** نسخةُ قراءةٍ مستقلّةُ من القيدِ الداخليِّ — القارئُ يملكُ لقطته لا الأصلَ */
+function copyEntry(e: AuditEntry): AuditEntry {
+  return Object.freeze({ ...e, detail: detailSnapshot(e.detail) });
+}
+
 export class AppendOnlyLog {
   private entries: AuditEntry[] = [];
   private sink: DurableSink | null;
@@ -90,8 +116,10 @@ export class AppendOnlyLog {
     const seq = this.entries.length + 1;
     const at = Date.now();
     const prevHash = prev ? prev.hash : GENESIS_HASH;
-    const hash = sha256(canonicalize({ seq, at, actor, kind, detail, prevHash }));
-    const entry: AuditEntry = Object.freeze({ seq, at, actor, kind, detail, prevHash, hash });
+    // اللقطةُ أولًا: التجزئةُ والتخزينُ على ما يُقرأُ مرّةً واحدةً لا على مرجعِ المستدعي الحيّ
+    const detailFrozen = detailSnapshot(detail);
+    const hash = sha256(canonicalize({ seq, at, actor, kind, detail: detailFrozen, prevHash }));
+    const entry: AuditEntry = Object.freeze({ seq, at, actor, kind, detail: detailFrozen, prevHash, hash });
     this.entries.push(entry);
     this.appending = true;
     let recorded: ReturnType<DurableSink['record']> | undefined;
@@ -125,7 +153,7 @@ export class AppendOnlyLog {
 
   /** نسخة للقراءة فقط — لا يُعطى المستدعي مرجعًا قابلًا للتعديل */
   snapshot(): readonly AuditEntry[] {
-    return this.entries.map((e) => Object.freeze({ ...e }));
+    return this.entries.map(copyEntry);
   }
 
   get length(): number {
@@ -133,7 +161,7 @@ export class AppendOnlyLog {
   }
 
   find(kind: string): readonly AuditEntry[] {
-    return this.entries.filter((e) => e.kind === kind);
+    return this.entries.filter((e) => e.kind === kind).map(copyEntry);
   }
 
   /** يعيد حساب السلسلة كاملة ويكشف أي تعديل أو حذف أو إعادة ترتيب */

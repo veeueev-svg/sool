@@ -47,7 +47,7 @@ import { isValidRatePerMille } from '../kernel/config/economy';
 import { RatePolicy } from './rate_policy';
 import type { DurableSink } from '../data/persistence';
 import type { RateAmendmentRecovery, RateDeclaration } from './rate_policy';
-import { auditPrimitive, type Levy, type LevyResult, type RateAmendmentResult, type RevenueDeps } from './tax_types';
+import { auditPrimitive, royalCommandWitness, type Levy, type LevyResult, type RateAmendmentResult, type RevenueDeps } from './tax_types';
 
 export type { RateAmendmentRecovery, RateDeclaration };
 
@@ -219,6 +219,10 @@ export class RevenueService {
       return { ok: false, reason: why, auditId: entry.hash };
     };
     if (typeof reason !== 'string' || typeof now !== 'number' || !Number.isFinite(now)) return refuse('سببُ الإعفاءِ نصٌّ ولحظةُ الأمرِ رقمٌ محددٌ — لا كائنٌ يُقرأُ عند المقارنةِ فيُخزَّنَ مرجعُه الحيّ');
+    // الجولة 44 (grok · TAX_WAIVE_COMMAND_ID_LIVE_REFERENCE): معرّفُ الأمرِ يُقرأُ قراءةً واحدةً
+    // ولقطةُ حمولتهِ تُعتمدُ — فالخامَّ غيرَ النصّيِّ كان يُخزَّنُ في levy_waived مرجعًا حيًّا يكسرُ العبثُ بعدَ النجاحِ السلسلةَ؛ والقارئةُ المنقلبةُ لا تُفرّقُ بينَ المفحوصِ والمعتمدِ.
+    const witness = royalCommandWitness(command, false);
+    if (!witness.ok) return refuse(witness.reason);
     const levy = this.levies.get(levyId);
     if (!levy) return refuse('لا تقدير بهذا المعرّف');
     if (levy.status === 'collected') return refuse('لا إعفاء بعد التحصيل: التصحيح بقيد معاكس معلن');
@@ -233,14 +237,14 @@ export class RevenueService {
     if (command.payload.target !== REVENUE_TARGET) {
       return refuse(`هدف الأمر يجب أن يكون ${REVENUE_TARGET}`);
     }
-    const authorized = this.deps.gateway.authorize(command, now);
+    const authorized = this.deps.gateway.authorize(witness.command, now);
     if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
 
     const waived: Levy = { ...levy, status: 'waived', waiveReason: reason.trim() };
     this.commit(waived);
     const entry = this.deps.audit.append(this.actorId, 'levy_waived', {
       levyId, payer: levy.payer, levied: levy.levied, reason: waived.waiveReason,
-      commandId: command.payload.commandId,
+      commandId: witness.commandId,
     });
     // 39أ (الجولة 39): النتيجةُ نسخةٌ مجمّدةٌ لا الكائنَ الداخليَّ الحيَّ
     return { ok: true, levy: { ...waived }, auditId: entry.hash };
@@ -269,14 +273,13 @@ export class RevenueService {
     if (typeof now !== 'number' || !Number.isFinite(now)) {
       return refuse('تاريخُ السريانِ رقمٌ محددٌ لا كائنٌ يُكرَه عند المقارنة — وذاك مرجعٌ حيٌّ يحرّك السريان بلا أمرٍ ملكي');
     }
-    // الجولة 43 (grok · RATE_AMENDMENT_COMMAND_ISSUED_AT_UNGUARDED): لحظةُ إصدارِ الأمرِ
-    // تُقرأ قراءةً واحدةً وتُرفضُ مسمّاةً إن لم تكن عددًا محددًا — فالكائنُ ذا valueOf
-    // يمرُّ بوابةَ التاجِ (العمرُ بالطرحِ) ويُدوَّنُ مرجعًا حيًّا في rate_amended فيكسرُ
-    // العبثُ بعدَ النجاحِ سلامةَ السلسلةِ ويقتلُ الإقلاعَ؛ والمقروءُ يُخزَّنُ لا المرجعُ.
-    const commandIssuedAt = command.payload.issuedAt;
-    if (typeof commandIssuedAt !== 'number' || !Number.isFinite(commandIssuedAt)) {
-      return refuse('لحظةُ إصدارِ الأمرِ رقمٌ محددٌ لا كائنٌ يُكرَه عند حسابِ العمرِ — وذاك مرجعٌ حيٌّ يُدوَّنُ في السجلِّ فيكسرُه');
-    }
+    // الجولتان 43-44: شهودُ الأمرِ (لحطتهُ ومعرّفهُ) وحمولتهُ تُقرأُ قراءةً واحدةً في حارسٍ مشتركٍ
+    // يُعيدُ لقطةَ الأمرِ — فالكائنُ ذا valueOf أو غيرُ النصّيِّ يمرُّ بوابةَ التاجِ فيُدوَّنُ مرجعًا
+    // حيًّا يكسرُ العبثُ بعدَ النجاحِ السلسلةَ ويقتلُ الإقلاعَ؛ واللقطةُ تُلزمُ البوابةَ والشاهدَ
+    // بالقراءةِ نفسها فلا تُفرّقُ قارئةٌ منقلبةٌ أثناءَ التنفيذِ بينَ المفحوصِ والمعتمدِ.
+    const witness = royalCommandWitness(command, true);
+    if (!witness.ok) return refuse(witness.reason);
+    const { command: guarded, commandId, commandIssuedAt } = witness;
     if (!this.rates.declares(base)) {
       return refuse('وعاء غير معلن — لا تعديل لما لا نصّ له (ثابت 1)', {
         declared: this.rates.declaredBases(),
@@ -316,10 +319,10 @@ export class RevenueService {
     }
     // أمرٌ نُفّذ مرّةً لا يُنفَّذ ثانيةً: البوابةُ تُعيد قرارَها السابق للإعادة (idempotent)
     // فلا يكفي `allowed` شاهدًا على اعتمادٍ جديد (الجلسة 1 · إعادةُ الأمر تُعدّل ثانيةً)
-    if (this.rates.hasExecuted(command.payload.commandId)) {
-      return refuse('الأمر نُفّذ سابقًا — إعادتُه لا تُعدّل ثانيةً', { commandId: command.payload.commandId });
+    if (this.rates.hasExecuted(commandId)) {
+      return refuse('الأمر نُفّذ سابقًا — إعادتُه لا تُعدّل ثانيةً', { commandId });
     }
-    const authorized = this.deps.gateway.authorize(command, now);
+    const authorized = this.deps.gateway.authorize(guarded, now);
     if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
     // الشاهدُ الدائمُ **أولًا**: كتابةُ قيد rate_amended في السجلِ الأبديّ تسبقُ كلَّ تغييرٍ
     // في الحال — فإذا رمى الوسيطُ الدائمُ رُدَّ قيدها ورُمي الاستثناءُ قبل أيِّ تعديلٍ حيٍّ،
@@ -336,7 +339,7 @@ export class RevenueService {
       to: newRatePerMille,
       previousDeclaredAt: current.declaredAt,
       effectiveFrom: now,
-      commandId: command.payload.commandId,
+      commandId,
       commandIssuedAt,
     });
     // الحمولةُ القانونيّةُ نفسُها تُسجَّل للأمرِ المنفَّذ وتُدوَّن شاهدًا — فإرجاعٌ لاحقٌ
@@ -344,7 +347,7 @@ export class RevenueService {
     this.rates.markExecuted({
       base, from: current.ratePerMille, ratePerMille: newRatePerMille,
       previousDeclaredAt: current.declaredAt, declaredAt: now,
-      commandId: command.payload.commandId, commandIssuedAt,
+      commandId, commandIssuedAt,
     });
 
     const declaration = this.rates.append(base, newRatePerMille, now);

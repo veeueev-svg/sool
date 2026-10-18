@@ -12,6 +12,7 @@ import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { REVENUE_TARGET, bootstrapState } from '../../src/index';
+import type { SignedRoyalCommand } from '../../src/kernel/types';
 
 const NOW = Date.now();
 
@@ -118,3 +119,160 @@ test('**T-53/مجلس 43** — RATE_AMENDMENT_COMMAND_ISSUED_AT_UNGUARDED (grok 
     sc.clean();
   }
 });
+
+/**
+ * مساميرُ الجولة 44 (W-2026-065 · علاجُ الجلسة 142): عيوبُ المجلس الثلاثة المقيّدة في discoveries —
+ * كلُّ مسبارٍ على يوميّةٍ حقيقيّةٍ بمجلّدِ حالة، وقارئةٌ منقلبةٌ أثناءَ التنفيذِ تُلزمُ البوابةَ والشاهدَ بالقراءةِ الوحيدةِ.
+ */
+function flippingCommand(cmd: SignedRoyalCommand): { command: SignedRoyalCommand; real: string } {
+  const real = cmd.payload.commandId;
+  let reads = 0;
+  const payload = { ...cmd.payload } as Record<string, unknown>;
+  Object.defineProperty(payload, 'commandId', {
+    enumerable: true,
+    get: () => { reads += 1; return reads === 1 ? real : { forged: true }; },
+  });
+  return { command: { ...cmd, payload: payload as unknown as typeof cmd.payload } as SignedRoyalCommand, real };
+}
+
+test('**T-53/مجلس 44أ** — RATE_AMENDMENT_COMMAND_ID_UNGUARDED (grok · الجولة 44): معرّفُ الأمرِ غيرُ النصّيِّ مرفوضٌ مسمًّا قبلَ أيِّ شاهدٍ دائمٍ في amendRate — والقارئةُ المنقلبةُ أثناءَ التنفيذِ تُلزمُ البوابةَ والشاهدَ بالقراءةِ نفسها (علاجُ الجلسة 142)', () => {
+  const sc = journalScene();
+  try {
+    const at = NOW + 60_000;
+    const first = sc.boot();
+    // الصور الخمس: فارغ · مسافات · عدد · NaN · كائن — كلُّ واحدٍ منها مرفوضٌ مسمًّا قبل أيِّ شاهدٍ دائمٍ
+    const variants: [string, unknown][] = [['الفارغ', ''], ['المسافات', '   '], ['العدد', 1001], ['NaN', NaN], ['الكائن', { forged: true }]];
+    for (const [label, cid] of variants) {
+      const cmd = first.king.issueCommand('amend_policy', 'economy:revenue',
+        { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at);
+      const forged = { ...cmd, payload: { ...cmd.payload, commandId: cid } } as unknown as SignedRoyalCommand;
+      const refused = first.revenue.amendRate(forged, 'compute_usage', 40, at);
+      assert.equal(refused.ok, false, `${label} مرفوض`);
+      assert.ok(!refused.ok && refused.reason.includes('معرّفُ الأمرِ نص'), `رفضٌ مسمّى: ${refused.ok ? '' : refused.reason}`);
+    }
+    assert.equal(first.audit.find('rate_amended').length, 0, 'لا شاهد تعديل من أمرٍّ بلا معرّفٍ نصيٍّ');
+    const refusals = first.audit.find('rate_amendment_refused');
+    assert.equal(refusals.length, 5, 'خمسةُ قيودِ رفضٍ مسمّاة');
+    for (const r of refusals) {
+      assert.equal((r.detail as { commandId?: unknown }).commandId, undefined, 'قيدُ الرفض لا يُعيدُ الخامّ في extra (ثابت 12)');
+    }
+    assert.equal(first.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةُ بعد الرفوض');
+    // القارئةُ المنقلبةُ أثناءَ التنفيذِ: تُعيدُ النصّ في قراءةِ الحارس الوحيدةِ ثمّ كائنًا لكلِّ قارئٍ لاحقٍ —
+    // اللقطةُ الموحّدةُ تُلزمُ البوابةَ والشاهدَ بالقراءةِ نفسها
+    const base = first.king.issueCommand('amend_policy', 'economy:revenue',
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at + 1_000);
+    const { command: flipped, real } = flippingCommand(base);
+    const ok = first.revenue.amendRate(flipped, 'compute_usage', 40, at + 1_000);
+    assert.equal(ok.ok, true, 'التعديلُ بالقراءةِ الأولى ينجح');
+    const approved = first.audit.find('command_approved').at(-1)!;
+    assert.equal((approved.detail as { commandId?: unknown }).commandId, real, 'شاهدُ الاعتماد يحملُ القراءةَ المحروسةَ نفسها');
+    const amended = first.audit.find('rate_amended')[0]!;
+    assert.equal((amended.detail as { commandId?: unknown }).commandId, real, 'شاهدُ rate_amended يحملُ المعرّفَ المقروءَ نصًّا لا المرجعَ الحيَّ');
+    assert.equal(first.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةُ بعد النجاح — المقروءُ دُوّن لا المرجعُ الحيُّ');
+    // الإقلاعُ من اليوميّةِ الحقيقيّة: سليمٌ والنسبةُ 40 والشاهدُ نصٌّ
+    const second = sc.boot(at + 120_000);
+    assert.equal(second.audit.verifyIntegrity().valid, true, 'الإقلاعُ سليم');
+    assert.equal(second.revenue.rateFor('compute_usage')?.ratePerMille, 40, 'النسبةُ 40');
+    const w2 = second.audit.find('rate_amended')[0]!;
+    assert.equal((w2.detail as { commandId?: unknown }).commandId, real, 'الشاهدُ المستعاد يحملُ النصّ');
+    // والأمرُ النصيُّ اللاحقُ ينجح — وإعادتُه تُرفضُ «نُفّذ سابقًا» والمقروءُ في extra نصٌّ
+    const cmd3 = second.king.issueCommand('amend_policy', 'economy:revenue',
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 55 }, at + 121_000);
+    const ok3 = second.revenue.amendRate(cmd3, 'compute_usage', 55, at + 121_000);
+    assert.equal(ok3.ok, true, 'الأمرُ النصيُّ اللاحقُ ينجح');
+    // أمرٌ رابعٌ يرفعُ النسبةَ إلى 70 — ليصبح طلبُ 55 مجددًً تعديلًا حقيقيًّا لا «بلا تغيير»
+    const cmd4 = second.king.issueCommand('amend_policy', 'economy:revenue',
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 70 }, at + 121_500);
+    const ok4 = second.revenue.amendRate(cmd4, 'compute_usage', 70, at + 121_500);
+    assert.equal(ok4.ok, true, 'الأمرُ الرابعُ ينجح');
+    // وإعادةُ الأمرِ الثالغِ (طلبُ 55 والسائدةُ 70) تُرفضُ «نُفّظ سابقًا»
+    const replay = second.revenue.amendRate(cmd3, 'compute_usage', 55, at + 122_000);
+    assert.equal(replay.ok, false, 'إعادةُ الأمر مرفوضة');
+    assert.ok(!replay.ok && replay.reason.includes('سابق'), 'رفضُ الإعادة مسمًّا');
+    const ref = second.audit.find('rate_amendment_refused').at(-1)!;
+    assert.equal(typeof (ref.detail as { commandId?: unknown }).commandId, 'string', 'رفضُ الإعادة يحملُ المعرّفَ نصًّا');
+    assert.equal(second.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمة');
+  } finally {
+    sc.clean();
+  }
+});
+
+test('**T-53/مجلس 44ب** — TAX_WAIVE_COMMAND_ID_LIVE_REFERENCE (grok · الجولة 44): معرّفُ الأمرِ غيرُ النصّيِّ مرفوضٌ مسمًّا في waive ولا يُخزَّنُ خامًّا في levy_waived — والقارئةُ المنقلبةُ تُخزَّنُ قراءتَا الأولى نصًّا لا مرجعًا حيًّا (علاجُ الجلسة 142)', () => {
+  const sc = journalScene();
+  try {
+    const s = sc.boot();
+    const assessed = s.revenue.assess('compute_usage', 'external:compute-provider', 1_000_000, NOW + 1_000, NOW + 1_000);
+    assert.ok(assessed.ok, 'التقديرُ السليم ينجح');
+    const levyId = assessed.ok ? assessed.levy.levyId : '';
+    // الصور: فارغ · عدد · كائن — مرفوضةٌ مسمّاةٌ ولا إعفاءَ ولا شاهد
+    const variants: [string, unknown][] = [['الفارغ', ''], ['العدد', 1001], ['الكائن', { forged: true }]];
+    for (const [label, cid] of variants) {
+      const cmd = s.king.issueCommand('amend_policy', 'economy:revenue', { kind: 'economy' }, NOW + 2_000);
+      const forged = { ...cmd, payload: { ...cmd.payload, commandId: cid } } as unknown as SignedRoyalCommand;
+      const refused = s.revenue.waive(forged, levyId, 'إعفاء ملكي', NOW + 2_000);
+      assert.equal(refused.ok, false, `${label} مرفوض`);
+      assert.ok(!refused.ok && refused.reason.includes('معرّفُ الأمرِ نص'), 'رفضٌ مسمّى');
+    }
+    assert.equal(s.audit.find('levy_waived').length, 0, 'لا شاهد إعفاءٍ بمعرّفٍ خامٍ');
+    assert.equal(s.revenue.get(levyId)?.status, 'assessed', 'الرسمُ ما زال معلّقًا');
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةُ بعد الرفوض');
+    // القارئةُ المنقلبةُ: النجاحُ بالقراءةِ الأولى والشاهدُ يحملُ النصّ المقروءَ لا المرجعَ الحيَّ
+    const cmd = s.king.issueCommand('amend_policy', 'economy:revenue', { kind: 'economy' }, NOW + 3_000);
+    const { command: flipped, real } = flippingCommand(cmd);
+    const waived = s.revenue.waive(flipped, levyId, 'إعفاء ملكي', NOW + 3_000);
+    assert.equal(waived.ok, true, 'الإعفاءُ بالقراءةِ الأولى ينجح');
+    const w = s.audit.find('levy_waived')[0]!;
+    assert.equal((w.detail as { commandId?: unknown }).commandId, real, 'شاهدُ levy_waived يحملُ المعرّفَ المقروءَ نصًّا');
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةُ بعد النجاح');
+    // الإقلاعُ من اليوميّةِ: الإعفاءُ باقٍ والشاهدُ نصٌّ
+    const s2 = sc.boot(NOW + 60_000);
+    assert.equal(s2.revenue.get(levyId)?.status, 'waived', 'الإعفاءُ باقٍ بعد الإقلاع');
+    const w2 = s2.audit.find('levy_waived')[0]!;
+    assert.equal((w2.detail as { commandId?: unknown }).commandId, real, 'الشاهدُ المستعاد يحملُ النصّ');
+    assert.equal(s2.audit.verifyIntegrity().valid, true, 'الإقلاعُ سليم');
+  } finally {
+    sc.clean();
+  }
+});
+
+test('**T-53/مجلس 44ج** — RATE_AMENDMENT_AUDIT_WITNESS_MUTABLE_REFERENCE_ESCAPE (gpt · الجولة 44): قراءةُ السجلِّ لقطةٌ عميقةٌ مجمّدةٌ — تعديلُ شاهدِ rate_amended بعدَ النجاحِ لا يكسرُ السلسلةَ لا من find ولا من snapshot ولا من كائنِ المستدعي الحيِّ المتداحلِ (علاجُ الجلسة 142)', () => {
+  const sc = journalScene();
+  try {
+    const at = NOW + 60_000;
+    const s = sc.boot();
+    const cmd = s.king.issueCommand('amend_policy', 'economy:revenue',
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at);
+    const ok = s.revenue.amendRate(cmd, 'compute_usage', 40, at);
+    assert.equal(ok.ok, true, 'التعديلُ ينجح');
+    // مسبار gpt: تعديلُ detail الشاهدِ من find بعد النجاح — لقطةٌ مجمّدةٌ لا تصلُ الأصل
+    const amended = s.audit.find('rate_amended')[0]!;
+    assert.equal((amended.detail as { to: number }).to, 40, 'الشاهدُ يحملُ النسبةَ الجديدة');
+    let mutationThrew = false;
+    try { (amended.detail as { to: number }).to = 999; } catch { mutationThrew = true; }
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'العبثُ بنسخةِ القراءةِ لا يكسرُ السلسلةَ');
+    assert.equal((s.audit.find('rate_amended')[0]!.detail as { to: number }).to, 40, 'الشاهدُ الداخليُّ لم يُمسّ');
+    // وكائنُ المستدعي المتداحلُ لا يصلُ: الإضافةُ تخزّنُ لقطةً عميقةً
+    const probe = { inner: { value: 1 } };
+    s.audit.append('king', 'council44_probe', { nested: probe });
+    probe.inner.value = 999;
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'قلبُ كائنِ المستدعي بعد الإضافةِ لا يكسرُ السلسلةَ');
+    const stored = s.audit.find('council44_probe')[0]!;
+    assert.equal((stored.detail as { nested: { inner: { value: number } } }).nested.inner.value, 1, 'المخزونُ اللقطةُ لا المرجعُ الحيُّ');
+    // ونسختا snapshot مستقلّتانِ عميقًًا
+    const a = s.audit.snapshot();
+    const b = s.audit.snapshot();
+    const lastA = a[a.length - 1]!.detail as { nested: unknown };
+    const lastB = b[b.length - 1]!.detail as { nested: unknown };
+    assert.notEqual(lastA.nested, lastB.nested, 'نسختا القراءةِ مستقلتانِ عميقًًا');
+    // والإقلاعُ من اليوميّةِ: الشاهدُ غيرُ معدولٍ والنسبةُ 40
+    const s2 = sc.boot(at + 60_000);
+    assert.equal(s2.audit.verifyIntegrity().valid, true, 'الإقلاعُ سليم');
+    assert.equal(s2.revenue.rateFor('compute_usage')?.ratePerMille, 40, 'النسبةُ 40');
+    const w2 = s2.audit.find('rate_amended')[0]!;
+    assert.equal((w2.detail as { to: number }).to, 40, 'الشاهدُ سليمٌ بعد الإقلاع');
+    assert.equal((s2.audit.find('council44_probe')[0]!.detail as { nested: { inner: { value: number } } }).nested.inner.value, 1, 'لقطةُ المسبار سليمةٌ');
+  } finally {
+    sc.clean();
+  }
+});
+
