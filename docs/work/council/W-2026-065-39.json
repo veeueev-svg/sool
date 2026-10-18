@@ -1,0 +1,39 @@
+{
+  "item": "W-2026-065",
+  "commit": "2ac132692bed676dff3082f540a73100de1680d8",
+  "scope_digest": "a84992db141c994376e17b0586512edfaff250c950b66dee60a424b0143a42e0",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-18",
+  "session": 39,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-39-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-065-39-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-065-39-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "TAX_LEVY_MUTABLE_REFERENCE_ESCAPE (gpt · مقيس): RevenueService.get() وoutstanding() في src/economy/tax.ts يعيدان كائنات Levy الداخلية نفسها لا نسخًا — وreadonly في TypeScript لا يجمع وقت التشغيل — فالمستدعي يعدّل التقديرَ (الحالة إلى collected والمبلغ 777777 والنسبة 999) بلا أمرٍ ملكيٍّ ولا بوابةِ تاجٍ ولا قيدِ تدقيقٍ ولا كسرِ سلسلةِ التدقيق (مسبار gpt: sameObject=true · outstanding: 0 · تقرير الإيراد collected=1 · collectedTotal=777777 · audit قبل=بعد=38 · integrity=true) — من نوعِ عيبِ إعلاناتِ النِّسَبِ المعالَجِ في الجولتين 7 و8 لكنه باقٍ في Levy. العلاجُ الأدنى بحسب خامِّ gpt: إرجاعُ لقطة/نسخةٍ عميقةٍ من get() وoutstanding() مع اختبارٍ يعيدُ مسبارَ المرجعِ الحيِّ ويثبتُ أنّ التقرير والحالة والتدقيق لا تتغيّر.",
+      "علاجُ الجولة 38 مغلقٌ بشهادةِ الثلاثةِ قياسًا: RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY — assertAppendable() أوّلَ commit() يرفض التقديرَ والتحصيلَ والإعفاءَ على الكائن المقفل قبل أيِّ أثرٍ دائم (gpt أعادَ المسبارَ بمجلدِ يوميةٍ مؤقتٍ ووسيطٍ يسجّل ثم يرمي: amend_error=OUTCOME_UNKNOWN · collect_error=OUTCOME_UNRESOLVED · الإقلاعُ لا يعيدُ تقديرًا بائدًا · grok وgemini قاسا إغلاقَه بمسباريهما)، والحدُّ المعلنُ (المجهولةُ على levy_assessed نفسِه) صادقٌ عند الثلاثةِ لا مبالغةَ فيه."
+    ]
+  }
+}

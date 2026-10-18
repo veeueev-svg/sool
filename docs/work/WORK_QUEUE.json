@@ -1312,11 +1312,11 @@
     {
       "id": "W-2026-065",
       "title": "مسارٌ ملكيٌّ لتعديل سعر الرسم مع حفظ تاريخ الإعلان — لا أثر رجعيًّا (T-53)",
-      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 136) — استلامًا من الجلسة 134 بالأمر التشغيلي الدائم (نقلٌ معلنٌ مؤرَّخ في هذا الالتزام — المعرّفُ لم يتبدّل · WORK_CONTROL §6 · RULE-015)",
+      "owner": "المساعد الآلي — Perplexity Computer (الجلسة 137 — استلامًا من الجلسة 136 بالأمر التشغيلي الدائم · نقلٌ معلنٌ مؤرَّخٌ في هذا الالتزام · WORK_CONTROL §6 · RULE-015)",
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "الاقتصاد والمالية",
       "phase": 40,
-      "status": "REVIEW",
+      "status": "IN_PROGRESS",
       "progress_items": [
         "T-53",
         "2026-10-05 (الجلسة 95): استلامٌ بأمر المالك («عالج العيوب وحل التعارضات وواصل العمل») من المساعد الآلي — Perplexity Computer (الجلسة 90)، وعلاجُ RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS داخل النطاق (src/data/rehydrate_fiscal.ts · src/economy/rate_policy.ts · tests/data/rehydrate_fiscal.test.ts).",
@@ -1379,7 +1379,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "2026-10-18 (الجلسة 136): الجولة 39 للمجلس على هذا البند وحده بعد تجميدِ هذا الالتزام — حزمةٌ محايدة ونصُّ إطلاقٍ واحدٌ حرفيًّا للأعضاء الثلاثة متتابعين",
+      "next_step": "2026-10-18 (الجلسة 137): علاجُ عيبِ الجولة 39 داخل نطاق W-2026-065 (TAX_LEVY_MUTABLE_REFERENCE_ESCAPE — نسخٌ عميقٌ في get()/outstanding() في src/economy/tax.ts مع اختبارِ المرجعِ الحيِّ) ثم الرفعُ إلى REVIEW بتغيّرٍ مقيسٍ (الثابت 8) وتجهيزُ الجولة 40 — جولةٌ واحدةٌ لا متزامنة · نصُّ إطلاقٍ واحدٌ حرفيٌّ (LAUNCH.txt) · الخامُّ أوّلًا ثم المحضرُ والمعالجة.",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-18",
       "documentation_impact": [
@@ -1403,7 +1403,8 @@
         "مجلس المراجعة — الجلسة 11 (2026-10-09 · عند a41efbe): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيوب المسمّاة: RATE_AMENDMENT_DURABLE_POSTCOMMIT_THROW_INCONSISTENT_ACK (gpt) · RATE_AMENDMENT_PRIMITIVE_GUARD_REREAD_LIVE_REFERENCE (grok) · RATE_AMENDMENT_APPEND_ROLLBACK_POPS_WRONG_ENTRY (grok) · RATE_AMENDMENT_SINK_NULL_ACCEPTED_AS_COMMIT (grok) · وفشلُ npm run verify على الالتزام المجمد عند gpt (DC-03/C-12/T-23 — خارج مسارات البند، لصاحبِ مساره). المحضر: docs/work/council/W-2026-065-11.json والتقاريرُ الخامُّ بجواره.",
         "2026-10-17 (الجلسة 37 للمجلس · خلاف ⇒ NOT_VERIFIED): عيبان مانعان مقيسان — gpt: RATE_AMENDMENT_OUTCOME_UNKNOWN_RETRY_CORRUPTS_AUDIT_RECOVERY (إعادةُ الأمرِ بعد نتيجةٍ غيرِ معلومةٍ تفسدُ استعادةَ اليوميّة) · grok: RATE_AMENDMENT_POSTCOMMIT_SEQ_REUSE_UNBOOTABLE (ردُّ الذاكرةِ يعيدُ رقمَ تسلسلِ اليوميّةِ المستهلكَ في الملف فتنكسرَ سلسلةُ الإقلاع) — gemini: VERIFIED",
         "2026-10-17 (الجلسة 134 · علاجُ عيبَي الجلسة 37): الإقفالُ الدائمُ بعد المجهولة في append_only_log.ts (AUDIT_APPEND_OUTCOME_UNRESOLVED) — الاستئنافُ إقلاعٌ جديدٌ من اليوميّة لا استمرار",
-        "2026-10-18 (الجولة 38 للمجلس · خلاف ⇒ NOT_VERIFIED): عيبا الجولة 37 مغلقانِ بحرفِ هجومهما بشهادةِ الثلاثة؛ وعيبٌ مانعٌ جديدٌ مقيس — grok: RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY (assess يكتب tax_levy دائمًا بنسبةٍ بائدةٍ قبل أن يرفض السجلُّ المقفلُ levy_assessed، والإقلاعُ يعيده بلا شاهدِ تدقيق) — المحضر docs/work/council/W-2026-065-38.json"
+        "2026-10-18 (الجولة 38 للمجلس · خلاف ⇒ NOT_VERIFIED): عيبا الجولة 37 مغلقانِ بحرفِ هجومهما بشهادةِ الثلاثة؛ وعيبٌ مانعٌ جديدٌ مقيس — grok: RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY (assess يكتب tax_levy دائمًا بنسبةٍ بائدةٍ قبل أن يرفض السجلُّ المقفلُ levy_assessed، والإقلاعُ يعيده بلا شاهدِ تدقيق) — المحضر docs/work/council/W-2026-065-38.json",
+        "TAX_LEVY_MUTABLE_REFERENCE_ESCAPE (gpt · مقيس · الجولة 39 · 2026-10-18): RevenueService.get() وoutstanding() في src/economy/tax.ts يعيدان كائنات Levy الداخلية نفسها لا نسخًا — فالمستدعي يعدّل التقديرَ (الحالة إلى collected والمبلغ والنسبة) بلا أمرٍ ملكيٍّ ولا بوابةِ تاجٍ ولا قيدِ تدقيقٍ ولا كسرِ سلسلةٍ (مسبار gpt: sameObject=true · outstanding: 0 · collectedTotal=777777 · audit قبل=بعد=38) — من نوعِ عيبِ إعلاناتِ النِّسَبِ المعالَجِ في الجولتين 7 و8 لكنه باقٍ في Levy. العلاجُ الأدنى بحسب خامِّ gpt: إرجاعُ نسخةٍ عميقةٍ من get() وoutstanding() مع اختبارِ مسبارِ المرجعِ الحيِّ."
       ],
       "blocked_reason": null
     },
@@ -1517,7 +1518,8 @@
         "2026-10-18 (الجلسة 136): الجولة 38 للمجلس على W-2026-065 وحده (نقطة الاستئناف §13.72) — الخامُّ أوّلًا (§13.73): gpt VERIFIED · grok REJECTED (RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY) · gemini VERIFIED ⇒ خلاف ⇒ NOT_VERIFIED — وعيبٌ إجرائيٌّ معلنٌ في تكليفِ gemini (COUNCIL38_TASKING_ASYMMETRY)",
         "2026-10-18 (الجلسة 136 · تتمة): محضرُ الجولة 38 ومعالجتُها — W-2026-065-38.json (خلاف ⇒ NOT_VERIFIED · مآل IN_PROGRESS): عاد W-2026-065 إلى العمل وعيبُ grok مقيّدٌ في discoveries، والعيبُ الإجرائيُّ COUNCIL38_TASKING_ASYMMETRY مقيّدٌ في المحضر — لا جولةَ أخرى نشطة",
         "2026-10-18 (الجلسة 136 · تتمة ثانية): تجهيزُ الجولة 39 على W-2026-065 وحده بعد علاجِ عيبِ الجولة 38 (2ac1326) — ملفاتُ الجولة الأربعة محجوزةٌ في السجلِّ والعقدِ §2 معًا بهذا الالتزام (درسُ 2026-10-17 · §13.75)",
-        "2026-10-18 (الجلسة 137): الجولة 39 للمجلس على W-2026-065 وحده (نقطة الاستئناف §13.75) — الخامُّ أوّلًا (§13.76): gpt REJECTED (TAX_LEVY_MUTABLE_REFERENCE_ESCAPE — مقيس) · grok VERIFIED · gemini VERIFIED ⇒ خلاف ⇒ NOT_VERIFIED · حزمةٌ محايدةٌ على التجميد 2ac1326 (25 ملفًا بمانيفست · LAUNCH.txt بنصِّ إطلاقٍ واحدٍ حرفيٍّ — علاجُ COUNCIL38_TASKING_ASYMMETRY) · الأعضاءُ متتابعون"
+        "2026-10-18 (الجلسة 137): الجولة 39 للمجلس على W-2026-065 وحده (نقطة الاستئناف §13.75) — الخامُّ أوّلًا (§13.76): gpt REJECTED (TAX_LEVY_MUTABLE_REFERENCE_ESCAPE — مقيس) · grok VERIFIED · gemini VERIFIED ⇒ خلاف ⇒ NOT_VERIFIED · حزمةٌ محايدةٌ على التجميد 2ac1326 (25 ملفًا بمانيفست · LAUNCH.txt بنصِّ إطلاقٍ واحدٍ حرفيٍّ — علاجُ COUNCIL38_TASKING_ASYMMETRY) · الأعضاءُ متتابعون",
+        "2026-10-18 (الجلسة 137 · تتمة): محضرُ الجولة 39 ومعالجتُها — W-2026-065-39.json (خلاف ⇒ NOT_VERIFIED · مآل IN_PROGRESS): عاد البندُ إلى العملِ وعيبُ gpt TAX_LEVY_MUTABLE_REFERENCE_ESCAPE مقيّدٌ في discoveries بتسميةِ صاحبه — لا جولةَ أخرى نشطة"
       ],
       "dependencies": [
         "W-2026-062"
