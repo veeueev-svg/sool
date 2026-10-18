@@ -1,0 +1,15 @@
+{
+  "item": "W-2026-065",
+  "commit": "2308d12998486efa203beee29d56d81cf67473f4",
+  "scope_digest": "8a9ebf14b3f289b7b2ec1ae90674bcce93e7f6ed0fbef0a12f1bfa5aa1ebcfa2",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-18",
+  "session": 44,
+  "verdicts": [
+    { "member": "gpt",  "model": "GPT 5.6 Terra",  "verdict": "REJECTED", "report": "docs/work/council/W-2026-065-44-gpt.md" },
+    { "member": "grok", "model": "Grok 4.7",       "verdict": "REJECTED", "report": "docs/work/council/W-2026-065-44-grok.md" },
+    { "member": "gemini", "model": "Gemini 3.8 Flash", "verdict": "VERIFIED", "report": "docs/work/council/W-2026-065-44-gemini.md" }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": { "kind": "IN_PROGRESS" }
+}

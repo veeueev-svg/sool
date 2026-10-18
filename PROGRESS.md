@@ -4150,3 +4150,10 @@ bash scripts/check_documentation.sh HEAD~1   # يجب أن يقول: التوث�
 - **الأحكامُ الخامُّ (cmp 3/3):** gpt REJECTED (`RATE_AMENDMENT_AUDIT_WITNESS_MUTABLE_REFERENCE_ESCAPE` — `audit.find` يعيدُ القيودَ الحيّة، و`params` مرجعٌ حيٌّ في `command_approved`) · grok REJECTED (`RATE_AMENDMENT_COMMAND_ID_UNGUARDED` — معرّفٌ غيرُ نصّيٍّ يُقبَلُ ثمّ يقتلُ الإقلاع، ومرجعٌ حيٌّ في `rate_amended` و`rate_amendment_refused` · و`TAX_WAIVE_COMMAND_ID_LIVE_REFERENCE` في `levy_waived`) · gemini VERIFIED (علاجُ الجولة 43 مغلقٌ بمسباراتِهِ ولم يبلغْهُ عيبُ `commandId`) ⇒ **خلافٌ ⇒ NOT_VERIFIED** (RULE-020).
 - **ما لم يُكمل:** المحضرُ والمعالجةُ — التزامٌ مستقلٌّ لاحق: مآلُ البندِ إلى IN_PROGRESS والعيوبُ في `discoveries`.
 - **التالي المقترح:** محضرُ الجولة 44 (W-2026-065-44.json) ومعالجتُها — الحكمُ بمآلِهِ والعيوبُ في مواضعِها (الوظيفيُّ في نطاقِ W-2026-065: src/economy/tax.ts؛ وعيبُ `command_approved`/`crown_gateway` لصاحبِ مسارِه — سابقةُ §13.95).
+
+### الجلسة 142 (تتمة ثانية) — 2026-10-18 — **W-2026-066: محضرُ الجولة 44 ومعالجتُها — خلافٌ ⇒ NOT_VERIFIED بمآل IN_PROGRESS (§13.98)**
+
+- **المحضر:** `docs/work/council/W-2026-065-44.json` (جواره حارسُ المجلس في npm test) — gpt REJECTED · grok REJECTED · gemini VERIFIED ⇒ خلافٌ ⇒ **NOT_VERIFIED** (RULE-020 — الإجماعُ شرطٌ والخلافُ يعيد).
+- **المعالجة:** W-2026-065 من REVIEW إلى IN_PROGRESS — العيوبُ الثلاثةُ مقيّدةٌ في discoveries بتسميةِ أصحابِها: `RATE_AMENDMENT_AUDIT_WITNESS_MUTABLE_REFERENCE_ESCAPE` (gpt — audit.find/snapshot في src/audit/append_only_log.ts داخلَ النطاق) · `RATE_AMENDMENT_COMMAND_ID_UNGUARDED` (grok — commandId غيرُ النصّيِّ في amendRate) · `TAX_WAIVE_COMMAND_ID_LIVE_REFERENCE` (grok — levy_waived) — العلاجُ في نطاقِ البندِ (src/economy/tax.ts وsrc/audit/append_only_log.ts) · واكتشافٌ خارجَ النطاقِ يُقيَّدُ لصاحبِ مسارِه: `params` مرجعٌ حيٌّ في `command_approved` (src/crown/crown_gateway.ts — سابقةُ §13.95).
+- **ما لم يُنفَّذ:** علاجُ العيوبِ — التزامٌ لاحقٌ داخلَ نطاقِ W-2026-065 بلا توسيعٍ صامت · بصمةُ النطاقِ لم تُمسّ (المعالجةُ حوكمةٌ فقط).
+- **التالي:** علاجُ عيوبِ الجولة 44 ثمّ الرفعُ بتغيّرٍ مقيسٍ وتجهيزُ الجولة 45 (جولةٌ واحدةٌ لا متزامنة).
