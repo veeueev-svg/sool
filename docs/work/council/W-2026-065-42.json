@@ -1,0 +1,22 @@
+{
+  "item": "W-2026-065",
+  "commit": "9c58aa78624630751b8ed6ad86f600e52e27222b",
+  "scope_digest": "f99eb84c40869b094f3d6b7ee67357e7401c6b6e13836c0f064d5668c91cc3c3",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-18",
+  "session": 42,
+  "verdicts": [
+    { "member": "gpt", "model": "GPT 5.6 Terra", "runtime_id": "gpt_5_6_terra", "verdict": "REJECTED", "report": "docs/work/council/W-2026-065-42-gpt.md" },
+    { "member": "grok", "model": "Grok 4.7", "runtime_id": "grok_4_7", "verdict": "REJECTED", "report": "docs/work/council/W-2026-065-42-grok.md" },
+    { "member": "gemini", "model": "Gemini 3.8 Flash", "runtime_id": "gemini_3_8_flash", "verdict": "REJECTED", "report": "docs/work/council/W-2026-065-42-gemini.md" }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "RATE_AMENDMENT_REFUSAL_AUDIT_PRIMITIVE_OVERRIDE (gpt · مقيس · الجولة 42 · 2026-10-18): إغلاقُ الرفضِ في amendRate() يعقّمُ requestedRatePerMille بـauditPrimitive ثمّ يمرّرُ فرعُ «النسبة غير السليمة» المفتاحَ نفسَه في extra فانتشارُ ...extra يغلبُ المعقّمَ فيُخزَّنُ مرجعُ كائنِ المستدعي الحيُّ في قيد rate_amendment_refused. مسبارُ gpt على dist/: sameReferenceBefore=true وقلبُ marker بعدَ الرفضِ يصلُ إلى القيدِ (storedMarkerAfterMutation=after) ويكسرُ سلامةَ السلسلةِ بلا قيدٍ جديد (integrity=false) — والعلاجُ الأدنى المعزولُ (تعقيمُ القيمةِ في extra) يقيسُ زوالَه (sameReferenceBefore=false · integrity=true). العلاجُ الأدنى: لا يُعادُ حقلٌ معقّمٌ خامًا في extra — داخل src/economy/tax.ts.",
+      "RATE_AMENDMENT_REFUSAL_EXTRA_OVERRIDES_SANITIZER (grok · مقيس · الجولة 42 · 2026-10-18): العينُ نفسُها بحرفِ هجومٍ أشدّ — refuse في amendRate يعقّمُ requestedRatePerMille ثمّ يغلبه ...extra بالقيمةِ الخام عند «نسبة غير سليمة». مسبارُ grok: sameRef=true · قلبُ marker بعدَ الرفض: integrity=false عند 39 والسبب «محتوى السجل مُعدَّل» · مع toJSON القرصُ يحملُ forged-via-toJSON والإقلاعُ يرمي «نسخةُ سجلٍّ فاسدة: محتوى السجل مُعدَّل عند 39» وبلا toJSON كذلك · شاهدُ الضبط (نسبة 1001) يُقلعُ سليمًا. العلاجُ الأدنى: لا يُعادُ حقلٌ معقّمٌ خامًا في extra أو تُعقَّمُ كلُّ قيمِ extra قبلَ التدوين — داخل src/economy/tax.ts.",
+      "RATE_AMENDMENT_REJECTED_INPUT_AUDIT_MUTABLE_REFERENCE_ESCAPE / RATE_AMENDMENT_REFUSAL_AUDIT_LIVE_REFERENCE_UNBOOTABLE (gemini · مقيس · الجولة 42 · 2026-10-18): انتشارُ ...extra في إغلاقِ رفضِ amendRate يتجاوزُ الخاصيةَ المعقّمة فيسربُ المرجعَ الحيَّ لكائنِ المستدعي إلى قيدِ rate_amendment_refused. مسبارُ gemini: عبثُ المستدعي بعدَ الرفضِ يكسرُ سلامةَ السلسلةِ في الذاكرةِ فورًا (integrityAfter.valid=false · «محتوى السجل مُعدَّل») · تدوينُ القيدِ في يوميةٍ حقيقيةٍ يقتلُ الإقلاعَ التالي (نسخةُ سجلٍّ فاسدة: محتوى السجل مُعدَّل عند 39) · شاهدُ الضبطِ بمدخلٍ بدائيٍّ غيرِ سليمٍ يُقلعُ سليمًا. العلاجُ الأدنى: إزالةُ requestedRatePerMille من extra في فرعِ الرفض (المعقّمُ مسجَّلٌ أصلًا) أو تعقيمُه — داخل src/economy/tax.ts."
+    ]
+  }
+}

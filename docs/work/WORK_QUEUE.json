@@ -1316,7 +1316,7 @@
       "reviewer": "مجلس المراجعة (RULE-020) والقيّم على المستودع",
       "area": "الاقتصاد والمالية",
       "phase": 41,
-      "status": "REVIEW",
+      "status": "IN_PROGRESS",
       "progress_items": [
         "T-53",
         "2026-10-05 (الجلسة 95): استلامٌ بأمر المالك («عالج العيوب وحل التعارضات وواصل العمل») من المساعد الآلي — Perplexity Computer (الجلسة 90)، وعلاجُ RATE_AMENDMENT_MALFORMED_AUDIT_BYPASS داخل النطاق (src/data/rehydrate_fiscal.ts · src/economy/rate_policy.ts · tests/data/rehydrate_fiscal.test.ts).",
@@ -1380,7 +1380,7 @@
         "الأرقامُ المنقولةُ بالمقيس: ARCHITECTURE.md (src/economy 1864 سطرًا · src/kernel/config 5887) وversion.json (tests.total=2377)",
         "حادثُ الدمج #35 (رسالةُ دمجٍ بلا مِذيالِ Work فسقطت بوابةُ ضبطِ العملِ على main) عُدِّل بلا تغييرِ محتوى ووُثِّق: docs/incident-reports/2026-10-04-merge-35-work-trailer.md"
       ],
-      "next_step": "2026-10-18 (الجلسة 139): عولج عيبُ الرفضِ (ثابت 12 · auditPrimitive) والبندُ في REVIEW بتغيّرٍ مقيس (البصمةُ f99eb84c… تخالف محضرَ الجولة 41) — تجهيزُ الجولة 42 في W-2026-066 (جولةٌ واحدةٌ لا متزامنة)",
+      "next_step": "2026-10-18 (الجلسة 140 · الجولة 42): إجماعُ رفضٍ ثلاثيٍّ ⇒ NOT_VERIFIED بمآل IN_PROGRESS — علاجُ عيبِ انتشارِ extra في إغلاقِ رفضِ amendRate داخلَ نطاقِ البند (src/economy/tax.ts وحده) ثمّ الرفعُ إلى REVIEW بتغيّرٍ مقيسٍ (الثابت 8 — البصمةُ تخالف محضرَ الجولة 42) وتجهيزُ الجولة 43",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-18",
       "documentation_impact": [
@@ -1389,7 +1389,7 @@
         "CHANGELOG.md — مدخلُ البند",
         "version.json — tests.total بالمقيس"
       ],
-      "verification": "2026-10-18 (الجلسة 139): npm run verify ⇒ EXIT=0 · 2454/2454 · بصمةُ النطاق f99eb84c40869b094f3d6b7ee67357e7401c6b6e13836c0f064d5668c91cc3c3 (تصويبُ الجلسة 140 · §13.87: كان الحقلُ يحملُ f99eb84c55017ad5… المخالفَ للقياسِ المستقلِّ على التجميد 9c58aa7) (13 مسارًا) على شجرةِ الالتزامِ تخالف محضرَ الجولة 41 (3819cf1e…) — الثابت 8 · بوابتا CI تُقرآنِ بعدَ الدفع",
+      "verification": "2026-10-18 (الجلسة 139): npm run verify ⇒ EXIT=0 · 2454/2454 · بصمةُ النطاق f99eb84c40869b094f3d6b7ee67357e7401c6b6e13836c0f064d5668c91cc3c3 (تصويبُ الجلسة 140 · §13.87: كان الحقلُ يحملُ f99eb84c55017ad5… المخالفَ للقياسِ المستقلِّ على التجميد 9c58aa7) (13 مسارًا) على شجرةِ الالتزامِ تخالف محضرَ الجولة 41 (3819cf1e…) — الثابت 8 · بوابتا CI تُقرآنِ بعدَ الدفع — الجولة 42 (الجلسة 140): إجماعُ رفضٍ ثلاثيٍّ ⇒ NOT_VERIFIED بمآل IN_PROGRESS (المحضر W-2026-065-42.json · الخامُّ الثلاثةُ محفوظةٌ بلا تحرير)",
       "discoveries": [
         "مجلس المراجعة — الجلسة 1 (2026-10-04 · عند 5bfd61f): NOT_VERIFIED (gpt REJECTED · grok REJECTED · gemini VERIFIED). العيبان: (1) إعادةُ الأمر الملكيّ نفسِه تُنفّذ تعديلًا ثانيًا لأنّ بوابةَ التاج idempotent تُعيد قرارَها السابق allowed=true وamendRate لا يميّز الإعادة — grok؛ (2) RATE_AMENDMENT_COMMAND_NOT_PARAMETER_BOUND: الأمرُ لا يربط الوعاءَ ولا النسبة، فتوقيعٌ واحدٌ يعدّل كلَّ الأوعية — gpt. وعولجا من الجذر في الجلسة 91 (انظر verification).",
         "مجلس المراجعة — الجلسة 2 (2026-10-04 · عند 147399214c8f): NOT_VERIFIED (gpt REJECTED · grok VERIFIED · gemini VERIFIED). العيب RATE_AMENDMENT_HISTORY_NOT_DURABLE (gpt): سجلُّ النِّسَبِ (rateHistory) ومعرّفاتُ الأوامرِ المنفَّذةِ (amendmentCommands) في الذاكرة وحدها — restore لا يسترجعُهما ومسارُ rehydrate_fiscal.ts لا يمررُهما لخدمةِ الإيراد، فإعادةُ تشغيلِ الدولة تمحو الإعلاناتِ التشغيليةَ من سجلِ النِّسَب (قيسها المسبارُ: الإعلانُ 40‰ يختفي بعد إعادةِ البناء) وتفقدُ منعَ إعادةِ الأمرِ نفسِه عبرَ حدودِ إعادةِ التشغيل.",
@@ -1408,6 +1408,10 @@
         "TAX_LEVY_MUTABLE_REFERENCE_ESCAPE (gpt · مقيس · الجولة 39 · 2026-10-18): RevenueService.get() وoutstanding() في src/economy/tax.ts يعيدان كائنات Levy الداخلية نفسها لا نسخًا — فالمستدعي يعدّل التقديرَ (الحالة إلى collected والمبلغ والنسبة) بلا أمرٍ ملكيٍّ ولا بوابةِ تاجٍ ولا قيدِ تدقيقٍ ولا كسرِ سلسلةٍ (مسبار gpt: sameObject=true · outstanding: 0 · collectedTotal=777777 · audit قبل=بعد=38) — من نوعِ عيبِ إعلاناتِ النِّسَبِ المعالَجِ في الجولتين 7 و8 لكنه باقٍ في Levy. العلاجُ الأدنى بحسب خامِّ gpt: إرجاعُ نسخةٍ عميقةٍ من get() وoutstanding() مع اختبارِ مسبارِ المرجعِ الحيِّ.",
         "TAX_LEVY_DURABLE_SINK_MUTABLE_REFERENCE_ESCAPE (gpt · مقيس) / TAX_LEVY_SINK_MUTABLE_REFERENCE_ESCAPE (grok · مقيس — الجولة 40 · 2026-10-18): البابُ السادسُ الذي لم تنسخه الأبوابُ الخمسةُ لعلاجِ الجولة 39 — الدالةُ الخاصة commit() في src/economy/tax.ts تخزّن levy في خريطةِ الحال ثمّ تمرّرُ المرجعَ الحيَّ نفسَه إلى الوسيطِ الدائم this.sink?.record('tax_levy', { levy, ... }). وسيطٌ يحتفظُ بالحمولةِ أو يعبثُ بها قبلَ الإرجاعِ يمسكُ الحالَ الكنونيّ: مسبارُ gpt قلبَ التقديرَ إلى محصّلٍ (777777 · 999) والتقريرَ والسلسلةَ سليمةً بلا قيدِ levy_collected · مسبارُ grok عادَ بأعراضِ الجولة 39 في الذاكرةِ والقرصُ سليم وقسّمَ شاهدَ levy_assessed (نسبةٌ 999 ومبلغٌ 25000 في القيدِ الواحد) والعبثُ قبلَ التسلسلِ أبقى 777777 على القرصِ فيجبيهِ الإقلاع. العلاجُ الأدنى: لا يشاركُ الوسيطُ كائنَ الحال — لقطةٌ تُخزَّنُ في الخريطةِ وحمولةُ record نسخةٌ أخرى، مع اختبارِ وسيطٍ عدائيّ.",
         "TAX_LEVY_NONPRIMITIVE_FIELD_ALIAS (grok · مقيس · الجولة 40 · 2026-10-18): دعوى «الحقلُ مسطّحٌ كله فالنسخةُ لقطةٌ كاملة» غيرُ مفروضةٍ في المدخل — assess(base, payer, amountBase, occurredAt, now) يفحصُ payer.trim() ومقارناتِ occurredAt/now بالإكراهِ ثمّ يخزّنُ مراجعَ المستدعي، والانتشارُ يشاركُ الحقلَ غيرَ البدائي. مسبارُ grok: payer كائنٌ بـtrim يقرأُ متغيّرًا وoccurredAt/now كائنانِ بـvalueOf — بعدَ الاعتمادِ قلبُ الصناديقِ زوّرَ المكلَّفَ على الإيصال (forged:after) ولحظةَ الواقعةِ ولحظةَ التقدير بلا أمرٍ ملكيٍّ ولا كسرِ سلسلةٍ (integrity=true وعددُ التدقيقِ ثابت) — من جنسِ عيبِ الجلسة 9 (RATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE) الذي أُغلق هناك بحارسِ بدائيّةٍ ولم يُغلق هنا. العلاجُ الأدنى: رفضٌ مسمّى إن لم يكن payer سلسلةً وoccurredAt وnow عددينِ محددين، وتخزينُ القيمِ المقروءةِ مرةً واحدةً لا المراجع — داخل src/economy/tax.ts."
+,
+      "RATE_AMENDMENT_REFUSAL_AUDIT_PRIMITIVE_OVERRIDE (gpt · مقيس · الجولة 42 · 2026-10-18): إغلاقُ الرفضِ في amendRate() يعقّمُ requestedRatePerMille بـauditPrimitive ثمّ يمرّرُ فرعُ «النسبة غير السليمة» المفتاحَ نفسَه في extra فانتشارُ ...extra يغلبُ المعقّمَ فيُخزَّنُ مرجعُ كائنِ المستدعي الحيُّ في قيد rate_amendment_refused. مسبارُ gpt على dist/: sameReferenceBefore=true وقلبُ marker بعدَ الرفضِ يصلُ إلى القيدِ (storedMarkerAfterMutation=after) ويكسرُ سلامةَ السلسلةِ بلا قيدٍ جديد (integrity=false) — والعلاجُ الأدنى المعزولُ يقيسُ زوالَه. العلاجُ الأدنى: لا يُعادُ حقلٌ معقّمٌ خامًا في extra — داخل src/economy/tax.ts.",
+      "RATE_AMENDMENT_REFUSAL_EXTRA_OVERRIDES_SANITIZER (grok · مقيس · الجولة 42 · 2026-10-18): العينُ نفسُها بحرفِ هجومٍ أشدّ — refuse في amendRate يعقّم ثمّ يغلبه ...extra بالقيمةِ الخام عند «نسبة غير سليمة». مسبارُ grok: sameRef=true · قلبُ marker بعدَ الرفض: integrity=false عند 39 «محتوى السجل مُعدَّل» · مع toJSON القرصُ يحملُ forged-via-toJSON والإقلاعُ يرمي «نسخةُ سجلٍّ فاسدة» وبلا toJSON كذلك · شاهدُ الضبط (1001) يُقلعُ سليمًا. العلاجُ الأدنى: لا يُعادُ حقلٌ معقّمٌ خامًا في extra أو تُعقَّمُ كلُّ قيمِ extra — داخل src/economy/tax.ts.",
+      "RATE_AMENDMENT_REJECTED_INPUT_AUDIT_MUTABLE_REFERENCE_ESCAPE / RATE_AMENDMENT_REFUSAL_AUDIT_LIVE_REFERENCE_UNBOOTABLE (gemini · مقيس · الجولة 42 · 2026-10-18): انتشارُ ...extra في إغلاقِ رفضِ amendRate يتجاوزُ الخاصيةَ المعقّمة فيسربُ المرجعَ الحيَّ لقيدِ rate_amendment_refused. مسبارُ gemini: كسرُ سلامةِ السلسلةِ في الذاكرةِ بعدَ العبثِ (integrityAfter.valid=false) · تدوينُ القيدِ في يوميةٍ حقيقيةٍ يقتلُ الإقلاعَ التالي («نسخةُ سجلٍّ فاسدة: محتوى السجل مُعدَّل عند 39») · شاهدُ الضبطِ يُقلعُ سليمًا. العلاجُ الأدنى: إزالةُ requestedRatePerMille من extra في فرعِ الرفض أو تعقيمُه — داخل src/economy/tax.ts."
       ],
       "blocked_reason": null
     },
@@ -1774,7 +1778,7 @@
         "docs/test-reports/phase-40-W-2026-066.md",
         "docs/test-reports/phase-40-W-2026-066.md — الجلسة 2 (الأعضاء الثلاثة معزولين على حزم مجمّدة عند 1473992): البنود الثلاثة NOT_VERIFIED بعيوب مسمّاة"
       ],
-      "next_step": "2026-10-18 (الجلسة 140 · §13.88): خامُّ الجولة 42 على W-2026-065 (التجميد 9c58aa7 · بصمة f99eb84c…) محفوظٌ بحروفِ الأعضاء الثلاثة (cmp 3/3) — إجماعٌ ثلاثيٌّ على الرفض ⇒ NOT_VERIFIED — محضرُ الجولة 42 ومعالجةُ الحكم (التزامٌ مستقل): علاجُ عيبِ الرفضِ داخلَ نطاق W-2026-065 ثمّ الرفعُ بتغيّرٍ مقيسٍ لعقدِ الجولة 43",
+      "next_step": "2026-10-18 (الجلسة 140 · §13.89): محضرُ الجولة 42 ومعالجةُ الحكم — إجماعُ رفضٍ ثلاثيٍّ ⇒ NOT_VERIFIED بمآل IN_PROGRESS (المحضر docs/work/council/W-2026-065-42.json) — التالي: علاجُ العيبِ داخلَ نطاق W-2026-065 ثمّ الرفعُ بتغيّرٍ مقيسٍ وتجهيزُ الجولة 43 (جولةٌ واحدةٌ لا متزامنة)",
       "created_at": "2026-10-04",
       "updated_at": "2026-10-18",
       "documentation_impact": [
