@@ -30,6 +30,8 @@
  *  10) **لا أثرَ دائمًا على كائنٍ مقفل** (الجولة 38 · RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY):
  *      بعد نتيجةٍ مجهولةٍ يُقفلُ السجلّ، فالتقديرُ والتحصيلُ والإعفاءُ تُرفضُ قبل قيد tax_levy لا بعده —
  *      وإلّا كُتب تقديرٌ بنسبةٍ بائدةٍ يُعيده الإقلاعُ بلا شاهد. الاستئنافُ إقلاعٌ جديد
+ *  11) **بدائيّةُ المداخلِ وعزلُ الوسيطِ عن الحال** (الجولة 40 · عيباها المسمّاة): لا مرجعٌ حيٌّ
+ *      يُخزَّنُ ولا وسيطٌ يمسكُ كائنَ الحالِ — الخريطةُ والوسيطُ لقطتانِ منفصلتان
  * حالات الفشل (كلها مغلقة): وعاء غير معلن ⇒ رفض؛ واقعة سابقة للإعلان ⇒ رفض؛
  *   تحصيل بلا تقدير أو مكرَّر ⇒ رفض؛ فشل القيد ⇒ لا تحصيل؛ إعفاء ذاتي ⇒ رفض
  * اختبار القبول: tests/economy/economy_lifecycle.test.ts
@@ -92,8 +94,9 @@ export class RevenueService {
    */
   private commit(levy: Levy): void {
     this.deps.audit.assertAppendable();
-    this.levies.set(levy.levyId, levy);
-    this.sink?.record('tax_levy', { levy, sequence: this.sequence });
+    // ثابت 11 (الجولة 40): الخريطةُ والوسيطُ لقطتانِ منفصلتانِ — لا يشاركُ وسيطٌ كائنَ الحالِ الحيَّ
+    this.levies.set(levy.levyId, { ...levy });
+    this.sink?.record('tax_levy', { levy: { ...levy }, sequence: this.sequence });
   }
 
   /**
@@ -135,6 +138,7 @@ export class RevenueService {
       return { ok: false, reason, auditId: entry.hash };
     };
 
+    if (typeof base !== 'string' || typeof payer !== 'string' || typeof occurredAt !== 'number' || !Number.isFinite(occurredAt) || typeof now !== 'number' || !Number.isFinite(now)) return refuse('المدخلُ بدائيٌّ محددٌ (نصٌّ للوعاءِ والمكلَّفِ ورقمٌ للحظتَي الواقعةِ والتقدير) — لا كائنٌ يُقرأُ عند كلِّ مقارنةٍ فيُخزَّنَ مرجعُه الحيّ (ثابت 11)');
     // ثابتا 2 و8: الواقعةُ تُقدَّر بإعلانِ النسبةِ الذي ساد لحظةَ وقوعها —
     // أحدثُ الإعلاناتِ لا يحكمُ الماضي (لا أثرٌ رجعيٌّ في الاتجاهين)
     const rate = this.rates.effectiveAt(base, occurredAt);
@@ -190,6 +194,7 @@ export class RevenueService {
       });
       return { ok: false, reason, auditId: entry.hash };
     };
+    if (typeof now !== 'number' || !Number.isFinite(now)) return refuse('لحظةُ التحصيلِ رقمٌ محددٌ — لا كائنٌ يُقرأُ عند المقارنةِ فيُخزَّنَ مرجعُه الحيّ (ثابت 11)');
     const levy = this.levies.get(levyId);
     if (!levy) return refuse('لا تقدير بهذا المعرّف — لا تحصيل بلا تقدير (ثابت 4)');
     if (levy.status === 'collected') return refuse('محصَّل سابقًا — لا تحصيل مرتين (ثابت 5)');
@@ -224,6 +229,7 @@ export class RevenueService {
       });
       return { ok: false, reason: why, auditId: entry.hash };
     };
+    if (typeof reason !== 'string' || typeof now !== 'number' || !Number.isFinite(now)) return refuse('سببُ الإعفاءِ نصٌّ ولحظةُ الأمرِ رقمٌ محددٌ — لا كائنٌ يُقرأُ عند المقارنةِ فيُخزَّنَ مرجعُه الحيّ');
     const levy = this.levies.get(levyId);
     if (!levy) return refuse('لا تقدير بهذا المعرّف');
     if (levy.status === 'collected') return refuse('لا إعفاء بعد التحصيل: التصحيح بقيد معاكس معلن');

@@ -279,3 +279,48 @@ test('**T-53/مجلس 38أ** — RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY
     sc.clean();
   }
 });
+
+test('**T-53/مجلس 40أ** — TAX_LEVY_SINK_MUTABLE_REFERENCE_ESCAPE: الوسيطُ الدائمُ لا يمسكُ كائنَ الحالِ الحيَّ — الخريطةُ والوسيطُ لقطتانِ منفصلتان (علاجُ الجولة 40 · الجلسة 138)', () => {
+  const { s } = revenueState();
+  // وسيطٌ عدائيٌّ بعينَي مسبارَي الجولة 40: يعبثُ بالحمولةِ داخل record (gpt) ثم يحتفظُ بها (grok 7أ)
+  const captured: { status?: string; levied?: number; ratePerMille?: number }[] = [];
+  const adversarialSink: DurableSink = {
+    record: (kind, payload, at = 0) => {
+      const p = payload as { levy?: { status?: string; levied?: number; ratePerMille?: number } };
+      if (kind === 'tax_levy' && p.levy) {
+        p.levy.status = 'collected';
+        p.levy.levied = 777777;
+        p.levy.ratePerMille = 999;
+        captured.push(p.levy);
+      }
+      return { seq: 0, at, kind, payload, prevHash: '0', hash: '0' };
+    },
+  };
+  s.revenue.attachJournal(adversarialSink);
+  const res = s.revenue.assess('compute_usage', 'external:compute-provider', 1_000_000, NOW + 1_000, NOW + 1_000);
+  assert.equal(res.ok, true, 'التقديرُ نفسُه ينجح — الوسيطُ لا يفسدُ الحساب');
+  const id = res.ok ? res.levy.levyId : '';
+  // الحالُ الكنونيُّ المخزَّنُ لم يمسَّه عبثُ الوسيطِ: قائمٌ بمبلغِه ونسبتِه (لا محصَّلًا بـ777777 و999)
+  const stored = s.revenue.get(id);
+  assert.equal(stored?.status, 'assessed', 'الحالُ المخزَّنُ قائمٌ — لا محصَّلًا');
+  assert.equal(stored?.levied, 25_000, 'المبلغُ الكنونيُّ 25‰ من مليون');
+  assert.equal(stored?.ratePerMille, 25, 'النسبةُ الكنونيّةُ لم تُبدَّل');
+  const report = s.revenue.report();
+  assert.equal(report.collected, 0, 'التقريرُ لا يشهدُ تحصيلًا لم يقع');
+  assert.equal(report.collectedTotal, 0, 'ولا مبلغًا مزوَّرًا');
+  assert.equal(s.revenue.outstanding().length, 1, 'التقديرُ في المستحقّات');
+  // والتحصيلُ اللاحقُ ينجحُ بالمبلغِ الكنونيّ لا بالكاذب — فالرفضُ المزعومُ لم يستهلكِ التقديرَ
+  const collected = s.revenue.collect(id, NOW + 2_000);
+  assert.equal(collected.ok, true, 'التحصيلُ الحقيقيُّ ينجح');
+  assert.equal(collected.ok ? collected.levy.levied : 0, 25_000, 'وبالمبلغِ الكنونيّ');
+  // عينُ مسبارِ grok 7أ: الاحتفاظُ بالحمولةِ ثمّ العبثُ بعدَ رجوعِ assess لا يصلُ إلى الحالِ المخزَّن
+  const kept = captured[0];
+  if (kept) { kept.status = 'waived'; kept.levied = 999_999; }
+  const after = s.revenue.get(id);
+  assert.equal(after?.status, 'collected', 'الاحتفاظُ ثمّ العبثُ لا يصلُ إلى الحالِ المخزَّن');
+  assert.equal(after?.levied, 25_000, 'ولا إلى مبلغِه');
+  // السلسلةُ سليمةٌ وشهودُ التدقيقِ بالعددِ الحقّ — لا شاهدَ تحصيلٍ زائفٍ من عبثِ الوسيط
+  assert.equal(s.audit.find('levy_assessed').length, 1, 'شاهدُ تقديرٍ واحد');
+  assert.equal(s.audit.find('levy_collected').length, 1, 'وشاهدُ تحصيلٍ واحد');
+  assert.equal(s.audit.verifyIntegrity().valid, true, 'والسلسلةُ سليمة');
+});
