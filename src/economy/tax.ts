@@ -288,9 +288,9 @@ export class RevenueService {
     }
     // حدودُ النسبةِ من مصدرِها الواحدِ الذي يقرؤه المحمّلُ نفسه (T-53)
     if (!isValidRatePerMille(newRatePerMille)) {
-      return refuse('نسبة غير سليمة: عددٌ صحيحٌ فوق الصفر ولا يتجاوز الألف (حدود المصدر نفسه)', {
-        requestedRatePerMille: newRatePerMille,
-      });
+      // الجولة 42 (إجماع الثلاثة): لا يُعادُ الحقلُ المعقّمُ خامًا في extra فيغلبه — قنَّع (ثابت 12)
+      return refuse('نسبة غير سليمة: عددٌ صحيحٌ فوق الصفر ولا يتجاوز الألف (حدود المصدر نفسه)',
+        { requestedRatePerMille: auditPrimitive(newRatePerMille) });
     }
     const current = this.rates.currentFor(base);
     if (!current) {

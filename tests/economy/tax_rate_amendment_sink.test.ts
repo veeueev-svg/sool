@@ -10,6 +10,8 @@
  * أيِّ أثرٍ دائم، ويُقاسُ بالإقلاعِ: outstanding() وشهودُ levy_assessed — لا رمزُ الرمي وحده.
  * الجلسة 139 (علاجُ عيبَي الجولة 41): أُضيف 41 — قيدُ الرفضِ لا يحملُ مرجعًا حيًّا (ثابت 12): عبثُ
  * المستدعي بعدَ الرفضِ لا يكسرُ السلسلةَ، والإقلاعُ من اليوميّةِ الحقيقيةِ بعدَ الرفضِ الكائنِ سليم.
+ * الجلسة 140 (علاجُ عيبِ الجولة 42 · W-2026-065): أُضيف 42 — فرعُ النسبة غير السليمةِ لا يعيدُ
+ * المرجعَ الحيَّ عبرَ extra فيغلبَ المعقّمَ (إجماعُ الجولة 42 · ثابت 12).
  * المالك: وزارة المالية تحت التاج | يوثّق في: docs/test-reports/phase-40-W-2026-065.md
  */
 import { test } from 'node:test';
@@ -372,6 +374,26 @@ test('**T-53/مجلس 41** — TAX_LEVY_REFUSAL_AUDIT_LIVE_REFERENCE (وعينُ
     const third = sc.boot(NOW + 120_000);
     assert.equal(third.audit.verifyIntegrity().valid, true, 'إقلاعٌ ثالثٌ سليم');
     assert.equal(third.audit.find('levy_refused').length, 4, 'قيودُ الرفضِ الأربعةُ في السلسلةِ المستعادة');
+  } finally {
+    sc.clean();
+  }
+});
+
+test('**T-53/مجلس 42** — RATE_AMENDMENT_REFUSAL_AUDIT_PRIMITIVE_OVERRIDE (الجولة 42 · إجماع الثلاثة): فرعُ النسبة غير السليمةِ لا يعيدُ المرجعَ الحيَّ عبرَ extra — العبثُ بعدَ الرفضِ لا يكسرُ السلسلةَ والإقلاعُ بعده سليم (علاجُ الجلسة 140)', () => {
+  const sc = journalScene();
+  try {
+    const first = sc.boot();
+    const at = NOW + 60_000;
+    const cmd = first.king.issueCommand('amend_policy', 'economy:revenue', { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at);
+    const rate = { marker: 'before' } as unknown as number; // مسبارُ الجولة 42: نسبةٌ كائن
+    const refused = first.revenue.amendRate(cmd, 'compute_usage', rate, at);
+    assert.equal(refused.ok, false, 'النسبةُ الكائنةُ مرفوضة');
+    assert.equal(first.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمةٌ قبلَ العبث');
+    (rate as unknown as { marker: string }).marker = 'after';
+    assert.equal(first.audit.verifyIntegrity().valid, true, 'العبثُ بعدَ الرفضِ لا يكسرُ السلسلة — extra لا يغلبُ المعقّم');
+    const entry = first.audit.find('rate_amendment_refused')[0]!;
+    assert.equal((entry.detail as { requestedRatePerMille?: unknown }).requestedRatePerMille, 'مدخلٌ غيرُ بدائيٍّ — لا يُخزَّنُ مرجعُهُ الحيُّ (ثابت 12)', 'القيدُ يحملُ الرمزَ المغلقَ لا كائنَ المستدعي');
+    assert.equal(sc.boot(at + 60_000).audit.verifyIntegrity().valid, true, 'الإقلاعُ من اليوميّةِ بعدَ الرفضِ الكائنِ سليم');
   } finally {
     sc.clean();
   }
