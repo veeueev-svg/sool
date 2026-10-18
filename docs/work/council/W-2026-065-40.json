@@ -1,0 +1,39 @@
+{
+  "item": "W-2026-065",
+  "commit": "3ac5709267b4f2b9fc35d89724b235e57fca6c89",
+  "scope_digest": "6a7732a549182b0f77cbd9a77537e6cc7aaea5634e3b08bc54fa73644406011a",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-18",
+  "session": 40,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-40-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-065-40-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-065-40-gemini.md"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS",
+    "discoveries": [
+      "TAX_LEVY_DURABLE_SINK_MUTABLE_REFERENCE_ESCAPE (gpt · مقيس) / TAX_LEVY_SINK_MUTABLE_REFERENCE_ESCAPE (grok · مقيس — عيبٌ واحدٌ شهدَ له العضوانِ بمسبارَيه): الدالةُ الخاصة commit() في src/economy/tax.ts تخزّن levy في خريطةِ الحال ثمّ تمرّرُ المرجعَ الحيَّ نفسَه إلى الوسيطِ الدائم this.sink?.record('tax_levy', { levy, ... }) — البابُ السادسُ الذي لم تنسخه الأبوابُ الخمسةُ لعلاجِ الجولة 39. وسيطٌ يحتفظُ بالحمولةِ أو يعبثُ بها قبلَ الإرجاعِ يمسكُ الحالَ الكنونيّ: مسبارُ gpt (العبثُ داخل record) قلبَ التقديرَ إلى محصّلٍ بمبلغٍ 777777 ونسبةٍ 999 والتقريرَ collectedTotal=777777 وoutstanding=0 والسلسلةَ سليمةً بلا قيدِ levy_collected · مسبارُ grok (الاحتفاظُ بعدَ التدوينِ على يوميةٍ حقيقية) عادَ بأعراضِ الجولة 39 في الذاكرةِ والقرصِ سليم، و(العبثُ قبلَ التسلسل) قسّمَ شاهدَ levy_assessed (نسبةٌ 999 ومبلغٌ 25000 في القيدِ الواحد) وأبقى 777777 على القرصِ فيجبيهِ الإقلاع. العلاجُ الأدنى: لا يشاركُ الوسيطُ كائنَ الحال — لقطةٌ تُخزَّنُ في الخريطةِ وحمولةُ record نسخةٌ أخرى، مع اختبارِ وسيطٍ عدائيّ يقتلُ الطفرة.",
+      "TAX_LEVY_NONPRIMITIVE_FIELD_ALIAS (grok · مقيس): دعوى علاجِ الجولة 39 «الحقلُ مسطّحٌ كله (بدائيات) فالنسخةُ لقطةٌ كاملة» غيرُ مفروضةٍ في المدخل: assess(base, payer, amountBase, occurredAt, now) يفحصُ payer.trim() ومقارناتِ occurredAt/now بالإكراهِ ثمّ يخزّنُ مراجعَ المستدعي، والانتشارُ يشاركُ الحقلَ غيرَ البدائي. مسبارُ grok: payer كائنٌ بـtrim يقرأُ متغيّرًا وoccurredAt/now كائنانِ بـvalueOf — بعدَ الاعتمادِ قلبُ الصناديقِ زوّرَ المكلَّفَ على الإيصال (forged:after) ولحظةَ الواقعةِ ولحظةَ التقدير بلا أمرٍ ملكيٍّ ولا كسرِ سلسلةٍ (integrity=true وعددُ التدقيقِ ثابت) — من جنسِ عيبِ الجلسة 9 (RATE_AMENDMENT_EFFECTIVE_AT_MUTABLE_OBJECT_ESCAPE) الذي أُغلق هناك بحارسِ بدائيّةٍ ولم يُغلق هنا. العلاجُ الأدنى: رفضٌ مسمّى إن لم يكن payer سلسلةً وoccurredAt وnow عددينِ محددين، وتخزينُ القيمِ المقروءةِ مرةً واحدةً لا المراجع — داخل src/economy/tax.ts."
+    ]
+  }
+}
