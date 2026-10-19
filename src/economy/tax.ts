@@ -219,8 +219,7 @@ export class RevenueService {
       return { ok: false, reason: why, auditId: entry.hash };
     };
     if (typeof reason !== 'string' || typeof now !== 'number' || !Number.isFinite(now)) return refuse('سببُ الإعفاءِ نصٌّ ولحظةُ الأمرِ رقمٌ محددٌ — لا كائنٌ يُقرأُ عند المقارنةِ فيُخزَّنَ مرجعُه الحيّ');
-    // الجولة 44 (grok · TAX_WAIVE_COMMAND_ID_LIVE_REFERENCE): معرّفُ الأمرِ يُقرأُ قراءةً واحدةً
-    // ولقطةُ حمولتهِ تُعتمدُ — فالخامَّ غيرَ النصّيِّ كان يُخزَّنُ في levy_waived مرجعًا حيًّا يكسرُ العبثُ بعدَ النجاحِ السلسلةَ؛ والقارئةُ المنقلبةُ لا تُفرّقُ بينَ المفحوصِ والمعتمدِ.
+    // الجولة 44 (grok · TAX_WAIVE_COMMAND_ID_LIVE_REFERENCE): معرّفُ الأمرِ يُقرأُ قراءةً واحدةً ولقطةُ حمولتهِ تُعتمدُ — فالخامَّ غيرَ النصّيِّ كان يُخزَّنُ مرجعًا حيًّا يكسرُ السلسلةَ.
     const witness = royalCommandWitness(command, false);
     if (!witness.ok) return refuse(witness.reason);
     const levy = this.levies.get(levyId);
@@ -241,11 +240,12 @@ export class RevenueService {
     if (!authorized.ok) return refuse(authorized.reason, authorized.extra);
 
     const waived: Levy = { ...levy, status: 'waived', waiveReason: reason.trim() };
-    this.commit(waived);
+    // الجولة 48 (gpt · WAIVE_EXECUTED_GUARD_NOT_ATOMIC_WITH_EFFECT): الشاهدُ الدائمُ **أولًا** كما في amendRate — فأثرُ الإعفاءِ كان يسبقُ شاهدَه فرفضُ الوسيطِ يتركُ إعفاءً بلا شاهدٍ ويسمحُ بإعادةِ الأمرِ نفسِه؛ الآنَ رميُ الإضافةِ قبلَ commit لا أثرَ بعده أصلًا.
     const entry = this.deps.audit.append(this.actorId, 'levy_waived', {
       levyId, payer: levy.payer, levied: levy.levied, reason: waived.waiveReason,
       commandId: witness.commandId,
     });
+    this.commit(waived);
     // 39أ (الجولة 39): النتيجةُ نسخةٌ مجمّدةٌ لا الكائنَ الداخليَّ الحيَّ
     return { ok: true, levy: { ...waived }, auditId: entry.hash };
   }

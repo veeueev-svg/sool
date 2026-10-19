@@ -6,6 +6,9 @@
  * الجولة 47 (الجلسة 145 · علاج عيبَي المجلس): grok RATE_AMENDMENT_APPROVAL_BINDING_OMITS_ISSUED_AT —
  * الربطُ صارَ يلزمُ المُصدِرَ ونافذةَ عمرِ الأمر؛ وgpt TAX_WAIVE_COMMAND_ISSUED_AT_MUTABLE_EXPIRY_BYPASS —
  * حارسُ issuedAt البدائيُّ لكلّ الاستدعاءاتِ لا لـamendRate وحده.
+ * الجولة 48 (الجلسة 146 · علاج عيب gpt): WAIVE_EXECUTED_GUARD_NOT_ATOMIC_WITH_EFFECT —
+ * شاهدُ levy_waived الدائمُ صارَ قبلَ أثرِ الإعفاءِ (commit) كما في amendRate، فرفضُ الوسيطِ يمنعُ
+ * الإعفاءَ كاملَه ولا يبقى أثرٌ دائمٌ بلا شاهدٍ يراه حارسُ الإعادة.
  * ملفٌّ جديدٌ معلنٌ لسقفِ الوحدةِ 400 سطرًا (سابقةُ الجلستين 133 و138 · توسيعُ نطاقٍ معلنٌ في §2 من عقدِ البند).
  * المالك: وزارة المالية تحت التاج | يوثّق في: docs/test-reports/phase-40-W-2026-065.md
  */
@@ -216,6 +219,57 @@ test('**T-53/مجلس 47ب** — TAX_WAIVE_COMMAND_ISSUED_AT_MUTABLE_EXPIRY_BYPA
     const ok = second.revenue.waive(good, idB, 'إعفاء معلن', at + 61_000);
     assert.equal(ok.ok, true, 'الإعفاءُ الموقَّعُ السليمُ ينجح');
     assert.equal(second.revenue.get(idB)?.status, 'waived', 'والتقديرُ الثاني معفوٌّ');
+  } finally {
+    sc.clean();
+  }
+});
+
+test('**T-53/مجلس 48أ** — WAIVE_EXECUTED_GUARD_NOT_ATOMIC_WITH_EFFECT (gpt · الجولة 48): رفضُ وسيطِ التدقيقِ لقيدِ levy_waived يمنعُ الإعفاءَ كاملًا — لا أثرَ بلا شاهدٍ، والأمرُ نفسُه يُعادُ فينجحُ بشاهدٍ واحدٍ لا اثنين، والإقلاعُ يشهد (علاجُ الجلسة 146)', () => {
+  const sc = journalScene();
+  try {
+    const at = NOW + 1_000;
+    const s = sc.boot();
+    const a = s.revenue.assess('compute_usage', 'external:compute-provider', 1_000_000, at, at);
+    const b = s.revenue.assess('compute_usage', 'external:compute-provider', 2_000_000, at, at);
+    assert.equal(a.ok && b.ok, true, 'تقديرانِ للمسبار');
+    const idA = a.ok ? a.levy.levyId : '';
+    const idB = b.ok ? b.levy.levyId : '';
+    // عقدُ رفضِ الوسيطِ بحرفِ AppendOnlyLog (محاكاةُ مسبارِ gpt): الوسيطُ ردَّ null لقيدِ levy_waived
+    // وحده فالقيدُ يُرَدُّ ويُرمى AUDIT_SINK_DECLINED_RECORD — قبلَ أيِّ أثرٍ لا بعده.
+    const realAppend = s.audit.append.bind(s.audit);
+    let declineLevyWaived = true;
+    (s.audit as unknown as { append: typeof realAppend }).append = (actor, kind, detail) => {
+      if (declineLevyWaived && kind === 'levy_waived') throw new Error('AUDIT_SINK_DECLINED_RECORD');
+      return realAppend(actor, kind, detail);
+    };
+    const cmd = s.king.issueCommand('amend_policy', REVENUE_TARGET, { kind: 'economy' }, at);
+    assert.equal(s.gateway.authorize(cmd, at).allowed, true, 'أمرُ الإعفاءِ معتمدٌ — بذرةُ المسبار');
+    assert.throws(() => s.revenue.waive(cmd, idA, 'إعفاء مرفوض الوسيط', at),
+      /AUDIT_SINK_DECLINED_RECORD/, 'رفضُ الشاهدِ يمنعُ الإعفاءَ كلَّه — لا أثرَ يسبقُ شاهدَه');
+    assert.equal(s.revenue.get(idA)?.status, 'assessed', 'التقديرُ باقٍ مستحقًّا — لا أثرَ بلا شاهد');
+    assert.equal(s.audit.find('levy_waived').length, 0, 'ولا شاهدَ إعفاء');
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'والسلسلةُ سليمة');
+    // الإقلاعُ من اليوميّةِ الحقيقيةِ يشهدُ أنّ لا إعفاءَ دائمًا بلا شاهدٍ يراهُ حارسُ الإعادة
+    // رُدَّ الوسيطُ فعادَ الأمرُ نفسُه يمرُّ من البابِ الأصليِّ — فالمحاولةُ المرفوضةُ لم تترك أثرًا يحرسُه الظلُّ
+    declineLevyWaived = false;
+    const ok = s.revenue.waive(cmd, idA, 'إعفاء معلن', at + 10);
+    assert.equal(ok.ok, true, 'الأمرُ نفسُه يُعادُ فينجحُ — لا إعفاءَ وقعَ بلا شاهد');
+    assert.equal(s.revenue.get(idA)?.status, 'waived', 'والتقديرُ الأول معفوٌّ الآنَ وشاهدُه حاضر');
+    assert.equal(s.revenue.get(idB)?.status, 'assessed', 'والتقديرُ الثاني باقٍ مستحقًّا');
+    assert.equal(s.audit.find('levy_waived').length, 1, 'شاهدُ إعفاءٍ واحدٌ لا اثنان');
+    // وإعادةُ الأمرِ نفسِه على التقديرِ الثاني مرفوضةٌ مسمّاةً — حارسُ الإعادةِ يرى الشاهدَ الآن
+    const again = s.revenue.waive(cmd, idB, 'إعفاء معاد', at + 20);
+    assert.equal(again.ok, false, 'الأمرُ المنفَّذَ لا يُعفي ثانيةً');
+    assert.match(again.ok ? '' : again.reason, /نُفّذ سابقًا/);
+    assert.equal(s.revenue.get(idB)?.status, 'assessed', 'التقديرُ الثاني باقٍ مستحقًّا');
+    assert.equal(s.audit.find('levy_waived').length, 1, 'وشاهدٌ واحدٌ فقط');
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'والسلسلةُ سليمة');
+    // والإقلاعُ يشهدُ: أثرٌ واحدٌ وشاهدٌ واحدٌ — لا أثرَ بلا شاهدٍ ولا شاهدَ بلا أثر
+    const second = sc.boot(at + 60_000);
+    assert.equal(second.revenue.get(idA)?.status, 'waived', 'الأول معفوٌّ بعدَ الإقلاع');
+    assert.equal(second.revenue.get(idB)?.status, 'assessed', 'والثاني مستحقٌّ بعدَ الإقلاع');
+    assert.equal(second.audit.find('levy_waived').length, 1, 'شاهدٌ واحدٌ دائم');
+    assert.equal(second.audit.verifyIntegrity().valid, true, 'والسلسلةُ سليمةٌ بعدَ الإقلاع');
   } finally {
     sc.clean();
   }
