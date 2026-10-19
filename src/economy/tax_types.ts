@@ -86,7 +86,11 @@ export function royalCommandWitness(
   const payload = command.payload;
   const commandId = payload.commandId;
   const issuedAt = payload.issuedAt;
-  if (withIssuedAt && (typeof issuedAt !== 'number' || !Number.isFinite(issuedAt))) {
+  // الجولة 47 (gpt · TAX_WAIVE_COMMAND_ISSUED_AT_MUTABLE_EXPIRY_BYPASS): الحارسُ البدائيُّ صار
+  // لكلِّ الاستدعاءاتِ لا لـamendRate وحده — فمسارُ الإعفاءِ كان يمرِّرُ كائنَ Date متحركًا يُوقَّعُ
+  // كـ{} (طيُّ canonicalize) ثم يُحرَّكُ بعدَ التوقيعِ فيتجاوزُ نافذةَ صلاحيةِ البوابةِ ويُدوِّنُ الإعفاءَ
+  // الدائمَ ويَنجو الإقلاع. واللقطةُ تخزنُه بدائيًّا مقروءًا مرّةً واحدةً فلا مرجعَ حيًّا بعدَ النجاح.
+  if (typeof issuedAt !== 'number' || !Number.isFinite(issuedAt)) {
     return { ok: false, reason: 'لحظةُ إصدارِ الأمرِ رقمٌ محددٌ لا كائنٌ يُكرَه عند حسابِ العمر — وذاك مرجعٌ حيٌّ يُدوَّنُ في السجلِّ فيكسرُه' };
   }
   if (typeof commandId !== 'string' || commandId.trim().length === 0) {
@@ -115,6 +119,15 @@ export function royalCommandWitness(
 }
 
 /**
+ * الجولة 47 (grok · RATE_AMENDMENT_APPROVAL_BINDING_OMITS_ISSUED_AT): نافذةُ عمرِ الأمرِ
+ * المعلنةُ عندَ بوابةِ التاجِ (120 ثانيةً في التركيبِ وDEFAULT_POLICY معًا · وتسامحُ المستقبلِ 5 ثوانٍ
+ * في authorize نفسِها) — يُعكسُها الربطُ هنا فلا يُقبلُ قرارٌ معادٌ لأمرٍ صدرَ خارجَ نافذتِه. اقترانٌ
+ * معلنٌ لا صامت: إن غُيِّرتْ نافذةُ البوابةِ في التركيبِ فليُحدَّثْ هذا الثابتُ معها.
+ */
+const GATEWAY_MAX_COMMAND_AGE_MS = 120_000;
+const GATEWAY_FUTURE_TOLERANCE_MS = 5_000;
+
+/**
  * الجولة 46 (grok · RATE_AMENDMENT_IDEMPOTENT_APPROVAL_NOT_PAYLOAD_BOUND): بوابةُ التاجِ تعيدُ القرارَ السابقَ لأيِّ
  * حمولةٍ تحملُ commandId سبقَ اعتمادُه قبلَ فحصِ التوقيعِ والفعلِ والهدف — فمعرّفُ declare_emergency المعتمدُ كان
  * يمرِّرُ amend_policy (وwaive) بتوقيعٍ مزوّر. فالاعتمادُ هنا: (1) أمرٌ نُفّذ في قيدِ executedKind لا يُنفَّذُ ثانيةً
@@ -122,6 +135,13 @@ export function royalCommandWitness(
  * يشيرُ إليه القرارُ واحدٌ ويطابقُ حمولةَ اللقطةِ بعينِها (المعرّفُ والفعلُ والهدفُ وparams) — فشلٌ مغلق. إعادةُ
  * الحمولةِ المعتمدةِ نفسِها بعدَ فشلٍ سابقٍ مشروعة، والقرارُ لحمولةٍ أخرى ليس اعتمادًا. البوابةُ نفسُها لا تُلمس هنا
  * (src/crown/crown_gateway.ts خارجَ نطاقِ W-2026-065).
+ *
+ * الجولة 47 (grok · RATE_AMENDMENT_APPROVAL_BINDING_OMITS_ISSUED_AT): الربطُ كانَ يتجاهلُ ما تبقّى من
+ * حمولةِ الأمرِ الموقَّعةِ — فأمرٌ غيرُ موقَّعٍ يعيدُ معرّفًا معتمدًا بـissuedAt=1 وissuedBy مزوّرٍ كانَ يُنفَّذُ
+ * ويُدوَّنُ الشاهدُ كذبًا (commandIssuedAt=1) ويَنجو الإقلاعُ. فالربطُ صارَ يلزمُ المُصدِرَ (فاعلَ قيدِ
+ * الاعتمادِ) ويلزمُ issuedAt داخلَ نافذةِ العمرِ المعلنةِ (أعلاه) — فلا يُقبلُ قرارٌ معادٌ لحمولةٍ لم تصدرْ
+ * في نافذتِها ولا لمُصدِرٍ غيرِ مَن اعتُمدَ له. والبقيّةُ الباقيةُ (توقيعٌ لا يُمكنُ التحقّقُ منه هنا بلا مفتاحِ
+ * الملكِ العام) جذرُها في البوابةِ نفسِها — مُسجَّلةً في عقدِ البند لا مُخفاة.
  */
 export function authorizeBound(
   deps: Pick<RevenueDeps, 'audit' | 'gateway'>, command: SignedRoyalCommand, now: number, executedKind?: string,
@@ -133,10 +153,16 @@ export function authorizeBound(
   const decision = deps.gateway.authorize(command, now);
   if (!decision.allowed) return { ok: false, reason: `الأمر غير معتمد: ${decision.reason}`, extra: {} };
   const hits = deps.audit.find('command_approved').filter((e) => e.hash === decision.auditId);
-  const d = hits.length === 1 ? hits[0]!.detail : null;
+  const hit = hits.length === 1 ? hits[0]! : null;
+  const d = hit ? hit.detail : null;
   const p = command.payload;
-  const bound = d !== null && d['commandId'] === p.commandId && d['action'] === p.action && d['target'] === p.target
-    && canonicalJson(d['params'] ?? null) === canonicalJson(p.params ?? null);
+  const ageMs = now - (p.issuedAt as number);
+  const bound = hit !== null && d !== null
+    && d['commandId'] === p.commandId && d['action'] === p.action && d['target'] === p.target
+    && canonicalJson(d['params'] ?? null) === canonicalJson(p.params ?? null)
+    && hit.actor === p.issuedBy
+    && typeof p.issuedAt === 'number' && Number.isFinite(p.issuedAt)
+    && ageMs <= GATEWAY_MAX_COMMAND_AGE_MS && ageMs >= -GATEWAY_FUTURE_TOLERANCE_MS;
   if (!bound) return { ok: false, reason: 'اعتمادُ البوابةِ لا يطابقُ حمولةَ هذا الأمر — لا أثرَ بقرارٍ لحمولةٍ أخرى', extra: { commandId } };
   return { ok: true };
 }

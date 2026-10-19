@@ -3,6 +3,9 @@
  * الجولة 46 (الجلسة 144 · علاج عيب grok RATE_AMENDMENT_IDEMPOTENT_APPROVAL_NOT_PAYLOAD_BOUND): بوابةُ التاجِ
  * تعيدُ القرارَ السابقَ لأيِّ حمولةٍ تحملُ commandId سبقَ اعتمادُه قبلَ فحصِ التوقيع — فلا يُعدَّلُ ولا يُعفى
  * بقرارٍ لحمولةٍ أخرى، ولا يُعفي أمرُ إعفاءٍ نُفّذَ مرّةً ثانيةً.
+ * الجولة 47 (الجلسة 145 · علاج عيبَي المجلس): grok RATE_AMENDMENT_APPROVAL_BINDING_OMITS_ISSUED_AT —
+ * الربطُ صارَ يلزمُ المُصدِرَ ونافذةَ عمرِ الأمر؛ وgpt TAX_WAIVE_COMMAND_ISSUED_AT_MUTABLE_EXPIRY_BYPASS —
+ * حارسُ issuedAt البدائيُّ لكلّ الاستدعاءاتِ لا لـamendRate وحده.
  * ملفٌّ جديدٌ معلنٌ لسقفِ الوحدةِ 400 سطرًا (سابقةُ الجلستين 133 و138 · توسيعُ نطاقٍ معلنٌ في §2 من عقدِ البند).
  * المالك: وزارة المالية تحت التاج | يوثّق في: docs/test-reports/phase-40-W-2026-065.md
  */
@@ -115,4 +118,105 @@ test('**T-53/مجلس 46ب** — الجنسُ نفسُه في waive: المعر�
   assert.equal(s.revenue.get(idB)?.status, 'assessed', 'التقديرُ الثاني باقٍ مستحقًّا');
   assert.equal(s.audit.find('levy_waived').length, 1, 'شاهدُ إعفاءٍ واحد');
   assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمة');
+});
+
+test('**T-53/مجلس 47أ** — RATE_AMENDMENT_APPROVAL_BINDING_OMITS_ISSUED_AT (grok · الجولة 47): أمرٌ غيرُ موقَّعٍ يعيدُ معرّفًا معتمدًا بـissuedAt=1 وissuedBy مزوّرٍ لا يُعدِّل — الربطُ صارَ يلزمُ المُصدِرَ ونافذةَ العمر، والشاهدُ لا يكذب، والإقلاعُ يشهد (علاجُ الجلسة 145)', () => {
+  const sc = journalScene();
+  try {
+    const at = NOW + 1_000;
+    const s = sc.boot();
+    const real = s.king.issueCommand('amend_policy', REVENUE_TARGET,
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at);
+    assert.equal(s.gateway.authorize(real, at).allowed, true, 'الأمرُ الحقيقيُّ معتمدٌ — بذرةُ المسبار');
+    const poisoned = {
+      ...real,
+      signature: 'not-a-signature',
+      payload: { ...real.payload, issuedBy: 'attacker:not-king', issuedAt: 1, nonce: 'poison-nonce' },
+    } as SignedRoyalCommand;
+    const r = s.revenue.amendRate(poisoned, 'compute_usage', 40, at);
+    assert.equal(r.ok, false, 'الحمولةُ المستبدَلةُ مرفوضةٌ ولو طابقَتِ المعرّفُ والفعلُ والهدفُ وparams');
+    assert.match(r.ok ? '' : r.reason, /اعتمادُ البوابةِ لا يطابقُ حمولةَ هذا الأمر/);
+    // صورتانِ معزولتانِ للحارسين: مُصدِرٌ سليمٌ بوقتٍ خارجَ النافذة (يردّهُ حارسُ العمرِ وحده)
+    const staleIssued = {
+      ...real, signature: 'not-a-signature',
+      payload: { ...real.payload, issuedAt: 1 },
+    } as SignedRoyalCommand;
+    const rStale = s.revenue.amendRate(staleIssued, 'compute_usage', 40, at);
+    assert.equal(rStale.ok, false, 'issuedAt=1 خارجَ نافذةِ العمرِ مرفوضٌ ولو صحَّ المُصدِرُ');
+    assert.match(rStale.ok ? '' : rStale.reason, /اعتمادُ البوابةِ لا يطابقُ حمولةَ هذا الأمر/);
+    // ومُصدِرٌ مزوّرٌ بوقتٍ معقولٍ (يردّهُ ربطُ المُصدِرِ وحده)
+    const forgedIssuer = {
+      ...real, signature: 'not-a-signature',
+      payload: { ...real.payload, issuedBy: 'attacker:not-king' },
+    } as SignedRoyalCommand;
+    const rIssuer = s.revenue.amendRate(forgedIssuer, 'compute_usage', 40, at);
+    assert.equal(rIssuer.ok, false, 'المُصدِرُ المزوّرُ مرفوضٌ ولو كانَ issuedAt داخلَ النافذة');
+    assert.match(rIssuer.ok ? '' : rIssuer.reason, /اعتمادُ البوابةِ لا يطابقُ حمولةَ هذا الأمر/);
+    assert.equal(s.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'النسبةُ باقيةٌ 25');
+    assert.equal(s.audit.find('rate_amended').length, 0, 'لا شاهدَ تعديل');
+    assert.ok(s.audit.find('command_replay_collapsed').some((e) => e.detail['commandId'] === real.payload.commandId),
+      'القرارُ مرَّ بمسارِ الإعادةِ (replay) ورُدَّ عندَ الربط — لا ببابِ التوقيع');
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمة');
+    // الإقلاعُ من اليوميّةِ الحقيقيةِ يشهدُ أنّ لا تعديلَ دائمًا ولا شاهدَ يكذب
+    const second = sc.boot(at + 60_000);
+    assert.equal(second.revenue.rateFor('compute_usage')?.ratePerMille, 25, 'بعدَ الإقلاعِ 25');
+    assert.equal(second.audit.find('rate_amended').length, 0, 'ولا شاهدَ تعديلٍ مستعاد');
+    assert.equal(second.audit.verifyIntegrity().valid, true, 'والسلسلةُ سليمةٌ بعدَ الإقلاع');
+    // والطريقُ القويمُ مفتوح: أمرٌ موقَّعٌ جديدٌ على التعديلِ بعينِه ينجح
+    const good = second.king.issueCommand('amend_policy', REVENUE_TARGET,
+      { kind: 'economy', base: 'compute_usage', ratePerMille: 40 }, at + 61_000);
+    const ok = second.revenue.amendRate(good, 'compute_usage', 40, at + 61_000);
+    assert.equal(ok.ok, true, 'الأمرُ الموقَّعُ السليمُ ينجح');
+    assert.equal(second.revenue.rateFor('compute_usage')?.ratePerMille, 40, 'والنسبةُ 40');
+  } finally {
+    sc.clean();
+  }
+});
+
+test('**T-53/مجلس 47ب** — TAX_WAIVE_COMMAND_ISSUED_AT_MUTABLE_EXPIRY_BYPASS (gpt · الجولة 47): إعفاءٌ بأمرٍ حمولتُه Date متحركٌ مرفوضٌ قبلَ البوابةِ — الحارسُ البدائيُّ لكلِّ الاستدعاءات، وتحريكُه بعدَ التوقيعِ لا ينفع، والإقلاعُ يشهد (علاجُ الجلسة 145)', () => {
+  const sc = journalScene();
+  try {
+    const at = NOW + 1_000;
+    const s = sc.boot();
+    const a = s.revenue.assess('compute_usage', 'external:compute-provider', 1_000_000, at, at);
+    const b = s.revenue.assess('compute_usage', 'external:compute-provider', 2_000_000, at, at);
+    assert.equal(a.ok && b.ok, true, 'تقديرانِ للمسبار');
+    const idA = a.ok ? a.levy.levyId : '';
+    const idB = b.ok ? b.levy.levyId : '';
+    // الضابطُ الرقميُّ المنتهي: البوابةُ نفسُها ترفضُه (أمرٌ منتهي الصلاحية)
+    const numericExpired = s.king.issueCommand('amend_policy', REVENUE_TARGET,
+      { kind: 'economy' }, at - 600_000);
+    const refusedNumeric = s.revenue.waive(numericExpired, idA, 'إعفاء منتهٍ', at);
+    assert.equal(refusedNumeric.ok, false, 'الأمرُ الرقميُّ المنتهي مرفوض');
+    assert.match(refusedNumeric.ok ? '' : refusedNumeric.reason, /منتهي الصلاحية/);
+    assert.equal(s.revenue.get(idA)?.status, 'assessed', 'التقديرُ باقٍ مستحقًّا');
+    // الحرفُ المهاجم: Date قديمٌ يُوقَّعُ كـ{} (طيُّ canonicalize) ثم يُحرَّكُ بعدَ التوقيع
+    const liveDate = new Date(at - 600_000);
+    const dateCmd = s.king.issueCommand('amend_policy', REVENUE_TARGET,
+      { kind: 'economy' }, liveDate as unknown as number);
+    const refusedDate = s.revenue.waive(dateCmd, idA, 'إعفاء متحرك', at);
+    assert.equal(refusedDate.ok, false, 'الأمرُ ذو الحمولةِ Date مرفوضٌ عندَ الحارسِ البدائي');
+    assert.match(refusedDate.ok ? '' : refusedDate.reason, /لحظةُ إصدارِ الأمرِ رقمٌ محدد/);
+    // تحريكُه بعدَ التوقيعِ (جوهرُ العيب) لا يعيدُه من الباب
+    liveDate.setTime(at);
+    const refusedMoved = s.revenue.waive(dateCmd, idA, 'إعفاء متحرك بعد الحركة', at);
+    assert.equal(refusedMoved.ok, false, 'تحريكُ Date بعدَ التوقيعِ لا ينفع');
+    assert.match(refusedMoved.ok ? '' : refusedMoved.reason, /لحظةُ إصدارِ الأمرِ رقمٌ محدد/);
+    assert.equal(s.revenue.get(idA)?.status, 'assessed', 'التقديرُ باقٍ مستحقًّا');
+    assert.equal(s.audit.find('levy_waived').length, 0, 'لا شاهدَ إعفاء');
+    assert.equal(s.audit.verifyIntegrity().valid, true, 'السلسلةُ سليمة');
+    // الإقلاعُ من اليوميّةِ يشهدُ أنّ لا إعفاءَ دائمًا
+    const second = sc.boot(at + 60_000);
+    assert.equal(second.revenue.get(idA)?.status, 'assessed', 'بعدَ الإقلاعِ التقديرُ مستحقٌّ');
+    assert.equal(second.audit.find('levy_waived').length, 0, 'ولا شاهدَ إعفاءٍ مستعاد');
+    assert.equal(second.audit.verifyIntegrity().valid, true, 'والسلسلةُ سليمةٌ بعدَ الإقلاع');
+    // والطريقُ القويمُ مفتوح: إعفاءٌ موقَّعٌ رقميٌّ سليمٌ ينجح
+    const good = second.king.issueCommand('amend_policy', REVENUE_TARGET,
+      { kind: 'economy' }, at + 61_000);
+    const ok = second.revenue.waive(good, idB, 'إعفاء معلن', at + 61_000);
+    assert.equal(ok.ok, true, 'الإعفاءُ الموقَّعُ السليمُ ينجح');
+    assert.equal(second.revenue.get(idB)?.status, 'waived', 'والتقديرُ الثاني معفوٌّ');
+  } finally {
+    sc.clean();
+  }
 });
