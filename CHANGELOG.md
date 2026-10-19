@@ -4060,3 +4060,7 @@ T-25 (لا نسب حقيقي للمخططات)، T-26 (سياسة التوالد
 ### حوكمة(46)
 
 - **W-2026-066 — الجولة 46 لمجلس المراجعة على W-2026-065 ثمّ محضرُها ومعالجتُها (بالأمر التشغيلي الدائم · الجلسة 144)**: الخامُّ أوّلًا (`e1c8fcf` — gpt VERIFIED · grok NOT_VERIFIED · gemini VERIFIED) ثمّ المحضرُ `W-2026-065-46.json`: خلافٌ ⇒ NOT_VERIFIED بمآل IN_PROGRESS — العيبُ `RATE_AMENDMENT_IDEMPOTENT_APPROVAL_NOT_PAYLOAD_BOUND` (إعادةُ معرّفِ أمرٍ معتمدٍ لفعلٍ آخر تمرّر تعديلَ نسبةٍ وإعفاءً بتوقيعٍ مزوّر) مقيّدٌ في discoveries.
+
+### إصلاح(46)
+
+- **W-2026-065 — علاجُ عيبِ الجولة 46 (بالأمر التشغيلي الدائم · الجلسة 144):** `RATE_AMENDMENT_IDEMPOTENT_APPROVAL_NOT_PAYLOAD_BOUND` — اعتمادُ بوابةِ التاجِ في `amendRate` و`waive` صارَ مربوطًا بحمولةِ الأمر (`authorizeBound` في `src/economy/tax_types.ts`: قيدُ `command_approved` المعادُ يطابقُ المعرّفَ والفعلَ والهدفَ وparams) وأمرُ الإعفاءِ المنفَّذُ لا يُعفي ثانيةً · اختبارٌ جديد `tests/economy/tax_rate_amendment_replay.test.ts` · 2464/2464.

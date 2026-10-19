@@ -47,7 +47,7 @@ import { isValidRatePerMille } from '../kernel/config/economy';
 import { RatePolicy } from './rate_policy';
 import type { DurableSink } from '../data/persistence';
 import type { RateAmendmentRecovery, RateDeclaration } from './rate_policy';
-import { auditPrimitive, royalCommandWitness, type Levy, type LevyResult, type RateAmendmentResult, type RevenueDeps } from './tax_types';
+import { auditPrimitive, authorizeBound, royalCommandWitness, type Levy, type LevyResult, type RateAmendmentResult, type RevenueDeps } from './tax_types';
 
 export type { RateAmendmentRecovery, RateDeclaration };
 
@@ -237,8 +237,8 @@ export class RevenueService {
     if (witness.command.payload.target !== REVENUE_TARGET) {
       return refuse(`هدف الأمر يجب أن يكون ${REVENUE_TARGET}`);
     }
-    const authorized = this.deps.gateway.authorize(witness.command, now);
-    if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
+    const authorized = authorizeBound(this.deps, witness.command, now, 'levy_waived'); // الجولة 46: الاعتمادُ يطابقُ اللقطةَ ولا إعفاءَ مكرّر
+    if (!authorized.ok) return refuse(authorized.reason, authorized.extra);
 
     const waived: Levy = { ...levy, status: 'waived', waiveReason: reason.trim() };
     this.commit(waived);
@@ -323,8 +323,8 @@ export class RevenueService {
     if (this.rates.hasExecuted(commandId)) {
       return refuse('الأمر نُفّذ سابقًا — إعادتُه لا تُعدّل ثانيةً', { commandId });
     }
-    const authorized = this.deps.gateway.authorize(guarded, now);
-    if (!authorized.allowed) return refuse(`الأمر غير معتمد: ${authorized.reason}`);
+    const authorized = authorizeBound(this.deps, guarded, now); // الجولة 46: القرارُ المعادُ لحمولةٍ أخرى ليس اعتمادًا
+    if (!authorized.ok) return refuse(authorized.reason, authorized.extra);
     // الشاهدُ الدائمُ **أولًا**: كتابةُ قيد rate_amended في السجلِ الأبديّ تسبقُ كلَّ تغييرٍ
     // في الحال — فإذا رمى الوسيطُ الدائمُ رُدَّ قيدها ورُمي الاستثناءُ قبل أيِّ تعديلٍ حيٍّ،
     // وإذا نجحت فالتغييرُ بعدها لا يعرف الفشل. فلا يبقى تعديلٌ حيٌّ بلا سجلٍّ دائمٍ تفقدُه

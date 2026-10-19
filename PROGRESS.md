@@ -4201,3 +4201,7 @@ bash scripts/check_documentation.sh HEAD~1   # يجب أن يقول: التوث�
 ## الجلسة 144 — §13.107 — محضرُ الجولة 46 ومعالجتُها: NOT_VERIFIED ⇒ IN_PROGRESS (2026-10-19)
 
 المحضرُ `W-2026-065-46.json` (gpt VERIFIED · grok REJECTED · gemini VERIFIED ⇒ NOT_VERIFIED · المآل IN_PROGRESS)؛ W-2026-065 من REVIEW إلى IN_PROGRESS والعيبُ `RATE_AMENDMENT_IDEMPOTENT_APPROVAL_NOT_PAYLOAD_BOUND` في discoveries. التالي: العلاجُ داخلَ `src/economy/tax.ts` بلا لمسِ `crown_gateway.ts` (خارجَ النطاق).
+
+## الجلسة 144 — علاجُ عيبِ الجولة 46 في W-2026-065 والرفعُ إلى REVIEW بتغيّرٍ مقيس (2026-10-19)
+
+`authorizeBound` في `src/economy/tax_types.ts` يربطُ اعتمادَ البوابةِ بحمولةِ الأمر في `amendRate` و`waive` ويمنعُ الإعفاءَ المكرّر؛ `crown_gateway.ts` لم يُلمس. اختبارٌ جديدٌ `tax_rate_amendment_replay.test.ts` (توسيعُ نطاقٍ معلن) · قتلُ أربعِ طفراتٍ مقيس · `npm run verify` ⇒ EXIT=0 · 2464/2464 · البصمة `e445ed5e…` (14 مسارًا) تخالفُ محضرَ الجولة 46. التالي: تجهيزُ الجولة 47.

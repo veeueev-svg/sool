@@ -113,3 +113,38 @@ export function royalCommandWitness(
     ? { ok: true, commandId, command: { ...command, payload: payloadSnapshot }, commandIssuedAt: issuedAt }
     : { ok: true, commandId, command: { ...command, payload: payloadSnapshot } };
 }
+
+/**
+ * الجولة 46 (grok · RATE_AMENDMENT_IDEMPOTENT_APPROVAL_NOT_PAYLOAD_BOUND): بوابةُ التاجِ تعيدُ القرارَ السابقَ لأيِّ
+ * حمولةٍ تحملُ commandId سبقَ اعتمادُه قبلَ فحصِ التوقيعِ والفعلِ والهدف — فمعرّفُ declare_emergency المعتمدُ كان
+ * يمرِّرُ amend_policy (وwaive) بتوقيعٍ مزوّر. فالاعتمادُ هنا: (1) أمرٌ نُفّذ في قيدِ executedKind لا يُنفَّذُ ثانيةً
+ * (نظيرُ hasExecuted في amendRate — وwaive كان بلا حارسٍ أصلًا)؛ (2) البوابةُ تعتمد؛ (3) قيدُ command_approved الذي
+ * يشيرُ إليه القرارُ واحدٌ ويطابقُ حمولةَ اللقطةِ بعينِها (المعرّفُ والفعلُ والهدفُ وparams) — فشلٌ مغلق. إعادةُ
+ * الحمولةِ المعتمدةِ نفسِها بعدَ فشلٍ سابقٍ مشروعة، والقرارُ لحمولةٍ أخرى ليس اعتمادًا. البوابةُ نفسُها لا تُلمس هنا
+ * (src/crown/crown_gateway.ts خارجَ نطاقِ W-2026-065).
+ */
+export function authorizeBound(
+  deps: Pick<RevenueDeps, 'audit' | 'gateway'>, command: SignedRoyalCommand, now: number, executedKind?: string,
+): { ok: true } | { ok: false; reason: string; extra: Record<string, unknown> } {
+  const commandId = command.payload.commandId;
+  if (executedKind !== undefined && deps.audit.find(executedKind).some((e) => e.detail['commandId'] === commandId)) {
+    return { ok: false, reason: 'الأمر نُفّذ سابقًا — إعادتُه لا تُنفَّذ ثانيةً', extra: { commandId } };
+  }
+  const decision = deps.gateway.authorize(command, now);
+  if (!decision.allowed) return { ok: false, reason: `الأمر غير معتمد: ${decision.reason}`, extra: {} };
+  const hits = deps.audit.find('command_approved').filter((e) => e.hash === decision.auditId);
+  const d = hits.length === 1 ? hits[0]!.detail : null;
+  const p = command.payload;
+  const bound = d !== null && d['commandId'] === p.commandId && d['action'] === p.action && d['target'] === p.target
+    && canonicalJson(d['params'] ?? null) === canonicalJson(p.params ?? null);
+  if (!bound) return { ok: false, reason: 'اعتمادُ البوابةِ لا يطابقُ حمولةَ هذا الأمر — لا أثرَ بقرارٍ لحمولةٍ أخرى', extra: { commandId } };
+  return { ok: true };
+}
+
+/** تمثيلٌ قانونيٌّ مرتّبُ المفاتيح لمقابلةِ params المعتمدةِ بحمولةِ اللقطة (الجولة 46) */
+function canonicalJson(v: unknown): string {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v) ?? 'undefined';
+  if (Array.isArray(v)) return `[${v.map(canonicalJson).join(',')}]`;
+  const o = v as Record<string, unknown>;
+  return `{${Object.keys(o).sort().map((k) => `${JSON.stringify(k)}:${canonicalJson(o[k])}`).join(',')}}`;
+}
