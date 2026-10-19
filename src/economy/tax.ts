@@ -6,32 +6,22 @@
  * المخرجات: تقدير ثم تحصيل مقيَّد في الدفتر بإيصال، أو رفض بسبب موثّق
  * التبعيات: الخزانة (القيد)، الدفتر، بوابة التاج (الإعفاء)، تهيئة الاقتصاد (النِسَب)
  * الصلاحيات: التقدير والتحصيل لوزارة المالية؛ والإعفاء والتعديلُ بأمرٍ ملكيٍّ وحده
- * السجلات: levy_assessed / levy_collected / levy_refused / levy_waived /
- *          rate_amended / rate_amendment_refused
+ * السجلات: levy_assessed / levy_collected / levy_refused / levy_waived / rate_amended / rate_amendment_refused
  * ثوابت هذه الوحدة:
  *   1) **لا رسم بلا نصّ معلن**: وعاء غير معلن في التهيئة ⇒ رفض (RULE-005)
- *   2) **لا أثر رجعي**: واقعة قبل تاريخ إعلان النسبة لا تُطالَب بها —
- *      نظير عدم رجعية القوانين في المرحلة 22
+ *   2) **لا أثر رجعي**: واقعة قبل تاريخ إعلان النسبة لا تُطالَب بها — نظير عدم رجعية القوانين
  *   3) **لا كسور عائمة**: الحساب بالأجزاء من الألف وبقسمة صحيحة، والباقي لمصلحة المكلَّف
  *   4) التقدير ليس تحصيلًا: مرحلتان منفصلتان، ولا تحصيل بلا تقدير سابق
  *   5) **لا تحصيل مرتين** لنفس التقدير
  *   6) **لا إعفاء إلا بأمر ملكي**: ولا يُعفي المكلَّفُ نفسه (RULE-005)
  *   7) كل تحصيل قيدٌ مزدوج في الدفتر بإيصال — لا مال يدخل بلا أثر
- *   8) **تعديل النسبة بأمر ملكي وبتاريخ سريان معلن** (T-53): يسجّل القيمتين
- *      معًا (القديمة والجديدة) كما يفعل appropriation_amended، والإعلانُ القديمُ
- *      يبقى في سجلِ النِّسَب لا يُمحى، والواقعةُ تُقدَّر بنسبةِ إعلانِها الذي
- *      ساد لحظة وقوعها لا بأحدثِ المعلن — فلا يُدقَّقُ الماضي بأحكامِ الحاضر
- *   9) **سجلُّ النِّسَبِ ومعرّفاتُ الأوامرِ تنجو إعادةَ التشغيل** (الجلسة 2 ·
- *      RATE_AMENDMENT_HISTORY_NOT_DURABLE): الإرجاعُ يعيدُ بناءَهما من قيودِ
- *      rate_amended في السجلِ الأبديِّ (شاهدُها لا يُسقَطُ بالضغط)، فلا يُمحى
- *      إعلانٌ بالإقلاعِ ولا يُنفَّذ أمرٌ نُفِّذ قبلَه. وما لا يُصدَّق يُرفضُ
- *      برمزٍ مغلقٍ لا يُخمَّن: وعاءٌ دخيلٌ · نسبةٌ غيرُ سليمةٍ · إعلانٌ يرجعُ
- *      بالزمنِ · تعديلٌ بلا تغييرٍ دخيل
- *  10) **لا أثرَ دائمًا على كائنٍ مقفل** (الجولة 38 · RATE_AMENDMENT_LOCKED_ASSESS_DURABLE_STALE_LEVY):
- *      بعد نتيجةٍ مجهولةٍ يُقفلُ السجلّ، فالتقديرُ والتحصيلُ والإعفاءُ تُرفضُ قبل قيد tax_levy لا بعده —
- *      وإلّا كُتب تقديرٌ بنسبةٍ بائدةٍ يُعيده الإقلاعُ بلا شاهد. الاستئنافُ إقلاعٌ جديد
- *  11) **بدائيّةُ المداخلِ وعزلُ الوسيطِ عن الحال** (الجولة 40 · عيباها المسمّاة): لا مرجعٌ حيٌّ
- *      يُخزَّنُ ولا وسيطٌ يمسكُ كائنَ الحالِ — الخريطةُ والوسيطُ لقطتانِ منفصلتان
+ *   8) **تعديل النسبة بأمر ملكي وبتاريخ سريان معلن** (T-53): يسجّل القيمتين معًا، والإعلانُ القديمُ يبقى
+ *      في سجلِ النِّسَب لا يُمحى، والواقعةُ تُقدَّر بنسبةِ إعلانِها الذي ساد لحظة وقوعها
+ *   9) **سجلُّ النِّسَبِ ومعرّفاتُ الأوامرِ تنجو إعادةَ التشغيل** (الجلسة 2): الإرجاعُ يعيدُ بناءَهما من
+ *      قيودِ rate_amended في السجلِ الأبديِّ، فلا يُمحى إعلانٌ بالإقلاع ولا يُنفَّذ أمرٌ نُفِّذ قبلَه
+ * 10) **لا أثرَ دائمًا على كائنٍ مقفل** (الجولتان 38 و49): بعد نتيجةٍ مجهولةٍ (تدقيقٍ أو خدمة) يُقفلُ السجلُّ
+ *      والخدمةُ معًا — فالتقديرُ والتحصيلُ والإعفاءُ تُرفضُ قبل قيد tax_levy لا بعده، والإقلاعُ وحدَه يفكُّه
+ * 11) **بدائيّةُ المداخلِ وعزلُ الوسيطِ عن الحال** (الجولة 40): لا مرجعٌ حيٌّ يُخزَّنُ ولا وسيطٌ يمسكُ كائنَ الحالِ
  * 12) **قيدُ الرفضِ لا يحملُ مرجعًا حيًّا** (الجولة 41): غيرُ البدائيِّ يُقنَّعُ (auditPrimitive)
  * حالات الفشل (كلها مغلقة): وعاء غير معلن ⇒ رفض؛ واقعة سابقة للإعلان ⇒ رفض؛
  *   تحصيل بلا تقدير أو مكرَّر ⇒ رفض؛ فشل القيد ⇒ لا تحصيل؛ إعفاء ذاتي ⇒ رفض
@@ -60,13 +50,13 @@ export class RevenueService {
   private readonly levies = new Map<string, Levy>();
   private readonly actorId: EntityId;
   /**
-   * سياسةُ النِّسَب (ثابت 8 · T-53 · والجلسة 2): سجلُّ إعلاناتٍ لا يُمحى منه إعلان،
-   * وحرسُ الأوامرِ المنفَّذة، وإرجاعُهما من شاهدِ السجلِ الأبديِّ — في وحدةٍ مستقلّة
-   * `rate_policy.ts` تحت سقفِ الوحدة، والاعتمادُ والتدوينُ هنا لا هناك (RULE-004).
+   * سياسةُ النِّسَب (ثابت 8 · T-53): سجلُّ إعلاناتٍ لا يُمحى منه إعلان، وحرسُ الأوامرِ المنفَّذة، وإرجاعُهما من شاهدِ السجلِّ الأبديِّ — في `rate_policy.ts` (RULE-004).
    */
   private readonly rates: RatePolicy;
   private sequence = 0;
   private sink: DurableSink | null = null;
+  /** الجولة 49 (gpt · WAIVE_WITNESS_TAX_COMMIT_SINK_SPLIT_BRAIN): نتيجةُ وسيطِ الخدمةِ غيرُ معلومةٍ ⇒ إقفالٌ حتى الإقلاع */
+  private sinkOutcomeUnknown = false;
 
   constructor(private readonly deps: RevenueDeps) {
     this.actorId = deps.actorId ?? FINANCE_MINISTRY;
@@ -78,26 +68,33 @@ export class RevenueService {
   attachJournal(sink: DurableSink): void { this.sink = sink; }
 
   /**
-   * كلُّ تغييرٍ على التزامٍ يمرّ من هنا: يُخزَّن ثم يُدوَّن (T-125). والسجلُّ المقفلُ بعد نتيجةٍ مجهولةٍ
-   * يرفضُ هنا **قبل** أيِّ أثرٍ في الذاكرةِ أو اليوميّة (ثابت 10) — لا بعد أن يُكتبَ التقديرُ بنسبةٍ بائدة.
+   * الجولة 49: بعد نتيجةٍ غير معلومةٍ لوسيطِ الخدمةِ تُقفلُ الخدمة — لا استمرارَ حتى يُبنى الحالُّ من اليومية (الإقلاع).
    */
+  private assertOpen(): void {
+    if (this.sinkOutcomeUnknown) throw new Error('REVENUE_SINK_OUTCOME_UNRESOLVED');
+  }
+
+  /** كلُّ تغييرٍ على التزامٍ يمرّ من هنا: يُخزَّن ثم يُدوَّن (T-125)، والسجلُّ المقفلُ يُرفضُ قبل أيِّ أثرٍ (ثابت 10). */
   private commit(levy: Levy): void {
     this.deps.audit.assertAppendable();
     // ثابت 11 (الجولة 40): الخريطةُ والوسيطُ لقطتانِ منفصلتانِ — لا يشاركُ وسيطٌ كائنَ الحالِ الحيَّ
     this.levies.set(levy.levyId, { ...levy });
-    this.sink?.record('tax_levy', { levy: { ...levy }, sequence: this.sequence });
+    try {
+      this.sink?.record('tax_levy', { levy: { ...levy }, sequence: this.sequence });
+    } catch (err) {
+      // الجولة 49 (gpt): الشاهدُ نجحَ وأثرُ tax_levy الدائمُ مجهول — كشفٌ وإقفالٌ لا استمرار، والإقلاعُ وحدَه يفكُّه
+      this.sinkOutcomeUnknown = true;
+      throw new Error('TAX_LEVY_SINK_OUTCOME_UNKNOWN', { cause: err });
+    }
   }
 
-  /**
-   * بابُ الإرجاع الذرّيّ (T-125): يُثبت التزاماتٍ مشهودةً ويرفع العدّاد فلا يتصادم
-   * معرّفٌ جديدٌ بقديم. ويرفض ما لا يُصدَّق: محصَّلٌ بلا قيدِ إيصالٍ في الدفتر ⇒
-   * RECOVERY_TAX_RECEIPT_MISSING — فالمُحصَّلُ دعوى، وقيدُ الدفتر شاهدُها.
-   */
+  /** بابُ الإرجاع الذرّيّ (T-125): يُثبت التزاماتٍ مشهودةً ويرفع العدّاد، ويرفض ما لا يُصدَّق: محصَّلٌ بلا قيدِ إيصالٍ ⇒ RECOVERY_TAX_RECEIPT_MISSING. */
   restore(levies: readonly Levy[], sequence: number, by: EntityId): void {
     for (const levy of levies) {
       if (levy.status !== 'collected') continue;
       if (levy.receiptEntryId === null) throw new Error('RECOVERY_TAX_RECEIPT_MISSING');
     }
+    this.sinkOutcomeUnknown = false; // الجولة 49: الإقلاعُ يبني الحالَّ من اليومية فيفكُّ الإقفال
     this.levies.clear();
     for (const levy of levies) this.levies.set(levy.levyId, { ...levy });
     this.sequence = Math.max(sequence, this.sequence);
@@ -120,6 +117,7 @@ export class RevenueService {
   assess(
     base: string, payer: EntityId, amountBase: number, occurredAt: number, now = Date.now(),
   ): LevyResult {
+    this.assertOpen(); // الجولة 49: لا عملَ على خدمةٍ مقفلة
     const refuse = (reason: string, extra: Record<string, unknown> = {}): LevyResult => {
       const entry = this.deps.audit.append(this.actorId, 'levy_refused', {
         base: auditPrimitive(base), payer: auditPrimitive(payer), amountBase: auditPrimitive(amountBase), reason, mode: 'assess', ...extra,
@@ -177,6 +175,7 @@ export class RevenueService {
 
   /** 2) التحصيل: مرة واحدة، بقيد مزدوج وإيصال (ثوابت 4 و5 و7) */
   collect(levyId: string, now = Date.now()): LevyResult {
+    this.assertOpen(); // الجولة 49: لا عملَ على خدمةٍ مقفلة
     const refuse = (reason: string, extra: Record<string, unknown> = {}): LevyResult => {
       const entry = this.deps.audit.append(this.actorId, 'levy_refused', {
         levyId: auditPrimitive(levyId), reason, mode: 'collect', ...extra,
@@ -212,6 +211,7 @@ export class RevenueService {
   waive(
     command: SignedRoyalCommand, levyId: string, reason: string, now = Date.now(),
   ): LevyResult {
+    this.assertOpen(); // الجولة 49: لا عملَ على خدمةٍ مقفلة
     const refuse = (why: string, extra: Record<string, unknown> = {}): LevyResult => {
       const entry = this.deps.audit.append(this.actorId, 'levy_refused', {
         levyId: auditPrimitive(levyId), reason: why, mode: 'waive', ...extra,

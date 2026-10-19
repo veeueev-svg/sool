@@ -7,6 +7,8 @@
  * الربطُ صارَ يلزمُ المُصدِرَ ونافذةَ عمرِ الأمر؛ وgpt TAX_WAIVE_COMMAND_ISSUED_AT_MUTABLE_EXPIRY_BYPASS —
  * حارسُ issuedAt البدائيُّ لكلّ الاستدعاءاتِ لا لـamendRate وحده.
  * الجولة 48 (الجلسة 146 · علاج عيب gpt): WAIVE_EXECUTED_GUARD_NOT_ATOMIC_WITH_EFFECT —
+ * الجولة 49 (الجلسة 147 · علاج عيب gpt): WAIVE_WITNESS_TAX_COMMIT_SINK_SPLIT_BRAIN — فشلُ وسيطِ الخدمةِ
+ * عند قيدِ tax_levy بعدَ نجاحِ الشاهدِ نتيجةٌ غيرُ معلومةٍ تُقفلُ الخدمةَ (كشفٌ وإقفالُ استمرار) والإقلاعُ يحسم.
  * شاهدُ levy_waived الدائمُ صارَ قبلَ أثرِ الإعفاءِ (commit) كما في amendRate، فرفضُ الوسيطِ يمنعُ
  * الإعفاءَ كاملَه ولا يبقى أثرٌ دائمٌ بلا شاهدٍ يراه حارسُ الإعادة.
  * ملفٌّ جديدٌ معلنٌ لسقفِ الوحدةِ 400 سطرًا (سابقةُ الجلستين 133 و138 · توسيعُ نطاقٍ معلنٌ في §2 من عقدِ البند).
@@ -270,6 +272,54 @@ test('**T-53/مجلس 48أ** — WAIVE_EXECUTED_GUARD_NOT_ATOMIC_WITH_EFFECT (gp
     assert.equal(second.revenue.get(idB)?.status, 'assessed', 'والثاني مستحقٌّ بعدَ الإقلاع');
     assert.equal(second.audit.find('levy_waived').length, 1, 'شاهدٌ واحدٌ دائم');
     assert.equal(second.audit.verifyIntegrity().valid, true, 'والسلسلةُ سليمةٌ بعدَ الإقلاع');
+  } finally {
+    sc.clean();
+  }
+});
+
+test('**T-53/مجلس 49أ** — WAIVE_WITNESS_TAX_COMMIT_SINK_SPLIT_BRAIN (gpt · الجولة 49): فشلُ وسيطِ الخدمةِ عند قيدِ tax_levy بعدَ نجاحِ شاهدِ levy_waived نتيجةٌ غيرُ معلومةٍ تُقفلُ الخدمة — كشفٌ وإقفالُ استمرارٍ لا استمرارَ بعده، والإقلاعُ من اليوميةِ الحقيقيةِ يحسمُ الحالَّ (علاجُ الجلسة 147 — الحدُّ المعلن: الشاهدُ اليتيمُ يمنعُ إعادةَ الأمرِ حتى بروتوكولٍ ذرٍّ خارجِ النطاق)', () => {
+  const sc = journalScene();
+  try {
+    const at = NOW + 1_000;
+    const s = sc.boot();
+    const a = s.revenue.assess('compute_usage', 'external:compute-provider', 3_000_000, at, at);
+    assert.equal(a.ok, true, 'تقديرٌ للمسبار');
+    const idA = a.ok ? a.levy.levyId : '';
+    const cmd = s.king.issueCommand('amend_policy', REVENUE_TARGET, { kind: 'economy' }, at);
+    assert.equal(s.gateway.authorize(cmd, at).allowed, true, 'أمرُ الإعفاءِ معتمدٌ — بذرةُ المسبار');
+    // عقدُ فشلِ وسيطِ الخدمةِ (محاكاةُ مسبارِ gpt بحرفِه): الشاهدُ يُلحَقُ في السجلِّ الدائمِ
+    // ثمّ يرمي وسيطُ الخدمةِ عند قيدِ tax_levy وحده — فالأثرُ الدائمُ مجهولٌ بعدَ شاهدٍ ناجح.
+    s.revenue.attachJournal({
+      record: (kind: string) => {
+        if (kind === 'tax_levy') throw new Error('PROBE_TAX_LEVY_SINK_REFUSAL');
+        return null;
+      },
+    });
+    // الكشف: رميٌ مسمًى بعلّةِ الأصل — لا ابتلاعَ للفشل
+    assert.throws(() => s.revenue.waive(cmd, idA, 'إعفاءٌ بوسيطِ خدمةٍ رافض', at + 1),
+      /TAX_LEVY_SINK_OUTCOME_UNKNOWN/, 'فشلُ وسيطِ الخدمةِ بعدَ الشاهدِ نتيجةٌ غيرُ معلومةٍ مسمّاة');
+    assert.equal(s.audit.find('levy_waived').length, 1, 'الشاهدُ نُجّحَ قبلَ الفشل — جوهرُ العيب');
+    // الإقفال: لا استمرارَ بعده — التقديرُ والتحصيلُ والإعفاءُ كلُّها مرفوضةٌ والخدمةُ مقفلة
+    assert.throws(() => s.revenue.assess('compute_usage', 'external:compute-provider', 4_000_000, at + 2, at + 2),
+      /REVENUE_SINK_OUTCOME_UNRESOLVED/, 'لا تقديرَ على خدمةٍ مقفلة');
+    assert.throws(() => s.revenue.collect(idA, at + 3),
+      /REVENUE_SINK_OUTCOME_UNRESOLVED/, 'لا تحصيلَ على خدمةٍ مقفلة');
+    assert.throws(() => s.revenue.waive(cmd, idA, 'إعفاءٌ ثانٍ', at + 4),
+      /REVENUE_SINK_OUTCOME_UNRESOLVED/, 'لا إعفاءَ على خدمةٍ مقفلة');
+    // الإقلاعُ من اليوميةِ الحقيقيةِ يحسمُ الحالَّ: قيدُ tax_levy المعفي لم يُكتب قطُّ
+    // فالتقديرُ assessed والشاهدُ اليتيمُ باقٍ — والحدُّ المعلنُ: إعادةُ الأمرِ نفسِه مرفوضةٌ
+    // «نُفّذ سابقًا» حتى بروتوكولٍ ذرٍّ يجمعُ القيدَ والشاهد (خارجُ مساراتِ البند).
+    const second = sc.boot(at + 60_000);
+    assert.equal(second.revenue.get(idA)?.status, 'assessed', 'اليوميةُ الحقيقيةُ تحسم: لا أثرَ دائمًا للإعفاء');
+    assert.equal(second.audit.find('levy_waived').length, 1, 'وشاهدُ الإعفاءِ اليتيمُ باقٍ — الحدُّ المعلن');
+    assert.equal(second.audit.verifyIntegrity().valid, true, 'والسلسلةُ سليمة');
+    const retry = second.revenue.waive(cmd, idA, 'إعادةُ الأمرِ اليتيم', at + 61_000);
+    assert.equal(retry.ok, false, 'الشاهدُ اليتيمُ يمنعُ إعادةَ الأمرِ — الحدُّ المعلنُ لا عيبًا صامتًا');
+    assert.match(retry.ok ? '' : retry.reason, /نُفّذ سابقًا/);
+    // والخدمةُ بعدَ الإقلاعِ مفتوحةٌ — الإقلاعُ وحده يفكُّ الإقفال
+    const fresh = second.revenue.assess('compute_usage', 'external:compute-provider', 5_000_000, at + 62_000, at + 62_000);
+    assert.equal(fresh.ok, true, 'الخدمةُ تعملُ بعدَ الإقلاعِ — الإقفالَ فكَّه بناءُ الحالِّ من اليومية');
+    assert.equal(second.audit.verifyIntegrity().valid, true, 'والسلسلةُ سليمةٌ بعدَ الإقلاعِ الثاني');
   } finally {
     sc.clean();
   }
