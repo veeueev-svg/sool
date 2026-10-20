@@ -1,0 +1,29 @@
+{
+  "item": "W-2026-065",
+  "commit": "afb036a33b0726c023a363dcf4e0f9f5b5273c5e",
+  "scope_digest": "1adbd9430deec4b385baea444b813c9274effae60e9aa2ef8c3360ed19ad46d1",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-20",
+  "session": 51,
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "gpt (إعلان ذاتي — عائلة مخالفة للمنفّذ · بلا اسم نموذج في خامّه)",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-065-51-gpt.md"
+    },
+    {
+      "member": "grok",
+      "model": "grok (إعلان ذاتي — عائلة مخالفة للمنفّذ · بلا اسم نموذج في خامّه)",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-065-51-grok.md"
+    },
+    {
+      "member": "gemini",
+      "model": "gemini (إعلان ذاتي — عائلة مخالفة للمنفّذ · بلا اسم نموذج في خامّه)",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-065-51-gemini.md"
+    }
+  ],
+  "decision": "VERIFIED"
+}
