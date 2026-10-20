@@ -220,7 +220,12 @@
         "docs/test-reports/phase-39-W-2026-040-remedy-5-measurements.txt",
         "tests/data/rehydrate_census_mutations_r6.test.ts",
         "docs/test-reports/phase-39-W-2026-040-remedy-6.md",
-        "docs/test-reports/phase-39-W-2026-040-remedy-6-measurements.txt"
+        "docs/test-reports/phase-39-W-2026-040-remedy-6-measurements.txt",
+        "scripts/rehydrate_producers.ts",
+        "scripts/rehydrate_constant.ts",
+        "tests/data/rehydrate_census_mutations_r7.test.ts",
+        "docs/test-reports/phase-39-W-2026-040-remedy-7.md",
+        "docs/test-reports/phase-39-W-2026-040-remedy-7-measurements.txt"
       ],
       "excluded": [
         "config/persistence.yaml — لا يُوسَّع النطاقُ ولا يُضيَّق: البندُ يبني الحاجزَ لا مقاسَه",
@@ -245,7 +250,7 @@
         "docs/decisions/ADR-0048-rehydrate-census.md — القرارُ ومُعجمُ الإعفاء والبدائلُ المرفوضة",
         "خرجُ npm test بعددٍ صريح وخرجُ npm run verify برمزِ خروجه"
       ],
-      "next_step": "علاجُ عيوبِ الجولةِ الثالثةِ المسماةِ (محضر W-2026-040-3.json · discoveries: COUNCIL3_W040_UNANIMOUS_REJECTED) من الجذرِ داخلَ نطاقِ البندِ — في مقدمتها قلبُ نفيِ المنتجِ إلى فشلٍ محافظٍ (المجهولُ لا يؤيّد الإعفاء) ومساواةُ صيغِ الكذبِ القطعيّ — ثمّ رفعٌ بتغيّرٍ مقيسٍ لجولةٍ رابعة أو قرارُ المالك",
+      "next_step": "معالجةُ عيوبِ الجولةِ الثالثةِ العشرةِ داخلَ النطاقِ الموسّعِ (§2-ط): نفيُ المنتِجِ بمدقّقِ الأنواعِ والمجهولُ لا يؤيّدُ الإعفاءَ (RC-14) · يسارُ القصرِ ذرّةُ حارسٍ للحصرِ · مقيّمٌ يحسبُ القيمةَ · فكُّ أغلفةِ المُستدعى · حارسانِ تشغيليّانِ عندَ القراءةِ والإرجاعِ — ثمّ الرفعُ إلى REVIEW ببصمةِ نطاقٍ متغيّرةٍ لجولةِ مجلسٍ رابعة",
       "created_at": "2026-09-08",
       "updated_at": "2026-10-20",
       "verification": [
