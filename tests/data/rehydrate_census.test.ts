@@ -159,3 +159,109 @@ test('الإسقاطُ خارجَ النطاقِ يُعَدّ ولا يُرمى:
     s.clean();
   }
 });
+
+/**
+ * مهادُ إقلاعٍ حقيقيٍّ على نسخةٍ مبنيةٍ مطفَّرة (الجولةُ الخامسةُ · عيبُ المراجعِ
+ * `BOOT_UNCLAIMED_NOT_DEMONSTRATED_ON_COPIED_CONFIG`): بندُ §4 السابعُ يطلبُ اختبارًا
+ * بمهادِ تهيئةٍ منسوخةٍ فيها صنفٌ في النطاقِ بلا دعوى كان الإقلاعُ يمضي صامتًا وصار
+ * يسقطُ بالرمز. الجدولُ الحقيقيُّ تامٌّ فلا تُبنى الفجوةُ من التهيئةِ وحدها، فالمهادُ
+ * ينسخُ **الحزمةَ المبنيةَ** والتهيئةَ إلى tmpdir ويحذفُ صفَّ `tax_levy` من الجدولِ في
+ * **النسخةِ** وحدَها، ثمّ يُقلعُ إقلاعًا حقيقيًّا (`bootstrapState` بعمليةٍ مستقلةٍ) لا
+ * حقنًا في الوحدةِ — فالغائبُ المطلوبُ شاهدُ الإقلاعِ لا شاهدُ النداءِ.
+ */
+function bootScene(): { root: string; run: () => { out: string }; clean: () => void } {
+  const root = mkdtempSync(join(tmpdir(), 'sool-rehydrate-boot-'));
+  const distSrc = join(root, 'dist-src');
+  const config = join(root, 'config');
+  cpSync(join(process.cwd(), 'dist/src'), distSrc, { recursive: true });
+  cpSync(join(process.cwd(), 'config'), config, { recursive: true });
+  // مجلدُ النشرِ يُعلَنُ صعودًا من موقعِ الوحدةِ لا من التهيئةِ (مصعدُ المجلداتِ المُعلنة)،
+  // فالنسخةُ المستقلةُ تحتاجُه بجانبِ الحزمةِ والتهيئة — وإلّا رُفض الإقلاعُ برمزِ المصعدِ
+  // قبل بلوغِ الحاجزِ، فيُقاسُ رفضُ المصعدِ لا رفضُ الحاجزِ.
+  cpSync(join(process.cwd(), 'deploy'), join(root, 'deploy'), { recursive: true });
+  // وجذرُ الدولةِ (نقطةُ التفتيشِ) يُعلَنُ بدليلِ `package.json` صعودًا (ثابت 4 · T-157) —
+  // فالنسخةُ المستقلةُ تحتاجُ ملفًّا يحملُ الاسمَ لا محتوى المستودعِ الحقيقيَّ.
+  writeFileSync(join(root, 'package.json'), '{}', 'utf8');
+  writeFileSync(join(config, 'recovery.yaml'), [
+    'policy:', '  rto_seconds: 30', '  rpo_seconds: 60', '  backup_interval_seconds: 30',
+    '  retention_count: 3', '  verify_after_restore: true',
+    `  backup_directory: "${join(root, 'backups')}"`, '  continuity_mode: limited', '',
+  ].join('\n'), 'utf8');
+  const bootJs = join(root, 'boot.js');
+  writeFileSync(bootJs, [
+    `const { bootstrapState } = require(${JSON.stringify(`${distSrc}/index.js`)});`,
+    'try {',
+    `  bootstrapState({ configDir: ${JSON.stringify(config)}, now: ${T0}, `
+      + `persistenceDir: ${JSON.stringify(join(root, 'state'))} });`,
+    "  console.log('BOOTED');",
+    '} catch (e) {',
+    "  console.log('THREW:' + e.constructor.name + ':' + (e.code ?? 'NO_CODE'));",
+    '}',
+  ].join('\n'), 'utf8');
+  return {
+    root,
+    run: () => {
+      const r = spawnSync('node', [bootJs], { encoding: 'utf8' });
+      return { out: `${r.stdout}${r.stderr}` };
+    },
+    clean: () => rmSync(root, { recursive: true, force: true }),
+  };
+}
+
+test('الإقلاعُ الحقيقيُّ يسقطُ بالرمز: صنفٌ في النطاقِ بلا دعوى — مهادٌ منسوخٌ بحذفِ صفٍّ من الجدول', () => {
+  const b = bootScene();
+  try {
+    // الضابطُ أوّلًا: النسخةُ السليمةُ تُقلعُ — فهذا يثبتُ أنّ الحزمةَ المنسوخةَ
+    // مستقلةٌ عن جذرِ المستودعِ بعمليةٍ مستقلةٍ، لا أنّ الفشلَ القادمَ من النسخِ نفسِه.
+    const control = b.run();
+    assert.ok(control.out.includes('BOOTED'), `الضابطُ لم يُقلع — فالنسخةُ غيرُ مستقلة:\n${control.out}`);
+    // والفجوةُ معلَنةٌ من الطرفَين: الصنفُ في نطاقِ التهيئةِ المنسوخةِ، وصفُّهُ في الجدولِ
+    const yaml = readFileSync(join(b.root, 'config', 'persistence.yaml'), 'utf8');
+    assert.match(yaml, /- tax_levy/, 'الصنفُ ليس في نطاقِ التهيئةِ المنسوخةِ');
+    const claimsJs = join(b.root, 'dist-src', 'data', 'rehydrate_census.js');
+    const table = readFileSync(claimsJs, 'utf8');
+    const row = table.split('\n').find((l) => l.includes("kind: 'tax_levy'"));
+    assert.ok(row !== undefined, 'صفُّ الدعوى غيرُ موجودٍ في الجدولِ المُجمَّع');
+    writeFileSync(claimsJs, table.replace(`${row}\n`, ''), 'utf8');
+    // الإقلاعُ الحقيقيُّ: يسقطُ بالرمزِ المُسمّى لا بصمتٍ — والاستثناءُ سياديٌّ لا خطأٌ عامٌّ
+    const fell = b.run();
+    assert.ok(fell.out.includes('THREW:SovereignViolation:PERSISTENCE_REHYDRATE_KIND_UNCLAIMED'),
+      `الإقلاعُ لم يسقط بالرمز:\n${fell.out}`);
+    // وشاهدُ «قبلَ أوّلِ إرجاعٍ»: يُعلَّمُ مدخلُ الإرجاعِ الحقيقيُّ في النسخةِ، فلا يُبلغَ —
+    // فالسقوطُ قبلَ الفعلِ لا بعده.
+    const persistenceJs = join(b.root, 'dist-src', 'data', 'persistence.js');
+    const persistence = readFileSync(persistenceJs, 'utf8');
+    const entry = 'function rehydrateFromJournal(journal, targets, by = \'ministry:data\', options = {}) {';
+    assert.ok(persistence.includes(entry), 'مدخلُ الإرجاعِ غيرُ موجودٍ في النسخةِ');
+    writeFileSync(persistenceJs, persistence.replace(entry,
+      `${entry}\n    console.log('REACHED_REHYDRATION');`), 'utf8');
+    const before = b.run();
+    assert.ok(before.out.includes('THREW:SovereignViolation:PERSISTENCE_REHYDRATE_KIND_UNCLAIMED'),
+      `الإقلاعُ بعد التعليلِ لم يسقط بالرمز:\n${before.out}`);
+    assert.ok(!before.out.includes('REACHED_REHYDRATION'),
+      'الإرجاعُ بُلغ قبل سقوط الحاجز — الحكمُ بعد الفعلِ لا يمنعه');
+  } finally {
+    b.clean();
+  }
+});
+
+test('الوجهُ السالبُ لاختبارِ الإقلاعِ: بلا حاجزٍ كان الإقلاعُ يمضي صامتًا — فيُكشفُ تجاوزُ العلاج', () => {
+  const b = bootScene();
+  try {
+    const claimsJs = join(b.root, 'dist-src', 'data', 'rehydrate_census.js');
+    const table = readFileSync(claimsJs, 'utf8');
+    const row = table.split('\n').find((l) => l.includes("kind: 'tax_levy'"));
+    assert.ok(row !== undefined, 'صفُّ الدعوى غيرُ موجودٍ في الجدولِ المُجمَّع');
+    writeFileSync(claimsJs, table.replace(`${row}\n`, ''), 'utf8');
+    const indexJs = join(b.root, 'dist-src', 'index.js');
+    const boot = readFileSync(indexJs, 'utf8');
+    const call = '(0, rehydrate_census_1.assertRehydrateCensus)(persistenceConfig.policy.scope);';
+    assert.ok(boot.includes(call), 'نداءُ الحاجزِ غيرُ موجودٍ في النسخةِ المُجمَّعة');
+    writeFileSync(indexJs, boot.replace(call, 'void 0;'), 'utf8');
+    const silent = b.run();
+    assert.ok(silent.out.includes('BOOTED'),
+      `إزالةُ الحاجزِ لم تُعد الإقلاعَ صامتًا — فالاختبارُ لا يكشفُ تجاوزَ العلاج:\n${silent.out}`);
+  } finally {
+    b.clean();
+  }
+});

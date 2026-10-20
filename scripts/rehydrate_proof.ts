@@ -100,12 +100,68 @@ export function sourceFiles(dir: string): string[] {
 }
 
 /**
+ * محلِّلُ قيمةٍ واحدٌ للمُنتِج: يفكُّ الأغلفةَ (`as const` · الأقواس · `satisfies` ·
+ * `!`)، ويتبعُ سلسلةَ المُعرّفِ إلى تعريفِه في نطاقِه (`resolveVariable`) بلا سقفِ
+ * مستوياتَ اعتباطيّ — فالمراجعُ رفضَ الحلَّ ذا المستوى الواحدِ لأنّ العقدَ لا يستثني
+ * المستوى الثاني، ونقلُ البابِ إلى سقفٍ خامسٍ يعيدُ العيبَ نفسَه بعينِه. والوقايةُ من
+ * الدورانِ (`const a = b; const b = a;`) تتبّعُ التعاريفِ المزارةِ لا عدّادٍ يُستنفد.
+ * ويقرأُ وصولَ الخاصّيّةِ (`row.kind`): يُحَلُّ الجذرُ إلى تعريفِه فإن كان كائنًا
+ * حرفيًّا قُرئت خاصّيّةٌ تحملُ اسمَ الوصولِ — واختصارُ الكائنِ (`{ kind }`) سكرٌ نحويّ
+ * لذاتِ القراءةِ.
+ *
+ * **تسميةُ عيوبِ الجولةِ الخامسةِ التي أوجبت هذا المحلِّل** (`docs/work/council/`
+ * `W-2026-040-1-grok.md` §6): `RC04_AS_CAST_ALIAS_UNSEEN` (القشرةُ لا تُفكُّ `as`) ·
+ * `RC04_ALIAS_CHAIN_UNSEEN` (المستوى الثاني) · `RC04_PROPERTY_ACCESS_PRODUCER_UNSEEN`
+ * (`row.kind`) · `RC04_OBJECT_ARG_ALIAS_UNSEEN` (`record({ kind })`).
+ */
+function resolvesToKind(
+  sf: ts.SourceFile, node: ts.Node, kind: string, visited: ReadonlySet<ts.VariableDeclaration>,
+): boolean {
+  const e = unwrap(node);
+  if ((ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) && e.text === kind) {
+    return true;
+  }
+  if (ts.isIdentifier(e)) {
+    const d = resolveVariable(sf, e);
+    if (d === null || d.initializer === undefined || visited.has(d)) return false;
+    return resolvesToKind(sf, d.initializer, kind, new Set(visited).add(d));
+  }
+  if (ts.isPropertyAccessExpression(e)) {
+    const base = unwrap(e.expression);
+    if (!ts.isIdentifier(base)) return false;
+    const d = resolveVariable(sf, base);
+    if (d === null || d.initializer === undefined || visited.has(d)) return false;
+    const init = unwrap(d.initializer);
+    if (!ts.isObjectLiteralExpression(init)) return false;
+    for (const prop of init.properties) {
+      const nm = ts.isPropertyAssignment(prop) || ts.isShorthandPropertyAssignment(prop)
+        ? prop.name : null;
+      if (nm === null || !(ts.isIdentifier(nm) || ts.isStringLiteral(nm)) || nm.text !== e.name.text) {
+        continue;
+      }
+      if (ts.isPropertyAssignment(prop)) {
+        return resolvesToKind(sf, prop.initializer, kind, new Set(visited).add(d));
+      }
+      if (ts.isShorthandPropertyAssignment(prop)) {
+        return resolvesToKind(sf, prop.name, kind, new Set(visited).add(d));
+      }
+      continue;
+    }
+    return false;
+  }
+  return false;
+}
+
+/**
  * مُنتِجو الصنف: نداءُ `x.record('kind', …)` **عقدةَ نداءٍ** لا نصًّا، ومعه شكلُ
- * `record({ kind: 'kind', … })` — فالتعليقُ لا يُعَدُّ مُنتِجًا، والاقتباسُ المزدوجُ يُرى
+ * `record({ kind: 'kind', … })` — فالتعليقُ لا يُعَدُّ مُنتِجًا، والاقتباسُ المزدوجُ يُرى
  * كالمفرد لأنّ المقارنةَ على متنِ العقدةِ لا على بايتِ السطر.
  * **وامتدادُ الجولةِ الرابعة** `RC04_PRODUCER_ALIAS_UNSEEN`: كان المنتِجُ يُقبل الصنفَ حرفًا مباشرًا فقط، فنُزِع
- * المنتِجُ الحقيقيُّ وأُبقي مُعرَّفًا يحمل الصنفَ ثمّ يمرِّطُ المُعرَّفَ — ومُدَّ الحدُّ القديمُ إعلانُه عند رفضِ الجولةِ. فصار المُعرَّفُ يُحَلُّ
+ * المنتِجُ الحقيقيُّ وأُبقي مُعرَّفًا يحمل الصنفَ ثمّ يمرِّطُ المُعرَّفَ — ومُدَّ الحدُّ القديمُ إعلانُه عند رفضِ الجولةِ. فصار المُعرَّفُ يُحَلُّ
  * إلى تعريفِه في نطاقِه (`resolveVariable`) — فأن كان ابتداؤُه حرفًا يوافقُ الصنفَ فهو منتِجٌ قائمٌ بالموجبِ.
+ * **وامتدادُ الجولةِ الخامسة**: صار الحلُّ محلِّلًا واحدًا بلا سقفِ مستوياتَ (`resolvesToKind`)
+ * يفكُّ الأغلفةَ ويتبعُ السلاسلَ ويقرأُ وصولَ الخاصّيّةِ واختصارَ الكائنِ — فالإعفاءُ
+ * «لا مُنتِجَ له» لا يبقى قائمَ الموجبِ ما دام للصنفِ مُنتِجٌ في `src/**` بأيِّ صيغةٍ من هذه.
  */
 export function producerSites(root: string, files: readonly string[], kind: string): string[] {
   const out: string[] = [];
@@ -118,37 +174,27 @@ export function producerSites(root: string, files: readonly string[], kind: stri
         : (ts.isIdentifier(callee) ? callee.text : '');
       if (name !== 'record') return;
       const first = n.arguments[0];
-      if (
-        first !== undefined
-        && (ts.isStringLiteral(first) || ts.isNoSubstitutionTemplateLiteral(first))
-        && first.text === kind
-      ) {
+      // **الجولةُ الخامسة**: المحلِّلُ الواحدُ — حرفٌ مباشرٌ، أو مُعرَّفٌ (وسلسلتُه
+      // وأغلفتُه)، أو وصولُ خاصّيّةٍ `row.kind` — كلُّها مُنتِجٌ قائمٌ بالموجبِ.
+      if (first !== undefined && resolvesToKind(sf, first, kind, new Set())) {
         out.push(`${relative(root, file)}:${lineOf(sf, n)}`);
         return;
-      }
-      // **عيبُ الجولةِ الرابعة** `RC04_PRODUCER_ALIAS_UNSEEN`: الصنفُ مُمرَّطٌ في مُعرَّف — يُحَلُّ إلى
-      // تعريفِه في نطاقِه، فأن كان ابتداؤُه حرفًا يوافقُ الصنفَ فهو منتِجٌ قائمٌ بالموجبِ
-      if (first !== undefined && ts.isIdentifier(first)) {
-        const d = resolveVariable(sf, first);
-        if (d !== null && d.initializer !== undefined) {
-          const init = ts.isParenthesizedExpression(d.initializer)
-            ? d.initializer.expression
-            : d.initializer;
-          if ((ts.isStringLiteral(init) || ts.isNoSubstitutionTemplateLiteral(init))
-            && init.text === kind) {
-            out.push(`${relative(root, file)}:${lineOf(sf, n)}`);
-            return;
-          }
-        }
       }
       for (const arg of n.arguments) {
         if (!ts.isObjectLiteralExpression(arg)) continue;
         for (const prop of arg.properties) {
+          // **الجولةُ الخامسة** `RC04_OBJECT_ARG_ALIAS_UNSEEN`: اختصارُ الخاصّيّةِ
+          // `record({ kind })` سكرٌ نحويٌّ لذاتِ القراءةِ — يُحَلُّ المُعرَّفُ لا يُشترطُ الحرفُ.
+          if (ts.isShorthandPropertyAssignment(prop)) {
+            if (prop.name.text === 'kind' && resolvesToKind(sf, prop.name, kind, new Set())) {
+              out.push(`${relative(root, file)}:${lineOf(sf, n)}`);
+            }
+            continue;
+          }
           if (!ts.isPropertyAssignment(prop)) continue;
           const key = prop.name;
           const keyText = ts.isIdentifier(key) || ts.isStringLiteral(key) ? key.text : '';
-          const val = prop.initializer;
-          if (keyText === 'kind' && ts.isStringLiteral(val) && val.text === kind) {
+          if (keyText === 'kind' && resolvesToKind(sf, prop.initializer, kind, new Set())) {
             out.push(`${relative(root, file)}:${lineOf(sf, n)}`);
           }
         }

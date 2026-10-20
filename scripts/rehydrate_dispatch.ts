@@ -364,7 +364,15 @@ export function dispatchSites(sf: ts.SourceFile, kind: string): Site[] {
   const out: Site[] = [];
   for (const lit of literalsOf(sf, kind)) {
     const p = lit.parent;
-    if (p !== undefined && ts.isCaseClause(p) && p.expression === lit && caseReaches(p)) {
+    // **الجولةُ الخامسة** `DISPATCH_ANCESTOR_CONSTANT_FALSY_UNSEEN`: موضعُ التوزيعِ —
+    // بندًا كان أو مقارنةً — لا يُقبل إن كان تحتَ حارسٍ ثابتِ الكذبِ (`if (false)
+    // switch` · `while (false)` · `if ((0, false))`): النصُّ يقولُ إنّ ثابتَ الكذبِ يُبطِلُ
+    // ما تحتَه، والقياسُ كان يُكذِّبُه حين يلفُّ التوزيعَ لا حين يكونُ شرطَ المقارنةِ نفسِها.
+    // فصار الوصولُ شرطًا في الشكلينِ معًا، بجامعِ `guardsOf` نفسِه الذي يقيسُ سيادةَ
+    // `[RC-07]` — والموضعُ الميتُ ليس توزيعًا، وصنفٌ «مُوزَّعٌ» بجسمٍ لا يُنفَّذُ صامتٌ
+    // عند الإرجاعِ كما كان في المسألةِ الأصليةِ للبندِ.
+    if (p !== undefined && ts.isCaseClause(p) && p.expression === lit && caseReaches(p)
+      && !guardsOf(sf, p).unsatisfiable) {
       out.push({ line: lineOf(sf, lit), form: 'case' });
       continue;
     }
@@ -374,6 +382,7 @@ export function dispatchSites(sf: ts.SourceFile, kind: string): Site[] {
         || p.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsEqualsToken)
       && isKindBearing(p.left === lit ? p.right : p.left)
       && comparisonReaches(p)
+      && !guardsOf(sf, lit).unsatisfiable
     ) {
       out.push({ line: lineOf(sf, lit), form: 'compare' });
     }

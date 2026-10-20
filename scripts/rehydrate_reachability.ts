@@ -57,6 +57,14 @@ function strip(expr: ts.Expression): ts.Expression {
  * تعبيرٌ **ثابتُ الكذب** — مركّبًا لا حرفيًّا: الروابطُ المنطقيّةُ تُقرأ بدلالةِ قصرِ
  * الدارة، فـ`false && true` و`false || false` و`x && false` كلُّها ثابتةُ الكذب، و`!A`
  * يُقلب. وما لا يُقطَع بكذبِه مجهول ⇒ ليس ثابتَ الكذب.
+ *
+ * **وعيبُ الجولةِ الخامسة** في العاملَينِ الجديدَينِ (تسميةُ المراجعِ الرافضِ في
+ * `docs/work/council/W-2026-040-1-grok.md` §6):
+ *   - **الفاصلةُ `(a, b)`**: قيمتُها الطرفُ الأيمنُ دومًا — فـ`(0, false)` كاذبٌ
+ *     قطعًا، و`(0, x)` مجهولٌ كـx، ولا عبرةَ للطرفِ الأيسرِ في القيمةِ أصلًا.
+ *   - **العدميُّ `A ?? B`**: إن كان A معدومًا حتمًا فالقيمةُ B؛ وإن كان A ثابتًا
+ *     حرفيًّا غيرَ معدومٍ فالقيمةُ A نفسُه — فـ`null ?? false` كاذبٌ و`false ?? true`
+ *     كاذبٌ و`'x' ?? y` صادقٌ. وما عداهما مجهولٌ لا يُقطَع.
  */
 export function definitelyFalsy(expr: ts.Expression | undefined): boolean {
   if (expr === undefined) return false;
@@ -80,8 +88,28 @@ export function definitelyFalsy(expr: ts.Expression | undefined): boolean {
       // A || B كاذبٌ إن كذبَ الطرفانِ معًا
       return definitelyFalsy(e.left) && definitelyFalsy(e.right);
     }
+    // **الجولةُ الخامسة**: الفاصلةُ قيمتُها الطرفُ الأيمنُ — `(0, false)` كاذبٌ قطعًا
+    if (k === ts.SyntaxKind.CommaToken) return definitelyFalsy(e.right);
+    // **الجولةُ الخامسة**: العدميُّ يُفصلُ معدومًا/غيرَ معدومٍ لا صادقًا/كاذبًا فقط
+    if (k === ts.SyntaxKind.QuestionQuestionToken) {
+      if (definitelyNullish(e.left)) return definitelyFalsy(e.right);
+      // الطرفُ الأيسرُ ثابتٌ غيرُ معدومٍ ⇒ القيمةُ هو نفسُه لا اليمينُ أبدًا
+      return definitelyFalsy(e.left);
+    }
   }
   return false;
+}
+
+/**
+ * تعبيرٌ **معدومٌ حتمًا** — `null` أو `undefined` حرفيًّا. وله فصلٌ في العدمِ لا في
+ * الكذب: `null ?? X` قيمتُه X، و`false ?? X` قيمتُه false — فجمعُهما في حكمٍ واحدٍ
+ * يُضيّع الوجهينِ معًا (عيبُ الجولةِ الخامسة `RC07_NULLISH_CONJUNCT_DECOY_GREENS`).
+ */
+function definitelyNullish(expr: ts.Expression | undefined): boolean {
+  if (expr === undefined) return false;
+  const e = strip(expr);
+  return e.kind === ts.SyntaxKind.NullKeyword
+    || (ts.isIdentifier(e) && e.text === 'undefined');
 }
 
 /** تعبيرٌ **ثابتُ الصدق** — مركّبًا: `true || x` و`x || true` و`a && true` (إن صدق a فلا يُقطَع)… والقطعُ بالصدقِ لا يكونُ إلّا بثابت. */
@@ -101,6 +129,12 @@ export function definitelyTruthy(expr: ts.Expression | undefined): boolean {
     }
     if (k === ts.SyntaxKind.BarBarToken) {
       return definitelyTruthy(e.left) || definitelyTruthy(e.right);
+    }
+    // **الجولةُ الخامسة**: الوجهُ الصادقُ للعاملَينِ الجديدَينِ — تقابلُ حكمِ الكذبِ أعلاه
+    if (k === ts.SyntaxKind.CommaToken) return definitelyTruthy(e.right);
+    if (k === ts.SyntaxKind.QuestionQuestionToken) {
+      if (definitelyNullish(e.left)) return definitelyTruthy(e.right);
+      return definitelyTruthy(e.left);
     }
   }
   return false;
@@ -129,22 +163,43 @@ function within(inner: ts.Node, outer: ts.Node): boolean {
  * فارغةٍ حرفيًّا، و`catch` لكتلةِ `try` خاويةٍ — كلُّها مواضعُ لا يُنفَّذُ ما فيها، وكلُّها
  * صارت تُسقِط الحكمَ إسقاطًا.
  */
+/**
+ * ذرّاتُ شرطِ حارسٍ واحد: تُفكّكُ الاقتراناتُ `&&` إلى طرفيها — فحارسٌ نصُّه
+ * `journal && extra` يُخزَّن نصًّا واحدًا في `texts`، واحتواءُ النصِّ في النصِّ لا يعني
+ * احتواءَ الشرطِ في الشرطِ (`journal` مُحتواةٌ في `journal && extra` دلالةً لا حرفًا).
+ * **عيبُ الجولةِ الخامسة** في سيادةِ `[RC-07]`: كان القياسُ يحتوي الحارسَ نصًّا، فكان
+ * حاجزٌ تحتَ `journal` وإرجاعٌ تحتَ `journal && extra` يُرى غيرَ محتوى وهو محتوى
+ * دلالةً. والذرّاتُ للأحتواءِ الدلاليّ؛ والنفيُ يُحفظُ لكلِّ ذرّةٍ كما هو.
+ */
+function guardAtoms(expr: ts.Expression, negated: boolean, sf: ts.SourceFile, out: string[]): void {
+  const e = strip(expr);
+  if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+    guardAtoms(e.left, negated, sf, out);
+    guardAtoms(e.right, negated, sf, out);
+    return;
+  }
+  out.push((negated ? '!' : '') + e.getText(sf).replace(/\s+/g, ''));
+}
+
 export function guardsOf(sf: ts.SourceFile, node: ts.Node): {
-  readonly texts: readonly string[]; readonly unsatisfiable: boolean; readonly fn: ts.Node | null;
+  readonly texts: readonly string[]; readonly atoms: readonly string[];
+  readonly unsatisfiable: boolean; readonly fn: ts.Node | null;
 } {
   const texts: string[] = [];
+  const atoms: string[] = [];
   let unsatisfiable = false;
   let cur: ts.Node = node;
   for (;;) {
     const p: ts.Node | undefined = cur.parent;
-    if (p === undefined) return { texts: [...texts].sort(), unsatisfiable, fn: null };
+    if (p === undefined) return { texts: [...texts].sort(), atoms: [...atoms].sort(), unsatisfiable, fn: null };
     if (ts.isFunctionDeclaration(p) || ts.isFunctionExpression(p)
       || ts.isArrowFunction(p) || ts.isMethodDeclaration(p)) {
-      return { texts: [...texts].sort(), unsatisfiable, fn: p };
+      return { texts: [...texts].sort(), atoms: [...atoms].sort(), unsatisfiable, fn: p };
     }
     if (ts.isIfStatement(p) && p.expression !== cur) {
       const negated = p.elseStatement === cur;
       texts.push((negated ? '!' : '') + p.expression.getText(sf).replace(/\s+/g, ''));
+      guardAtoms(p.expression, negated, sf, atoms);
       if (negated ? definitelyTruthy(p.expression) : definitelyFalsy(p.expression)) {
         unsatisfiable = true;
       }
@@ -152,6 +207,7 @@ export function guardsOf(sf: ts.SourceFile, node: ts.Node): {
     if (ts.isConditionalExpression(p) && p.condition !== cur) {
       const negated = p.whenFalse === cur;
       texts.push((negated ? '!' : '') + p.condition.getText(sf).replace(/\s+/g, ''));
+      guardAtoms(p.condition, negated, sf, atoms);
       if (negated ? definitelyTruthy(p.condition) : definitelyFalsy(p.condition)) {
         unsatisfiable = true;
       }
@@ -163,11 +219,13 @@ export function guardsOf(sf: ts.SourceFile, node: ts.Node): {
       const cond = ts.isForStatement(p) ? p.condition : p.expression;
       if (cond !== undefined) {
         texts.push(cond.getText(sf).replace(/\s+/g, ''));
+        guardAtoms(cond, false, sf, atoms);
         if (!ts.isDoStatement(p) && definitelyFalsy(cond)) unsatisfiable = true;
       }
     }
     if (ts.isForOfStatement(p) && p.statement === cur) {
       texts.push(`for-of:${p.expression.getText(sf).replace(/\s+/g, '')}`);
+      atoms.push(`for-of:${p.expression.getText(sf).replace(/\s+/g, '')}`);
       // **عيبُ الجولةِ الرابعة**: `for (const x of [])` — جسمٌ لا يدور؛ والمصفوفةُ
       // الفارغةُ حرفيًّا تُقطَع بها الدارةُ قطعًا، لا تُظنّ.
       if (ts.isArrayLiteralExpression(p.expression) && p.expression.elements.length === 0) {

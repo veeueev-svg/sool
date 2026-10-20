@@ -221,28 +221,50 @@ if (censusCall === undefined) {
   bad('✗ [RC-07] لا نداءَ إرجاعٍ واحدٌ في مسار الإقلاع — فالحاجزُ يحرس بابًا لا يُدخَل منه (RULE-001).');
 } else {
   const ordered = [...rehydrateCalls].sort((a, b) => a.getStart(bootSf) - b.getStart(bootSf));
-  const firstCall = ordered[0] as ts.CallExpression;
-  if (censusCall.getStart(bootSf) > firstCall.getStart(bootSf)) {
-    bad(`✗ [RC-07] الحاجزُ منادًى بعدَ أوّلِ إرجاع (السطر ${lineOf(bootSf, censusCall)} بعد `
-      + `${lineOf(bootSf, firstCall)}) — حكمٌ بعد الفعلِ لا يمنعه.`);
+  // **عيبُ الجولةِ الخامسة** `RC07_COMMA_CONJUNCT_DECOY_GREENS` (وجهُ اختيارِ أوّلِ النداء):
+  // كان القياسُ على «أوّلِ نداءٍ يوافق `/^rehydrate[A-Z]/`» — فنداءٌ خادعٌ بالاسمِ تحتَ
+  // شرطِ الحاجزِ نفسِه يُزيحُ الإرجاعَ الحقيقيَّ من القياسِ ويُقاسُ الحاجزُ عليه. فصار
+  // القياسُ على **كلِّ نداءِ إرجاعٍ**: السيادةُ أن يمرَّ كلُّ مسارِ إرجاعٍ بالحاجزِ، لا
+  // أن يوافقَ أوّلُ اسمٍ قاعدةً. والترتيبُ والدالّةُ والشروطُ تُقاسُ لكلِّ نداءٍ.
+  let orderOk = true;
+  for (const call of ordered) {
+    if (censusCall.getStart(bootSf) > call.getStart(bootSf)) {
+      bad(`✗ [RC-07] الحاجزُ منادًى بعدَ إرجاع (السطر ${lineOf(bootSf, censusCall)} بعد `
+        + `${lineOf(bootSf, call)}) — حكمٌ بعد الفعلِ لا يمنعه.`);
+      orderOk = false;
+      break;
+    }
   }
   // والترتيبُ وحدَه ليس سيادةً: تُقاس **الشروطُ الحارسةُ** لا موضعُ السطر
   const gCensus = guardsOf(bootSf, censusCall);
-  const gFirst = guardsOf(bootSf, firstCall);
   if (gCensus.unsatisfiable) {
     bad(`✗ [RC-07] نداءُ الحاجزِ تحت شرطٍ لا يصدُق أبدًا (السطر ${lineOf(bootSf, censusCall)}: `
       + `${gCensus.texts.join(' · ')}) — نداءٌ لا يُنفَّذ ليس حاجزًا (RULE-001).`);
   }
-  if (gCensus.fn !== gFirst.fn) {
-    bad('✗ [RC-07] نداءُ الحاجزِ وأوّلُ إرجاعٍ في دالّتَينِ مختلفتَين — فلا يُقاس ترتيبٌ بينهما (RULE-001).');
+  // **وعيبُ الجولةِ الخامسة** في الاحتواءِ نفسِه: كان الاحتواءُ نصًّا، فحاجزٌ تحتَ
+  // `journal` وإرجاعٌ تحتَ `journal && extra` يُرى غيرَ محتوى وهو محتوى دلالةً. فصار
+  // الاحتواءُ **ذرّاتٍ** (تفكيكُ الاقتراناتِ في `guardsOf`): كلُّ ذرّةٍ من شروطِ الحاجزِ
+  // يجبُ أن تحرسَ النداءَ — فالشرطُ الأوسعُ يحرسُ ما يحرسُهُ الأضيقُ وزيادة.
+  let containmentOk = true;
+  for (const call of ordered) {
+    const gCall = guardsOf(bootSf, call);
+    if (gCensus.fn !== gCall.fn) {
+      bad(`✗ [RC-07] نداءُ الحاجزِ وإرجاع (السطر ${lineOf(bootSf, call)}) في دالّتَينِ `
+        + 'مختلفتَين — فلا يُقاس ترتيبٌ بينهما (RULE-001).');
+      containmentOk = false;
+      break;
+    }
+    const narrower = gCensus.atoms.filter((t) => !gCall.atoms.includes(t));
+    if (narrower.length > 0) {
+      bad(`✗ [RC-07] الحاجزُ محروسٌ بشرطٍ لا يحرسُ الإرجاع (السطر ${lineOf(bootSf, call)}): `
+        + `${narrower.join(' · ')} — فمسلكٌ يُرجِع ولا يمرُّ بالحاجزِ قائمٌ — والمطلوبُ سيادةٌ لا مجرّدُ ترتيب.`);
+      containmentOk = false;
+      break;
+    }
   }
-  const narrower = gCensus.texts.filter((t) => !gFirst.texts.includes(t));
-  if (narrower.length > 0) {
-    bad(`✗ [RC-07] الحاجزُ محروسٌ بشرطٍ لا يحرس الإرجاع: ${narrower.join(' · ')} — `
-      + 'فمسلكٌ يُرجِع ولا يمرُّ بالحاجزِ قائمٌ — والمطلوبُ سيادةٌ لا مجرّدُ ترتيب.');
-  } else {
-    say(`  سيادةُ نداءِ الحاجزِ مقيسةٌ: شروطُه {${gCensus.texts.join(' · ') || 'لا شرط'}} `
-      + `مُحتواةٌ في شروطِ أوّلِ إرجاع {${gFirst.texts.join(' · ') || 'لا شرط'}}`);
+  if (orderOk && containmentOk) {
+    say(`  سيادةُ نداءِ الحاجزِ مقيسةٌ على ${ordered.length} نداءِ إرجاعٍ: شروطُه {${gCensus.texts.join(' · ') || 'لا شرط'}} `
+      + `مُحتواةٌ بالذرّاتِ في شروطِ كلِّ نداءٍ منها`);
   }
 }
 
