@@ -4,7 +4,7 @@
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * المدخلات: عُقدةُ تعبيرٍ أو عبارةٍ في شجرةِ نحوِ TypeScript
  * المخرجات: حكمُ ثباتِ الصدق/الكذب المركّب، وسلسلةُ الحراس، وربطُ الاسمِ بتعريفِه
- * التبعيات: مُترجمُ TypeScript وحدَه — لا تستوردُ من إخوتِها شيئًا (لا حلقةَ استيراد)
+ * التبعيات: مُترجمُ TypeScript و`rehydrate_constant` (لا يستوردُ شيئًا من إخوتِه — لا حلقةَ استيراد)
  * الصلاحيات (RULE-004): تقرأ وتُقيس؛ لا تُصلح ملفًّا ولا تكتب واحدًا
  * السجلات: لا تكتب شيئًا — الحكمُ لمن يستدعيها
  * حالات الفشل: لا ترمي؛ ما لا يُقطَع بكذبِه **يُعَدُّ قابلًا للصدق** — فالافتراضُ في جانبِ
@@ -39,6 +39,7 @@
  * لا يكونُ إلّا بثابتٍ مقيسٍ لا بظنّ.
  */
 import ts from 'typescript';
+import { computedFalsy, computedLiteral, computedNotNullish, computedNullish, computedTruthy } from './rehydrate_constant';
 
 /** فكُّ الأغلفةِ الشكليةِ: الأقواسُ والتأكيدُ النوعيُّ وعدمُ الإبطالِ — لا يغيّرون الصدق */
 function strip(expr: ts.Expression): ts.Expression {
@@ -122,7 +123,7 @@ export function definitelyFalsy(expr: ts.Expression | undefined): boolean {
       return false;
     }
   }
-  return false;
+  return computedFalsy(e); // الجولةُ السابعة: ما لم تحكم به القواعدُ يُحسَبُ (rehydrate_constant)
 }
 
 /**
@@ -137,7 +138,8 @@ function definitelyNullish(expr: ts.Expression | undefined): boolean {
     || (ts.isIdentifier(e) && e.text === 'undefined')
     // **الجولةُ السادسة**: `void X` قيمتُه `undefined` دومًا — فعدميّتُه قطعيةٌ، وعدُّه
     // كاذبًا في `(void 0) ?? Y` كان رفضًا كاذبًا لحيٍّ (قيمتُه Y).
-    || ts.isVoidExpression(e);
+    || ts.isVoidExpression(e)
+    || computedNullish(e);
 }
 
 /**
@@ -155,7 +157,7 @@ export function definitelyNotNullish(expr: ts.Expression | undefined): boolean {
   if (ts.isNumericLiteral(e) || ts.isStringLiteralLike(e)) return true;
   if (ts.isBigIntLiteral(e)) return true;
   if (isGlobalZeroBigIntCall(e)) return true;
-  return false;
+  return computedNotNullish(e);
 }
 
 /** تعبيرٌ **ثابتُ الصدق** — مركّبًا: `true || x` و`x || true` و`a && true` (إن صدق a فلا يُقطَع)… والقطعُ بالصدقِ لا يكونُ إلّا بثابت. */
@@ -185,7 +187,7 @@ export function definitelyTruthy(expr: ts.Expression | undefined): boolean {
       return false;
     }
   }
-  return false;
+  return computedTruthy(e);
 }
 
 /** قيمةٌ حرفيّةٌ (رقمٌ أو سلسلة) لمقابلةِ مُميّزِ `switch` ببنودِه — أو null إن لم يكن حرفيًّا */
@@ -194,7 +196,7 @@ export function literalValue(expr: ts.Expression | undefined): string | number |
   const e = ts.isParenthesizedExpression(expr) ? expr.expression : expr;
   if (ts.isNumericLiteral(e)) return Number(e.text);
   if (ts.isStringLiteralLike(e)) return e.text;
-  return null;
+  return computedLiteral(e);
 }
 
 /** هل العقدةُ `inner` داخلَ مدى `outer` (نطاقُ شجرةٍ مُعرَّفةٍ بالمواضع) */
@@ -310,6 +312,18 @@ export function guardsOf(sf: ts.SourceFile, node: ts.Node): {
     // فاليمينُ لا يُقيَّمُ أبدًا (`false ?? census()` لا ينادي).
     if (ts.isBinaryExpression(p)) {
       const k = p.operatorToken.kind;
+      // **الجولةُ السابعة** (`RC07_*_SKIPS_CENSUS`): يسارُ القاصرِ حارسٌ ليمينِه كشرطِ `if` — ذرّةٌ
+      // (منفيّةٌ في `||`، معدوميّةٌ في `??`)؛ فما لا يُحسَبُ لا يطابقُ حرّاسَ الإرجاعِ ولا يؤيّدُ السيادة.
+      if (within(cur, p.right)) {
+        const t = p.left.getText(sf).replace(/\s+/g, '');
+        if (k === ts.SyntaxKind.AmpersandAmpersandToken && !definitelyTruthy(p.left)) {
+          texts.push(t); guardAtoms(p.left, false, sf, atoms);
+        } else if (k === ts.SyntaxKind.BarBarToken && !definitelyFalsy(p.left)) {
+          texts.push(`!${t}`); guardAtoms(p.left, true, sf, atoms);
+        } else if (k === ts.SyntaxKind.QuestionQuestionToken && !definitelyNullish(p.left)) {
+          texts.push(`nullish:${t}`); atoms.push(`nullish:${t}`);
+        }
+      }
       if ((k === ts.SyntaxKind.AmpersandAmpersandToken
         && within(cur, p.right) && definitelyFalsy(p.left))
         || (k === ts.SyntaxKind.BarBarToken

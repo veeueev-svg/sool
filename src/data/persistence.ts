@@ -32,6 +32,7 @@ import { SovereignViolation } from '../kernel/types';
 import type { AuditEntry, EntityId } from '../kernel/types';
 import type { DurableKind, PersistenceConfig } from '../kernel/config/persistence';
 import { JournalDropLedger } from './journal_drops';
+import { assertExemptionsHold, assertRehydrateCensus } from './rehydrate_census';
 import type { AppendOnlyLog } from '../audit/append_only_log';
 import type { AgentMemory, MemoryRecord } from './agent_memory';
 import type { Fact, KnowledgeGraph } from './knowledge_graph';
@@ -170,8 +171,13 @@ export class StateJournal implements DurableSink {
     return entry;
   }
 
-  /** قراءة اليوميّة بعد التحقق — تُستخدم في الإقلاع وفي القياس المستقل */
+  /**
+   * قراءة اليوميّة بعد التحقق — تُستخدم في الإقلاع وفي القياس المستقل. **والحصرُ قبلَها**
+   * (W-2026-040 · الجولةُ السابعة): كلُّ مسلكِ إرجاعٍ يقرأ من هنا، فلا يُعادُ قيدٌ قبلَ أن
+   * يُبرهَنَ لكلِّ صنفٍ في النطاقِ مستهلكٌ أو إعفاء — أيًّا كانت صيغةُ تعطيلِ نداءِ الإقلاع.
+   */
   read(): readonly DurableRecord[] {
+    assertRehydrateCensus([...this.scope]);
     return existsSync(this.path) ? this.readInternal(true) : [];
   }
 
@@ -305,6 +311,8 @@ export function rehydrateFromJournal(
   options: { readonly rebuildTerminationRoll?: boolean } = {},
 ): RehydrateReport {
   const entries = journal.read();
+  // الإعفاءُ «لا منتِج» دعوى تُقاسُ على المكتوبِ فعلًا لا على الشفرةِ وحدَها (الجولةُ السابعة)
+  assertExemptionsHold(entries.map((e) => e.kind));
   const auditEntries: AuditEntry[] = [];
   const records = new Map<string, MemoryRecord>();
   const shares = new Map<string, Set<EntityId>>();

@@ -53,6 +53,7 @@ import {
 import type { Claim } from './rehydrate_proof';
 import { dispatchSites } from './rehydrate_dispatch';
 import { guardsOf } from './rehydrate_reachability';
+import { typedProducerVerdicts } from './rehydrate_producers';
 
 const ROOT = process.env.SOOL_CHECK_ROOT ?? '.';
 const CFG = join(ROOT, 'config/persistence.yaml');
@@ -124,6 +125,8 @@ for (const kind of scope) {
 
 // ── فحصُ كلِّ صفّ ────────────────────────────────────────────────────────────────────
 const files = sourceFiles(SRC);
+let typed: ReturnType<typeof typedProducerVerdicts> | undefined;
+const exemptKinds = claims.filter((c) => c.exemption === 'declared_without_producer').map((c) => c.kind);
 let provenConsumers = 0;
 let provenExempt = 0;
 for (const claim of claims) {
@@ -168,10 +171,22 @@ for (const claim of claims) {
   }
 
   if (exemption === 'declared_without_producer') {
-    const producers = producerSites(ROOT, files, kind);
-    if (producers.length > 0) {
-      bad(`✗ [RC-04] إعفاءٌ بطل موجبُه: ${kind} مُعفًى بحجّة «لا مُنتِجَ له» وله مُنتِجٌ في: ${producers.join(' ')}`);
+    const foreignWrites: string[] = [];
+    const producers = producerSites(ROOT, files, kind, foreignWrites);
+    // **الجولةُ السابعة** (§2-ط): والنفيُ يُسأَلُ عنه المترجمُ لا الشكلُ — والمجهولُ لا يؤيّدُ الإعفاء
+    typed ??= typedProducerVerdicts(ROOT, files, exemptKinds);
+    const verdict = typed.get(kind) ?? { definite: [], possible: ['(لا حكمَ — لا يُقاسُ النفي)'] };
+    const definite = [...new Set([...producers, ...verdict.definite])];
+    if (definite.length > 0) {
+      bad(`✗ [RC-04] إعفاءٌ بطل موجبُه: ${kind} مُعفًى بحجّة «لا مُنتِجَ له» وله مُنتِجٌ في: ${definite.join(' ')}`);
       say('         صارت له حالةٌ تُدوَّن ولا تُستعاد — يُكتب له مستهلكُ إرجاعٍ أو يُنزع من scope.');
+      continue;
+    }
+    const possible = [...new Set([...verdict.possible, ...foreignWrites])];
+    if (possible.length > 0) {
+      bad(`✗ [RC-14] غيابُ المُنتِجِ لا يُبرهَن: ${kind} مُعفًى بحجّة «لا مُنتِجَ له» ونداءاتُ يوميّةٍ لا يُعرَفُ صنفُها: `
+        + possible.join(' · '));
+      say('         لا يُدّعى أنّ له منتِجًا؛ يُرفَضُ الإعفاءُ لأنّ نفيَه لم يُبرهَن — المجهولُ لا يؤيّدُ الإعفاء.');
       continue;
     }
     provenExempt += 1;
@@ -206,13 +221,43 @@ for (const claim of claims) {
 const bootSf = parseFile(BOOT);
 let censusCall: ts.CallExpression | undefined;
 const rehydrateCalls: ts.CallExpression[] = [];
+// **الجولةُ السابعة** (`RC07_PARENTHESIZED_REHYDRATE_CALLEE_BLINDS_GATE` · gemini): اسمُ المُستدعى
+// يُقرأُ بعدَ فكِّ الأغلفةِ (قوسٌ · `as` · `!` · `satisfies` · يمينُ الفاصلة) ومن الفهرسِ الحرفيِّ —
+// كان `(rehydrateFromJournal)(…)` لا يُرى نداءَ إرجاعٍ فيمضي قبلَ الحاجزِ والحاجزُ أخضر.
+const calleeNodes = new Set<ts.Node>();
+function calleeName(expr: ts.Expression): string {
+  let e = expr;
+  for (;;) {
+    if (ts.isParenthesizedExpression(e) || ts.isAsExpression(e) || ts.isNonNullExpression(e)
+      || ts.isSatisfiesExpression(e) || ts.isTypeAssertionExpression(e)) e = e.expression;
+    else if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.CommaToken) e = e.right;
+    else break;
+  }
+  const leaf = ts.isIdentifier(e) ? e : ts.isPropertyAccessExpression(e) ? e.name
+    : ts.isElementAccessExpression(e) && ts.isStringLiteralLike(e.argumentExpression)
+      ? e.argumentExpression : null;
+  if (leaf === null) return '';
+  calleeNodes.add(leaf);
+  return leaf.text;
+}
 walk(bootSf, (n) => {
   if (!ts.isCallExpression(n)) return;
-  const callee = n.expression;
-  const name = ts.isIdentifier(callee) ? callee.text
-    : (ts.isPropertyAccessExpression(callee) ? callee.name.text : '');
+  const name = calleeName(n.expression);
   if (name === 'assertRehydrateCensus') { censusCall ??= n; return; }
   if (/^rehydrate[A-Z]/.test(name)) rehydrateCalls.push(n);
+});
+// والمرجعُ الهاربُ — اسمُ إرجاعٍ أو الحاجزِ في غيرِ موضعِ المُستدعى (إسنادٌ إلى اسمٍ آخرَ ·
+// `.call` · وسيطٌ) — نداءٌ لا يُرى: المجهولُ لا يؤيّدُ السيادة فيسقطُ برمزِه لا يُتجاهَل.
+walk(bootSf, (n) => {
+  const named = ts.isIdentifier(n) || (ts.isStringLiteralLike(n) && ts.isElementAccessExpression(n.parent));
+  if (!named || calleeNodes.has(n)) return;
+  const text = (n as ts.Identifier | ts.StringLiteral).text;
+  if (!/^rehydrate[A-Z]/.test(text) && text !== 'assertRehydrateCensus') return;
+  let up: ts.Node = n;
+  while (up.parent !== undefined && !ts.isSourceFile(up.parent)) up = up.parent;
+  if (ts.isImportDeclaration(up) || ts.isExportDeclaration(up)) return;
+  bad(`✗ [RC-07] مرجعٌ إلى «${text}» في غيرِ موضعِ المُستدعى (السطر ${lineOf(bootSf, n)}) — `
+    + 'نداءٌ عبرَ اسمٍ آخرَ لا تُقاسُ سيادتُه، والمجهولُ لا يؤيّدُ السيادة (RULE-001).');
 });
 
 if (censusCall === undefined) {

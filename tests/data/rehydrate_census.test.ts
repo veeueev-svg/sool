@@ -245,7 +245,11 @@ test('الإقلاعُ الحقيقيُّ يسقطُ بالرمز: صنفٌ في
   }
 });
 
-test('الوجهُ السالبُ لاختبارِ الإقلاعِ: بلا حاجزٍ كان الإقلاعُ يمضي صامتًا — فيُكشفُ تجاوزُ العلاج', () => {
+test('الوجهُ السالبُ لاختبارِ الإقلاعِ: بلا حاجزٍ كان الإقلاعُ يمضي صامتًا — فيُكشفُ تجاوزُ العلاج (والحصرُ طبقتانِ: نداءُ الإقلاعِ وقراءةُ اليوميّة)', () => {
+  // **الجولةُ السابعة** (W-2026-040 · §2-ط): الحصرُ يُجرى أيضًا عندَ `StateJournal.read()` —
+  // نقطةِ الاختناقِ التي يقرأُ منها كلُّ مسلكِ إرجاع. فحذفُ نداءِ الإقلاعِ وحدَه **لا يكفي**
+  // لإسكاتِ الإقلاع (يُقاسُ أوّلًا: يسقطُ برمزِه من الطبقةِ الثانية)، والضبطُ السالبُ يحذفُ
+  // الطبقتينِ معًا ليثبتَ أنّ الاختبارَ يكشفُ غيابَ الحصرِ كلِّه. الضبطُ أشدُّ لا أرخى.
   const b = bootScene();
   try {
     const claimsJs = join(b.root, 'dist-src', 'data', 'rehydrate_census.js');
@@ -258,6 +262,14 @@ test('الوجهُ السالبُ لاختبارِ الإقلاعِ: بلا حا
     const call = '(0, rehydrate_census_1.assertRehydrateCensus)(persistenceConfig.policy.scope);';
     assert.ok(boot.includes(call), 'نداءُ الحاجزِ غيرُ موجودٍ في النسخةِ المُجمَّعة');
     writeFileSync(indexJs, boot.replace(call, 'void 0;'), 'utf8');
+    const layer2 = b.run();
+    assert.ok(!layer2.out.includes('BOOTED') && layer2.out.includes('PERSISTENCE_REHYDRATE_KIND_UNCLAIMED'),
+      `حذفُ نداءِ الإقلاعِ وحدَه أسكتَ الإقلاعَ — فطبقةُ القراءةِ غيرُ قائمة:\n${layer2.out}`);
+    const persistenceJs = join(b.root, 'dist-src', 'data', 'persistence.js');
+    const reader = readFileSync(persistenceJs, 'utf8');
+    const readGuard = '(0, rehydrate_census_1.assertRehydrateCensus)([...this.scope]);';
+    assert.ok(reader.includes(readGuard), 'حصرُ القراءةِ غيرُ موجودٍ في النسخةِ المُجمَّعة');
+    writeFileSync(persistenceJs, reader.replace(readGuard, 'void 0;'), 'utf8');
     const silent = b.run();
     assert.ok(silent.out.includes('BOOTED'),
       `إزالةُ الحاجزِ لم تُعد الإقلاعَ صامتًا — فالاختبارُ لا يكشفُ تجاوزَ العلاج:\n${silent.out}`);

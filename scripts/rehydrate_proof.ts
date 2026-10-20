@@ -220,8 +220,12 @@ function writeIsBranched(node: ts.Node): boolean {
  * `RC04_ALIAS_CHAIN_UNSEEN` (المستوى الثاني) · `RC04_PROPERTY_ACCESS_PRODUCER_UNSEEN`
  * (`row.kind`) · `RC04_OBJECT_ARG_ALIAS_UNSEEN` (`record({ kind })`).
  */
+const enclosingFn = (n: ts.Node): ts.Node | undefined => ts.findAncestor(n.parent, ts.isFunctionLike);
+// **الجولةُ السابعة** (`LOCAL_ASSIGNMENT_LIMIT_MISSTATED` · `…_FAILS_OPEN`): «آخِرُ كتابةٍ» موضعيّةٌ في دالّةِ
+// الاستعمالِ كما يُعلَن؛ وكتابةٌ للصنفِ في دالّةٍ أخرى تُرفَعُ في `foreign` («لا يُبرهَن» RC-14 لا «له منتِج»).
 function resolvesToKind(
   sf: ts.SourceFile, node: ts.Node, kind: string, visited: ReadonlySet<ts.VariableDeclaration>,
+  foreign?: { hit: boolean },
 ): boolean {
   const e = unwrap(node);
   if ((ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) && e.text === kind) {
@@ -231,12 +235,19 @@ function resolvesToKind(
     const d = resolveVariable(sf, e);
     if (d === null || visited.has(d)) return false;
     // آخِرُ كتابةٍ قبلَ الاستعمالِ — ابتداءً أو إسنادًا لاحقًا مربوطًا بالتعريفِ نفسِه
-    const writes = writesOf(sf, e, d).filter((w) => w.at < e.pos);
+    const fnU = enclosingFn(e);
+    const all = writesOf(sf, e, d);
+    const seen = new Set(visited).add(d);
+    for (const w of all) {
+      if (w.node !== null && enclosingFn(w.node) !== fnU && foreign !== undefined
+        && resolvesToKind(sf, w.value, kind, seen, foreign)) foreign.hit = true;
+    }
+    const writes = all.filter((w) => (w.node === null || enclosingFn(w.node) === fnU) && w.at < e.pos);
     let last: { at: number; value: ts.Expression; node: ts.Node | null } | null = null;
     for (const w of writes) if (last === null || w.at > last.at) last = w;
     if (last === null) return false;
     if (last.node !== null && writeIsBranched(last.node)) return false;
-    return resolvesToKind(sf, last.value, kind, new Set(visited).add(d));
+    return resolvesToKind(sf, last.value, kind, seen, foreign);
   }
   if (ts.isPropertyAccessExpression(e)) {
     const obj = resolveToObject(sf, e.expression, visited);
@@ -267,7 +278,9 @@ function resolvesToKind(
  * يفكُّ الأغلفةَ ويتبعُ السلاسلَ ويقرأُ وصولَ الخاصّيّةِ واختصارَ الكائنِ — فالإعفاءُ
  * «لا مُنتِجَ له» لا يبقى قائمَ الموجبِ ما دام للصنفِ مُنتِجٌ في `src/**` بأيِّ صيغةٍ من هذه.
  */
-export function producerSites(root: string, files: readonly string[], kind: string): string[] {
+export function producerSites(
+  root: string, files: readonly string[], kind: string, possible: string[] = [],
+): string[] {
   const out: string[] = [];
   for (const file of files) {
     const sf = parseFile(file);
@@ -286,10 +299,12 @@ export function producerSites(root: string, files: readonly string[], kind: stri
       const first = n.arguments[0];
       // **الجولةُ الخامسة**: المحلِّلُ الواحدُ — حرفٌ مباشرٌ، أو مُعرَّفٌ (وسلسلتُه
       // وأغلفتُه)، أو وصولُ خاصّيّةٍ `row.kind` — كلُّها مُنتِجٌ قائمٌ بالموجبِ.
-      if (first !== undefined && resolvesToKind(sf, first, kind, new Set())) {
+      const foreign = { hit: false };
+      if (first !== undefined && resolvesToKind(sf, first, kind, new Set(), foreign)) {
         out.push(`${relative(root, file)}:${lineOf(sf, n)}`);
         return;
       }
+      if (foreign.hit) possible.push(`${relative(root, file)}:${lineOf(sf, n)} (كتابةٌ للصنفِ في دالّةٍ أخرى)`);
       for (const arg of n.arguments) {
         if (!ts.isObjectLiteralExpression(arg)) continue;
         for (const prop of arg.properties) {

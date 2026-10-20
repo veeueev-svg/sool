@@ -196,3 +196,26 @@ export function assertRehydrateCensus(
   }
   return report;
 }
+
+/**
+ * **الإعفاءُ يُقاسُ على المكتوبِ** (W-2026-040 · معالجةُ مجلسِ المراجعةِ الثالثة): دعوى
+ * `declared_without_producer` («لا مُنتِجَ له») نفيٌ لا يُحسَمُ ساكنًا في العموم — فالتحويلُ
+ * عبرَ `as unknown as` يُفلتُ من نظامِ الأنواع (`COMPUTED_PRODUCER_BYPASSES_DECLARED_WITHOUT_PRODUCER`).
+ * فتُقاسُ عندَ نقطةِ الاختناقِ: قيدٌ في اليوميّةِ لصنفٍ يُدّعى أن لا منتِجَ له **يُكذِّبُ الدعوى**،
+ * والإقلاعُ يسقطُ برمزِه قبلَ أن يُعيدَ شيئًا — لا يُفقَدُ المكتوبُ صامتًا بإعفاءٍ كاذب.
+ */
+export function assertExemptionsHold(
+  writtenKinds: Iterable<string>,
+  claims: readonly RehydrateClaim[] = REHYDRATE_CLAIMS,
+): void {
+  const exempt = new Set(claims.filter((c) => c.exemption === 'declared_without_producer').map((c) => c.kind));
+  const contradicted = [...new Set([...writtenKinds].filter((k) => exempt.has(k as DurableKind)))].sort();
+  if (contradicted.length > 0) {
+    throw new SovereignViolation(
+      `أصنافٌ مُعفاةٌ بحجّةِ «لا مُنتِجَ لها» ولها في اليوميّةِ قيودٌ مكتوبة: ${contradicted.join(', ')} — `
+      + 'الدعوى كاذبةٌ بشهادةِ القرص، وإرجاعٌ يتجاهلُها يُفقِدُ المكتوبَ صامتًا. يُسمّى للصنفِ '
+      + 'مستهلكٌ في REHYDRATE_CLAIMS أو يُنزَعُ منتِجُه',
+      'PERSISTENCE_REHYDRATE_EXEMPTION_CONTRADICTED',
+    );
+  }
+}
