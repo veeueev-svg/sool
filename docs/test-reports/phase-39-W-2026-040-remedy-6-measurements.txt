@@ -1,0 +1,75 @@
+قياساتُ معالجةِ مجلسِ المراجعةِ الثانية — W-2026-040 · الجولةُ السادسة (2026-10-20 · الجلسة 151/152)
+المصدر: العيوبُ الواحدُ والعشرونَ المسمّاةُ في محضرِ الجولةِ الثانية docs/work/council/W-2026-040-2.json
+        (gpt REJECTED بعيبَين · grok REJECTED بعشرين عيبًا مسمّى §7 · gemini VERIFIED)
+
+═══════════════════════════════════════════════════════════════════════════
+§1 — الشجرةُ الحيّةُ بعدَ العلاجِ (الأمرُ نفسُهُ الذي يُشغِّلُهُ الحاجزُ)
+═══════════════════════════════════════════════════════════════════════════
+الأمر: node dist/scripts/check_rehydrate_census.js   ⇒   رمزُ الخروجِ 0
+
+  حاجزُ حصرِ الإرجاع: لكلِّ صنفٍ في النطاق دعوى قائمةٌ على بنيةِ الشفرة (W-2026-040)
+    المقيس: نطاقُ التدوين 23 عنصرًا · جدولُ الدعاوى 23 صفًّا · التعدادُ المغلق 23 صنفًا · مُعجمُ الإعفاء 2 سببًا
+    سيادةُ نداءِ الحاجزِ مقيسةٌ على 4 نداءِ إرجاعٍ: شروطُه {journal} مُحتواةٌ بالذرّاتِ في شروطِ كلِّ نداءٍ منها
+    قارئو عدّادِ الإسقاطِ في الإنتاج: src/production/production_scanners.ts
+    ماسحُ الإسقاطِ مشترَطٌ: journal_drop في PRODUCTION_REQUIRED_SCANNERS (8 ماسحًا مشترَطًا)
+  ✓ حصرُ الإرجاع: 23 صنفًا في النطاق كلُّها مُدَّعاة · 21 بمستهلكٍ له موضعُ توزيعٍ في شجرةِ نحوِه
+    · 2 بإعفاءٍ قائمِ الموجب · والحاجزُ منادًى قبل أوّلِ إرجاع
+
+═══════════════════════════════════════════════════════════════════════════
+§2 — تطفيراتُ الجولةِ السادسة: كلُّ صيغةٍ من صيغِ التجاوزِ الـ21 تسقطُ الحاجزَ برمزها
+═══════════════════════════════════════════════════════════════════════════
+الأمر: node --test dist/tests/data/rehydrate_census_mutations_r6.test.js
+النتيجة: tests 2 · pass 2 · fail 0   ⇒   كلُّ تطفيرٍ سقط برمزِهِ (exit 1 + [RC-NN])
+
+الصيغةُ (الاسمُ القانونيّ)                                              الرمزُ   القياسُ
+─────────────────────────────────────────────────────────────────────────────────────
+RC07_QQ_NONNULLISH_SHORT_CIRCUIT_SKIPS_CENSUS (false ?? census)          RC-07   سقط
+  — الوجهُ بسلسلةٍ 'x' ?? census                                        RC-07   سقط
+RC07_UNARY_ZERO_AND_SKIPS_CENSUS (-0 && census)                          RC-07   سقط
+RC07_BIGINT_ZERO_AND_SKIPS_CENSUS (0n && census)                         RC-07   سقط
+RC07_SATISFIES_FALSY_AND_SKIPS_CENSUS (false satisfies && census)        RC-07   سقط
+RC03_QQ_DEAD_EFFECT_GREENS (false ?? (levy += 1))                        RC-03   سقط
+RC03_UNARY_ZERO_GREENS_DISPATCH (if (-0))                                RC-03   سقط
+RC03_BIGINT_ZERO_GREENS_DISPATCH (if (0n))                                RC-03   سقط
+RC03_SATISFIES_FALSY_GREENS_DISPATCH (if (false satisfies boolean))      RC-03   سقط
+RC03_BIGINT_CALL_FALSY_GUARD_GREENS (if (BigInt(0)) — عيبُ gpt)           RC-03   سقط
+RC03_FOR_OF_WRAPPED_EMPTY_UNSEEN (for-of ([]) switch)                    RC-03   سقط
+  — الوجهُ بغلافٍ as const (for-of [] as const)                         RC-03   سقط
+RC12_QQ_DEAD_READER_GREENS (false ?? droppedByKind())                    RC-12   سقط
+RC12_UNARY_ZERO_DEAD_READER_GREENS (-0 && droppedByKind())               RC-12   سقط
+RC04_BRACKET_CALLEE_UNSEEN (j['record']('archive_snapshot', {}))         RC-04   سقط
+  — الوجهُ الاختياريُّ (j?.['record']?.(…))                              RC-04   سقط
+RC04_ELEMENT_ACCESS_KIND_UNSEEN (j.record(row['kind'], {}))              RC-04   سقط
+RC04_COMPUTED_PROPERTY_KEY_UNSEEN ({ ['kind']: 'archive_snapshot' })      RC-04   سقط
+RC04_LET_ASSIGNMENT_UNSEEN (let kind; kind = 'archive_snapshot')         RC-04   سقط
+  — الإسنادُ فوقَ ابتداءٍ (kind = 'other' ثم 'archive_snapshot')        RC-04   سقط
+RC04_SPREAD_OBJECT_UNSEEN ({ ...{ kind: 'archive_snapshot' } })           RC-04   سقط
+RC04_NESTED_PROPERTY_UNSEEN (row.meta.kind)                              RC-04   سقط
+
+═══════════════════════════════════════════════════════════════════════════
+§3 — الوجوهُ الحيّةُ لا تُرفضُ (رفضُ الصحيحِ يدفَعُ إلى التزوير)
+═══════════════════════════════════════════════════════════════════════════
+عشرةُ وجوهٍ كلُّها EXIT=0 (في الاختبارِ نفسِه — tests 2 · pass 2):
+  if (void 0 ?? true) أثر — اليسارُ معدومٌ فقيمتُه اليمينُ الصادقُ (كان رفضًا كاذبًا)
+  if (void 0 ?? journal) الحاجزُ — الذرّاتُ ذرّاتُ journal فالسيادةُ قائمة
+  if ((0, journal)) الحاجزُ — الفاصلةُ قيمتُها اليمينُ فالذرّاتُ ذرّاتُه
+  if (null ?? journal) الحاجزُ — معدومٌ فالقيمةُ (والذرّاتُ) journal
+  if (0, 1) أثر — فاصلةٌ قيمتُها الطرفُ الأيمنُ الصادقُ
+  if (1n) أثر — BigInt غيرُ صفريٍّ صادقٌ
+  if (-1) أثر — بادئةُ سالبٍ على غيرِ الصفريِّ لا تُغيّرُ الصدق
+  BigInt مظلَّلٌ محليًّا فلا يُقطَعُ بكذبِه — مجهولٌ يُعاملُ قابلًا للصدق
+  إسنادٌ لاحقٌ يُبطلُ القيمةَ: kind = 'archive_snapshot'; kind = 'other' — آخِرُ كتابةٍ هي القيمة
+  ترتيبُ الاستبدالِ في النشرِ: { kind: 'archive_snapshot', ...{ kind: 'other' } } — النشرُ آخِرًا فهو الغالبُ
+
+═══════════════════════════════════════════════════════════════════════════
+§4 — لا انحدارَ: تطفيراتُ الجولاتِ السابقةِ والمجموعةُ الكاملة
+═══════════════════════════════════════════════════════════════════════════
+تطفيراتُ الجولاتِ 1 و3 و4 و5 (الأمرُ على الملفاتِ الأربعةِ):
+  node --test dist/tests/data/rehydrate_census_mutations{,_r3,_r4,_r5}.test.js
+  ⇒ tests 9 · pass 9 · fail 0
+
+المجموعةُ الكاملةُ: npm test
+  ⇒ tests 2476 · pass 2476 · fail 0 · duration 328.5s
+  (كان 2474 قبلَ هذه المعالجةِ · +2 اختبارا r6 — version.json يُحدَّث بالمقيسِ)
+
+npm run verify ⇒ EXIT=0 (يُقاسُ قبلَ الدفعِ — بروتوكولُ §13.129)

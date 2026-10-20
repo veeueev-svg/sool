@@ -100,14 +100,120 @@ export function sourceFiles(dir: string): string[] {
 }
 
 /**
+ * اسمُ خاصّيّةِ عنصرِ كائنٍ حرفيّ: معرّفٌ أو حرفٌ أو **مفتاحٌ محسوبٌ بحرفٍ** (الجولةُ
+ * السادسة: `['kind']: 'x'` — حرفٌ في قوسٍ لا يُرى فكُانت خاصّيّةً خفيّة).
+ */
+function propertyNameOf(prop: ts.ObjectLiteralElementLike): string | null {
+  if (!ts.isPropertyAssignment(prop) && !ts.isShorthandPropertyAssignment(prop)) return null;
+  const nm = prop.name;
+  if (ts.isIdentifier(nm) || ts.isStringLiteral(nm)) return nm.text;
+  if (ts.isComputedPropertyName(nm)) {
+    const k = unwrap(nm.expression);
+    if (ts.isStringLiteral(k) || ts.isNoSubstitutionTemplateLiteral(k)) return k.text;
+  }
+  return null;
+}
+
+/**
+ * قيمةُ خاصّيّةٍ بالاسمِ في كائنٍ حرفيّ: **آخرُ مطابقةٍ تفوزُ** (ترتيبُ الاستبدالِ
+ * معتبرٌ)، والنشرُ `…{ kind }` يسهمُ بخصائصِ كائنِه في موضعِه (الجولةُ السادسة).
+ */
+function propertyInitializerOf(
+  sf: ts.SourceFile, obj: ts.ObjectLiteralExpression, name: string,
+  visited: ReadonlySet<ts.VariableDeclaration>,
+): ts.Expression | null {
+  let found: ts.Expression | null = null;
+  for (const prop of obj.properties) {
+    if (ts.isSpreadAssignment(prop)) {
+      const spreadObj = resolveToObject(sf, prop.expression, visited);
+      if (spreadObj !== null) {
+        const inner = propertyInitializerOf(sf, spreadObj, name, visited);
+        if (inner !== null) found = inner;
+      }
+      continue;
+    }
+    const nm = propertyNameOf(prop);
+    if (nm !== name) continue;
+    if (ts.isPropertyAssignment(prop)) found = prop.initializer;
+    else if (ts.isShorthandPropertyAssignment(prop)) found = prop.name;
+  }
+  return found;
+}
+
+/** يحلُّ تعبيرًا إلى **كائنٍ حرفيّ**: مُعرّفٌ إلى تعريفِه، ووصولُ خاصّيّةٍ إلى
+ * خاصّيّتِه في كائنِه (بأيّ عمقٍ — `row.meta` كائنٌ داخلَ كائنٍ)، وفهرسًا بحرفٍ إلى
+ * كذاك. وكلُّ حلٍّ يمرّ بمجموعةِ التعاريفِ المزارةِ فلا دورانَ. */
+function resolveToObject(
+  sf: ts.SourceFile, expr: ts.Node, visited: ReadonlySet<ts.VariableDeclaration>,
+): ts.ObjectLiteralExpression | null {
+  const e = unwrap(expr);
+  if (ts.isObjectLiteralExpression(e)) return e;
+  if (ts.isIdentifier(e)) {
+    const d = resolveVariable(sf, e);
+    if (d === null || d.initializer === undefined || visited.has(d)) return null;
+    return resolveToObject(sf, d.initializer, new Set(visited).add(d));
+  }
+  if (ts.isPropertyAccessExpression(e)) {
+    const obj = resolveToObject(sf, e.expression, visited);
+    if (obj === null) return null;
+    const init = propertyInitializerOf(sf, obj, e.name.text, visited);
+    return init === null ? null : resolveToObject(sf, init, visited);
+  }
+  if (ts.isElementAccessExpression(e)) {
+    const arg = unwrap(e.argumentExpression);
+    if (!(ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg))) return null;
+    const obj = resolveToObject(sf, e.expression, visited);
+    if (obj === null) return null;
+    const init = propertyInitializerOf(sf, obj, arg.text, visited);
+    return init === null ? null : resolveToObject(sf, init, visited);
+  }
+  return null;
+}
+
+/**
+ * كتاباتُ مُعرّفٍ **المربوطةِ بتعريفِه**: الابتداءُ أولُ كتابةٍ، وكلُّ `name = value`
+ * يُربطُ يسارُه بالتعريفِ نفسِه (لا بالاسمِ — فالمظلّلُ غيرُه) كتابةٌ بعده. آخِرُ
+ * كتابةٍ قبلَ الاستعمالِ هي قيمتُه هناك؛ وإن كانت في فرعٍ (شرطٍ أو حلقةٍ أو try)
+ * فالقيمةُ غيرُ محسومةٍ لا تُدّعى. (الجولةُ السادسة: `let kind; kind = 'x';` كان
+ * لا يُرى لأنّ الحلَّ تابعَ الابتداءَ وحده.)
+ */
+function writesOf(
+  sf: ts.SourceFile, usage: ts.Identifier, decl: ts.VariableDeclaration,
+): ReadonlyArray<{ at: number; value: ts.Expression; node: ts.Node | null }> {
+  const writes: Array<{ at: number; value: ts.Expression; node: ts.Node | null }> = [];
+  if (decl.initializer !== undefined) writes.push({ at: decl.pos, value: decl.initializer, node: null });
+  walk(sf, (n) => {
+    if (!ts.isBinaryExpression(n) || n.operatorToken.kind !== ts.SyntaxKind.EqualsToken) return;
+    if (!ts.isIdentifier(n.left) || n.left.text !== usage.text) return;
+    if (resolveVariable(sf, n.left) !== decl) return;
+    writes.push({ at: n.pos, value: n.right, node: n });
+  });
+  return writes;
+}
+
+/** كتابةٌ داخلَ بنيةِ تفريعٍ (شرطٍ · حلقةٍ · try · switch)؟ فقيمتُها غيرُ محسومةٍ هناك */
+function writeIsBranched(node: ts.Node): boolean {
+  for (let cur: ts.Node | undefined = node.parent; cur !== undefined; cur = cur.parent) {
+    if (ts.isIfStatement(cur) || ts.isConditionalExpression(cur) || ts.isSwitchStatement(cur)
+      || ts.isTryStatement(cur) || ts.isWhileStatement(cur) || ts.isForStatement(cur)
+      || ts.isDoStatement(cur) || ts.isForOfStatement(cur) || ts.isForInStatement(cur)) return true;
+  }
+  return false;
+}
+
+/**
  * محلِّلُ قيمةٍ واحدٌ للمُنتِج: يفكُّ الأغلفةَ (`as const` · الأقواس · `satisfies` ·
  * `!`)، ويتبعُ سلسلةَ المُعرّفِ إلى تعريفِه في نطاقِه (`resolveVariable`) بلا سقفِ
  * مستوياتَ اعتباطيّ — فالمراجعُ رفضَ الحلَّ ذا المستوى الواحدِ لأنّ العقدَ لا يستثني
  * المستوى الثاني، ونقلُ البابِ إلى سقفٍ خامسٍ يعيدُ العيبَ نفسَه بعينِه. والوقايةُ من
  * الدورانِ (`const a = b; const b = a;`) تتبّعُ التعاريفِ المزارةِ لا عدّادٍ يُستنفد.
- * ويقرأُ وصولَ الخاصّيّةِ (`row.kind`): يُحَلُّ الجذرُ إلى تعريفِه فإن كان كائنًا
- * حرفيًّا قُرئت خاصّيّةٌ تحملُ اسمَ الوصولِ — واختصارُ الكائنِ (`{ kind }`) سكرٌ نحويّ
- * لذاتِ القراءةِ.
+ * ويقرأُ وصولَ الخاصّيّةِ (`row.kind`) و**الفهرسَ بالحرفِ** (`row['kind']`) وخصائصَ
+ * الكائنِ المتداخلةَ (`row.meta.kind`) والمفتاحَ المحسوبَ والنشرَ، واختصارُ الكائنِ
+ * (`{ kind }`) سكرٌ نحويٌّ لذاتِ القراءةِ.
+ *
+ * **والجولةُ السادسة**: الكتابةُ اللاحقةُ للإعلانِ (`let kind; kind = 'x'; j.record(kind)`)
+ * تُربطُ بالتعريفِ نفسِه وتُتبعُ — آخِرُ كتابةٍ قبلَ الاستعمالِ هي القيمةُ، وما كان في
+ * فرعٍ فغيرُ محسومٍ لا يُدّعى.
  *
  * **تسميةُ عيوبِ الجولةِ الخامسةِ التي أوجبت هذا المحلِّل** (`docs/work/council/`
  * `W-2026-040-1-grok.md` §6): `RC04_AS_CAST_ALIAS_UNSEEN` (القشرةُ لا تُفكُّ `as`) ·
@@ -123,31 +229,29 @@ function resolvesToKind(
   }
   if (ts.isIdentifier(e)) {
     const d = resolveVariable(sf, e);
-    if (d === null || d.initializer === undefined || visited.has(d)) return false;
-    return resolvesToKind(sf, d.initializer, kind, new Set(visited).add(d));
+    if (d === null || visited.has(d)) return false;
+    // آخِرُ كتابةٍ قبلَ الاستعمالِ — ابتداءً أو إسنادًا لاحقًا مربوطًا بالتعريفِ نفسِه
+    const writes = writesOf(sf, e, d).filter((w) => w.at < e.pos);
+    let last: { at: number; value: ts.Expression; node: ts.Node | null } | null = null;
+    for (const w of writes) if (last === null || w.at > last.at) last = w;
+    if (last === null) return false;
+    if (last.node !== null && writeIsBranched(last.node)) return false;
+    return resolvesToKind(sf, last.value, kind, new Set(visited).add(d));
   }
   if (ts.isPropertyAccessExpression(e)) {
-    const base = unwrap(e.expression);
-    if (!ts.isIdentifier(base)) return false;
-    const d = resolveVariable(sf, base);
-    if (d === null || d.initializer === undefined || visited.has(d)) return false;
-    const init = unwrap(d.initializer);
-    if (!ts.isObjectLiteralExpression(init)) return false;
-    for (const prop of init.properties) {
-      const nm = ts.isPropertyAssignment(prop) || ts.isShorthandPropertyAssignment(prop)
-        ? prop.name : null;
-      if (nm === null || !(ts.isIdentifier(nm) || ts.isStringLiteral(nm)) || nm.text !== e.name.text) {
-        continue;
-      }
-      if (ts.isPropertyAssignment(prop)) {
-        return resolvesToKind(sf, prop.initializer, kind, new Set(visited).add(d));
-      }
-      if (ts.isShorthandPropertyAssignment(prop)) {
-        return resolvesToKind(sf, prop.name, kind, new Set(visited).add(d));
-      }
-      continue;
-    }
-    return false;
+    const obj = resolveToObject(sf, e.expression, visited);
+    if (obj === null) return false;
+    const init = propertyInitializerOf(sf, obj, e.name.text, visited);
+    return init !== null && resolvesToKind(sf, init, kind, visited);
+  }
+  // **الجولةُ السادسة**: الفهرسُ بالحرفِ قراءةٌ ثانيةٌ لذاتِ الخاصّيّةِ — `row['kind']`
+  if (ts.isElementAccessExpression(e)) {
+    const arg = unwrap(e.argumentExpression);
+    if (!(ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg))) return false;
+    const obj = resolveToObject(sf, e.expression, visited);
+    if (obj === null) return false;
+    const init = propertyInitializerOf(sf, obj, arg.text, visited);
+    return init !== null && resolvesToKind(sf, init, kind, visited);
   }
   return false;
 }
@@ -170,8 +274,14 @@ export function producerSites(root: string, files: readonly string[], kind: stri
     walk(sf, (n) => {
       if (!ts.isCallExpression(n)) return;
       const callee = n.expression;
+      // **الجولةُ السادسة**: الفهرسُ بالحرفِ — `j['record'](...)` و`j?.['record'](...)`
+      // نداءٌ لذاتِ المسمّى (وجهُ `isLogCall` مع `console['log']` من الجولةِ الرابعة).
+      const bracketArg = ts.isElementAccessExpression(callee) ? unwrap(callee.argumentExpression) : null;
       const name = ts.isPropertyAccessExpression(callee) ? callee.name.text
-        : (ts.isIdentifier(callee) ? callee.text : '');
+        : ts.isIdentifier(callee) ? callee.text
+          : (bracketArg !== null
+            && (ts.isStringLiteral(bracketArg) || ts.isNoSubstitutionTemplateLiteral(bracketArg))
+            ? bracketArg.text : '');
       if (name !== 'record') return;
       const first = n.arguments[0];
       // **الجولةُ الخامسة**: المحلِّلُ الواحدُ — حرفٌ مباشرٌ، أو مُعرَّفٌ (وسلسلتُه

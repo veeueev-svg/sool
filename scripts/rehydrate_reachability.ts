@@ -45,12 +45,28 @@ function strip(expr: ts.Expression): ts.Expression {
   let e = expr;
   for (;;) {
     if (ts.isParenthesizedExpression(e) || ts.isAsExpression(e) || ts.isNonNullExpression(e)
+      || ts.isSatisfiesExpression(e)
       || (ts.isTypeAssertionExpression !== undefined && ts.isTypeAssertionExpression(e))) {
       e = e.expression;
     } else {
       return e;
     }
   }
+}
+
+/**
+ * استدعاءُ `BigInt(0)` **العالميّ**: قيمتُه `0n` — كاذبٌ قطعًا وغيرُ معدومٍ قطعًا. ولا
+ * يُعتمدُ الاسمُ وحده: إن ربطَ المعرّفَ تعريفٌ محليٌّ (تظليلٌ) فلا حكمَ هنا.
+ */
+function isGlobalZeroBigIntCall(e: ts.Expression): boolean {
+  if (!ts.isCallExpression(e)) return false;
+  const callee = strip(e.expression);
+  if (!ts.isIdentifier(callee) || callee.text !== 'BigInt') return false;
+  const first = e.arguments[0];
+  if (e.arguments.length !== 1 || first === undefined) return false;
+  const arg = strip(first);
+  if (!ts.isNumericLiteral(arg) || Number(arg.text) !== 0) return false;
+  return resolveVariable(callee.getSourceFile(), callee) === null;
 }
 
 /**
@@ -71,11 +87,17 @@ export function definitelyFalsy(expr: ts.Expression | undefined): boolean {
   const e = strip(expr);
   if (e.kind === ts.SyntaxKind.FalseKeyword || e.kind === ts.SyntaxKind.NullKeyword) return true;
   if (ts.isNumericLiteral(e)) return Number(e.text) === 0;
+  if (ts.isBigIntLiteral(e)) return e.text === '0n';
   if (ts.isStringLiteralLike(e)) return e.text === '';
   if (ts.isIdentifier(e)) return e.text === 'undefined' || e.text === 'NaN';
   if (ts.isVoidExpression(e)) return true;
+  if (isGlobalZeroBigIntCall(e)) return true;
   if (ts.isPrefixUnaryExpression(e)) {
     if (e.operator === ts.SyntaxKind.ExclamationToken) return definitelyTruthy(e.operand);
+    // **الجولةُ السادسة**: صفرٌ ببادئةٍ `-0`/`+0` — كاذبٌ قطعًا وقتَ التشغيلِ، والبادئةُ
+    // لا تُغيّرُ القيمةَ العدديةَ (لا يُقطَعُ إلا على الحرفيِّ الصفريِّ).
+    if ((e.operator === ts.SyntaxKind.MinusToken || e.operator === ts.SyntaxKind.PlusToken)
+      && ts.isNumericLiteral(e.operand) && Number(e.operand.text) === 0) return true;
     return false;
   }
   if (ts.isBinaryExpression(e)) {
@@ -90,11 +112,14 @@ export function definitelyFalsy(expr: ts.Expression | undefined): boolean {
     }
     // **الجولةُ الخامسة**: الفاصلةُ قيمتُها الطرفُ الأيمنُ — `(0, false)` كاذبٌ قطعًا
     if (k === ts.SyntaxKind.CommaToken) return definitelyFalsy(e.right);
-    // **الجولةُ الخامسة**: العدميُّ يُفصلُ معدومًا/غيرَ معدومٍ لا صادقًا/كاذبًا فقط
+    // **الجولةُ السادسة**: العدميُّ يُفصلُ معدومًا/غيرَ معدومٍ لا صادقًا/كاذبًا فقط —
+    // ولا يُقطَعُ من اليسارِ إلا إذا ثبتَ عدمُ معدوميّتِه؛ فإن جهلت معدوميّتُه فالقيمةُ
+    // «اليسارُ أو اليمينُ» ولا يُقطَعُ بحكمٍ واحدٍ (رفضٌ كاذبٌ كان: `(x && false) ?? true`
+    // قيمتُها true إذا كان x معدومًا).
     if (k === ts.SyntaxKind.QuestionQuestionToken) {
       if (definitelyNullish(e.left)) return definitelyFalsy(e.right);
-      // الطرفُ الأيسرُ ثابتٌ غيرُ معدومٍ ⇒ القيمةُ هو نفسُه لا اليمينُ أبدًا
-      return definitelyFalsy(e.left);
+      if (definitelyNotNullish(e.left)) return definitelyFalsy(e.left);
+      return false;
     }
   }
   return false;
@@ -109,7 +134,28 @@ function definitelyNullish(expr: ts.Expression | undefined): boolean {
   if (expr === undefined) return false;
   const e = strip(expr);
   return e.kind === ts.SyntaxKind.NullKeyword
-    || (ts.isIdentifier(e) && e.text === 'undefined');
+    || (ts.isIdentifier(e) && e.text === 'undefined')
+    // **الجولةُ السادسة**: `void X` قيمتُه `undefined` دومًا — فعدميّتُه قطعيةٌ، وعدُّه
+    // كاذبًا في `(void 0) ?? Y` كان رفضًا كاذبًا لحيٍّ (قيمتُه Y).
+    || ts.isVoidExpression(e);
+}
+
+/**
+ * تعبيرٌ **غيرُ معدومٍ حتمًا**: الحروفُ الثابتةُ (رقمٌ · سلسلةٌ · BigInt · صواب/كذبٌ)
+ * قيمتُها نفسُها لا معدومةً أبدًا — فطرفُهُ الأيمنُ في `A ?? B` لا يُقيَّمُ أصلًا.
+ * وما لا يُقطَعُ به فمجهولٌ (لا يُدّعى). `BigInt(0)` العالميُّ يُرَدُّ `0n` غيرَ معدومٍ.
+ */
+export function definitelyNotNullish(expr: ts.Expression | undefined): boolean {
+  if (expr === undefined) return false;
+  const e = strip(expr);
+  if (e.kind === ts.SyntaxKind.NullKeyword) return false;
+  if (ts.isIdentifier(e) && e.text === 'undefined') return false;
+  if (ts.isVoidExpression(e)) return false;
+  if (e.kind === ts.SyntaxKind.TrueKeyword || e.kind === ts.SyntaxKind.FalseKeyword) return true;
+  if (ts.isNumericLiteral(e) || ts.isStringLiteralLike(e)) return true;
+  if (ts.isBigIntLiteral(e)) return true;
+  if (isGlobalZeroBigIntCall(e)) return true;
+  return false;
 }
 
 /** تعبيرٌ **ثابتُ الصدق** — مركّبًا: `true || x` و`x || true` و`a && true` (إن صدق a فلا يُقطَع)… والقطعُ بالصدقِ لا يكونُ إلّا بثابت. */
@@ -118,6 +164,7 @@ export function definitelyTruthy(expr: ts.Expression | undefined): boolean {
   const e = strip(expr);
   if (e.kind === ts.SyntaxKind.TrueKeyword) return true;
   if (ts.isNumericLiteral(e)) return Number(e.text) !== 0;
+  if (ts.isBigIntLiteral(e)) return e.text !== '0n';
   if (ts.isStringLiteralLike(e)) return e.text !== '';
   if (ts.isPrefixUnaryExpression(e) && e.operator === ts.SyntaxKind.ExclamationToken) {
     return definitelyFalsy(e.operand);
@@ -134,7 +181,8 @@ export function definitelyTruthy(expr: ts.Expression | undefined): boolean {
     if (k === ts.SyntaxKind.CommaToken) return definitelyTruthy(e.right);
     if (k === ts.SyntaxKind.QuestionQuestionToken) {
       if (definitelyNullish(e.left)) return definitelyTruthy(e.right);
-      return definitelyTruthy(e.left);
+      if (definitelyNotNullish(e.left)) return definitelyTruthy(e.left);
+      return false;
     }
   }
   return false;
@@ -173,10 +221,32 @@ function within(inner: ts.Node, outer: ts.Node): boolean {
  */
 function guardAtoms(expr: ts.Expression, negated: boolean, sf: ts.SourceFile, out: string[]): void {
   const e = strip(expr);
-  if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) {
-    guardAtoms(e.left, negated, sf, out);
-    guardAtoms(e.right, negated, sf, out);
-    return;
+  if (ts.isBinaryExpression(e)) {
+    const k = e.operatorToken.kind;
+    if (k === ts.SyntaxKind.AmpersandAmpersandToken) {
+      guardAtoms(e.left, negated, sf, out);
+      guardAtoms(e.right, negated, sf, out);
+      return;
+    }
+    // **الجولةُ السادسة**: الفاصلةُ قيمتُها الطرفُ الأيمنُ — فذرّاتُها ذرّاتُه لا نصُّ
+    // العاملِ كلِّه (رفضٌ كاذبٌ كان: `(0, journal)` يُرى حارسًا آخر غير `journal`).
+    if (k === ts.SyntaxKind.CommaToken) {
+      guardAtoms(e.right, negated, sf, out);
+      return;
+    }
+    // **الجولةُ السادسة**: العدميُّ — يسارٌ معدومٌ حتمًا فالقيمةُ (والذرّاتُ) اليمينُ؛
+    // يسارٌ غيرُ معدومٍ حتمًا فالقيمةُ اليسارُ. ومجهولُ المعدوميةِ يبقى نصًّا واحدًا
+    // كاملًا (لا برهانَ على تكافؤِه فيُحتاطُ للفرعِ المقروءِ).
+    if (k === ts.SyntaxKind.QuestionQuestionToken) {
+      if (definitelyNullish(e.left)) {
+        guardAtoms(e.right, negated, sf, out);
+        return;
+      }
+      if (definitelyNotNullish(e.left)) {
+        guardAtoms(e.left, negated, sf, out);
+        return;
+      }
+    }
   }
   out.push((negated ? '!' : '') + e.getText(sf).replace(/\s+/g, ''));
 }
@@ -227,19 +297,25 @@ export function guardsOf(sf: ts.SourceFile, node: ts.Node): {
       texts.push(`for-of:${p.expression.getText(sf).replace(/\s+/g, '')}`);
       atoms.push(`for-of:${p.expression.getText(sf).replace(/\s+/g, '')}`);
       // **عيبُ الجولةِ الرابعة**: `for (const x of [])` — جسمٌ لا يدور؛ والمصفوفةُ
-      // الفارغةُ حرفيًّا تُقطَع بها الدارةُ قطعًا، لا تُظنّ.
-      if (ts.isArrayLiteralExpression(p.expression) && p.expression.elements.length === 0) {
+      // الفارغةُ حرفيًّا تُقطَع بها الدارةُ قطعًا، لا تُظنّ. **والجولةُ السادسة**: تُقشَرُ
+      // الأغلفةُ أولًا — فقوسٌ أو `as const` كان يخفيها (`([])` · `[] as const`).
+      const iter = strip(p.expression);
+      if (ts.isArrayLiteralExpression(iter) && iter.elements.length === 0) {
         unsatisfiable = true;
       }
     }
     // **عيبُ الجولةِ الرابعة** `RC07_SHORT_CIRCUIT_CONDITION_ESCAPES_GUARDS`: نداءٌ في
     // الطرفِ الأيمنِ لرابطٍ منطقيٍّ لا يُنفَّذ إن قطعَ الطرفُ الأيسرُ الدارةَ قبله.
+    // **والجولةُ السادسة**: العدميُّ رابطٌ قاصِرٌ كأخويه — يسارٌ غيرُ معدومٍ حتمًا
+    // فاليمينُ لا يُقيَّمُ أبدًا (`false ?? census()` لا ينادي).
     if (ts.isBinaryExpression(p)) {
       const k = p.operatorToken.kind;
       if ((k === ts.SyntaxKind.AmpersandAmpersandToken
         && within(cur, p.right) && definitelyFalsy(p.left))
         || (k === ts.SyntaxKind.BarBarToken
-          && within(cur, p.right) && definitelyTruthy(p.left))) {
+          && within(cur, p.right) && definitelyTruthy(p.left))
+        || (k === ts.SyntaxKind.QuestionQuestionToken
+          && within(cur, p.right) && definitelyNotNullish(p.left))) {
         unsatisfiable = true;
       }
     }

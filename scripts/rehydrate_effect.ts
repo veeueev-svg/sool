@@ -60,7 +60,7 @@
  */
 import ts from 'typescript';
 import { unwrap } from './rehydrate_proof';
-import { definitelyFalsy, definitelyTruthy, literalValue } from './rehydrate_reachability';
+import { definitelyFalsy, definitelyNotNullish, definitelyTruthy, literalValue } from './rehydrate_reachability';
 
 /** أسماءُ أدواتِ التسجيلِ التي لا يُعدُّ نداءُها عملًا يُرجِع حالًا */
 export const LOG_ROOTS: ReadonlySet<string> = new Set([
@@ -174,6 +174,9 @@ export function effectfulExpression(expr: ts.Expression | undefined, depth = 0):
       return effectfulExpression(e.left, depth + 1) || effectfulExpression(e.right, depth + 1);
     }
     if (k === ts.SyntaxKind.QuestionQuestionToken) {
+      // **الجولةُ السادسة**: العدميُّ قاصرٌ كأخويه — يسارٌ غيرُ معدومٍ حتمًا فاليمينُ
+      // لا يُقيَّمُ أصلًا فأثرُه ليس أثرًا (`false ?? (x += 1)` لا يُنفّذ الإسنادَ).
+      if (definitelyNotNullish(e.left)) return effectfulExpression(e.left, depth + 1);
       return effectfulExpression(e.left, depth + 1) || effectfulExpression(e.right, depth + 1);
     }
     return false;
