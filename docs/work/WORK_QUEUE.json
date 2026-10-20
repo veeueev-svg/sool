@@ -214,7 +214,10 @@
         "docs/test-reports/phase-39-W-2026-040-review-round-4-measurements.txt",
         "scripts/rehydrate_reachability.ts",
         "tests/data/rehydrate_census_mutations_r4.test.ts",
-        "docs/test-reports/phase-39-W-2026-040-remedy-4.md"
+        "docs/test-reports/phase-39-W-2026-040-remedy-4.md",
+        "tests/data/rehydrate_census_mutations_r5.test.ts",
+        "docs/test-reports/phase-39-W-2026-040-remedy-5.md",
+        "docs/test-reports/phase-39-W-2026-040-remedy-5-measurements.txt"
       ],
       "excluded": [
         "config/persistence.yaml — لا يُوسَّع النطاقُ ولا يُضيَّق: البندُ يبني الحاجزَ لا مقاسَه",
