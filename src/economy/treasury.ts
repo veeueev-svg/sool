@@ -16,17 +16,14 @@
  *   5) الصارف ليس المستفيد: لا يصرف أحد لنفسه ولو في نطاق اختصاصه
  *   6) **لا رصيد موازٍ**: الخزانة لا تحتفظ بعدّاد خاص — رصيدها استعلام من الدفتر (حجّة واحدة)
  *   7) الخزانة المجمَّدة لا تصرف شيئًا ولو كان مُقرًّا ومموَّلًا — والتجميد والفكّ بأمر ملكي
- *   9) **ما تراكم يُدوَّن لحظتَه** (T-125): المصروفُ قيدٌ يُضاف ولا يُمحى، والتجميدُ
- *      والعدّادُ حالةٌ يُغني أحدثُها عمّا قبله. والعدّادُ ليس زينةً: معرّفُ المصروف هو
- *      معرّفُ قيدِ الدفتر، فعدّادٌ يعود إلى الصفر بعد إقلاعٍ يصطدم بقيدٍ قائمٍ فيُرفض الصرف.
- *  11) **نطاقٌ محجوزٌ لا يُدخل إلا من بابِه** (T-60): من وَّكل إليه حرسٌ
- *      بـ`bindReservedTargets` فلا يُقيَّد في نطاقِه صرفٌ إلا بإذنِ مالكِه لحظتَه.
- *      يُربط مرّةً واحدةً، والربطُ الثاني استثناءٌ مغلقٌ لا تجاوزٌ صامت.
+ *   9) **ما تراكم يُدوَّن لحظتَه** (T-125): المصروفُ قيدٌ يُضاف ولا يُمحى، والتجميدُ والعدّادُ حالةٌ
+ *      يُغني أحدثُها. والعدّادُ ليس زينةً: معرّفُ المصروفِ معرّفُ قيدِ الدفتر، فعدّادٌ يعود إلى الصفر بعد إقلاعٍ يصطدم بقيدٍ قائمٍ فيُرفض الصرف.
+ *  11) **نطاقٌ محجوزٌ لا يُدخل إلا من بابِه** (T-60): من وَّكل إليه حرسٌ بـ`bindReservedTargets` فلا يُقيَّد
+ *      في نطاقِه صرفٌ إلا بإذنِ مالكِه لحظتَه. يُربط مرّةً واحدةً، والربطُ الثاني استثناءٌ مغلقٌ لا تجاوزٌ صامت.
  *  10) **الإرجاعُ لا يُنفّذ فعلًا**: `restore` يُثبت حالةً مشهودةً ولا ينادي `disburse`،
  *      فلا يُقيَّد صرفٌ قديمٌ مرّتين ولا يُحجز سقفٌ ثانيةً.
- *   8) **لا يخرج مال بغياب النبض الملكي** (RULE-007): في الوضع الحمائي أو المتوقف
- *      يُرفض الصرف ولو كان دون الحدّ ومُقرًّا. والقبض (receive) يبقى جائزًا
- *      عن قصد: حجز الوارد لا يحمي الدولة بل يُخرج المال من الدفتر إلى العدم.
+ *   8) **لا يخرج مال بغياب النبض الملكي** (RULE-007): في الوضع الحمائي أو المتوقف يُرفض الصرف
+ *      ولو كان دون الحدّ ومُقرًّا. والقبض (receive) يبقى جائزًا عن قصد: حجز الوارد لا يحمي الدولة بل يُخرج المال من الدفتر إلى العدم.
  * حالات الفشل (كلها مغلقة): رصيد لا يكفي ⇒ رفض؛ بند غير قائم أو منقضٍ ⇒ رفض؛
  *   تجاوز الحدّ بلا أمر ⇒ رفض؛ فشل القيد ⇒ فكّ الحجز ورفض؛ خزانة مجمَّدة ⇒ رفض
  * اختبار القبول: tests/economy/economy_lifecycle.test.ts
@@ -242,6 +239,7 @@ export class Treasury {
   /** 2) الإيراد الوارد: يُقيَّد بطرفين، ولا يُعتبر إذنًا بالصرف */
   receive(
     amount: number, source: string, revenueAccount: string, memo: string, now = Date.now(),
+    idempotencyKey?: string,
   ): TreasuryResult {
     const refuse = (reason: string): TreasuryResult => {
       const entry = this.deps.audit.append(this.actorId, 'disbursement_refused', {
@@ -253,8 +251,21 @@ export class Treasury {
     if (memo.trim().length < 3) return refuse('لا إيراد بلا بيان معلن');
     if (!this.deps.ledger.hasAccount(revenueAccount)) return refuse('حساب الإيراد غير مفتوح');
 
-    this.sequence += 1;
-    const receiptId = `rcpt:${this.sequence}`;
+    // الجولة 50 (gemini · COLLECT_TREASURY_RECEIPT_TAX_LEVY_SPLIT_DOUBLE_RECEIPT): إيصالُ التحصيلِ حتميُّ
+    // الهويةِ من مفتاحِه — فإعادةُ المحاولةِ بعدَ إقلاعٍ تستأنفُ بالقائمِ نفسِه ولا ثانٍ لتحصيلٍ واحد. وعكسُهُ تصحيحًا معلنًا يمنعُ إعادتَهُ (رفضُ الدفترِ للمعرّفِ المكرَّر).
+    const receiptId = idempotencyKey === undefined ? `rcpt:${this.sequence + 1}` : `rcpt:lk:${idempotencyKey}`;
+    if (idempotencyKey !== undefined) {
+      const prior = this.deps.ledger.entry(receiptId);
+      if (prior !== null && prior.total === amount
+        && !this.deps.ledger.journal().some((e) => e.reverses === receiptId)) {
+        return {
+          ok: true, auditId: prior.auditId,
+          disbursement: { disbursementId: receiptId, line: 'revenue', amount: prior.total, to: this.deps.account,
+            purpose: prior.memo, by: prior.by, at: prior.at, royalCommandId: null, entryId: prior.entryId },
+        };
+      }
+    }
+    if (idempotencyKey === undefined) this.sequence += 1;
     const posted = this.deps.ledger.post({
       entryId: receiptId, memo: memo.trim(),
       lines: [
@@ -267,13 +278,11 @@ export class Treasury {
 
     const receipt: Disbursement = {
       disbursementId: receiptId, line: 'revenue', amount, to: this.deps.account,
-      purpose: memo.trim(), by: this.actorId, at: now, royalCommandId: null,
-      entryId: posted.entry.entryId,
+      purpose: memo.trim(), by: this.actorId, at: now, royalCommandId: null, entryId: posted.entry.entryId,
     };
-    // الإيصالُ **لا يُدوَّن كمصروف**: `receive` لا يُلحقه بـ`disbursements` أصلًا، فتدوينُه
-    // بصنفِ المصروفِ يُضخّم المُستعادَ بإيصالاتٍ لم تكن فيه (T-125). والمُدوَّنُ العدّادُ
-    // وحده، وهو الذي يجب أن ينجو: `rcpt:N` معرّفُ قيدٍ في الدفتر، وعدّادٌ يعود صفرًا
-    // يصطدم بقيدٍ قائمٍ فيُرفض كلُّ إيرادٍ بعد الإقلاع.
+    // الإيصالُ **لا يُدوَّن كمصروف**: `receive` لا يُلحقه بـ`disbursements` أصلًا، فتدوينُه بصنفِ المصروفِ
+    // يُضخّم المُستعادَ (T-125). والمُدوَّنُ العدّادُ وحده وهو الذي يجب أن ينجو: عدّادٌ يعود صفرًا بعد الإقلاع
+    // يصطدم بقيدٍ قائمٍ فيُرفض كلُّ إيرادٍ.
     this.journalState();
     const entry = this.deps.audit.append(this.actorId, 'revenue_received', {
       receiptId, amount, source, entryId: receipt.entryId, balanceAfter: this.balance(),
