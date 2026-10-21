@@ -1,0 +1,93 @@
+{
+  "item": "W-2026-040",
+  "commit": "5cf06a7a7549509c1147bd518d21ba4a56afd625",
+  "scope_digest": "10defdaae31d16d5052dfa883df5b5030db040c6a6dffc5d4e9eea40ae2f4ca5",
+  "executor_family": "GLM",
+  "convened_at": "2026-10-21",
+  "session": 5,
+  "commissioning": "النصُّ المأذونُ به الملتزمُ كاملًا في عقدِ W-2026-066 §13.149 قبلَ التشغيل (قالبُ الجولةِ الرابعةِ المأذونُ بتحديثِ معاملاتِ الجولة — أمرُ المالكِ الدائم) · التشغيلُ المتتابعُ لا المتزامنُ (gpt ثمّ grok ثمّ gemini) · الحزمةُ منشورةٌ مقيسةٌ في الجذورِ الثلاثةِ قبلَ التكليفِ (مانيفست 57/57 · لا فرق) · الأوامرُ الثمانيةَ عشرَ قيست على التجميدِ قبلَ التكليف",
+  "verdicts": [
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "runtime_id": "gpt_5_6_terra",
+      "agent_run": "gpt_mvi5q0mm",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-040-5-gpt.md",
+      "report_sha256": "d5208fc19294d14908652233015166b6f9dac7b3fd34597490203bab7049f076"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "runtime_id": "grok_4_7",
+      "agent_run": "grok_mvi7pu2h",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-040-5-grok.md",
+      "report_sha256": "d3be6620836780215d0298bd2cdc62c82c0d839e83192db554acbbc9f3cf6416"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "runtime_id": "gemini_3_8_flash",
+      "agent_run": "gemini_mvi9aazw",
+      "verdict": "VERIFIED",
+      "report": "docs/work/council/W-2026-040-5-gemini.md",
+      "report_sha256": "d37d0eb913e0cfa2a7c165542949d2106ebc10abde3306047eefcc501bd6aa2a"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS"
+  },
+  "defects": [
+    {
+      "name": "RC07_SHADOWED_UNDEFINED_NULLISH_SKIPS_CENSUS",
+      "confirmed_by": [
+        "gpt"
+      ],
+      "summary": "رابطٌ محليٌّ const undefined = false يجعلُ undefined ?? assertRehydrateCensus(...) يتخطّى نداءَ الحصرِ وقتَ التشغيلِ (مسبارُ gpt: censusCalls 0) بينما الحاجزُ الساكنُ يبقى أخضرَ ويطبعُ سيادةً — definiteNullish يعاملُ كلَّ معرّفٍ نصُّه undefined عدميًّا بلا سؤالٍ عن التظليلِ، وعلاجُ الظلِّ في definitelyFalsy لم يُطبَّقْ نظيرُهُ العدميُّ"
+    },
+    {
+      "name": "RC07_SHADOWED_NAN_SCOPE_FALSE_REJECT",
+      "confirmed_by": [
+        "gpt"
+      ],
+      "summary": "declaredNames يجمعُ إعلاناتِ الملفِّ كلِّه بلا نطاقٍ معجميٍّ فوجهُ NaN || census الحيُّ (تظليلٌ داخلَ دالةٍ أخرى) يُرفضُ كاذبًا [RC-07] — الرفضُ الكاذبُ وجهٌ ثانٍ للعيبِ"
+    },
+    {
+      "name": "RC07_BIGINT_SWITCH_DEAD_DEFAULT_GREENS",
+      "confirmed_by": [
+        "grok"
+      ],
+      "summary": "حرفيُّ BigInt في مميّزِ switch (0n) لا يصلُ حساباتِ literalValue (التي أُضيفت في المعالجةِ الثامنةِ لوجهَي &&/|| وحدهما) فيصيرُ default الميتُ سيّدًا والحاجزُ أخضرُ — مركّبًا معَ نداءٍ ميتٍ في index وحذفِ حصرِ read() تبقى البوابةُ EXIT=0"
+    },
+    {
+      "name": "RC07_UNLABELED_BREAK_DEAD_CENSUS_GREENS",
+      "confirmed_by": [
+        "grok"
+      ],
+      "summary": "break غيرُ المسمّى داخلَ حلقةٍ/كتلةٍ بعدهُ نداءُ الحصرِ الميتُ يُعدُّ حيًّا — علاجُ الجولةِ الرابعةِ سمّى break label المسمّى وحده"
+    },
+    {
+      "name": "RC07_DYNAMIC_PRODUCERS_UNSEEN",
+      "confirmed_by": [
+        "grok"
+      ],
+      "summary": "منشئو الدوالِّ من نصٍّ (new Function · eval · data: URL) في src/** يكتبونَ قيدَ archive_snapshot ويجتازونَ tsc والحاجزَ الساكنَ — غيرُ موجودينَ في سؤالِ المنتِجِ فإعفاءُ declared_without_producer يبقى قائمَ الموجبِ والمجهولُ آمنٌ (نقضٌ لمبدأِ الجولةِ الثالثةِ)"
+    },
+    {
+      "name": "JS_IN_SRC_UNSEEN_BY_CENSUS_SCAN",
+      "confirmed_by": [
+        "grok"
+      ],
+      "summary": "ملفُّ .js تحتَ src/** لا يراهُ مسحُ الحصرِ أصلاً — والمعيارُ §4 يقيسُ الظهورَ في src/**"
+    },
+    {
+      "name": "RC07_CATCH_NONTHROWING_CALL_COUNTED_LIVE",
+      "confirmed_by": [
+        "grok"
+      ],
+      "summary": "catch لكتلةٍ فيها نداءٌ أو وصولٌ يبقى سيّدًا للسيادةِ وهو لا يُنفَّذ — الحدُّ المعلنُ في المعالجةِ الثامنةِ (الإعلانُ المحضُ وحدَهُ لا يرمي) لا يُسلَّمُ بمعيارِ «نداءٌ حقيقي»"
+    }
+  ]
+}
