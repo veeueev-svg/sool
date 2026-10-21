@@ -1,0 +1,174 @@
+قياسُ علاجِ الجولةِ التاسعة — W-2026-040 (عيوبُ مجلسِ الجولةِ الخامسةِ السبعةُ · محضر W-2026-040-5.json · COUNCIL5_W040_SPLIT_REJECTED)
+قبل: بوابةُ التجميدِ 5a38482 مبنيّةً في شجرةِ عملٍ منفصلةٍ (/tmp/r9-before · tsc -p tsconfig.json ⇒ 0)
+بعد: بوابةُ شجرةِ العلاجِ التاسعِ مبنيّةً في هذهِ الجلسة — كلُّ وجهٍ على نسخةٍ واحدةٍ مُطفَّرةٍ تُشغَّلُ عليها البوابتانِ تباعًا
+src/** وconfig/** متطابقانِ بين الشجرتينِ (git diff --stat 5a38482 -- src config ⇒ فارغ) — فالفرقُ فرقُ الحاجزِ وحدَه
+الأداة: مسبارٌ خارجَ المستودعِ (/tmp/r9probe/run.mjs بـPAIR=1) ينسخُ config/ وsrc/ وscripts/ إلى tmpdir ولا يلمسُ الأصل
+التاريخ: 2026-10-21T17:52:09Z · البيئة: Linux 6.1.155 · Node v20.20.2
+
+── BASELINE (المتوقَّع: حيٌّ يُخضِرّ EXIT=0)
+  قبل 5a38482: EXIT=0 بلا رمز ✓ كما يُنتظَر
+  بعد العلاج: EXIT=0 بلا رمز ✓ كما يُنتظَر
+── A gpt RC07_SHADOWED_UNDEFINED_NULLISH (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-07] ✓ كما يُنتظَر
+── A2 void-undefined ?? live ctrl (المتوقَّع: حيٌّ يُخضِرّ EXIT=0)
+  قبل 5a38482: EXIT=0 بلا رمز ✓ كما يُنتظَر
+  بعد العلاج: EXIT=0 بلا رمز ✓ كما يُنتظَر
+── B gpt RC07_SHADOWED_NAN_SCOPE (live) (المتوقَّع: حيٌّ يُخضِرّ EXIT=0)
+  قبل 5a38482: EXIT=1 [RC-07] ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=0 بلا رمز ✓ كما يُنتظَر
+── B2 shadow NaN in same scope (dead) (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=1 [RC-07] ✓ كما يُنتظَر
+  بعد العلاج: EXIT=1 [RC-07] ✓ كما يُنتظَر
+── C grok RC07_BIGINT_SWITCH default (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-07] ✓ كما يُنتظَر
+── C2 bigint case mismatch (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-07] ✓ كما يُنتظَر
+── C3 bigint case match (live) (المتوقَّع: حيٌّ يُخضِرّ EXIT=0)
+  قبل 5a38482: EXIT=0 بلا رمز ✓ كما يُنتظَر
+  بعد العلاج: EXIT=0 بلا رمز ✓ كما يُنتظَر
+── C4 unknown switch case (conditional) (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-07] ✓ كما يُنتظَر
+── D grok RC07_UNLABELED_BREAK for (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-07] ✓ كما يُنتظَر
+── D2 while(true) break (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=1 [RC-07] ✓ كما يُنتظَر
+  بعد العلاج: EXIT=1 [RC-07] ✓ كما يُنتظَر
+── D3 conditional break before census in loop (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-07] ✓ كما يُنتظَر
+── D4 census then break in loop (live) (المتوقَّع: حيٌّ يُخضِرّ EXIT=0)
+  قبل 5a38482: EXIT=0 بلا رمز ✓ كما يُنتظَر
+  بعد العلاج: EXIT=0 بلا رمز ✓ كما يُنتظَر
+── G grok RC07_CATCH_NONTHROWING_CALL (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-07] ✓ كما يُنتظَر
+── G2 census inside try swallowed (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-07] ✓ كما يُنتظَر
+── E1 grok new Function producer (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-14] ✓ كما يُنتظَر
+── E2 grok eval producer (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-14] ✓ كما يُنتظَر
+── E3 grok globalThis[Function] (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-14] ✓ كما يُنتظَر
+── E4 grok import(data:) (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-14] ✓ كما يُنتظَر
+── E5 constructor.constructor (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-14] ✓ كما يُنتظَر
+── F grok JS_IN_SRC (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-04] ✓ كما يُنتظَر
+── F2 .mjs in src (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-04] ✓ كما يُنتظَر
+── F3 .mjs non-literal kind (المتوقَّع: يسقط EXIT=1)
+  قبل 5a38482: EXIT=0 بلا رمز ✗ يخالفُ المنتظَر
+  بعد العلاج: EXIT=1 [RC-14] ✓ كما يُنتظَر
+── G3 catch census + real census (live) (المتوقَّع: حيٌّ يُخضِرّ EXIT=0)
+  قبل 5a38482: EXIT=0 بلا رمز ✓ كما يُنتظَر
+  بعد العلاج: EXIT=0 بلا رمز ✓ كما يُنتظَر
+── L1 live: j.record ledger_entry (المتوقَّع: حيٌّ يُخضِرّ EXIT=0)
+  قبل 5a38482: EXIT=0 بلا رمز ✓ كما يُنتظَر
+  بعد العلاج: EXIT=0 بلا رمز ✓ كما يُنتظَر
+── L2 live: global NaN || (المتوقَّع: حيٌّ يُخضِرّ EXIT=0)
+  قبل 5a38482: EXIT=0 بلا رمز ✓ كما يُنتظَر
+  بعد العلاج: EXIT=0 بلا رمز ✓ كما يُنتظَر
+── L3 live: const NaN=1; NaN && (المتوقَّع: حيٌّ يُخضِرّ EXIT=0)
+  قبل 5a38482: EXIT=0 بلا رمز ✓ كما يُنتظَر
+  بعد العلاج: EXIT=0 بلا رمز ✓ كما يُنتظَر
+── L4 live: finally (المتوقَّع: حيٌّ يُخضِرّ EXIT=0)
+  قبل 5a38482: EXIT=0 بلا رمز ✓ كما يُنتظَر
+  بعد العلاج: EXIT=0 بلا رمز ✓ كما يُنتظَر
+EXIT=0
+
+── الحصيلة
+  الوجوه: 28 (18 سالبًا · 10 حيّة)
+  قبل: 17 تخالفُ المنتظَر — 16 سالبًا نجا (EXIT=0) · 1 حيٌّ رُفض كذبًا (B: تظليلُ NaN في دالّةٍ أخرى)
+  بعد: 28/28 كما يُنتظَر — السالبةُ تسقطُ برموزِها (RC-07 · RC-14 · RC-04) والحيّةُ تُخضِرّ
+  ووجهانِ سالبانِ (B2 · D2) كانا يسقطانِ سلفًا على التجميدِ — ضابطانِ لا عيبان
+
+── الشجرةُ الحقيقيّةُ بعد العلاج (node dist/scripts/check_rehydrate_census.js على الجذر)
+  سيادةُ نداءِ الحاجزِ مقيسةٌ على 4 نداءِ إرجاعٍ: السيّدُ السطر 130 {journal} — شروطُه مُحتواةٌ بالذرّاتِ في شروطِ كلِّ نداءٍ منها (من 1 نداءِ حاجز)
+✓ حصرُ الإرجاع: 23 صنفًا في النطاق كلُّها مُدَّعاة · 21 بمستهلكٍ له موضعُ توزيعٍ في شجرةِ نحوِه · 2 بإعفاءٍ قائمِ الموجب · والحاجزُ منادًى قبل أوّلِ إرجاع
+  EXIT=0
+
+── ملحق: نصُّ المسبارِ كما شُغِّل (لإعادةِ القياسِ — وتطفيراتُه السالبةُ والحيّةُ مُثبّتةٌ اختبارًا في tests/data/rehydrate_census_mutations_r9.test.ts)
+// مسبارُ قياسٍ للمعالجة التاسعة — W-2026-040 — يُشغَّل من جذر المستودع؛ ينسخ ولا يلمس الأصل
+import { cpSync, mkdtempSync, rmSync, writeFileSync, readFileSync, appendFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+
+const CWD = process.cwd();
+const INDEX = 'src/index.ts';
+const PERS = 'src/data/persistence.ts';
+const CALL = 'if (journal) assertRehydrateCensus(persistenceConfig.policy.scope);';
+const SCOPE = 'assertRehydrateCensus(persistenceConfig.policy.scope)';
+const patch = (root, rel, from, to) => {
+  const f = join(root, rel); const b = readFileSync(f, 'utf8');
+  if (!b.includes(from)) throw new Error(`no site ${rel}: ${from}`);
+  writeFileSync(f, b.replace(from, to));
+};
+const sink = (name, body) => (root) => appendFileSync(join(root, PERS),
+  [`export function ${name}(j: DurableSink): void {`, ...body, '}', ''].join('\n'));
+
+const faces = [
+  ['BASELINE', 'live', () => {}],
+  ['A gpt RC07_SHADOWED_UNDEFINED_NULLISH', 'dead', (r) => patch(r, INDEX, CALL, `const undefined = false;\n  if (journal) undefined ?? ${SCOPE};`)],
+  ['A2 void-undefined ?? live ctrl', 'live', (r) => patch(r, INDEX, CALL, `if (journal) undefined ?? ${SCOPE};`)],
+  ['B gpt RC07_SHADOWED_NAN_SCOPE (live)', 'live', (r) => { patch(r, INDEX, CALL, `if (journal) NaN || ${SCOPE};`); appendFileSync(join(r, INDEX), '\nexport function probeShadowNaN(): number { const NaN = 1; return NaN; }\n'); }],
+  ['B2 shadow NaN in same scope (dead)', 'dead', (r) => patch(r, INDEX, CALL, `const NaN = 1;\n  if (journal) NaN || ${SCOPE};`)],
+  ['C grok RC07_BIGINT_SWITCH default', 'dead', (r) => patch(r, INDEX, CALL, `switch (0n) { case 0n: break; default: ${CALL} }`)],
+  ['C2 bigint case mismatch', 'dead', (r) => patch(r, INDEX, CALL, `switch (0n) { case 1n: ${CALL} }`)],
+  ['C3 bigint case match (live)', 'live', (r) => patch(r, INDEX, CALL, `switch (0n) { case 0n: ${CALL} }`)],
+  ['C4 unknown switch case (conditional)', 'dead', (r) => patch(r, INDEX, CALL, `switch (process.argv.length) { case 9: ${CALL} }`)],
+  ['D grok RC07_UNLABELED_BREAK for', 'dead', (r) => patch(r, INDEX, CALL, `for (;;) { break; ${CALL} }`)],
+  ['D2 while(true) break', 'dead', (r) => patch(r, INDEX, CALL, `do { break; ${CALL} } while (false);`)],
+  ['D3 conditional break before census in loop', 'dead', (r) => patch(r, INDEX, CALL, `for (;;) { if (process.argv.length > 9) break; ${CALL} break; }`)],
+  ['D4 census then break in loop (live)', 'live', (r) => patch(r, INDEX, CALL, `for (;;) { ${CALL} break; }`)],
+  ['G grok RC07_CATCH_NONTHROWING_CALL', 'dead', (r) => patch(r, INDEX, CALL, `try { console.log('m'); } catch { ${CALL} }`)],
+  ['G2 census inside try swallowed', 'dead', (r) => patch(r, INDEX, CALL, `try { ${CALL} } catch { /* بلع */ }`)],
+  ['E1 grok new Function producer', 'dead', sink('probeFn', [`  new Function('j', 'j.record("archive_snapshot", {})')(j);`])],
+  ['E2 grok eval producer', 'dead', sink('probeEval', [`  eval('j.record("archive_snapshot", {})'); void j;`])],
+  ['E3 grok globalThis[Function]', 'dead', sink('probeGt', [`  new (globalThis['Function'] as FunctionConstructor)('j', 'j.record("archive_snapshot", {})')(j);`])],
+  ['E4 grok import(data:)', 'dead', sink('probeImp', [`  const code = 'export default (j) => j.record("archive_snapshot", {})';`, `  void import('data:text/javascript,' + code).then((m) => m.default(j));`])],
+  ['E5 constructor.constructor', 'dead', sink('probeCtor', [`  (() => 0).constructor('j', 'j.record("archive_snapshot", {})')(j);`])],
+  ['F grok JS_IN_SRC', 'dead', (r) => writeFileSync(join(r, 'src/data/probe_dyn.js'), "module.exports = (j) => j.record('archive_snapshot', {});\n")],
+  ['F2 .mjs in src', 'dead', (r) => writeFileSync(join(r, 'src/data/probe_dyn.mjs'), "export default (j) => j.record('archive_snapshot', {});\n")],
+  ['F3 .mjs non-literal kind', 'dead', (r) => writeFileSync(join(r, 'src/data/probe_dyn.mjs'), 'export default (j, k) => j.record(k, {});\n')],
+  ['G3 catch census + real census (live)', 'live', (r) => patch(r, INDEX, CALL, `try { console.log('m'); } catch { ${SCOPE}; }\n  ${CALL}`)],
+  ['L1 live: j.record ledger_entry', 'live', sink('probeLedger', [`  j.record('ledger_entry', {});`])],
+  ['L2 live: global NaN ||', 'live', (r) => patch(r, INDEX, CALL, `if (journal) NaN || ${SCOPE};`)],
+  ['L3 live: const NaN=1; NaN &&', 'live', (r) => patch(r, INDEX, CALL, `const NaN = 1;\n  if (journal) NaN && ${SCOPE};`)],
+  ['L4 live: finally', 'live', (r) => patch(r, INDEX, CALL, `try { void 0; } finally { ${CALL} }`)],
+];
+
+const only = process.argv[2];
+for (const [name, expect, mutate] of faces) {
+  if (only && !name.startsWith(only)) continue;
+  const root = mkdtempSync(join(tmpdir(), 'r9-'));
+  for (const d of ['config', 'src', 'scripts']) cpSync(join(CWD, d), join(root, d), { recursive: true });
+  mutate(root);
+  const gates = process.env.PAIR ? [['قبل 5a38482', '/tmp/r9-before/dist/scripts/check_rehydrate_census.js'], ['بعد العلاج', join(CWD, 'dist/scripts/check_rehydrate_census.js')]]
+    : [['', process.env.GATE ?? join(CWD, 'dist/scripts/check_rehydrate_census.js')]];
+  if (process.env.PAIR) console.log(`── ${name} (المتوقَّع: ${expect === 'live' ? 'حيٌّ يُخضِرّ EXIT=0' : 'يسقط EXIT=1'})`);
+  for (const [label, gate] of gates) {
+    const r = spawnSync('node', [gate], { encoding: 'utf8', env: { ...process.env, SOOL_CHECK_ROOT: root } });
+    const out = `${r.stdout}${r.stderr}`;
+    const codes = [...new Set([...out.matchAll(/✗ \[(RC-\d+)\]/g)].map((m) => m[1]))].join(',');
+    const ok = expect === 'live' ? r.status === 0 : r.status !== 0;
+    if (process.env.PAIR) console.log(`  ${label}: EXIT=${r.status} ${codes ? '[' + codes + ']' : 'بلا رمز'} ${ok ? '✓ كما يُنتظَر' : '✗ يخالفُ المنتظَر'}`);
+    else console.log(`${ok ? 'OK  ' : 'FAIL'} | ${name} | expect=${expect} | EXIT=${r.status} | ${codes || '-'}`);
+  }
+  rmSync(root, { recursive: true, force: true });
+}

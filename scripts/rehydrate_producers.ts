@@ -34,6 +34,7 @@
  */
 import { dirname, relative } from 'node:path';
 import ts from 'typescript';
+import { foreignCodeReason, opaqueCodeReason } from './rehydrate_opaque_code';
 
 export interface ProducerVerdict {
   /** مواضعُ نوعُ وسيطِها الحرفُ المُعفى وحدَه — منتِجٌ قطعًا */
@@ -79,8 +80,16 @@ export function typedProducerVerdicts(
   const out = new Map<string, { definite: string[]; possible: string[] }>();
   for (const k of exemptKinds) out.set(k, { definite: [], possible: [] });
   if (exemptKinds.length === 0) return out;
+  const all = (site: string, mode: 'definite' | 'possible'): void => {
+    for (const v of out.values()) v[mode].push(site);
+  };
 
-  const program = ts.createProgram([...files], {
+  // **الجولةُ التاسعة** (grok `JS_IN_SRC_UNSEEN_BY_CENSUS_SCAN`): ملفُّ شفرةٍ غيرُ TS لا يدخلُ البرنامج — فلا يُبرهَنُ غيابٌ فيه
+  for (const f of files) {
+    const why = foreignCodeReason(f);
+    if (why !== null) all(`${relative(root, f)} (${why})`, 'possible');
+  }
+  const program = ts.createProgram(files.filter((f) => f.endsWith('.ts')), {
     target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
     moduleResolution: ts.ModuleResolutionKind.Node10, strict: true, noEmit: true,
     skipLibCheck: true, types: ['node'], typeRoots: [NODE_TYPE_ROOT],
@@ -98,9 +107,6 @@ export function typedProducerVerdicts(
       }
     }
   }
-  const all = (site: string, mode: 'definite' | 'possible'): void => {
-    for (const v of out.values()) v[mode].push(site);
-  };
   if (journalTypes.length === 0) {
     all('src/data/persistence.ts (لا تعريفَ لـStateJournal/DurableSink — لا يُقاسُ النفي)', 'possible');
     return out;
@@ -227,6 +233,9 @@ export function typedProducerVerdicts(
           all(`${siteOf(sf, n)} (مرجعٌ هاربٌ بفهرسٍ على يوميّة)`, 'possible');
         }
       }
+      // **الجولةُ التاسعة** (grok `RC07_DYNAMIC_PRODUCERS_UNSEEN`): الشفرةُ المعتمةُ لا يُبرهَنُ عليها نفيٌ
+      const opaque = opaqueCodeReason(n, checker, journalLike);
+      if (opaque !== null) all(`${siteOf(sf, n)} (${opaque})`, 'possible');
       if (ts.isObjectBindingPattern(n)) {
         const hasRecord = n.elements.some((el) => (el.propertyName ?? el.name).getText(sf) === 'record'
           || el.dotDotDotToken !== undefined);

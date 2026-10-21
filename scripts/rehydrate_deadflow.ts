@@ -32,7 +32,7 @@ function within(inner: ts.Node, outer: ts.Node): boolean {
 
 /** المعاملاتُ المُمرَّرةُ من برهانِ الوصولِ — حقنٌ لا استيرادٌ فلا حلقةَ */
 export interface DeadFlowDeps {
-  readonly literalValue: (expr: ts.Expression | undefined) => string | number | null;
+  readonly literalValue: (expr: ts.Expression | undefined) => { readonly value: unknown } | null;
   readonly strip: (expr: ts.Expression) => ts.Expression;
 }
 
@@ -65,7 +65,7 @@ export function deadByControlFlow(p: ts.Node, cur: ts.Node, deps: DeadFlowDeps):
     if (ts.isSwitchStatement(sw)) {
       const d = deps.literalValue(sw.expression);
       const c = deps.literalValue(p.expression);
-      if (d !== null && c !== null && d !== c) return true;
+      if (d !== null && c !== null && d.value !== c.value) return true;
     }
   }
   // **عيبُ الجولةِ الرابعة** `EFFECT_REACHABILITY_IS_SYNTAX_UNION`: `catch` لكتلةِ
@@ -95,7 +95,7 @@ export function deadByControlFlow(p: ts.Node, cur: ts.Node, deps: DeadFlowDeps):
     const sw = p.parent.parent;
     if (ts.isSwitchStatement(sw)) {
       const d = deps.literalValue(sw.expression);
-      if (d !== null && p.parent.clauses.some((c) => ts.isCaseClause(c) && deps.literalValue(c.expression) === d)) {
+      if (d !== null && p.parent.clauses.some((c) => ts.isCaseClause(c) && deps.literalValue(c.expression)?.value === d.value)) {
         return true;
       }
     }
