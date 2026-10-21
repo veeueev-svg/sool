@@ -156,6 +156,10 @@ export function compactJournal(journal: StateJournal, at = Date.now()): Compacti
     entries = journal.read();
   } catch (error) {
     const code = (error as { code?: string }).code ?? 'PERSISTENCE_JOURNAL_TAMPERED';
+    // **الجولةُ الثامنة** (عييبُ grok `READ_CENSUS_REMAPPED_AS_COMPACTION_TAMPER`): فشلُ
+    // الحصرِ وإعفائِه ليس تحريفًا — يُمرَّر برمزِهِ الأصليِّ لا يُعادُ تسميتُه. فالحصرُ
+    // دليلُ فسادِ الدعاوى لا فسادِ السلسلةِ، وخلطُهما يُسمّي الداءَ بغيرِ اسمِه.
+    if (code.startsWith('PERSISTENCE_REHYDRATE_')) throw error;
     throw new SovereignViolation(
       `لا ضغط على يوميّة غير مُتحقَّقة (${code})`,
       'JOURNAL_COMPACTION_TAMPERED',

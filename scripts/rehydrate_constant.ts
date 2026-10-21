@@ -56,9 +56,69 @@ function declaredNames(sf: ts.SourceFile): Set<string> {
   return out;
 }
 
-function isGlobal(id: ts.Identifier): boolean {
+/**
+ * **الجولةُ الثامنة** (عيبا grok `RC07_SHADOWED_NAN_OR_SKIPS_CENSUS` و`RC07_SHADOWED_UNDEFINED_OR_SKIPS_CENSUS`):
+ * يُصدَّر ليَسألَ برهانُ الوصولِ عن التظليلِ قبلَ أن يَعُدَّ `NaN`/`undefined` العالميَّينِ
+ * ثابتَي الكذبِ/المعدوميّةِ — فالاسمُ المظلَّلُ بربطٍ محليٍّ مجهولٌ لا حرفيٌّ عالميّ.
+ */
+export function isGlobal(id: ts.Identifier): boolean {
   const sf = id.getSourceFile();
   return sf !== undefined && !declaredNames(sf).has(id.text);
+}
+
+/**
+ * **الجولةُ الثامنة:** ثابتٌ محليٌّ بمُبدِّعٍ معلومِ القيمةِ — قيمتُه تُحسَبُ لا تُجهَل.
+ * فالمعرّفُ المظلَّلَ بربطٍ محليٍّ ليس مجهولًا أصلًا إذا كان إعلانُه `const` بمبدِّعٍ حرفيٍّ
+ * لا يرمي ولا يرجعُ إلى نفسِه (رابطُ قيمةٍ لا حالة) — وإلا فالرفضُ الكاذبُ يعودُ من هذهِ
+ * الجهةِ (`const NaN = 1` ثمّ `NaN && …` حيٌّ يُنفَّذُ ولا يُعلَمُ صدقُه ساكنًا).
+ */
+function localConstValue(id: ts.Identifier): Constant | null {
+  const sf = id.getSourceFile();
+  if (sf === undefined) return null;
+  const found: { decl?: ts.VariableDeclaration } = {}; // حاملٌ لا يُضيِّقُه تحليلُ التدفّقِ داخلَ الإغلاق
+  const visit = (n: ts.Node): void => {
+    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.name.text === id.text
+      && n.initializer !== undefined
+      && ts.isVariableDeclarationList(n.parent) && (n.parent.flags & ts.NodeFlags.Const) !== 0) {
+      // أقربُ إعلانٍ نطاقُه يحوي الاستعمال — كحلِّ الاسمِ في اللغةِ نفسِها
+      const scope = declarationScopeOf(n);
+      const cur = found.decl;
+      if (withinNode(id, scope) && (cur === undefined || n.pos > cur.pos)) found.decl = n;
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(sf);
+  const best = found.decl;
+  if (best === undefined || best.initializer === undefined) return null;
+  const init = unwrap(best.initializer);
+  if (referencesName(init, id.text)) return null; // إسنادٌ راجعٌ — لا قيمةَ معلومةً
+  return evaluate(init);
+}
+
+/** نطاقُ التعريف: أقربُ كتلةٍ أو ملفٍّ يحويه */
+function declarationScopeOf(d: ts.VariableDeclaration): ts.Node {
+  let cur: ts.Node = d;
+  while (cur.parent !== undefined) {
+    const p = cur.parent;
+    if (ts.isBlock(p) || ts.isSourceFile(p) || ts.isCaseBlock(p) || ts.isModuleBlock(p)) return p;
+    cur = p;
+  }
+  return cur;
+}
+
+function withinNode(inner: ts.Node, outer: ts.Node): boolean {
+  return inner.pos >= outer.pos && inner.end <= outer.end;
+}
+
+/** هل يرجعُ التعبيرُ إلى الاسمِ نفسِه؟ (إسنادٌ راجعٌ لا قيمةَ له) */
+function referencesName(e: ts.Node, name: string): boolean {
+  let found = false;
+  const visit = (n: ts.Node): void => {
+    if (ts.isIdentifier(n) && n.text === name) found = true;
+    if (!found) ts.forEachChild(n, visit);
+  };
+  visit(e);
+  return found;
 }
 
 function unwrap(e: ts.Expression): ts.Expression {
@@ -95,7 +155,8 @@ function evaluate(e: ts.Expression): Constant | null {
     return { value: OBJECT };
   }
   if (ts.isIdentifier(e)) {
-    return e.text in GLOBAL_VALUES && isGlobal(e) ? { value: GLOBAL_VALUES[e.text] } : null;
+    if (e.text in GLOBAL_VALUES && isGlobal(e)) return { value: GLOBAL_VALUES[e.text] };
+    return localConstValue(e); // ثابتٌ محليٌّ حرفيُّ القيمة — يُحسَب (الجولةُ الثامنة)
   }
   if (ts.isVoidExpression(e)) return { value: undefined };
   if (ts.isPropertyAccessExpression(e)) {

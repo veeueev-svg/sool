@@ -175,10 +175,19 @@ export class StateJournal implements DurableSink {
    * قراءة اليوميّة بعد التحقق — تُستخدم في الإقلاع وفي القياس المستقل. **والحصرُ قبلَها**
    * (W-2026-040 · الجولةُ السابعة): كلُّ مسلكِ إرجاعٍ يقرأ من هنا، فلا يُعادُ قيدٌ قبلَ أن
    * يُبرهَنَ لكلِّ صنفٍ في النطاقِ مستهلكٌ أو إعفاء — أيًّا كانت صيغةُ تعطيلِ نداءِ الإقلاع.
+   *
+   * **والجولةُ الثامنة** (عييبُ gpt المُجمَّعُ عليه عندَ grok
+   * `EXEMPTION_RUNTIME_GUARD_NOT_DOMINATING_ALL_REHYDRATION_PATHS`): تكذيبُ الإعفاءِ
+   * («لا مُنتِجَ له») صار **هنا** عندَ نقطةِ القراءةِ المشتركةِ نفسِها لا داخلَ مسلكِ
+   * إرجاعٍ واحدٍ — فحذفُ نداءِ ذلك المسلكِ من الإقلاعِ لم يعد يُبقي القيدَ المكتوبَ
+   * للمُعفى يُقرأُ صامتًا عبرَ مسالكِ الإرجاعِ الأخرى: كلُّ قارئٍ للقيودِ يمرُّ بهذا
+   * الحارسِ أو لا يقرأُ شيئًا.
    */
   read(): readonly DurableRecord[] {
     assertRehydrateCensus([...this.scope]);
-    return existsSync(this.path) ? this.readInternal(true) : [];
+    const entries = existsSync(this.path) ? this.readInternal(true) : [];
+    assertExemptionsHold(entries.map((e) => e.kind));
+    return entries;
   }
 
   /** تحقق لا يرفع استثناء — لتقارير التدقيق التي تريد الرقم لا التوقف */
