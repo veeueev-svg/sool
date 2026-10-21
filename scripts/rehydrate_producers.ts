@@ -106,11 +106,65 @@ export function typedProducerVerdicts(
     return out;
   }
 
-  /** مُستقبِلٌ يمكنُ أن يكونَ يوميّة: `any`، أو تُسنَدُ إليه يوميّةٌ */
-  const journalLike = (receiver: ts.Expression): boolean => {
-    const t = checker.getTypeAtLocation(receiver);
+  /**
+   * مُستقبِلٌ يمكنُ أن يكونَ يوميّة — **والجولةُ الثامنة** قلبت اتجاهَ السؤالِ (عيوبُ grok
+   * `GENERIC_BIND_ESCAPES_TYPED_PRODUCER_NEGATION` · `GENERIC_DURABLEKIND_PARAM_UNSEEN` ·
+   * `SUBCLASS_BIND_ESCAPES_TYPED_PRODUCER_NEGATION`): كان يُسألُ «هل تُسنَدُ يوميّةٌ إلى المُستقبِل؟»
+   * فيسقطُ المعاملُ العامُّ `J extends StateJournal` والصنفُ الفرعيُّ — وهما يوميّةٌ قطعًا.
+   * فالسؤالُ صار في الاتجاهينِ معًا: «هل يُسنَدُ المُستقبِلُ إلى يوميّةٍ أو يوميّةٌ إليه؟» —
+   * فكلُّ تعلُّقٍ بالنوعِ يُرى. **وبنيويًّا** (عييبُ grok
+   * `AS_UNKNOWN_AS_STRUCTURAL_RECORD_GREENS_STATIC_GATE`): مُستقبِلٌ نوعُهُ ذو خاصّيّةِ `record`
+   * قابلةٍ للنداءِ — يُرى يوميًّا محتمَلًا؛ فالتحويلُ البنيويُّ لا يُبرّئ الإعفاءَ ساكنًا
+   * (معيارُ العقدِ §4: الظهورُ في `src/**` مقيسًا على بوابةِ الدمجِ، لا صيغةُ التحويلِ).
+   */
+  const couldBeJournalType = (t: ts.Type): boolean => {
     if ((t.flags & ts.TypeFlags.Any) !== 0) return true;
-    return journalTypes.some((j) => checker.isTypeAssignableTo(j, t));
+    return journalTypes.some((j) => checker.isTypeAssignableTo(t, j) || checker.isTypeAssignableTo(j, t));
+  };
+  /**
+   * **وتحوبُ التحويلِ** (عييبُ grok `AS_UNKNOWN_AS_STRUCTURAL_RECORD_GREENS_STATIC_GATE`):
+   * التحويلُ البنيويُّ — `as unknown as { record: … }` سمّى هدفَهُ أو لم يُسمّهِ — طريقُ إخفاءِ
+   * يوميّةٍ خلفَ نوعٍ آخر، والمترجمُ لا يُخبرُ عنهُ. فيُتتبّعُ المُستقبِلُ **تعبيرًا**: تحويلٌ
+   * (`as` أو تأكيدٌ نوعيٌّ) هدفُهُ ذو خاصّيّةِ `record` قابلةٍ للنداءِ — يوميّةٌ محتملةٌ؛
+   * والمعرّفُ يُتتبّعُ إلى إعلانِهِ في ملفِّهِ (متغيّرٌ محليٌّ بلا وسيطٍ) فتحويلُهُ يُقرأُ
+   * كذلك. فالصنفُ المسمّى الأمينُ لا يُتّهم لصنفِهِ، والتحويلُ مهما سمّى هدفَهُ لا يُبرّئ.
+   * **وحدُّ معلَن:** التعقّي يشملُ إعلاناتِ الملفِّ نفسِهِ؛ والمعرّفُ المستورَدُ والوسيطُ لا
+   * إعلانَ محليًّا لهما — نوعُهُما هو المُسألُ عنهُ (اتجاهَي الإسنادِ أعلاه).
+   */
+  const hasCallableRecordType = (t: ts.Type): boolean => {
+    if ((t.flags & ts.TypeFlags.Any) !== 0) return true;
+    const record = t.getProperty('record');
+    return record !== undefined && checker.getTypeOfSymbol(record).getCallSignatures().length > 0;
+  };
+  const localInitializer = (id: ts.Identifier): ts.Expression | null => {
+    let out: ts.Expression | null = null;
+    const visit = (n: ts.Node): void => {
+      if (out === null && ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.name.text === id.text
+        && n.initializer !== undefined && n.getSourceFile() === id.getSourceFile()) out = n.initializer;
+      ts.forEachChild(n, visit);
+    };
+    visit(id.getSourceFile());
+    return out;
+  };
+  const journalLike = (receiver: ts.Expression): boolean => {
+    if (couldBeJournalType(checker.getTypeAtLocation(receiver))) return true;
+    let cur: ts.Expression = receiver;
+    for (let depth = 0; depth < 8; depth += 1) {
+      if (ts.isParenthesizedExpression(cur)) { cur = cur.expression; continue; }
+      if (ts.isAsExpression(cur) || ts.isTypeAssertionExpression(cur)) {
+        if (hasCallableRecordType(checker.getTypeAtLocation(cur))) return true;
+        cur = cur.expression;
+        continue;
+      }
+      if (ts.isIdentifier(cur)) {
+        const init = localInitializer(cur);
+        if (init === null) return false;
+        cur = init;
+        continue;
+      }
+      return false;
+    }
+    return false;
   };
   /** النوعُ المُعلَنُ للمتغيّرِ القابلِ للكتابةِ وللخاصّيّة — لا المُضيَّقُ بالتدفّق */
   const declaredTypeOf = (arg: ts.Expression): ts.Type => {
@@ -178,7 +232,7 @@ export function typedProducerVerdicts(
           || el.dotDotDotToken !== undefined);
         if (hasRecord) {
           const t = checker.getTypeAtLocation(n);
-          if ((t.flags & ts.TypeFlags.Any) !== 0 || journalTypes.some((j) => checker.isTypeAssignableTo(j, t))) {
+          if (couldBeJournalType(t)) {
             all(`${siteOf(sf, n)} (تفكيكُ record من يوميّة)`, 'possible');
           }
         }

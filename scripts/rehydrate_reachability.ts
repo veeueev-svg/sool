@@ -39,7 +39,8 @@
  * لا يكونُ إلّا بثابتٍ مقيسٍ لا بظنّ.
  */
 import ts from 'typescript';
-import { computedFalsy, computedLiteral, computedNotNullish, computedNullish, computedTruthy } from './rehydrate_constant';
+import { computedFalsy, computedLiteral, computedNotNullish, computedNullish, computedTruthy, isGlobal } from './rehydrate_constant';
+import { deadByControlFlow } from './rehydrate_deadflow';
 
 /** فكُّ الأغلفةِ الشكليةِ: الأقواسُ والتأكيدُ النوعيُّ وعدمُ الإبطالِ — لا يغيّرون الصدق */
 function strip(expr: ts.Expression): ts.Expression {
@@ -52,6 +53,21 @@ function strip(expr: ts.Expression): ts.Expression {
     } else {
       return e;
     }
+  }
+}
+
+/**
+ * **الجولةُ الثامنة** (عيبا grok `RC07_HEX_BIGINT_ZERO_AND_SKIPS_CENSUS` و`RC07_HEX_BIGINT_ZERO_OR_FALSE_REJECT`):
+ * صفريةُ حرفيِّ BigInt **تُحسَبُ قيمةً** لا تُقرأُ من نصِّه — فالمترجمُ يُطبِّعُ `0b0n` و`0o0n`
+ * إلى `"0n"` ويُبقي السداسيَّ والثنائيَّ والثمانيَّ بصيغتِهِ (`0x0n` نصُّه `"0x0n"`)، فمقارنةُ
+ * النصِّ بـ`'0n'` تحكمُ على الوجهينِ حكمًا واحدًا: يخضرُّ ما لا يُنفَّذ (`0x0n &&`) ويُرفضُ
+ * ما يُنفَّذ (`0x0n ||`). والقيمةُ يُحسبها محرّكُ اللغةِ نفسُه: `BigInt("0x0")` = `0n`.
+ */
+function bigIntLiteralIsZero(e: ts.BigIntLiteral): boolean {
+  try {
+    return BigInt(e.text.slice(0, -1).replace(/_/g, '')) === 0n;
+  } catch {
+    return e.text === '0n'; // صيغةٌ لا يفهمها المحرّكُ — يُحتاطُ للنصِّ المطابقِ وحده
   }
 }
 
@@ -88,9 +104,13 @@ export function definitelyFalsy(expr: ts.Expression | undefined): boolean {
   const e = strip(expr);
   if (e.kind === ts.SyntaxKind.FalseKeyword || e.kind === ts.SyntaxKind.NullKeyword) return true;
   if (ts.isNumericLiteral(e)) return Number(e.text) === 0;
-  if (ts.isBigIntLiteral(e)) return e.text === '0n';
+  if (ts.isBigIntLiteral(e)) return bigIntLiteralIsZero(e);
   if (ts.isStringLiteralLike(e)) return e.text === '';
-  if (ts.isIdentifier(e)) return e.text === 'undefined' || e.text === 'NaN';
+  // **الجولةُ الثامنة** (RC07_SHADOWED_NAN/UNDEFINED_OR_SKIPS_CENSUS): المعرّفُ العالميُّ المظلَّلُ
+  // بربطٍ محليٍّ ليس الحرفيَّ العالميَّ — فالاسمُ المُعرَّفُ مجهولُ القيمةِ لا ثابتُ الكذبِ.
+  if (ts.isIdentifier(e)) {
+    return (e.text === 'undefined' || e.text === 'NaN') && isGlobal(e);
+  }
   if (ts.isVoidExpression(e)) return true;
   if (isGlobalZeroBigIntCall(e)) return true;
   if (ts.isPrefixUnaryExpression(e)) {
@@ -166,7 +186,7 @@ export function definitelyTruthy(expr: ts.Expression | undefined): boolean {
   const e = strip(expr);
   if (e.kind === ts.SyntaxKind.TrueKeyword) return true;
   if (ts.isNumericLiteral(e)) return Number(e.text) !== 0;
-  if (ts.isBigIntLiteral(e)) return e.text !== '0n';
+  if (ts.isBigIntLiteral(e)) return !bigIntLiteralIsZero(e);
   if (ts.isStringLiteralLike(e)) return e.text !== '';
   if (ts.isPrefixUnaryExpression(e) && e.operator === ts.SyntaxKind.ExclamationToken) {
     return definitelyFalsy(e.operand);
@@ -298,13 +318,7 @@ export function guardsOf(sf: ts.SourceFile, node: ts.Node): {
     if (ts.isForOfStatement(p) && p.statement === cur) {
       texts.push(`for-of:${p.expression.getText(sf).replace(/\s+/g, '')}`);
       atoms.push(`for-of:${p.expression.getText(sf).replace(/\s+/g, '')}`);
-      // **عيبُ الجولةِ الرابعة**: `for (const x of [])` — جسمٌ لا يدور؛ والمصفوفةُ
-      // الفارغةُ حرفيًّا تُقطَع بها الدارةُ قطعًا، لا تُظنّ. **والجولةُ السادسة**: تُقشَرُ
-      // الأغلفةُ أولًا — فقوسٌ أو `as const` كان يخفيها (`([])` · `[] as const`).
-      const iter = strip(p.expression);
-      if (ts.isArrayLiteralExpression(iter) && iter.elements.length === 0) {
-        unsatisfiable = true;
-      }
+      // جسمُ المرورِ على مصفوفةٍ فارغةٍ حرفيًّا لا يدور — قاعدتُه في `rehydrate_deadflow.ts`
     }
     // **عيبُ الجولةِ الرابعة** `RC07_SHORT_CIRCUIT_CONDITION_ESCAPES_GUARDS`: نداءٌ في
     // الطرفِ الأيمنِ لرابطٍ منطقيٍّ لا يُنفَّذ إن قطعَ الطرفُ الأيسرُ الدارةَ قبله.
@@ -333,23 +347,9 @@ export function guardsOf(sf: ts.SourceFile, node: ts.Node): {
         unsatisfiable = true;
       }
     }
-    // **عيبُ الجولةِ الرابعة** `RC07_SWITCH_GUARD_NOT_MODELED`: بندُ `case` لا يوافقُ
-    // مُميّزَ الـ`switch` الحرفيَّ لا يُنفَّذ أبدًا — فما في جسمِه غيرُ قابلٍ للوصول.
-    if (ts.isCaseClause(p)) {
-      const sw = p.parent.parent;
-      if (ts.isSwitchStatement(sw)) {
-        const d = literalValue(sw.expression);
-        const c = literalValue(p.expression);
-        if (d !== null && c !== null && d !== c) unsatisfiable = true;
-      }
-    }
-    // **عيبُ الجولةِ الرابعة** `EFFECT_REACHABILITY_IS_SYNTAX_UNION`: `catch` لكتلةِ
-    // `try` خاويةٍ لا يمكن أن ترميَ شيئًا — فلا يُنفَّذ ما في `catch` أبدًا. وحدُّنا
-    // مُعلَن: الخواءُ وحدَه يُقطَع به؛ كتلةٌ فيها بيانٌ فالرميُ فيها ممكن.
-    if (ts.isCatchClause(p) && within(cur, p.block)) {
-      const t = p.parent.tryBlock;
-      if (t.statements.length === 0) unsatisfiable = true;
-    }
+    // **قواعدُ موتِ الفرعِ** (الجولاتُ الرابعةُ والثامنة) كلُّها في `scripts/rehydrate_deadflow.ts`
+    // (فُكِّكَ عندَ بلوغِ سقفِ الوحدةِ — سابقةُ `rehydrate_constant.ts`)
+    if (deadByControlFlow(p, cur, { literalValue, strip })) unsatisfiable = true;
     cur = p;
   }
 }

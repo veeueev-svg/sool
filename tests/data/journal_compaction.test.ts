@@ -60,9 +60,21 @@ function seeded(dir: string): StateJournal {
   journal.record('memory_share', { recordId: 'mem:1', reader: 'agent:x' }, T0 + 6);
   journal.record('knowledge_fact', { factId: 'fact:1', claim: 'قديم' }, T0 + 7);
   journal.record('knowledge_fact', { factId: 'fact:1', claim: 'جديد' }, T0 + 8);
+  journal.record('audit_entry', { entryId: 'a2', at: T0 + 9 }, T0 + 9);
+  return journal;
+}
+
+/**
+ * **الجولةُ الثامنة (W-2026-040):** قيدُ `archive_snapshot` لم يَعُد يُكتبُ في مهادِ الضغط —
+ * فقراءةُ اليوميّةِ صارت تسألُ الدعاوى عندَ نقطةِ القراءةِ المشتركةِ (`StateJournal.read()`
+ * يُكذِّبُ إعفاءَ «لا مُنتِجَ له» إن وُجدَ له قيدٌ مكتوبٌ)، ويوميّةٌ فيها قيدٌ للمُعفى
+ * دولةٌ دعاواها مُكذَّبةٌ فلا تُضغط — حُكمُها عندَ الإقلاعِ لا عندَ الضغط. والوجهُ
+ * الأصيلُ («آخرُ نسخةٍ يبقى») يقيسُه `memory_record` و`knowledge_fact` في المهادِ نفسِه.
+ */
+function seededWithExempt(dir: string): StateJournal {
+  const journal = seeded(dir);
   journal.record('archive_snapshot', { version: 1 }, T0 + 9);
   journal.record('archive_snapshot', { version: 2 }, T0 + 10);
-  journal.record('audit_entry', { entryId: 'a2', at: T0 + 11 }, T0 + 11);
   return journal;
 }
 
@@ -70,20 +82,28 @@ test('الضغط يُسقط المنسوخ ويُبقي الأحدث وكل قي
   const dir = root();
   const journal = seeded(dir);
   const report = compactJournal(journal, T0 + 100);
-  assert.equal(report.before, 12);
-  // الباقون: علامة + قيدا تدقيق + mem:1 الأخير + mem:2 + مشاركة واحدة + fact:1 الأخير + لقطة واحدة
-  assert.equal(report.after, 8);
-  assert.equal(report.droppedSupersededRecords, 5);
+  assert.equal(report.before, 10);
+  // الباقون: علامة + قيدا تدقيق + mem:1 الأخير + mem:2 + مشاركة واحدة + fact:1 الأخير
+  assert.equal(report.after, 7);
+  assert.equal(report.droppedSupersededRecords, 4);
   const entries = journal.read();
   assert.equal(entries[0]!.kind, 'journal_compacted');
   const memories = entries.filter((e) => e.kind === 'memory_record');
   assert.deepEqual(memories.map((e) => (e.payload as { body: string }).body), ['أخير', 'وحيد']);
   const facts = entries.filter((e) => e.kind === 'knowledge_fact');
   assert.deepEqual(facts.map((e) => (e.payload as { claim: string }).claim), ['جديد']);
-  const snapshots = entries.filter((e) => e.kind === 'archive_snapshot');
-  assert.deepEqual(snapshots.map((e) => (e.payload as { version: number }).version), [2]);
   assert.equal(entries.filter((e) => e.kind === 'audit_entry').length, 2);
   assert.equal(entries.filter((e) => e.kind === 'memory_share').length, 1);
+  journal.close();
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('الجولةُ الثامنة (W-2026-040): يوميّةٌ كُذِّبَ إعفاءُ صنفٍ فيها لا تُضغط — والرمزُ الأصليُّ يُمرَّر لا يُحَرَّف', () => {
+  const dir = root();
+  const journal = seededWithExempt(dir);
+  // قيدُ المُعفى المكتوبُ يُكذِّبُ دعوى «لا مُنتِجَ له» عندَ القراءةِ المشتركةِ — والضغطُ
+  // يُرفضُ برمزِ الحصرِ لا برمزِ التحريفِ (عييبُ grok READ_CENSUS_REMAPPED_AS_COMPACTION_TAMPER)
+  assert.equal(code(() => compactJournal(journal, T0 + 100)), 'PERSISTENCE_REHYDRATE_EXEMPTION_CONTRADICTED');
   journal.close();
   rmSync(dir, { recursive: true, force: true });
 });
