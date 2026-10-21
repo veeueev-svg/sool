@@ -41,6 +41,7 @@
 import ts from 'typescript';
 import { computedFalsy, computedLiteral, computedNotNullish, computedNullish, computedTruthy, isGlobal } from './rehydrate_constant';
 import { deadByControlFlow } from './rehydrate_deadflow';
+import { regionOf, within } from './rehydrate_region';
 
 /** فكُّ الأغلفةِ الشكليةِ: الأقواسُ والتأكيدُ النوعيُّ وعدمُ الإبطالِ — لا يغيّرون الصدق */
 function strip(expr: ts.Expression): ts.Expression {
@@ -154,8 +155,8 @@ export function definitelyFalsy(expr: ts.Expression | undefined): boolean {
 function definitelyNullish(expr: ts.Expression | undefined): boolean {
   if (expr === undefined) return false;
   const e = strip(expr);
-  return e.kind === ts.SyntaxKind.NullKeyword
-    || (ts.isIdentifier(e) && e.text === 'undefined')
+  return e.kind === ts.SyntaxKind.NullKeyword // الجولةُ التاسعة (gpt): `undefined` المظلَّلُ ليس المعدومَ العالميّ
+    || (ts.isIdentifier(e) && e.text === 'undefined' && isGlobal(e))
     // **الجولةُ السادسة**: `void X` قيمتُه `undefined` دومًا — فعدميّتُه قطعيةٌ، وعدُّه
     // كاذبًا في `(void 0) ?? Y` كان رفضًا كاذبًا لحيٍّ (قيمتُه Y).
     || ts.isVoidExpression(e)
@@ -171,7 +172,7 @@ export function definitelyNotNullish(expr: ts.Expression | undefined): boolean {
   if (expr === undefined) return false;
   const e = strip(expr);
   if (e.kind === ts.SyntaxKind.NullKeyword) return false;
-  if (ts.isIdentifier(e) && e.text === 'undefined') return false;
+  if (ts.isIdentifier(e) && e.text === 'undefined' && isGlobal(e)) return false; // المظلَّلُ يُحسَبُ أدناه
   if (ts.isVoidExpression(e)) return false;
   if (e.kind === ts.SyntaxKind.TrueKeyword || e.kind === ts.SyntaxKind.FalseKeyword) return true;
   if (ts.isNumericLiteral(e) || ts.isStringLiteralLike(e)) return true;
@@ -210,18 +211,9 @@ export function definitelyTruthy(expr: ts.Expression | undefined): boolean {
   return computedTruthy(e);
 }
 
-/** قيمةٌ حرفيّةٌ (رقمٌ أو سلسلة) لمقابلةِ مُميّزِ `switch` ببنودِه — أو null إن لم يكن حرفيًّا */
-export function literalValue(expr: ts.Expression | undefined): string | number | null {
-  if (expr === undefined) return null;
-  const e = ts.isParenthesizedExpression(expr) ? expr.expression : expr;
-  if (ts.isNumericLiteral(e)) return Number(e.text);
-  if (ts.isStringLiteralLike(e)) return e.text;
-  return computedLiteral(e);
-}
-
-/** هل العقدةُ `inner` داخلَ مدى `outer` (نطاقُ شجرةٍ مُعرَّفةٍ بالمواضع) */
-function within(inner: ts.Node, outer: ts.Node): boolean {
-  return inner.pos >= outer.pos && inner.end <= outer.end;
+/** قيمةٌ أوّليّةٌ **مغلّفةٌ** لمقابلةِ مُميّزِ `switch` ببنودِه (`===`) — أو null إن لم تُحسَب (الجولةُ التاسعة: وBigInt) */
+export function literalValue(expr: ts.Expression | undefined): { readonly value: unknown } | null {
+  return expr === undefined ? null : computedLiteral(strip(expr));
 }
 
 /**
@@ -350,6 +342,10 @@ export function guardsOf(sf: ts.SourceFile, node: ts.Node): {
     // **قواعدُ موتِ الفرعِ** (الجولاتُ الرابعةُ والثامنة) كلُّها في `scripts/rehydrate_deadflow.ts`
     // (فُكِّكَ عندَ بلوغِ سقفِ الوحدةِ — سابقةُ `rehydrate_constant.ts`)
     if (deadByControlFlow(p, cur, { literalValue, strip })) unsatisfiable = true;
+    // **الجولةُ التاسعة**: منطقةُ التنفيذ — ما لم يُسمَّ ممرًّا ذرّةٌ معتمةٌ لا «حيٌّ بلا شرط» (rehydrate_region.ts)
+    const region = regionOf(p, cur, { literalValue, definitelyTruthy, definitelyFalsy });
+    if (region.dead) unsatisfiable = true;
+    if (region.atom !== null) { texts.push(region.atom); atoms.push(region.atom); }
     cur = p;
   }
 }

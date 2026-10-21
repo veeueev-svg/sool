@@ -15,6 +15,7 @@
  * في ملفٍّ واحدٍ تجاوز سقفَ الوحدةِ المُعلَن (400 سطرًا) — والسقفُ لا يُرفع لأنّ ملفًّا كبُر.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { CODE_FILE } from './rehydrate_opaque_code';
 import { join, relative } from 'node:path';
 import ts from 'typescript';
 import { resolveVariable } from './rehydrate_reachability';
@@ -88,13 +89,13 @@ export function argumentSites(sf: ts.SourceFile, kind: string): Site[] {
   return out;
 }
 
-/** كلُّ ملفّات `src/**` بلاحقة `.ts` */
+/** كلُّ ملفّاتِ **الشفرةِ** في `src/**` (`CODE_FILE`) — الجولةُ التاسعة: كانت `.ts` وحدَها فـ`.js` منتِجٌ لا يُرى */
 export function sourceFiles(dir: string): string[] {
   const out: string[] = [];
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
     if (statSync(p).isDirectory()) out.push(...sourceFiles(p));
-    else if (name.endsWith('.ts')) out.push(p);
+    else if (CODE_FILE.test(name)) out.push(p);
   }
   return out;
 }

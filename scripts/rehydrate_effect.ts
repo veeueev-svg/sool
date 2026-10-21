@@ -257,7 +257,7 @@ export function effectful(stmt: ts.Statement | undefined, depth = 0): boolean {
       (c) => {
         if (d !== null && ts.isCaseClause(c)) {
           const cv = literalValue(c.expression);
-          if (cv !== null && cv !== d) return false;
+          if (cv !== null && cv.value !== d.value) return false;
         }
         return c.statements.some((s) => effectful(s, depth + 1));
       },
