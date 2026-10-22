@@ -1803,7 +1803,11 @@
         "docs/work/council/W-2026-040-6.json",
         "docs/work/council/W-2026-040-6-gpt.md",
         "docs/work/council/W-2026-040-6-grok.md",
-        "docs/work/council/W-2026-040-6-gemini.md"
+        "docs/work/council/W-2026-040-6-gemini.md",
+        "docs/work/council/W-2026-040-7.json",
+        "docs/work/council/W-2026-040-7-gpt.md",
+        "docs/work/council/W-2026-040-7-grok.md",
+        "docs/work/council/W-2026-040-7-gemini.md"
       ],
       "excluded": [
         "تعديلُ أيِّ تقريرٍ خامٍّ لعضو — يُحفظ كما كتبه",
