@@ -11,7 +11,7 @@
    "member": "gpt",
    "model": "GPT 5.6 Terra",
    "runtime_id": "gpt_5_6_terra",
-   "agent_run": "gpt_mviqnv2v",
+   "agent_run": "6_w_2026_040_gpt_mviqnv2v",
    "verdict": "REJECTED",
    "report": "docs/work/council/W-2026-040-6-gpt.md",
    "report_sha256": "401a6d0055dac80fec55a7d9c03d002ec46a296cc284265d49d40f338aa11171"
@@ -20,7 +20,7 @@
    "member": "grok",
    "model": "Grok 4.7",
    "runtime_id": "grok_4_7",
-   "agent_run": "grok_mvisma6m",
+   "agent_run": "6_w_2026_040_grok_mvisma6m",
    "verdict": "REJECTED",
    "report": "docs/work/council/W-2026-040-6-grok.md",
    "report_sha256": "61457156cdcbd4300984f02d04979dd6169bf59b38171b8dcc04aeb0de1c47b7"
@@ -29,7 +29,7 @@
    "member": "gemini",
    "model": "Gemini 3.8 Flash",
    "runtime_id": "gemini_3_8_flash",
-   "agent_run": "gemini_mviw6i6j",
+   "agent_run": "6_w_2026_040_gemini_mviw6i6j",
    "verdict": "VERIFIED",
    "report": "docs/work/council/W-2026-040-6-gemini.md",
    "report_sha256": "bb22e5a0eae9cc4032f2a1293a039fc617e5a7d609983d0d6546799cc33ccf30"
@@ -80,7 +80,7 @@
    "confirmed_by": [
     "grok"
    ],
-   "summary": "مفتاحُ constructor المحسوبُ (() => 0)['constr'+'ctor'] يكتبُ القيدَ والبوابةُ تخضرُّ — وصولُ .constructor المسمّى يُسقطُ لكنَّ مفتاحَهُ المحسوبَ لا"
+   "summary": "مفتاحُ constructor المحسوبُ (() => 0)['constr'+'uctor'] يكتبُ القيدَ والبوابةُ تخضرُّ — وصولُ .constructor المسمّى يُسقطُ لكنَّ مفتاحَهُ المحسوبَ لا"
   },
   {
    "name": "OPAQUE_ABSENCE_STILL_CLOSED_FORM_LIST",
