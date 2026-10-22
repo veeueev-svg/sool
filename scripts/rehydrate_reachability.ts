@@ -296,15 +296,17 @@ export function guardsOf(sf: ts.SourceFile, node: ts.Node): {
         unsatisfiable = true;
       }
     }
-    // حارسُ الحلقةِ شرطٌ كشرطِ `if`، وثابتُ الكذبِ منه يُبطِل النداء — إلا `do … while`
-    // فإنّه يُنفَّذ مرّةً قبل الشرط.
-    if ((ts.isWhileStatement(p) || ts.isForStatement(p) || ts.isDoStatement(p))
-      && p.statement === cur) {
+    // حارسُ الحلقةِ شرطٌ كشرطِ `if`، وثابتُ الكذبِ منه يُبطِل النداء.
+    // **والجولةُ السادسةُ** (grok `RC07_DO_WHILE_BODY_FALSE_REJECT` — وجهُ رفضٍ كاذبٍ):
+    // جسمُ `do … while` يُنفَّذُ **قبلَ شرطِهِ** — فالشرطُ لا يحرسُ دخولَهُ الأوّلَ أصلًا،
+    // ولا يُلصَقُ ذرّةً على الجسمِ: `do { census() } while (false)` نداءٌ حيٌّ لا يُرفَض.
+    // (الشرطُ يبقى حارسًا لما **بعدَ** الحلقةِ عبرَ مسارِ الأسلافِ العاديّ.)
+    if ((ts.isWhileStatement(p) || ts.isForStatement(p)) && p.statement === cur) {
       const cond = ts.isForStatement(p) ? p.condition : p.expression;
       if (cond !== undefined) {
         texts.push(cond.getText(sf).replace(/\s+/g, ''));
         guardAtoms(cond, false, sf, atoms);
-        if (!ts.isDoStatement(p) && definitelyFalsy(cond)) unsatisfiable = true;
+        if (definitelyFalsy(cond)) unsatisfiable = true;
       }
     }
     if (ts.isForOfStatement(p) && p.statement === cur) {

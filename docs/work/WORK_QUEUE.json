@@ -165,7 +165,7 @@
       "reviewer": "مراجعان مستقلان: GPT (OpenAI) + Grok (xAI) — بتفويض المالك 2026-09-09 (RULE-019)",
       "area": "البيانات والديمومة",
       "phase": 39,
-      "status": "IN_PROGRESS",
+      "status": "REVIEW",
       "progress_items": [
         "T-29"
       ],
@@ -236,7 +236,10 @@
         "scripts/rehydrate_opaque_code.ts",
         "tests/data/rehydrate_census_mutations_r9.test.ts",
         "docs/test-reports/phase-39-W-2026-040-remedy-9.md",
-        "docs/test-reports/phase-39-W-2026-040-remedy-9-measurements.txt"
+        "docs/test-reports/phase-39-W-2026-040-remedy-9-measurements.txt",
+        "docs/test-reports/phase-39-W-2026-040-remedy-10-measurements.txt",
+        "docs/test-reports/phase-39-W-2026-040-remedy-10.md",
+        "tests/data/rehydrate_census_mutations_r10.test.ts"
       ],
       "excluded": [
         "config/persistence.yaml — لا يُوسَّع النطاقُ ولا يُضيَّق: البندُ يبني الحاجزَ لا مقاسَه",
@@ -261,7 +264,7 @@
         "docs/decisions/ADR-0048-rehydrate-census.md — القرارُ ومُعجمُ الإعفاء والبدائلُ المرفوضة",
         "خرجُ npm test بعددٍ صريح وخرجُ npm run verify برمزِ خروجه"
       ],
-      "next_step": "المعالجةُ العاشرةُ — علاجُ العيوبِ الثمانيةِ المسماةِ في COUNCIL6_W040_SPLIT_REJECTED منَ الجذرِ داخلَ نطاقِ البندِ ثمّ رفعٌ بتغيّرٍ مقيسٍ (الثابت 8) وجولةُ مجلسٍ سابعةٌ واحدةٌ لا تزامنَ لا تبدأُ إلا بعدَ دفعِ العلاجِ واخضرارِ بوابتَيه",
+      "next_step": "جولةُ مجلسٍ سابعةٌ على تجميدٍ جديدٍ ببصمةِ نطاقٍ متغيّرةٍ (المعالجةُ العاشرة · §2-ل · 67 مسارًا) — جولةٌ واحدةٌ لا تزامنَ (الأمرُ التشغيليُّ الدائم): تجهيزُ الحزمةِ المجمّدةِ والنصِّ المأذونِ ثمّ تشغيلُ الأعضاءِ تباعًا، وأسرةُ المنفّذِ تُسجَّلُ في المحضرِ بصدق",
       "created_at": "2026-09-08",
       "updated_at": "2026-10-22",
       "verification": [
@@ -296,6 +299,10 @@
         {
           "commit": "التزام المعالجة التاسعة (الجلسة 156)",
           "evidence": "npm test ⇒ 2488/2488 (+3 تطفيراتُ الجولةِ التاسعة · version.json 0.70.7) — خام القياس: docs/test-reports/phase-39-W-2026-040-remedy-9-measurements.txt (قبل/بعد في جريانٍ واحدٍ على التجميد 5a38482): وجوهُ عيوبِ COUNCIL5_W040_SPLIT_REJECTED السبعةُ كلُّها كانت ناجيةً أو مرفوضةً كذبًا وصارت كما يُنتظَر — منطقةُ التنفيذِ تُثبَتُ لا يُفترَض (scripts/rehydrate_region.ts) · الشفرةُ المعتمةُ وملفُّ الشفرةِ غيرُ TS لا يؤيّدانِ الغيابَ (scripts/rehydrate_opaque_code.ts) · التظليلُ معجميٌّ والعدميّةُ تسألُ عنه · BigInt في مقارنةِ case · كلُّ نداءِ حاجزٍ يُقاسُ والسيّدُ يُسمّى — وتطفيراتُ الجولاتِ السابقةِ بلا انحدارٍ ولا تعديلِ اختبارٍ قائم"
+        },
+        {
+          "commit": "التزام المعالجة العاشرة (الجلسة 157)",
+          "evidence": "npm test ⇒ 2491/2491 (+3 تطفيراتُ الجولةِ العاشرة · version.json 0.70.8) — خامُّ القياس: docs/test-reports/phase-39-W-2026-040-remedy-10-measurements.txt (قبل/بعد في جريانٍ واحدٍ على التجميد 73e7668): وجوهُ عيوبِ COUNCIL6_W040_SPLIT_REJECTED المسماةُ الستةُ كانت ناجيةً على حاجزِ التجميدِ وسقطت برموزِها (RC07_COUNTERFEIT_COMPUTED_CALLEE_GREENS — الهويةُ ربطٌ لا نصٌّ: مستدعى الحاجز معرّفٌ يحلُّ إلى استيرادِهِ · RC14_DYNAMIC_IMPORT_CODE_MODULE_UNSEEN · RC14_REFLECT_GET_FUNCTION_UNSEEN · RC14_DESCRIPTOR_FUNCTION_UNSEEN · RC14_ALIASED_GLOBAL_COMPUTED_FUNCTION_UNSEEN · RC14_COMPUTED_CONSTRUCTOR_KEY_UNSEEN — أبوابُ الشفرةِ المعتمةِ تُقاسُ بآلياتِها) ووجهُ الرفضِ الكاذبِ RC07_DO_WHILE_BODY_FALSE_REJECT عولج (جسمُ do يُنفَّذُ قبلَ شرطِهِ) · وتطفيراتُ الجولاتِ السابقةِ بلا انحدارٍ ولا تعديلِ اختبارٍ قائم (14/14 أخضر)"
         }
       ],
       "blocked_reason": "سجلٌّ تاريخيٌّ لا وصفٌ للحالِ الراهن — عولجت العيوبُ الأربعةَ عشرَ في المعالجةِ الرابعةِ (2026-09-13 · docs/test-reports/phase-39-W-2026-040-remedy-4.md · القياسُ §6–§9 من ملفِّ قياساتِ الجولةِ الرابعة): الجولةُ الرابعةُ من المراجعةِ المستقلّة (2026-09-13) رفضت البندَ رابعةً بأربعةَ عشرَ عيبًا مسمًّى مدارُها واحد: حكمُ الوصولِ غائبٌ عن عقدِ الحاجز — فالشرطُ المركّبُ ثابتُ الكذبِ (EFFECT_CROSSES_COMPOU…",

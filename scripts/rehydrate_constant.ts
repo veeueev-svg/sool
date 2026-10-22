@@ -120,6 +120,21 @@ export function isGlobal(id: ts.Identifier): boolean {
 }
 
 /**
+ * **الجولةُ السادسةُ** (gpt `RC07_COUNTERFEIT_COMPUTED_CALLEE_GREENS`): هل يحلُّ المعرّفُ
+ * إلى **استيرادِهِ** لا إلى تظليلٍ أقربَ؟ حَلُّ اللغةِ نفسِهِ: أضيقُ نطاقِ ربطٍ يحوي الاستعمالَ
+ * هو صاحبُ الاسمِ — ونطاقُ الاستيرادِ الملفُّ كلُّهُ (الأوسعُ). فإن كان الأضيقُ نطاقًا غيرَ
+ * الملفِّ فالتظليلُ قائمٌ والاسمُ ليسَ للاستيرادِ. وما لا ربطَ لهُ أصلًا ليسَ استيرادًا.
+ */
+export function resolvesToImportBinding(id: ts.Identifier): boolean {
+  const sf = id.getSourceFile();
+  if (sf === undefined) return false;
+  const scopes = (bindings(sf).get(id.text) ?? []).filter((s) => withinNode(id, s));
+  if (scopes.length === 0) return false;
+  const innermost = scopes.reduce((a, b) => (b.pos >= a.pos && b.end <= a.end ? b : a));
+  return innermost === sf;
+}
+
+/**
  * **الجولةُ الثامنة:** ثابتٌ محليٌّ بمُبدِّعٍ معلومِ القيمةِ — قيمتُه تُحسَبُ لا تُجهَل.
  * فالمعرّفُ المظلَّلَ بربطٍ محليٍّ ليس مجهولًا أصلًا إذا كان إعلانُه `const` بمبدِّعٍ حرفيٍّ
  * لا يرمي ولا يرجعُ إلى نفسِه (رابطُ قيمةٍ لا حالة) — وإلا فالرفضُ الكاذبُ يعودُ من هذهِ

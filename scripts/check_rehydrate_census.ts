@@ -53,6 +53,7 @@ import {
 import type { Claim } from './rehydrate_proof';
 import { dispatchSites } from './rehydrate_dispatch';
 import { guardsOf } from './rehydrate_reachability';
+import { resolvesToImportBinding } from './rehydrate_constant';
 import { typedProducerVerdicts } from './rehydrate_producers';
 
 const ROOT = process.env.SOOL_CHECK_ROOT ?? '.';
@@ -243,7 +244,22 @@ function calleeName(expr: ts.Expression): string {
 walk(bootSf, (n) => {
   if (!ts.isCallExpression(n)) return;
   const name = calleeName(n.expression);
-  if (name === 'assertRehydrateCensus') { censusCalls.push(n); return; }
+  if (name === 'assertRehydrateCensus') {
+    // **الجولةُ السادسةُ** (gpt `RC07_COUNTERFEIT_COMPUTED_CALLEE_GREENS`): نصُّ المفتاحِ ليسَ
+    // هويةً — لا يُعَدُّ نداءَ حاجزٍ إلا ما كانَ مستدعاهُ معرّفًا أصلًا (لا وصولَ خاصّيّةٍ ولا
+    // فهرسَ عنصرٍ ينحلُّ إلى نصٍّ مُنتحَلٍ) **ويحلُّ إلى استيرادِهِ** لا إلى تظليلٍ أقربَ —
+    // فالكائنُ المحليُّ ذو المفتاحِ الحرفيِّ كان يُنصَّبُ سيّدًا زورًا والحاجزُ يخضرّ.
+    let e: ts.Expression = n.expression;
+    for (;;) {
+      if (ts.isParenthesizedExpression(e) || ts.isAsExpression(e) || ts.isNonNullExpression(e)
+        || ts.isSatisfiesExpression(e) || ts.isTypeAssertionExpression(e)) e = e.expression;
+      else if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.CommaToken) e = e.right;
+      else break;
+    }
+    if (ts.isIdentifier(e) && resolvesToImportBinding(e)) { censusCalls.push(n); return; }
+    bad(`✗ [RC-07] مستدعى الحاجزِ لا يحلُّ إلى استيرادِ «assertRehydrateCensus» الحقيقيّ (السطر ${lineOf(bootSf, n)}) — نصُّ المفتاحِ أو التظليلُ الأقربُ ليسَ هويةً: المجهولُ لا يؤيّدُ السيادة (RULE-001).`);
+    return;
+  }
   if (/^rehydrate[A-Z]/.test(name)) rehydrateCalls.push(n);
 });
 // والمرجعُ الهاربُ — اسمُ إرجاعٍ أو الحاجزِ في غيرِ موضعِ المُستدعى (إسنادٌ إلى اسمٍ آخرَ ·
