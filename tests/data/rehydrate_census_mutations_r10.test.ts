@@ -30,6 +30,8 @@ const PERSISTENCE = 'src/data/persistence.ts';
 const CENSUS_CALL = 'if (journal) assertRehydrateCensus(persistenceConfig.policy.scope);';
 const SCOPE = 'assertRehydrateCensus(persistenceConfig.policy.scope)';
 const boot = (to: string) => (root: string): void => patch(root, INDEX, CENSUS_CALL, to);
+const IMPORT_LINE = "import { assertRehydrateCensus } from './data/rehydrate_census';";
+const bootImport = (to: string) => (root: string): void => patch(root, INDEX, IMPORT_LINE, to);
 
 /** دالّةٌ تُلحَقُ بـ`persistence.ts` بمُستقبِلٍ من نوعِ اليوميّةِ الحقيقيِّ `DurableSink` */
 const sink = (name: string, body: readonly string[]): ((root: string) => void) => (root) =>
@@ -46,19 +48,23 @@ const NEGATIVE: readonly Face[] = [
     mutate: boot(`const counterfeitCensus = { assertRehydrateCensus: (_s: unknown): void => void 0 };\n  if (journal) counterfeitCensus.assertRehydrateCensus(persistenceConfig.policy.scope);`) },
   { code: 'RC-07', why: 'تظليلٌ أقربُ لاسمِ الحاجزِ — ربطٌ محليٌّ يحلُّ محلَّ الاستيرادِ فالسيادةُ مدَّعاةٌ زورًا',
     mutate: boot(`const assertRehydrateCensus = (_s: unknown): void => void 0;\n  if (journal) ${SCOPE};`) },
+  { code: 'RC-07', why: "استيرادُ الحاجزِ من وحدةٍ أخرى غيرِ وحدةِ الحصرِ — أضيقُ النطاقِ لا يكفي: عقدةُ التعريفِ نفسُها هي الهوية (تصويبُ الجلسة 157 · ملاحظةُ المراجع)",
+    mutate: bootImport(`import { assertRehydrateCensus } from './data/persistence';`) },
+  { code: 'RC-07', why: 'إعلانُ دالةٍ محليّةٍ بنفسِ الاسمِ مكانَ الاستيرادِ — نطاقُ الملفِّ يملكُهُ الإعلانُ أيضًا',
+    mutate: bootImport(`function assertRehydrateCensus(_s: unknown): void { void _s; }`) },
   // ── الشفرةُ المعتمة: أبوابُ الوصولِ إلى منشئِ الدالّةِ (grok §5) ──
   { code: 'RC-14', why: "`import('node:vm')` الحرفيُّ ثمّ `runInThisContext` يكتبُ المُعفى — الوصولُ إلى وحدةِ الشفرةِ بابٌ لا يُبرهَنُ غيابُه",
     mutate: sink('probeR10Vm', ["  void import('node:vm').then((vm) => vm.runInThisContext(`globalThis.j.record(\"archive_snapshot\", {})`));"]) },
   { code: 'RC-14', why: "`import('node:module')` الحرفيُّ ثمّ `_compile` يكتبُ المُعفى",
     mutate: sink('probeR10Mod', ["  void import('node:module').then((m) => m.Module._compile(`globalThis.j.record(\"archive_snapshot\", {})`, 'probe'));"]) },
   { code: 'RC-14', why: "`Reflect.get(globalThis, 'Function')('j', …)` — انعكاسُ وصولٍ يبلغُ منشئَ الدالّةِ بلا قراءةٍ ساكنة (كما في خامّ grok)",
-    mutate: sink('probeR10Reflect', [`  Reflect.get(globalThis, 'Function')('j', 'globalThis.j.record("archive_snapshot", {})'); void j;`]) },
+    mutate: sink('probeR10Reflect', [`  const f = Reflect.get(globalThis, 'Function')('j', 'globalThis.j.record("archive_snapshot", {})'); f(); void j;`]) },
   { code: 'RC-14', why: "`Object.getOwnPropertyDescriptor(globalThis, 'Function').value('j', …)` — الواصفُ يبلغُ القيمةَ ديناميكيًّا (كما في خامّ grok)",
-    mutate: sink('probeR10Desc', [`  const d = Object.getOwnPropertyDescriptor(globalThis, 'Function');`, `  if (d !== undefined) (d.value as FunctionConstructor)('j', 'globalThis.j.record("archive_snapshot", {})');`]) },
+    mutate: sink('probeR10Desc', [`  const d = Object.getOwnPropertyDescriptor(globalThis, 'Function');`, `  if (d !== undefined) { const f = (d.value as FunctionConstructor)('j', 'globalThis.j.record("archive_snapshot", {})'); f(); }`]) },
   { code: 'RC-14', why: "`const g = globalThis; g['Func'+'tion']('j', …)` — فهرسٌ محسوبٌ على اسمٍ مستعارٍ للكائنِ العالميّ (كما في خامّ grok)",
-    mutate: sink('probeR10Alias', [`  const g = globalThis;`, `  (g['Func'+'tion'] as FunctionConstructor)('j', 'globalThis.j.record("archive_snapshot", {})');`]) },
+    mutate: sink('probeR10Alias', [`  const g = globalThis;`, `  const f = (g['Func'+'tion'] as FunctionConstructor)('j', 'globalThis.j.record("archive_snapshot", {})'); f();`]) },
   { code: 'RC-14', why: "`(() => 0)['constr'+'uctor']('j', …)` — مفتاحٌ محسوبٌ يطوي إلى constructor — منشئُ الدالّةِ من نصّ (كما في خامّ grok)",
-    mutate: sink('probeR10Ctor', [`  ((() => 0)['constr'+'uctor'] as FunctionConstructor)('j', 'globalThis.j.record("archive_snapshot", {})');`]) },
+    mutate: sink('probeR10Ctor', [`  const f = ((() => 0)['constr'+'uctor'] as FunctionConstructor)('j', 'globalThis.j.record("archive_snapshot", {})'); f();`]) },
 ];
 
 const LIVE: readonly Face[] = [

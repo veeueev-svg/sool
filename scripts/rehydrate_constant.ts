@@ -120,18 +120,40 @@ export function isGlobal(id: ts.Identifier): boolean {
 }
 
 /**
- * **الجولةُ السادسةُ** (gpt `RC07_COUNTERFEIT_COMPUTED_CALLEE_GREENS`): هل يحلُّ المعرّفُ
- * إلى **استيرادِهِ** لا إلى تظليلٍ أقربَ؟ حَلُّ اللغةِ نفسِهِ: أضيقُ نطاقِ ربطٍ يحوي الاستعمالَ
- * هو صاحبُ الاسمِ — ونطاقُ الاستيرادِ الملفُّ كلُّهُ (الأوسعُ). فإن كان الأضيقُ نطاقًا غيرَ
- * الملفِّ فالتظليلُ قائمٌ والاسمُ ليسَ للاستيرادِ. وما لا ربطَ لهُ أصلًا ليسَ استيرادًا.
+ * **الجولةُ السادسةُ (تصويبُ الجلسة 157 · ملاحظةُ المراجع):** أضيقُ نطاقِ ربطٍ يحوي الاستعمالَ
+ * هو صاحبُ الاسمِ (كحلِّ اللغةِ نفسِهِ) — هذه الدالةُ تُعيدُ **عقدةَ التعريفِ الفائزةَ** نفسَها لا
+ * نطاقَها فقط: فنطاقُ الملفِّ يملكُهُ الاستيرادُ الحقيقيُّ **وأيضًا** إعلانُ دالةٍ محليٍّ بنفسِ
+ * الاسمِ أو استيرادٌ من وحدةٍ أخرى — وحدَها عقدةُ التعريفِ تُثبتُ الهويةَ (رمزُ الاستيرادِ
+ * من وحدةِ الحصرِ) لا مجردُ أوسعيةِ النطاقِ. وما لا ربطَ لهُ أصلًا ليسَ استيرادًا.
  */
-export function resolvesToImportBinding(id: ts.Identifier): boolean {
+export function innermostBindingDeclaration(id: ts.Identifier): ts.Node | undefined {
   const sf = id.getSourceFile();
-  if (sf === undefined) return false;
-  const scopes = (bindings(sf).get(id.text) ?? []).filter((s) => withinNode(id, s));
-  if (scopes.length === 0) return false;
-  const innermost = scopes.reduce((a, b) => (b.pos >= a.pos && b.end <= a.end ? b : a));
-  return innermost === sf;
+  if (sf === undefined) return undefined;
+  const decls = declarationsOf(sf, id.text).filter((d) => withinNode(id, bindingScope(d) ?? sf));
+  if (decls.length === 0) return undefined;
+  return decls.reduce((a, b) => {
+    const sa = bindingScope(a) ?? sf;
+    const sb = bindingScope(b) ?? sf;
+    return sb.pos >= sa.pos && sb.end <= sa.end ? b : a;
+  });
+}
+
+/** تعريفاتُ الاسمِ في الملفِّ — عقُدُ التعريفِ نفسُها (مثلُ `bindings` لكنّها تُعيدُ العُقدَ لا النطاقات) */
+function declarationsOf(sf: ts.SourceFile, text: string): ts.Node[] {
+  const out: ts.Node[] = [];
+  const visit = (n: ts.Node): void => {
+    const named = n as ts.Node & { name?: ts.Node };
+    if ((ts.isVariableDeclaration(n) || ts.isParameter(n) || ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n)
+      || ts.isClassDeclaration(n) || ts.isClassExpression(n) || ts.isImportSpecifier(n) || ts.isImportClause(n)
+      || ts.isNamespaceImport(n) || ts.isBindingElement(n) || ts.isEnumDeclaration(n)
+      || ts.isModuleDeclaration(n) || ts.isImportEqualsDeclaration(n))
+      && named.name && ts.isIdentifier(named.name) && named.name.text === text) {
+      out.push(n);
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(sf);
+  return out;
 }
 
 /**
