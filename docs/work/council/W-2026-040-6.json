@@ -1,0 +1,100 @@
+{
+ "item": "W-2026-040",
+ "commit": "73e76684fc34d34842e81a2551ebfa7a67e2075e",
+ "scope_digest": "cb85476f8f9ed28e36a010b8f4da3abafbf21a23a4f57bb676bf47be741cf086",
+ "executor_family": "GLM",
+ "convened_at": "2026-10-22",
+ "session": 6,
+ "commissioning": "النصُّ المأذونُ به الملتزمُ كاملًا في عقدِ W-2026-066 §13.152 قبلَ التشغيل (قالبُ الجولةِ الخامسةِ المأذونُ بتحديثِ معاملاتِ الجولةِ — الأمرُ التشغيليُّ الدائم) · التشغيلُ المتتابعُ لا المتزامنُ (gpt ثمّ grok ثمّ gemini) · الحزمةُ منشورةٌ مقيسةٌ في الجذورِ الثلاثةِ قبلَ التكليفِ (مانيفست 63/63 · لا فرق) · الأوامرُ التسعةَ عشرَ قيست على التجميدِ قبلَ التكليف",
+ "verdicts": [
+  {
+   "member": "gpt",
+   "model": "GPT 5.6 Terra",
+   "runtime_id": "gpt_5_6_terra",
+   "agent_run": "gpt_mviqnv2v",
+   "verdict": "REJECTED",
+   "report": "docs/work/council/W-2026-040-6-gpt.md",
+   "report_sha256": "401a6d0055dac80fec55a7d9c03d002ec46a296cc284265d49d40f338aa11171"
+  },
+  {
+   "member": "grok",
+   "model": "Grok 4.7",
+   "runtime_id": "grok_4_7",
+   "agent_run": "grok_mvisma6m",
+   "verdict": "REJECTED",
+   "report": "docs/work/council/W-2026-040-6-grok.md",
+   "report_sha256": "61457156cdcbd4300984f02d04979dd6169bf59b38171b8dcc04aeb0de1c47b7"
+  },
+  {
+   "member": "gemini",
+   "model": "Gemini 3.8 Flash",
+   "runtime_id": "gemini_3_8_flash",
+   "agent_run": "gemini_mviw6i6j",
+   "verdict": "VERIFIED",
+   "report": "docs/work/council/W-2026-040-6-gemini.md",
+   "report_sha256": "bb22e5a0eae9cc4032f2a1293a039fc617e5a7d609983d0d6546799cc33ccf30"
+  }
+ ],
+ "decision": "NOT_VERIFIED",
+ "disposition": {
+  "kind": "IN_PROGRESS"
+ },
+ "defects": [
+  {
+   "name": "RC07_COUNTERFEIT_COMPUTED_CALLEE_GREENS",
+   "confirmed_by": [
+    "gpt"
+   ],
+   "summary": "الحاجزُ الساكنُ لا يربطُ المستدعَى رمزيًّا بالاستيرادِ الحقيقيِّ: calleeName في scripts/check_rehydrate_census.ts يفكُّ فهرسَ العنصرِ الحرفيِّ ويعيدُ نصَّ المفتاحِ وحدَه، فكائنٌ محليٌّ بلا صلةٍ بالاستيرادِ يقدّمُ دالةً فارغةً تحتَ مفتاحٍ محسوبٍ حرفيٍّ (counterfeitCensus['assertRehydrateCensus']) فيَعُدُّها الحاجزُ النداءَ الحقيقيَّ السيّدَ ويمنحُها السيادةَ على نداءاتِ الإرجاعِ — المسبارُ المقيسُ على نسخةٍ منفصلةٍ مرَّ أخضرَ (build+gate=0) معَ إعلانِ السيادةِ زورًا"
+  },
+  {
+   "name": "RC14_DYNAMIC_IMPORT_CODE_MODULE_UNSEEN",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "import('node:vm') وimport('node:module') الحرفيُّ (وimport('vm') بالوجهِ النحويِّ نفسِهِ) يكتبانِ archive_snapshot عبرَ runInThisContext/Module._compile والبوابةُ تخضرُّ — الوحداتُ مسماةٌ في CODE_MODULES لـrequire والاستيرادِ الساكنِ وحدَهما لا للاستيرادِ الديناميكيِّ الحرفيِّ"
+  },
+  {
+   "name": "RC14_REFLECT_GET_FUNCTION_UNSEEN",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "Reflect.get(globalThis,'Function') ثم نداءُ النصِّ يكتبُ القيدَ والبوابةُ تخضرُّ — انعكاسُ الوصولِ غيرُ مرئيٍّ لنفيِ المنتِج"
+  },
+  {
+   "name": "RC14_DESCRIPTOR_FUNCTION_UNSEEN",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "Object.getOwnPropertyDescriptor(globalThis,'Function').value يكتبُ القيدَ والبوابةُ تخضرُّ — الوصولُ بالوصفِ غيرُ مرئيٍّ"
+  },
+  {
+   "name": "RC14_ALIASED_GLOBAL_COMPUTED_FUNCTION_UNSEEN",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "الفهرسُ المحسوبُ على اسمٍ مستعارٍ للكائنِ العالميِّ (const g = globalThis; g['Func'+'tion']) يكتبُ القيدَ والبوابةُ تخضرُّ — الفهرسُ المحسوبُ يُسقطُ فقط إن كان المفعولُ معرّفًا من {globalThis, global, window, self} حصرًا"
+  },
+  {
+   "name": "RC14_COMPUTED_CONSTRUCTOR_KEY_UNSEEN",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "مفتاحُ constructor المحسوبُ (() => 0)['constr'+'ctor'] يكتبُ القيدَ والبوابةُ تخضرُّ — وصولُ .constructor المسمّى يُسقطُ لكنَّ مفتاحَهُ المحسوبَ لا"
+  },
+  {
+   "name": "OPAQUE_ABSENCE_STILL_CLOSED_FORM_LIST",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "الجذرُ الواحدُ للعيوبِ الخمسةِ أعلاهُ: نفيُ المنتِجِ في scripts/rehydrate_opaque_code.ts ما زالَ قائمةَ أشكالٍ مغلقةً — درسُ الجولةِ الخامسةِ («قائمةُ نفيٍ مغلقةٌ تُنجي ما لم يُذكر») قُلبَ في منطقةِ التنفيذِ (rehydrate_region.ts: ما لم يُسمَّ ممرًّا ذرّةٌ معتمةٌ) ولم يُقلبْ هنا: قياسُ العلاجِ قياسُ غيابِ الأشكالِ المسماةِ لا برهانُ غيابِ المنتِجِ"
+  },
+  {
+   "name": "RC07_DO_WHILE_BODY_FALSE_REJECT",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "وجهُ رفضٍ كاذبٍ مسمّى معلنٌ لا يُعلَّقُ الرفضُ عليهِ وحدَهُ: جسمُ do-while يُنفَّذُ قبلَ شرطِهِ فالذرةُ الملصقةُ عليهِ في guardsOf ترفضُ الوجهَ الحيَّ كذبًا [RC-07] (scripts/rehydrate_reachability.ts نحو 301–308) — الرفضُ الكاذبُ وجهٌ ثانٍ للعيبِ يدفعُ إلى التزويرِ"
+  }
+ ]
+}
