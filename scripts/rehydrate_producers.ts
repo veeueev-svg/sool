@@ -32,9 +32,9 @@
  *
  * التبعيات: مُترجمُ TypeScript وحدَه.
  */
-import { dirname, relative } from 'node:path';
-import ts from 'typescript';
-import { foreignCodeReason, opaqueCodeReason } from './rehydrate_opaque_code';
+import { dirname, relative } from "node:path";
+import ts from "typescript";
+import { foreignCodeReason, opaqueCodeReason } from "./rehydrate_opaque_code";
 
 export interface ProducerVerdict {
   /** مواضعُ نوعُ وسيطِها الحرفُ المُعفى وحدَه — منتِجٌ قطعًا */
@@ -47,13 +47,12 @@ export interface ProducerVerdict {
  * أنواعُ Node تُحمَّلُ من مستودعِ الحاجزِ نفسِه لا من الجذرِ المفحوص — فيُرى `readFileSync` نوعًا
  * لا `any` في الشجرةِ الحقيقيّةِ وفي نسخِ الاختبارِ معًا (حكمٌ واحدٌ لا يتبدّلُ بالجذر).
  */
-const NODE_TYPE_ROOT = dirname(dirname(require.resolve('@types/node/package.json')));
+const NODE_TYPE_ROOT = dirname(dirname(require.resolve("@types/node/package.json")));
 
 function unwrap(e: ts.Expression): ts.Expression {
   let cur = e;
   for (;;) {
-    if (ts.isParenthesizedExpression(cur) || ts.isAsExpression(cur) || ts.isNonNullExpression(cur)
-      || ts.isSatisfiesExpression(cur) || ts.isTypeAssertionExpression(cur)) cur = cur.expression;
+    if (ts.isParenthesizedExpression(cur) || ts.isAsExpression(cur) || ts.isNonNullExpression(cur) || ts.isSatisfiesExpression(cur) || ts.isTypeAssertionExpression(cur)) cur = cur.expression;
     else if (ts.isBinaryExpression(cur) && cur.operatorToken.kind === ts.SyntaxKind.CommaToken) cur = cur.right;
     else return cur;
   }
@@ -71,29 +70,43 @@ function literalsOf(t: ts.Type): string[] | null {
 }
 
 /**
+ * البرنامجُ النوعيُّ فوقَ `src/**` — يُبنى مرّةً ويُشارَكُهُ نفيُ المُنتِجِ وفحصُ هويةِ الحاجزِ
+ * (الجولةُ الحاديةَ عشرةَ): رمزٌ واحدٌ يحلُّ الاستيرادِ والكنيةَ والعبورَ بينَ الوحداتِ.
+ */
+export function buildSrcProgram(files: readonly string[]): ts.Program {
+  return ts.createProgram(
+    files.filter((f) => f.endsWith(".ts")),
+    {
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.CommonJS,
+      moduleResolution: ts.ModuleResolutionKind.Node10,
+      strict: true,
+      noEmit: true,
+      skipLibCheck: true,
+      types: ["node"],
+      typeRoots: [NODE_TYPE_ROOT],
+    },
+  );
+}
+
+/**
  * الأحكامُ لكلِّ صنفٍ مُعفًى. `files` مساراتُ `src/**`؛ والبرنامجُ يُبنى مرّةً واحدةً لكلِّ الأصناف.
  * إن غابَ تعريفُ اليوميّةِ (`src/data/persistence.ts`) فلا يُقاسُ شيءٌ — والمجهولُ لا يؤيّدُ الإعفاء.
  */
-export function typedProducerVerdicts(
-  root: string, files: readonly string[], exemptKinds: readonly string[],
-): Map<string, ProducerVerdict> {
+export function typedProducerVerdicts(root: string, files: readonly string[], exemptKinds: readonly string[], prebuilt?: ts.Program): Map<string, ProducerVerdict> {
   const out = new Map<string, { definite: string[]; possible: string[] }>();
   for (const k of exemptKinds) out.set(k, { definite: [], possible: [] });
   if (exemptKinds.length === 0) return out;
-  const all = (site: string, mode: 'definite' | 'possible'): void => {
+  const all = (site: string, mode: "definite" | "possible"): void => {
     for (const v of out.values()) v[mode].push(site);
   };
 
   // **الجولةُ التاسعة** (grok `JS_IN_SRC_UNSEEN_BY_CENSUS_SCAN`): ملفُّ شفرةٍ غيرُ TS لا يدخلُ البرنامج — فلا يُبرهَنُ غيابٌ فيه
   for (const f of files) {
     const why = foreignCodeReason(f);
-    if (why !== null) all(`${relative(root, f)} (${why})`, 'possible');
+    if (why !== null) all(`${relative(root, f)} (${why})`, "possible");
   }
-  const program = ts.createProgram(files.filter((f) => f.endsWith('.ts')), {
-    target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
-    moduleResolution: ts.ModuleResolutionKind.Node10, strict: true, noEmit: true,
-    skipLibCheck: true, types: ['node'], typeRoots: [NODE_TYPE_ROOT],
-  });
+  const program = prebuilt ?? buildSrcProgram(files);
   const checker = program.getTypeChecker();
   const fileSet = new Set(files.map((f) => ts.sys.resolvePath(f)));
   const persistence = program.getSourceFiles().find((sf) => /[\\/]src[\\/]data[\\/]persistence\.ts$/.test(sf.fileName));
@@ -101,14 +114,13 @@ export function typedProducerVerdicts(
   const journalTypes: ts.Type[] = [];
   if (persistence !== undefined) {
     for (const st of persistence.statements) {
-      if ((ts.isClassDeclaration(st) && st.name?.text === 'StateJournal')
-        || (ts.isInterfaceDeclaration(st) && st.name.text === 'DurableSink')) {
+      if ((ts.isClassDeclaration(st) && st.name?.text === "StateJournal") || (ts.isInterfaceDeclaration(st) && st.name.text === "DurableSink")) {
         journalTypes.push(checker.getTypeAtLocation(st.name!));
       }
     }
   }
   if (journalTypes.length === 0) {
-    all('src/data/persistence.ts (لا تعريفَ لـStateJournal/DurableSink — لا يُقاسُ النفي)', 'possible');
+    all("src/data/persistence.ts (لا تعريفَ لـStateJournal/DurableSink — لا يُقاسُ النفي)", "possible");
     return out;
   }
 
@@ -139,14 +151,13 @@ export function typedProducerVerdicts(
    */
   const hasCallableRecordType = (t: ts.Type): boolean => {
     if ((t.flags & ts.TypeFlags.Any) !== 0) return true;
-    const record = t.getProperty('record');
+    const record = t.getProperty("record");
     return record !== undefined && checker.getTypeOfSymbol(record).getCallSignatures().length > 0;
   };
   const localInitializer = (id: ts.Identifier): ts.Expression | null => {
     let out: ts.Expression | null = null;
     const visit = (n: ts.Node): void => {
-      if (out === null && ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.name.text === id.text
-        && n.initializer !== undefined && n.getSourceFile() === id.getSourceFile()) out = n.initializer;
+      if (out === null && ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.name.text === id.text && n.initializer !== undefined && n.getSourceFile() === id.getSourceFile()) out = n.initializer;
       ts.forEachChild(n, visit);
     };
     visit(id.getSourceFile());
@@ -156,7 +167,10 @@ export function typedProducerVerdicts(
     if (couldBeJournalType(checker.getTypeAtLocation(receiver))) return true;
     let cur: ts.Expression = receiver;
     for (let depth = 0; depth < 8; depth += 1) {
-      if (ts.isParenthesizedExpression(cur)) { cur = cur.expression; continue; }
+      if (ts.isParenthesizedExpression(cur)) {
+        cur = cur.expression;
+        continue;
+      }
       if (ts.isAsExpression(cur) || ts.isTypeAssertionExpression(cur)) {
         if (hasCallableRecordType(checker.getTypeAtLocation(cur))) return true;
         cur = cur.expression;
@@ -178,20 +192,21 @@ export function typedProducerVerdicts(
     const sym = ts.isIdentifier(e) || ts.isPropertyAccessExpression(e) ? checker.getSymbolAtLocation(e) : undefined;
     const decl = sym?.valueDeclaration;
     if (sym !== undefined && decl !== undefined) {
-      const isConst = ts.isVariableDeclaration(decl) && ts.isVariableDeclarationList(decl.parent)
-        && (decl.parent.flags & ts.NodeFlags.Const) !== 0;
+      const isConst = ts.isVariableDeclaration(decl) && ts.isVariableDeclarationList(decl.parent) && (decl.parent.flags & ts.NodeFlags.Const) !== 0;
       if (!isConst) return checker.getTypeOfSymbol(sym);
     }
     return checker.getTypeAtLocation(arg);
   };
-  const siteOf = (sf: ts.SourceFile, n: ts.Node): string =>
-    `${relative(root, sf.fileName)}:${sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1}`;
+  const siteOf = (sf: ts.SourceFile, n: ts.Node): string => `${relative(root, sf.fileName)}:${sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1}`;
 
   const calleeNodes = new Set<ts.Node>();
   const judgeCall = (sf: ts.SourceFile, call: ts.CallExpression): void => {
     const site = siteOf(sf, call);
     const arg = call.arguments[0];
-    if (arg === undefined || ts.isSpreadElement(arg)) { all(`${site} (وسيطُ الصنفِ غائبٌ أو منشور)`, 'possible'); return; }
+    if (arg === undefined || ts.isSpreadElement(arg)) {
+      all(`${site} (وسيطُ الصنفِ غائبٌ أو منشور)`, "possible");
+      return;
+    }
     const kinds = literalsOf(declaredTypeOf(arg));
     for (const [k, v] of out) {
       if (kinds === null) v.possible.push(`${site} (نوعُ الصنفِ غيرُ حرفيّ: ${checker.typeToString(declaredTypeOf(arg))})`);
@@ -205,44 +220,41 @@ export function typedProducerVerdicts(
     const visit = (n: ts.Node): void => {
       if (ts.isCallExpression(n)) {
         const callee = unwrap(n.expression);
-        if (ts.isPropertyAccessExpression(callee) && callee.name.text === 'record') {
+        if (ts.isPropertyAccessExpression(callee) && callee.name.text === "record") {
           calleeNodes.add(callee);
           if (journalLike(callee.expression)) judgeCall(sf, n);
         } else if (ts.isElementAccessExpression(callee)) {
           const key = unwrap(callee.argumentExpression);
           const literal = ts.isStringLiteralLike(key) ? key.text : null;
-          if (literal === 'record' || literal === null) {
+          if (literal === "record" || literal === null) {
             calleeNodes.add(callee);
             if (journalLike(callee.expression)) {
-              if (literal === null) all(`${siteOf(sf, n)} (فهرسٌ محسوبُ المفتاحِ على يوميّة)`, 'possible');
+              if (literal === null) all(`${siteOf(sf, n)} (فهرسٌ محسوبُ المفتاحِ على يوميّة)`, "possible");
               else judgeCall(sf, n);
             }
           }
         }
       }
       // المرجعُ الهارب: `X.record`/`X['record']`/تفكيكُ `{ record }` في غيرِ موضعِ المُستدعى
-      if (ts.isPropertyAccessExpression(n) && n.name.text === 'record' && !calleeNodes.has(n)
-        && !isCalleeOf(n) && journalLike(n.expression)) {
-        all(`${siteOf(sf, n)} (مرجعٌ هاربٌ إلى record: ${n.parent.getText(sf).slice(0, 60)})`, 'possible');
+      if (ts.isPropertyAccessExpression(n) && n.name.text === "record" && !calleeNodes.has(n) && !isCalleeOf(n) && journalLike(n.expression)) {
+        all(`${siteOf(sf, n)} (مرجعٌ هاربٌ إلى record: ${n.parent.getText(sf).slice(0, 60)})`, "possible");
       }
       if (ts.isElementAccessExpression(n) && !calleeNodes.has(n) && !isCalleeOf(n)) {
         const key = unwrap(n.argumentExpression);
         const literal = ts.isStringLiteralLike(key) ? key.text : null;
-        if ((literal === 'record' || literal === null) && journalLike(n.expression)
-          && !ts.isNumericLiteral(key)) {
-          all(`${siteOf(sf, n)} (مرجعٌ هاربٌ بفهرسٍ على يوميّة)`, 'possible');
+        if ((literal === "record" || literal === null) && journalLike(n.expression) && !ts.isNumericLiteral(key)) {
+          all(`${siteOf(sf, n)} (مرجعٌ هاربٌ بفهرسٍ على يوميّة)`, "possible");
         }
       }
       // **الجولةُ التاسعة** (grok `RC07_DYNAMIC_PRODUCERS_UNSEEN`): الشفرةُ المعتمةُ لا يُبرهَنُ عليها نفيٌ
       const opaque = opaqueCodeReason(n, checker, journalLike);
-      if (opaque !== null) all(`${siteOf(sf, n)} (${opaque})`, 'possible');
+      if (opaque !== null) all(`${siteOf(sf, n)} (${opaque})`, "possible");
       if (ts.isObjectBindingPattern(n)) {
-        const hasRecord = n.elements.some((el) => (el.propertyName ?? el.name).getText(sf) === 'record'
-          || el.dotDotDotToken !== undefined);
+        const hasRecord = n.elements.some((el) => (el.propertyName ?? el.name).getText(sf) === "record" || el.dotDotDotToken !== undefined);
         if (hasRecord) {
           const t = checker.getTypeAtLocation(n);
           if (couldBeJournalType(t)) {
-            all(`${siteOf(sf, n)} (تفكيكُ record من يوميّة)`, 'possible');
+            all(`${siteOf(sf, n)} (تفكيكُ record من يوميّة)`, "possible");
           }
         }
       }
@@ -256,9 +268,6 @@ export function typedProducerVerdicts(
 /** هل العقدةُ هي المُستدعى (بعدَ الأغلفة) لنداءٍ؟ */
 function isCalleeOf(n: ts.Expression): boolean {
   let cur: ts.Node = n;
-  while (cur.parent !== undefined && (ts.isParenthesizedExpression(cur.parent) || ts.isAsExpression(cur.parent)
-    || ts.isNonNullExpression(cur.parent) || ts.isSatisfiesExpression(cur.parent)
-    || (ts.isBinaryExpression(cur.parent) && cur.parent.operatorToken.kind === ts.SyntaxKind.CommaToken
-      && cur.parent.right === cur))) cur = cur.parent;
+  while (cur.parent !== undefined && (ts.isParenthesizedExpression(cur.parent) || ts.isAsExpression(cur.parent) || ts.isNonNullExpression(cur.parent) || ts.isSatisfiesExpression(cur.parent) || (ts.isBinaryExpression(cur.parent) && cur.parent.operatorToken.kind === ts.SyntaxKind.CommaToken && cur.parent.right === cur))) cur = cur.parent;
   return cur.parent !== undefined && ts.isCallExpression(cur.parent) && cur.parent.expression === cur;
 }

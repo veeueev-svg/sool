@@ -1,0 +1,50 @@
+ خامُّ قياسِ المعالجةِ الحاديةَ عشرةَ — الجولةُ 11 · علاجُ عيوبِ مجلسِ المراجعةِ السابعةِ (COUNCIL7_W040_UNANIMOUS_REJECTED)
+ التاريخ: 2026-10-23 · المنفّذ: الجلسة 160 (Perplexity Computer) · جريانٌ واحدٌ لا مونتاج
+ التجميد: c048c6e6a72e27a7aee8fe08ff0ee1a8c3fb6582 (تجميدُ الجولةِ السابعةِ) · البوابةُ القديمةُ مبنيةٌ من شجرتِه نفسِها
+ البوابةُ الجديدةُ: dist/scripts/check_rehydrate_census.js من شجرةِ العملِ الحاليةِ (قانونُ الهويةِ الرمزيِّ + أبوابُ الآليةِ)
+
+ ═══ الشاهدُ الأول: الجذورُ السليمة ═══
+ [القديمةُ على التجميدِ النقيّ] EXIT=0 — الحاجزُ أخضرُ (لا انحرافَ مفتعلًا): (بلا رموز)
+ [الجديدةُ على التجميدِ النقيّ] EXIT=0 — الحاجزُ أخضرُ (لا رفضًا كاذبًا): (بلا رموز)
+
+ ═══ الشاهدُ الثاني: المسباراتُ المسمّاةُ في خامِّ الأعضاءِ — قبلُ (البوابةُ القديمةُ) وبعدُ (الجديدةُ) ═══
+ • RC14_REFLECT_GET_STILL_NAME_SHAPED (gpt adv-01 · grok 4.4) Reflect['get'] بالفهرس
+   القديمةُ: EXIT=0 (نجا المسبارُ — العيبُ كما سمّاهُ المجلسُ)
+   الجديدةُ: EXIT=1 (سقط المسبارُ برمزه) RC-14
+ • RC14_REFLECT_GET_STILL_NAME_SHAPED (grok 4.4) const R = Reflect; R.get
+   القديمةُ: EXIT=0 (نجا المسبارُ — العيبُ كما سمّاهُ المجلسُ)
+   الجديدةُ: EXIT=1 (سقط المسبارُ برمزه) RC-14
+ • RC14_REFLECT_GET_STILL_NAME_SHAPED (grok 4.4) globalThis.Reflect.get
+   القديمةُ: EXIT=0 (نجا المسبارُ — العيبُ كما سمّاهُ المجلسُ)
+   الجديدةُ: EXIT=1 (سقط المسبارُ برمزه) RC-14
+ • RC14_DESCRIPTOR_STILL_NAME_SHAPED (gemini) Object['getOwnPropertyDescriptor']
+   القديمةُ: EXIT=0 (نجا المسبارُ — العيبُ كما سمّاهُ المجلسُ)
+   الجديدةُ: EXIT=1 (سقط المسبارُ برمزه) RC-14
+ • RC14_DESCRIPTOR_STILL_NAME_SHAPED (grok 4.5) const O = Object; O.getOwnPropertyDescriptor
+   القديمةُ: EXIT=0 (نجا المسبارُ — العيبُ كما سمّاهُ المجلسُ)
+   الجديدةُ: EXIT=1 (سقط المسبارُ برمزه) RC-14
+ • RC14_GLOBAL_PROPERTY_ACCESS_UNSEEN (gemini) globalThis.globalThis بمفتاح مشتق
+   القديمةُ: EXIT=0 (نجا المسبارُ — العيبُ كما سمّاهُ المجلسُ)
+   الجديدةُ: EXIT=1 (سقط المسبارُ برمزه) RC-14
+ • RC14_REQUIRE_ALIAS_GREENS (grok 4.6) const req = require; req('node:vm')
+   القديمةُ: EXIT=0 (نجا المسبارُ — العيبُ كما سمّاهُ المجلسُ)
+   الجديدةُ: EXIT=1 (سقط المسبارُ برمزه) RC-14
+ • RC14_CTOR_KEY_VIA_CONST_BINDING_GREENS (grok 4.7) const k = 'constr'+'uctor'
+   القديمةُ: EXIT=0 (نجا المسبارُ — العيبُ كما سمّاهُ المجلسُ)
+   الجديدةُ: EXIT=1 (سقط المسبارُ برمزه) RC-14
+ • RC14_CROSS_MODULE_GLOBAL_ALIAS_GREENS (grok 4.8) وحدة global_alias.ts
+   القديمةُ: EXIT=0 (نجا المسبارُ — العيبُ كما سمّاهُ المجلسُ)
+   الجديدةُ: EXIT=1 (سقط المسبارُ برمزه) RC-14
+ • RC07_ALIASED_EXPORT_CHOKEPOINT_GREENS (grok 4.1) notBarrier as assertRehydrateCensus
+   القديمةُ: EXIT=0 (نجا المسبارُ — العيبُ كما سمّاهُ المجلسُ)
+   الجديدةُ: EXIT=1 (سقط المسبارُ برمزه) RC-07
+ • RC07_SPECIFIER_SUFFIX_NOT_RESOLVED_MODULE (grok 4.2) src/vendor/data/rehydrate_census.ts
+   القديمةُ: EXIT=0 (نجا المسبارُ — العيبُ كما سمّاهُ المجلسُ)
+   الجديدةُ: EXIT=1 (سقط المسبارُ برمزه) RC-07
+
+ الحاصلُ: القديمةُ أخضرت كلَّ الناجينِ المسماةِ (نعم) والجديدةُ أسقطتها كلَّها برموزها (نعم).
+
+ ═══ الشاهدُ الثالث: الوجوهُ الحيّةُ على البوابةِ الجديدةِ (لا رفضًا كاذبًا) ═══
+ • RC07_RENAME_OF_REAL_EXPORT_FALSE_REJECT — as checkCensus: EXIT=0 (أخضرُ — الرفضُ الكاذبُ عولج)
+ • وصولُ النطاقِ census.assertRehydrateCensus: EXIT=0 (أخضرُ)
+
