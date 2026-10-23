@@ -1,0 +1,141 @@
+{
+ "item": "W-2026-040",
+ "commit": "c048c6e6a72e27a7aee8fe08ff0ee1a8c3fb6582",
+ "scope_digest": "6b916cd175e2f448eef6e3f8971c99f2920ed9213a19bd503fdb5d8f226cd0b5",
+ "executor_family": "GLM",
+ "convened_at": "2026-10-23",
+ "session": 7,
+ "commissioning": "النصُّ المأذونُ به الملتزمُ كاملًا في عقدِ W-2026-066 §13.156 قبلَ التشغيل (قالبُ الجولةِ السادسةِ المأذونُ بتحديثِ معاملاتِ الجولةِ — الأمرُ التشغيليُّ الدائم) · التشغيلُ المتتابعُ لا المتزامنُ (gpt ثمّ grok ثمّ gemini) · الحزمةُ أُعيد تجهيزُها في بيئةِ الجلسةِ 159 معلنةً §13.158 (بصمةُ مانيفستٍ جديدةٍ c176fb55… لا انتحالَ) ومنشورةٌ مقيسةً في الجذورِ الثلاثةِ قبلَ التكليفِ (مانيفست 69/69 ×3 · لا فرق) · الأوامرُ العشرونَ قيست على التجميدِ في بيئةِ الجلسةِ قبلَ التكليف (npm test 2491/2491 · verify EXIT=0 · check:work EXIT=0)",
+ "verdicts": [
+  {
+   "member": "gpt",
+   "model": "GPT 5.6 Terra",
+   "runtime_id": "gpt_5_6_terra",
+   "agent_run": "council_round_7_gpt_w_2026_040_mvkb9fcq",
+   "verdict": "REJECTED",
+   "report": "docs/work/council/W-2026-040-7-gpt.md",
+   "report_sha256": "4f6a50b03aa21b3631d05eb8467a7f3ef7ba4fa88b034976c0e3a27f7983d1a1"
+  },
+  {
+   "member": "grok",
+   "model": "Grok 4.7",
+   "runtime_id": "grok_4_7",
+   "agent_run": "council_round_7_grok_w_2026_040_mvkect4r",
+   "verdict": "REJECTED",
+   "report": "docs/work/council/W-2026-040-7-grok.md",
+   "report_sha256": "2c59ed0a66945c3c3a3b1d9402ff41e9f354625d6cd72ab1f0edd8de33e81d8a"
+  },
+  {
+   "member": "gemini",
+   "model": "Gemini 3.8 Flash",
+   "runtime_id": "gemini_3_8_flash",
+   "agent_run": "council_round_7_gemini_w_2026_040_mvkhepop",
+   "verdict": "REJECTED",
+   "report": "docs/work/council/W-2026-040-7-gemini.md",
+   "report_sha256": "777db13280ef866df41a087022917c6c3a04e02b5d0fc393587480531410a080"
+  }
+ ],
+ "decision": "NOT_VERIFIED",
+ "disposition": {
+  "kind": "IN_PROGRESS"
+ },
+ "defects": [
+  {
+   "name": "OPAQUE_ABSENCE_STILL_CLOSED_FORM_LIST",
+   "confirmed_by": [
+    "gpt",
+    "grok",
+    "gemini"
+   ],
+   "summary": "الجذرُ المسمّى المعلنُ غيرَ المعالَجِ منذُ الجولةِ السادسةِ: الأعضاءُ الثلاثةُ حكموا بالإجماعِ أنّ تصنيفَهُ «تغييرَ سياسةِ حاجزٍ يُرفعُ للمالكِ لا علاجَ عيبٍ» غيرُ مقبولٍ بمعيارِ العقدِ §4 («الإعفاءُ لا يكونُ بابًا: صنفٌ معفًى بحجّةِ لا منتجَ له يسقطُ برمزٍ مسمًّى إن ظهرَ له منتجٌ في src/**») — الصدقُ في الإعلانِ ليسَ استيفاءً للمعيار · وكلٌّ منهم قاسَ بنفسِهِ صيغًا قانونيةً تُنتِجُ archive_snapshot في src/** والبوابةُ (سطرُ الدمجِ) تخرجُ 0 — فالنفيُ قائمةُ أشكالٍ ممدودةٌ لا برهانَ غيابٍ إيجابيًّا (RULE-001: المجهولُ لا يؤيّدُ الإعفاءَ) · العلاجُ المطلوبُ علاجُ جذرٍ: برهانُ غيابِ منتجٍ للصنفِ المعفى يقيسُ على بوابةِ الدمجِ لا توسيعُ قائمةِ الأشكالِ (دَينُ الجولاتِ السبعِ: كلُّ جولةٍ تسمّي صيغةً فيوسّعُ المنفّذُ القائمةَ — نمطُ «مطاردةِ الصيغ» شهدَ عليهِ الأعضاءُ)"
+  },
+  {
+   "name": "RC14_REFLECT_GET_STILL_NAME_SHAPED",
+   "confirmed_by": [
+    "gpt",
+    "grok",
+    "gemini"
+   ],
+   "summary": "فحصُ Reflect.get في scripts/rehydrate_opaque_code.ts ما زالَ يطابقُ الاسمَ المنقّطَ حرفيًّا لا الآليةَ: Reflect['get'] بفهرسةِ الأقواسِ (ElementAccessExpression) · const r = Reflect; r.get(...) · globalThis.Reflect.get(...) — قيسَت خضراءَ على البوابةِ وتكتبُ القيدَ المعفى · وObject وReflect لم يُضيفا إلى GLOBAL_OBJECTS ولم تُستدعَ isGlobalObjectOrAlias عليهما قط"
+  },
+  {
+   "name": "RC14_DESCRIPTOR_STILL_NAME_SHAPED",
+   "confirmed_by": [
+    "grok",
+    "gemini"
+   ],
+   "summary": "فحصُ Object.getOwnPropertyDescriptor كذلكَ اسمٌ منقّطٌ: Object['getOwnPropertyDescriptor'] بالأقواسِ · const o = Object; o.getOwnPropertyDescriptor(...) — قيسَتا خضراوينِ وتكتبانِ القيدَ المعفى"
+  },
+  {
+   "name": "RC14_GLOBAL_PROPERTY_ACCESS_UNSEEN",
+   "confirmed_by": [
+    "gemini"
+   ],
+   "summary": "سلسلةُ الوصولِ globalThis.globalThis بمفتاحٍ مشتقٍ (String.fromCharCode) تخضرُّ وتكتبُ القيدَ: isGlobalObjectOrAlias تعيدُ false فورًا عندَ أولِ PropertyAccessExpression · foldStringLiteral لا يطوي الدوالَ المشتقةَ"
+  },
+  {
+   "name": "RC14_REQUIRE_ALIAS_GREENS",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "const req = require; req('node:vm').runInThisContext(...) في src/data/persistence.ts: البوابةُ EXIT=0 وتكتبُ القيدَ (via require-alias) — الوصولُ إلى الوحدةِ المعتمةِ مستعارًا يخضرُّ بعدَ إغلاقِ import('node:vm') الحرفيِّ"
+  },
+  {
+   "name": "RC14_CTOR_KEY_VIA_CONST_BINDING_GREENS",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "الحدُّ المعلنُ («المفتاحُ عبرَ ربطٍ يبقى مجهولًا») بابٌ مفتوحٌ: const k = 'constr' + 'uctor'; box[k](...) — البوابةُ EXIT=0 وتكتبُ (via constKey) · الحرفُ المطويُّ ['constr'+'uctor'] يسقطُ والربطُ الواحدُ لا يُطوى"
+  },
+  {
+   "name": "RC14_CROSS_MODULE_GLOBAL_ALIAS_GREENS",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "الحدُّ المعلنُ («لا تتبّعَ بينَ الوحدات») بابٌ مفتوحٌ: src/data/global_alias.ts يصدّرُ const g = globalThis ويستوردُه persistence.ts ويفهرسُ g[k] بمفتاحٍ غيرِ مطويٍّ — البوابةُ EXIT=0 وتكتبُ القيدَ · الاستعارةُ المحليةُ بالمفتاحِ غيرِ المطويِّ تسقطُ (الآلةُ تعرفُ الحلَّ المحليَّ) فالعبورُ للوحدةِ هو الثغرةُ"
+  },
+  {
+   "name": "RC07_ALIASED_EXPORT_CHOKEPOINT_GREENS",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "الهويةُ بعدَ تصويبِ c048c6e ما زالت نصَ اسمٍ ولاحقةَ مسارٍ لا الرمزَ المصدَّرَ: كنيةُ مصدَّرٍ لا يرمي (notBarrier/notHold) إلى أسماءِ assertRehydrateCensus/assertExemptionsHold من ./data/rehydrate_census تُبقي نداءَ الإقلاعِ وread() وتكذيبَ الإعفاءِ مربوطةً بدوالَّ لا ترمي — البوابةُ EXIT=0 وtsc EXIT=0 · importModuleOfWinner لا يسألُ عن propertyName"
+  },
+  {
+   "name": "RC07_SPECIFIER_SUFFIX_NOT_RESOLVED_MODULE",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "شرطُ /data\\/rehydrate_census$/ لاحقةُ نصٍّ لا وحدةٌ محلولةٌ: استيرادٌ من src/vendor/data/rehydrate_census.ts يصدّرُ دالةً فارغةً — البوابةُ EXIT=0 · فالشرطُ ليسَ «وحدةَ الحصرِ نفسَها» كما يقولُ العقدُ §2-ل"
+  },
+  {
+   "name": "RC07_RENAME_OF_REAL_EXPORT_FALSE_REJECT",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "وجهُ رفضٍ كاذبٍ جديدٌ: تسميةُ الاستيرادِ الحقيقيِّ باسمٍ أوضحَ (import { assertRehydrateCensus as checkCensus }) يُرفضُ [RC-07] لأنَّ الفحصَ يشترطُ نصَّ المعرّفِ قبلَ السؤالِ عن عقدةِ التعريفِ — مَن سمّى الاستيرادَ باسمٍ أوضحَ يُرفضُ ومَن كنّى مصدَّرًا آخرَ بالاسمِ المطلوبِ يُقبَل (قرينُ العيبِ السابقِ)"
+  },
+  {
+   "name": "FACE_COUNT_INCONSISTENT_9_VS_11",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "توثيقٌ غيرُ متّسقٍ مسمّىٌ لا يُعلَّقُ الرفضُ عليهِ وحدَه (كما أعلنَ صاحبُهُ): عقدُ البندِ §2-ل يقولُ «9 وجوهٍ سالبة» وتقريرُ المعالجةِ العاشرةِ يقولُ «أحدَ عشرَ» في موضعٍ و«9» في آخرَ — مصفوفةُ NEGATIVE في tests/data/rehydrate_census_mutations_r10.test.ts طولُها 11 والقياسُ يطابقُ 11+4+تسمية · درسُ PREVIOUS_MUTATION_COUNT_INFLATED قائمٌ (تُصلَّحُ في علاجِ الجولةِ السابعةِ)"
+  }
+ ],
+ "closed_previous_defects": [
+  {
+   "name": "RC07_DO_WHILE_BODY_FALSE_REJECT",
+   "closed_by": [
+    "gpt",
+    "grok",
+    "gemini"
+   ],
+   "summary": "الرفضُ الكاذبُ المسمّى منَ الجولةِ السادسةِ قيسَ مغلقًا عندَ الأعضاءِ الثلاثةِ: جسمُ do…while يُنفَّذُ قبلَ شرطِهِ فالوجهُ الحيُّ مقبولٌ ولا رفضَ كاذبًا"
+  },
+  {
+   "name": "RC07_COUNTERFEIT_COMPUTED_CALLEE_GREENS",
+   "closed_by_literal": "سقطَ حرفُهُ عندَ الثلاثةِ لكنَّ صنفَهُ عادَ بصيغةٍ جديدةٍ (RC07_ALIASED_EXPORT_CHOKEPOINT_GREENS · RC07_SPECIFIER_SUFFIX_NOT_RESOLVED_MODULE) — أُغلقَ الحرفُ وبقيَ الصنفُ"
+  }
+ ]
+}
