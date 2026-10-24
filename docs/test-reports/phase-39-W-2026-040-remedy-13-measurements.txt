@@ -1,0 +1,86 @@
+خامُّ قياساتِ المعالجةِ الثالثةَ عشرةَ — W-2026-040 (الجلسة 163 · 2026-10-24)
+العيوبُ الخمسةُ الباقيةُ من مجلسِ الجولةِ الثامنةِ (W-2026-040-8 · خامُّ grok §4.2/§4.4/§5 بحروفِهِ):
+  RC14_CALL_APPLY_TRAMPOLINE_ESCAPE_GREENS · RC14_TYPE_LAUNDERING_GREENS ·
+  RC14_ANY_CALL_NO_JOURNAL_ARG_GREENS · RC14_FALSE_REJECTS_CONSTRUCTOR_AND_SAFE_INDEX ·
+  DECLARED_ANY_LIMIT_MISDIAGNOSED_ARRAY_ISARRAY
+الآليةُ: تدفّقُ أصلِ القيمةِ — scripts/rehydrate_value_origin.ts (وحدةٌ جديدة) + إعادةُ بناءِ أبوابِ
+  scripts/rehydrate_opaque_code.ts على الأصلِ (البابُ (و) الجديدُ · (ج) بالأصلِ لا بالنوعِ · حرسُ
+  الأسماءِ نوعيٌّ لا اسميًّا) + فكُّ وسيطاتِ الترامبولينِ في البابِ الأولِ.
+الآلة: node v20.20.2 · npm v10.8.2 · القياسُ في بيئةِ الجلسةِ 163 (الشجرةُ عندَ d20bf03 قبلَ الالتزامِ)
+
+منهجُ القياسِ (جريانٌ واحدٌ · مسابرُ الجولةِ الثامنةِ بحروفِها كما في ملفِّ التطفيرِ
+tests/data/rehydrate_census_mutations_r12.test.ts): لكلِّ وجهٍ يُبنى جذرُ بوابةٍ منسوخٌ
+(config/ · src/ · scripts/) ويُلحَقُ الوجهُ بـsrc/data/persistence.ts ثمّ تُشغَّلُ البوابةُ
+(node dist/scripts/check_rehydrate_census.js) — قبلَ المعالجةِ بالبوابةِ المبنيةِ من d20bf03
+كما هو · وبعدَها بالبوابةِ المعالَجةِ. الوجهانِ الحيّانِ (F1/F2) يقيسانِ الرفضَ الكاذبَ.
+
+=== المرحلة 1: القياسُ قبلَ المعالجةِ (البوابةُ من d20bf03 كما هي — العيبُ كما سمّاهُ المجلسُ) ===
+P1  Reflect.apply(eval, globalThis, ['…']): exit=0  (النجاةُ — العيبُ)
+P2  eval.call(globalThis, '…'): exit=0  (النجاةُ — العيبُ)
+P3  eval.apply(globalThis, ['…']): exit=0  (النجاةُ — العيبُ)
+P4  const run: (code: string) => unknown = eval; run('…'): exit=0  (النجاةُ — العيبُ)
+P5  globalThis as unknown as Record<…> ثمّ box[k] بمفتاحٍ غيرِ مطويٍّ: exit=0  (النجاةُ — العيبُ)
+P6  Reflect.get as T ثمّ النداءُ: exit=0  (النجاةُ — العيبُ)
+P7  Reflect.apply(Function, undefined, ['j', '…']) as T ثمّ النداءُ: exit=0  (النجاةُ — العيبُ)
+P8  const load: (id) => {runInThisContext} = require; load('node:vm')…: exit=0  (النجاةُ — العيبُ)
+P9  const evil: any = eval; evil('…'): exit=0  (النجاةُ — العيبُ)
+P10 const evil: any = { run: eval }; evil.run('…'): exit=0  (النجاةُ — العيبُ)
+P11 const box: any = { run: () => void 0 }; box.run = eval; box.run('…'): exit=0  (النجاةُ — العيبُ)
+P12 export function viaParam(f: any, code: string) { f(code); }: exit=0  (النجاةُ — العيبُ)
+F1  const date = new Date(); if (date.constructor === Date) { void j; }: exit=1  [RC-14] (الرفضُ الكاذبُ)
+F2  const q = globalThis['queueMicrotask']; q((): void => { void j; }): exit=1  [RC-14] (الرفضُ الكاذبُ)
+الشجرةُ الحيّةُ بلا تطفيرٍ: exit=0
+=== نهايةِ المرحلةِ 1 ===
+
+=== المرحلة 2: القياسُ بعدَ المعالجةِ (تدفّقُ الأصلِ — البوابةُ نفسُها مُعالَجةً) ===
+P1:  exit=1  [RC-14] (وصولٌ أصلهُ تنفيذٌ ديناميكيّ («require»… — بابُ Reflect.apply))
+P2:  exit=1  [RC-14]
+P3:  exit=1  [RC-14]
+P4:  exit=1  [RC-14]
+P5:  exit=1  [RC-14] (وصولٌ معتمُ الأصلِ — فهرسةٌ غيرُ مطويةٍ على الكائنِ العالميّ)
+P6:  exit=1  [RC-14]
+P7:  exit=1  [RC-14]
+P8:  exit=1  [RC-14]
+P9:  exit=1  [RC-14]
+P10: exit=1  [RC-14]
+P11: exit=1  [RC-14]
+P12: exit=1  [RC-14] (نداءٌ مباشرٌ على قيمةٍ غيرِ مبرهَنِ الأصلِ — معاملٌ بلا نوعٍ مبرهَنٍ)
+F1:  exit=0  (الرفضُ الكاذبُ عولجَ — منشئُ قيمةٍ معروفةِ النوعِ غيرِ دالّيّةٍ صنفُها البريء)
+F2:  exit=0  (الرفضُ الكاذبُ عولجَ — مفتاحٌ مطويٌّ معروفُ النوعِ على الكائنِ العالميّ)
+الشجرةُ الحيّةُ بلا تطفيرٍ: exit=0 (لا رفضًا كاذبًا — منها المواقعُ الستُّ ذاتُ المعاملاتِ
+  any ذاتِ الجذورِ البياناتِ: وصولُ خاصّيّةٍ على أصلٍ بياناتٍ يُخضَرّ)
+=== نهايةِ المرحلةِ 2 ===
+
+=== تطفيرُ ملفِّ الجولةِ الثانيةَ عشرةَ (node --test dist/tests/data/rehydrate_census_mutations_r12.test.js) ===
+# tests 2 · # pass 2 · # fail 0 (12 وجهًا سالبًا · 6 وجوهٍ حيّةً)
+
+=== اختبارُ الانحدارِ — ملفُّ الجولةِ الحاديةَ عشرةَ (node --test dist/tests/data/rehydrate_census_mutations_r11.test.js) ===
+# tests 2 · # pass 2 · # fail 0 (15 سالبًا · 6 حيّةً — بلا تعديلِ وجهٍ قائم)
+
+=== الجولةُ الأولى منَ الاختبارِ الكاملِ (اكتشافُ رفضٍ كاذبٍ — لا يُخفى) ===
+npm test (قبلَ التصويبِ): # tests 2495 · # pass 2494 · # fail 1 · TEST_EXIT=1
+  not ok 429 - الحاجزُ الساكن: الوجوهُ الحيّةُ لا تُرفض — فحاجزٌ يرفضُ الصحيحَ يدفعُ إلى التزوير
+  (وجهُ الجولةِ الخامسةِ: نداءٌ خادعٌ لرمزٍ غيرِ محلولٍ `rehydrateProbeBypass()` تحتَ شرطِ
+  الحاجزِ نفسِهِ — رفضهُ مُعرّفُ الأصلِ الجديدُ كمعتمٍ «رمزٌ غيرُ محلولٍ»)
+التصويبُ (rehydrate_value_origin.ts · identOrigin): الرمزُ غيرُ المحلولِ لا يدخلُ برنامجًا
+  مترجَمًا (فشلُ tsc «Cannot find name») فلا يكونُ وجهَ إنتاجٍ قابلاً للحياةِ — يُخضَرّ.
+  وأُضيفَ الوجهُ الحيُّ السادسُ إلى r12 يقفلُ هذا الحدَّ (بلا تغييرٍ في عددِ كتلِ الاختبارِ — الوجهُ داخلَ كتلةٍ قائمة).
+
+=== إعادةُ القياسِ بعدَ التصويبِ ===
+r12: # tests 2 · # pass 2 · # fail 0 (12 سالبًا · 6 حيّةً)
+r11: # tests 2 · # pass 2 · # fail 0 (بلا انحدارٍ)
+r5:  # tests 2 · # pass 2 · # fail 0 (الوجهُ المكتشَفُ عادَ أخضرَ)
+
+=== npm test (جريانٌ نظيفٌ واحدٌ على الشجرةِ المعالَجةِ بعدَ التصويبِ) ===
+# tests 2495
+# suites 0
+# pass 2495
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1693243.672987
+NPMTEST_EXIT=0
+(الجريانُ الثاني بعدَ التصويبِ — الأول فشلَ في وجهِ الجولةِ الخامسةِ كما قُيّدَ أعلاه)
+(الأمرُ: npm test > /tmp/sool_test_r12b.log 2>&1 · node v20.20.2 · 2026-10-24 · بيئةُ الجلسةِ 163)
+(جولةُ npm run verify الكاملةُ على الشجرةِ النهائيةِ: EXIT=0 — build · الاختبارُ الكاملُ 2495/2495 · سلسلةُ التدقيقِ · check:size · check:criteria · check:paths · check:declaration · check:readers · check:numbers · check:closed-enums · check:boot-work · check:confinement · check:rehydrate-census · check:ci-gates · check:work كلُّها خضراءُ · الأمرُ: npm run verify · الخامُّ /tmp/sool_verify_r12b.log في بيئةِ الجلسةِ 163)

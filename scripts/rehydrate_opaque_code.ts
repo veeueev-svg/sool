@@ -35,16 +35,43 @@
  *
  * **حدٌّ معلَنٌ (قياسُ الجولةِ الحاديةَ عشرةَ):** نداءٌ على مستدعًى `any` بلا وسيطِ يوميّةٍ لا
  * يُعلَمُ مصدرُه من أبوابِ الجلبِ (ب/ج/د) لا يُقاسُ هنا — ووراءَه الحارسُ التشغيليُّ
- * (`assertExemptionsHold` عندَ قراءةِ اليوميّةِ يُكذِّبُ الإعفاءَ إن كُتبَ الصنفُ). والمواقعُ
- * الحيّةُ الستُّ (استدعاءاتُ بياناتٍ على قيمٍ `any`: `startsWith`/`trim`/`act`/`verify` في
- * `src/scale/population.ts` و`src/governance/ministries.ts` و`src/staging/{runbook_runner,manifest}.ts`)
- * دَينٌ معلَنٌ بندًا مستقلًّا (تلوينُها خارجَ نطاقِ هذا البند) — لا استثناءً صامتًا.
+ * (`assertExemptionsHold` عندَ قراءةِ اليوميّةِ يُكذِّبُ الإعفاءَ إن كُتبَ الصنفُ).
+ *
+ * ## إلحاقٌ مؤرَّخٌ (2026-10-24 · المعالجةُ الثالثةَ عشرةَ · عيوبُ الجولةِ الثامنةِ الباقية)
+ *
+ * حكمَ المجلسُ بالإجماعِ أنّ البوابةَ كانت تقيسُ **موقعَ النداءِ** لا **مصدرَ القيمةِ** — فعبرتْ
+ * رموزُ التنفيذِ الترامبولينَ (`f.call`/`f.apply`/`Reflect.apply`) وربطَ الأنواعِ (`const run:
+ * (code) => unknown = eval`) وتغسيلَ `any`، ورفضتْ رفضًا كاذبًا `date.constructor` والفهرسةَ
+ * الآمنةَ على الكائنِ العالميّ. فصارَ القياسُ **تدفّقًا لأصلِ القيمةِ** في الوحدةِ الجديدةِ
+ * `scripts/rehydrate_value_origin.ts` (الأصلُ يتبعُ الإسنادَ لا الاسمَ ولا النوعَ المعلَنَ):
+ *
+ *   - **(و) بابُ الأصلِ:** كلُّ نداءٍ مستدعاهُ — أو ترامبولينُه — أصلهُ تنفيذٌ ديناميكيّ يُسقط،
+ *     وكلُّ وصولٍ بالخاصّيّةِ أو الفهرسِ على قيمةٍ أصلُها تنفيذٌ أو على الكائنِ العالميّ بمفتاحٍ
+ *     غيرِ مطويٍّ يُسقط. ووسيطاتُ الترامبولينِ تُفكُّ قبلَ البابِ الأولِ (وسيطُ `call` يُزاحُ ·
+ *     مصفوفةُ `apply` تُفكُّ عنصرًا عنصرًا).
+ *   - **(ج) الكائنُ العالميّ:** يُقاسُ **بالأصلِ** لا بنوعِ المستقبِلِ — فالتغسيلُ بالتحويلِ
+ *     (`globalThis as unknown as …`) لا يُخفي البابَ، والمفتاحُ المطويُّ المعروفُ النوعَ
+ *     (`queueMicrotask`) يُخضَرّ، ومفاتيحُ التنفيذِ (`eval`/`Function`/`constructor`/`require`)
+ *     تُسقط، وسلسلةُ `globalThis.globalThis` تُرى أصلًا واحدًا.
+ *   - **حرسُ الأسماءِ صار نوعيًّا لا اسميًّا:** وصولٌ باسمِ `constructor`/`eval`/`Function` يُسقط
+ *     إن كانَ نوعُ الوصولِ `Function`/`FunctionConstructor` أو مجهولًا (`any`) — ويُخضَرّ إن كانَ
+ *     نوعُه معروفًا بريئًا (`date.constructor` نوعُه `DateConstructor` — الرفضُ الكاذبُ المسمّى
+ *     في محضرِ الجولةِ الثامنةِ عولجَ هنا).
+ *
+ * **تصويبٌ مؤرَّخٌ (2026-10-24):** المواقعُ الحيّةُ الستُّ المذكورةٌ في ترويسةِ المعالجةِ الحاديةَ
+ * عشرةَ وُصفتْ بأنّها «استدعاءاتُ بياناتٍ على قيمٍ any» — والقياسُ الكاملُ يقولُ إنّها **وصولُ
+ * خاصّيّةٍ على معاملاتِ `any` جذورُها بياناتٌ**: تضييقُ `Array.isArray` في ردّاتِ `some`/`filter`
+ * (population.ts · ministries.ts) ومعاملاتُ خطواتِ `any` في runbook/manifest — لا استدعاءٌ مباشرٌ
+ * على قيمةٍ مجهولةِ المصدر. وبابُ الأصلِ الجديدُ يقيسُها فتُخضَرّ (أصلُ الأساسِ بياناتٌ معروفةُ
+ * النوعِ) — فلا تبقى دَينًا معلَنًا بلا قياسٍ، وحدُّ التدفقِ البينيّ عبرَ المعاملاتِ يبقى مفتوحًا
+ * بندًا مستقلًا كما هو.
  *
  * ## البابُ الأول (كما هو منذ الجولة التاسعة) — تسرّبُ اليوميّةِ إلى مُستدعًى لا يُرى جسمُه
  * نداءٌ يمرّرُ يوميّةً وسيطًا إلى مُستدعًى نوعُه `any`/`unknown`/`Function`/`FunctionConstructor`
  * — جسمُه لا يُرى فلا يُبرهَنُ الغياب. (لا يُحذف بإلحاقِ الجولةِ الحاديةَ عشرةَ؛ قياسُ الجلسةِ أكده.)
  */
 import ts from "typescript";
+import { effectiveCallArguments, unwrapFlow, valueOriginOracle } from "./rehydrate_value_origin";
 
 /** لواحقُ الشفرةِ التي ينفّذها Node أو يُحوّلها مُحوِّلٌ — وما ليس `.ts` منها لا يراه البرنامجُ النوعيّ */
 export const CODE_FILE = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
@@ -111,8 +138,21 @@ function globalRequireType(checker: ts.TypeChecker, at: ts.Node): ts.Type | null
  * الذي يقيسُ به نفيُ المنتِجِ المُستقبِلَ (اتجاها الإسناد · `any` · تحويلُ التحويل).
  */
 export function opaqueCodeReason(n: ts.Node, checker: ts.TypeChecker, couldBeJournal: (e: ts.Expression) => boolean): string | null {
-  // البابُ 1 — تسرّبُ اليوميّةِ إلى مُستدعًى لا يُرى جسمُه (باقٍ من الجولة التاسعة)
-  if ((ts.isCallExpression(n) || ts.isNewExpression(n)) && n.expression.kind !== ts.SyntaxKind.ImportKeyword && n.expression.kind !== ts.SyntaxKind.SuperKeyword && (n.arguments ?? []).some((a) => !ts.isSpreadElement(a) && couldBeJournal(a))) {
+  // البابُ 1 — تسرّبُ اليوميّةِ إلى مُستدعًى لا يُرى جسمُه (باقٍ من الجولة التاسعة) —
+  // والوسيطاتُ تُفكُّ منَ الترامبولينِ (المعالجةُ الثالثةَ عشرةَ): وسيطُ call يُزاحُ ومصفوفةُ apply تُفكُّ
+  if (ts.isCallExpression(n) && n.expression.kind !== ts.SyntaxKind.ImportKeyword && n.expression.kind !== ts.SyntaxKind.SuperKeyword) {
+    const args = effectiveCallArguments(n);
+    if (args.some((a) => !ts.isSpreadElement(a) && couldBeJournal(a))) {
+      const callee = unwrap(n.expression);
+      const target = ts.isPropertyAccessExpression(callee) && ["call", "apply", "bind"].includes(callee.name.text) ? callee.expression : n.expression;
+      const t = checker.getTypeAtLocation(target);
+      const name = checker.typeToString(t);
+      if ((t.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) !== 0 || name === "Function" || name === "FunctionConstructor") {
+        return `يوميّةٌ تُمرَّرُ وسيطًا إلى مُستدعًى معتمٍ (${name}) — جسمُه لا يُرى`;
+      }
+    }
+  }
+  if (ts.isNewExpression(n) && (n.arguments ?? []).some((a) => !ts.isSpreadElement(a) && couldBeJournal(a))) {
     const t = checker.getTypeAtLocation(n.expression);
     const name = checker.typeToString(t);
     if ((t.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) !== 0 || name === "Function" || name === "FunctionConstructor") {
@@ -166,30 +206,48 @@ export function opaqueCodeReason(n: ts.Node, checker: ts.TypeChecker, couldBeJou
       }
     }
   }
-  // (ج) الكائنُ العالميّ: فهرسٌ على مستقبلٍ نوعُه typeof globalThis — بالنوعِ لا بالاسمِ
-  if (ts.isElementAccessExpression(n)) {
-    let recv: ts.Expression = n.expression;
-    for (;;) {
-      const u = unwrap(recv);
-      if (u === recv) break;
-      recv = u;
+  // (و) بابُ الأصلِ (المعالجةُ الثالثةَ عشرةَ): مستدعًى — أو ترامبولينُه — أصلهُ تنفيذٌ ديناميكيّ
+  if (ts.isCallExpression(n) && n.expression.kind !== ts.SyntaxKind.ImportKeyword && n.expression.kind !== ts.SyntaxKind.SuperKeyword) {
+    const oracle = valueOriginOracle(n.getSourceFile(), checker);
+    const callee = unwrapFlow(n.expression);
+    const calleeOrigin = oracle.originOf(n.expression);
+    if (calleeOrigin.kind === "exec") {
+      return `مستدعًى أصلهُ تنفيذٌ ديناميكيّ (${calleeOrigin.why}) — قيمتُهُ جرتْ من رمزِ تنفيذٍ فلا يُبرهَنُ نفيُ المنتِجِ عليه`;
     }
-    if (checker.typeToString(checker.getTypeAtLocation(recv)) === "typeof globalThis") {
-      return "فهرسٌ على الكائنِ العالميِّ (مباشرةً أو مستعارًا أو عابرًا للوحداتِ — يُرى بالنوعِ) — بابُ الوصولِ إلى منشئِ الدالّةِ والمخزونِ لا يُقرأُ ساكنًا";
-    }
-    // حرسٌ زائدٌ (لا برهان): مفاتيحُ أبوابِ النصِّ الحرفيّةُ والمطويّةُ — صيانةُ المستقبلِ المجهولِ النوعِ
-    const key = unwrap(n.argumentExpression);
-    if (ts.isStringLiteralLike(key) && ["constructor", "eval", "Function"].includes(key.text)) {
-      return `فهرسُ «${key.text}» — بابُ منشئِ الدالّةِ من نصّ`;
-    }
-    const folded = foldStringLiteral(key);
-    if (folded !== null && ["constructor", "eval", "Function"].includes(folded)) {
-      return `مفتاحٌ محسوبٌ يطوي إلى «${folded}» — بابُ منشئِ الدالّةِ من نصّ`;
+    // نداءٌ مباشرٌ على معاملٍ مجهولِ المصدرِ (any/unknown) — لا برهانَ على براءةِ أصلِ القيمةِ
+    if (calleeOrigin.kind === "opaque" && ts.isIdentifier(callee)) {
+      return `نداءٌ مباشرٌ على قيمةٍ غيرِ مبرهَنِ الأصلِ (${calleeOrigin.why}) — قد يكونُ رمزَ تنفيذٍ فلا يُبرهَنُ النفي`;
     }
   }
-  // حرسٌ زائدٌ (لا برهان): خاصّيّةُ أبوابِ النصِّ بالاسمِ — صيانةُ المستقبلِ المجهولِ النوعِ
-  if (ts.isPropertyAccessExpression(n) && ["constructor", "eval", "Function"].includes(n.name.text)) {
-    return `خاصّيّةُ «${n.name.text}» — بابُ منشئِ الدالّةِ من نصّ`;
+  // (ج) الكائنُ العالميّ وأبوابُ الأصلِ في الوصولِ — بالأصلِ لا بنوعِ المستقبِلِ (المعالجةُ الثالثةَ عشرةَ)
+  if (ts.isElementAccessExpression(n) || ts.isPropertyAccessExpression(n)) {
+    const oracle = valueOriginOracle(n.getSourceFile(), checker);
+    const o = oracle.originOf(n);
+    if (o.kind === "exec") {
+      return `وصولٌ أصلهُ تنفيذٌ ديناميكيّ (${o.why}) — بابُ منشئِ الدالّةِ والمخزونِ لا يُقرأُ ساكنًا`;
+    }
+    if (o.kind === "opaque") {
+      return `وصولٌ معتمُ الأصلِ (${o.why}) — لا يُبرهَنُ براءةُ المفتاحِ فلا يُقرأُ ساكنًا`;
+    }
+    // حرسٌ زائدٌ (لا برهان): أسماءُ أبوابِ النصِّ — نوعيٌّ لا اسميًّا (عيوبُ الجولةِ الثامنةِ)
+    const key = ts.isPropertyAccessExpression(n) ? n.name.text : foldStringLiteral(n.argumentExpression);
+    if (key !== null && ["constructor", "eval", "Function"].includes(key)) {
+      const t = checker.getTypeAtLocation(n);
+      const name = checker.typeToString(t);
+      const anyish = (t.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) !== 0;
+      if (key === "constructor" && !anyish) {
+        // منشئُ قيمةٍ معروفةِ النوعِ غيرِ دالّيّةٍ هو صنفُها البريء (date.constructor نوعُه Date) —
+        // يُخضَرّ إلا أن تكونَ القيمةُ دالّيّةً (منشئُها Function) أو الوصولُ في موضعِ الاستدعاءِ نفسِه
+        const baseT = checker.getTypeAtLocation(n.expression);
+        const baseCallable = (baseT.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) !== 0 || baseT.getCallSignatures().length > 0 || baseT.getConstructSignatures().length > 0;
+        const isCallee = n.parent !== undefined && ts.isCallExpression(n.parent) && n.parent.expression === n;
+        if (baseCallable || isCallee) {
+          return `خاصّيّةُ «constructor» على قيمةٍ دالّيّةٍ أو في موضعِ استدعاء — بابُ منشئِ الدالّةِ من نصّ`;
+        }
+      } else if (anyish || name === "Function" || name === "FunctionConstructor") {
+        return `خاصّيّةُ «${key}» على قيمةٍ ${name === "Function" || name === "FunctionConstructor" ? name : "غيرِ مبرهَنِ النوع"} — بابُ منشئِ الدالّةِ من نصّ`;
+      }
+    }
   }
   // استيرادُ وحداتِ الشفرةِ الثابتُ — كما هو
   if ((ts.isImportDeclaration(n) || ts.isExportDeclaration(n)) && n.moduleSpecifier !== undefined && ts.isStringLiteralLike(n.moduleSpecifier)) {
@@ -198,3 +256,4 @@ export function opaqueCodeReason(n: ts.Node, checker: ts.TypeChecker, couldBeJou
   }
   return null;
 }
+
