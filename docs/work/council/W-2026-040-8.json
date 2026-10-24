@@ -1,0 +1,110 @@
+{
+ "item": "W-2026-040",
+ "commit": "d34d738bf5a9b4b5d672b7930e6edf87196ac8e3",
+ "scope_digest": "15b72463dcac84dda588c47ae4dd7fbbc732313cf601df7f39e6998b738b6718",
+ "executor_family": "GLM",
+ "convened_at": "2026-10-24",
+ "session": 8,
+ "commissioning": "النصُّ المأذونُ به الملتزمُ كاملًا في عقدِ W-2026-066 §13.162 قبلَ التشغيل (قالبُ الجولةِ السابعةِ المأذونُ بتحديثِ معاملاتِ الجولةِ — الأمرُ التشغيليُّ الدائم) · التشغيلُ المتتابعُ لا المتزامنُ (gpt ثمّ grok ثمّ gemini · معرّفاتُ الوكلاءِ ملتزمةٌ في العقدِ §13.165) · الحزمةُ أُعيد تجهيزُها في بيئةِ الجلسةِ 162 معلنةً §13.164 (بصمةُ مانيفستٍ جديدةٍ 94f6e556… لا انتحالَ) ومنشورةٌ مقيسةً في الجذورِ الثلاثةِ قبلَ التكليف (مانيفست 75/75 ×3 · لا فرق) · الأوامرُ الواحدُ والعشرونَ قيست على التجميدِ في بيئةِ الجلسةِ قبلَ التكليف (npm test 2493/2493 · verify EXIT=0 · check:work EXIT=0) · انحرافانِ إجرائيانِ معلنانِ في الخامِّ (§13.165): تناقضٌ توثيقيٌّ في خامِّ gemini (وثّقَ 98/98 والمقيسُ 75/75 — الخروجُ 0 والبصمةُ مطابقة) ورسالةُ gpt الختاميةُ في القناةِ حجبَها مصنّفُ أمانِ المزوّدِ بعدَ اكتمالِ عملِهِ فخامُّهُ المكتملُ على القرصِ هو المُسلَّم",
+ "verdicts": [
+  {
+   "member": "gpt",
+   "model": "GPT 5.6 Terra",
+   "runtime_id": "gpt_5_6_terra",
+   "agent_run": "council_round_8_gpt_w_2026_040_mvlo2ej0",
+   "verdict": "REJECTED",
+   "report": "docs/work/council/W-2026-040-8-gpt.md",
+   "report_sha256": "1a290e18fe51388e53766d51433a9bc52d74bf30b84ad1c750ed938f1b477f25"
+  },
+  {
+   "member": "grok",
+   "model": "Grok 4.7",
+   "runtime_id": "grok_4_7",
+   "agent_run": "council_round_8_grok_w_2026_040_mvlpoqve",
+   "verdict": "REJECTED",
+   "report": "docs/work/council/W-2026-040-8-grok.md",
+   "report_sha256": "8b09a9bd56a92123aa9c2c79f3c4f4e063bcfe21426b15869f27639c3fba38ea"
+  },
+  {
+   "member": "gemini",
+   "model": "Gemini 3.8 Flash",
+   "runtime_id": "gemini_3_8_flash",
+   "agent_run": "council_round_8_gemini_w_2026_040_mvlsmf6o",
+   "verdict": "REJECTED",
+   "report": "docs/work/council/W-2026-040-8-gemini.md",
+   "report_sha256": "3b993f779835f1614f39edfd374abf3a398d4fcae69c2bd9af5ece028ba2d5f2"
+  }
+ ],
+ "decision": "NOT_VERIFIED",
+ "disposition": {
+  "kind": "IN_PROGRESS"
+ },
+ "defects": [
+  {
+   "name": "RC14_CALL_APPLY_TRAMPOLINE_ESCAPE_GREENS",
+   "confirmed_by": [
+    "gpt",
+    "grok",
+    "gemini"
+   ],
+   "summary": "عبورُ الرموزِ الخطرةِ عبرَ توابعِ المرجعِ القياسيةِ يُخضِرُ البوابةَ: eval.call وeval.apply وReflect.apply(eval, …) وReflect.get.apply(Reflect, …) — التوقيعُ المحلولُ للنداءِ هو call/apply لا الرمزَ المُعبَرُ، والفحصُ لا يسألُ التعبيرَ المستقبِلَ إطلاقًا · قيسَ عندَ الثلاثةِ كلِّهم بمسابرَ مستقلةٍ قابلةٍ لإعادةِ التشغيلِ تكتبُ archive_snapshot في src/** والبوابةُ EXIT=0 (RC14_REFLECT_GET_APPLY_ESCAPE_GREENS عندَ gpt · RC14_EVAL_TRAMPOLINE_GREENS عندَ grok · RC14_EVAL_CALL_AND_APPLY_BYPASS عندَ gemini) — امتدادُ قائمةِ الأشكالِ باسمِ التوقيعِ بدلَ الاسمِ المنقّطِ هو الجذرُ المسمّى OPAQUE_ABSENCE_STILL_CLOSED_FORM_LIST لا علاجُه (دَينُ الجولاتِ الثماني: كلُّ جولةٍ تسمّي صيغةً فيوسّعُ المنفّذُ القائمةَ)"
+  },
+  {
+   "name": "RC14_TYPE_LAUNDERING_GREENS",
+   "confirmed_by": [
+    "grok",
+    "gemini"
+   ],
+   "summary": "غسلُ النوعِ يُخفي الهويةَ قبلَ النداءِ والبوابةُ EXIT=0 وكلُّها يكتبُ الصنفَ المعفى: نسخُ globalThis بـas unknown as Record ثمّ فهرسٌ بمفتاحٍ مشتقٍّ Function (RC14_TYPE_LAUNDERED_GLOBAL_INDEX_GREENS) · التعليقُ النوعيُّ على eval وrequire وReflect.get (RC14_CAST_ERASES_REFLECT_GET_SIGNATURE · RC14_EVAL_TYPED_BINDING_GREENS · RC14_REQUIRE_TYPED_BINDING_GREENS) · Reflect.apply(Function, …) بتحويلِ العائدِ (RC14_REFLECT_APPLY_OF_FUNCTION_GREENS) · Function.bind يُرجعُ any فيسقطُ فحصُ النوعِ عندَ المنشئِ (RC14_FUNCTION_BIND_DYNAMIC_INSTANTIATION_BYPASS عندَ gemini) — الادّعاءُ «الاستعارةُ والعبورُ تُرى كلُّها بالنوع» كاذبٌ على كذبٍ نوعيٍّ: getResolvedSignature يتبعُ التحويلَ لا إعلانَ المكتبة"
+  },
+  {
+   "name": "RC14_ANY_CALL_NO_JOURNAL_ARG_GREENS",
+   "confirmed_by": [
+    "grok",
+    "gemini"
+   ],
+   "summary": "الحدُّ المعلنُ (نداءٌ على مستدعًى any بلا وسيطِ يوميّةٍ لا يُقاس) بابٌ مفتوحٌ: قاسَ grok وgemini أنّ const evil: any = eval; evil('…archive_snapshot…') والنداءَ بالخاصيةِ evil.run(…) يخرجانِ EXIT=0 والتشغيلُ يكتبُ الصنفَ — وكلُّ آليةِ تنفيذٍ ديناميكيةٍ (call/apply/bind) تُرجعُ any فتصيرُ محصّنةً تلقائيًا من الفحصِ الساكنِ · والحارسُ التشغيليُّ المُستشهَدُ به غطاءً لا يُلزِمُ البوابةَ (انظر RC07_CHOKEPOINT_DEAD_GUARD_ACCEPTED) فالحدُّ مرفوضٌ بمعيارِ العقدِ §4 بإجماعِ الرافضَين"
+  },
+  {
+   "name": "RC07_CHOKEPOINT_DEAD_GUARD_ACCEPTED",
+   "confirmed_by": [
+    "grok",
+    "gemini"
+   ],
+   "summary": "حراسةُ نقطةِ الاختناقِ في rehydrate_barrier_binding.ts تجوالٌ نحويٌّ (ts.forEachChild) بلا فحصِ وصولٍ ولا guardsOf ولا isReachable: نداءا assertRehydrateCensus وassertExemptionsHold داخلَ StateJournal.read ونداءُ assertExemptionsHold داخلَ rehydrateFromJournal ملفوفةٌ في if (false) أو إغلاقٍ ميتٍ غيرِ مستدعًى تُحسَبُ حارسةً والبوابةُ EXIT=0 (RC07_CHOKEPOINT_UNSATISFIABLE_DECOY_GREENS عندَ grok · RC07_CHOKEPOINT_UNREACHABLE_BARRIER_ACCEPTED عندَ gemini) · والتشغيلُ شاهدٌ: read() الحيُّ يرمي PERSISTENCE_REHYDRATE_EXEMPTION_CONTRADICTED والميتُ يعيدُ قيدًا صنفُهُ archive_snapshot — خرقٌ صريحٌ لقاعدةِ «لا حرسَ على معدوم» (RULE-001 · «وجودُ الشيءِ في شجرةِ النحوِ لا يقومُ مقامَ تنفيذِه») ومسارُ الإقلاعِ في src/index.ts يعتمدُ على read() حارسًا وحيدًا"
+  },
+  {
+   "name": "RC14_FALSE_REJECTS_CONSTRUCTOR_AND_SAFE_INDEX",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "وجهُ الرفضِ الكاذبِ قائمٌ في الحاجزِ الجديدِ: date.constructor === Date في src/** يُسقط [RC-14] («خاصيّةُ constructor») وglobalThis['queueMicrotask'] يُسقط [RC-14] («فهرسٌ على الكائنِ العالميّ») — الصادقُ يُرفضُ والكاذبُ النوعيُّ والمفتاحُ المشتقُّ يمرّانِ: الحاجزُ أوسعُ منَ الآليةِ وأضيقُ منَ التجاوزِ معًا وهذا يدفعُ إلى التزويرِ (RC14_CONSTRUCTOR_PROPERTY_FALSE_REJECT · RC14_GLOBAL_SAFE_INDEX_FALSE_REJECT عندَ grok)"
+  },
+  {
+   "name": "DECLARED_ANY_LIMIT_MISDIAGNOSED_ARRAY_ISARRAY",
+   "confirmed_by": [
+    "grok"
+   ],
+   "summary": "تشخيصُ المواقعِ الستِّ المعلنةِ (startsWith/trim/act/verify) خاطئٌ: قيسَ grok ببرنامجٍ نوعيٍّ أنّ المواضعَ الستةَ كلَّها بعدَ Array.isArray في الدالةِ نفسِها ومحمّلُ الأنواعِ يضيّقُ إلى any[] فيمحو عنصرَ المصفوفة — ليست «تهيئةً خارجيةً لم تمرَّ بأبوابِ الجلب» كما علّلَ العلاجُ: الحارسُ هو الذي يُنتجُ any لا الجلبُ الخارجيُّ · والاستشهادُ بها لتسويغِ إعفاءِ نداءاتِ any يسوي بينَ startsWith على عنصرٍ موسَّعٍ وبينَ const evil: any = eval"
+  }
+ ],
+ "closed_previous_defects": [
+  {
+   "name": "COUNCIL7_TEN_NAMED_DEFECTS",
+   "closed_by": [
+    "gpt",
+    "grok",
+    "gemini"
+   ],
+   "summary": "عيوبُ الجولةِ السابعةِ العشرةُ المسماةُ سقطت بحروفِها عندَ الأعضاءِ (وجوهُ r11 السالبةُ الأحدَ عشرَ قيست ساقطةً والمفردةُ خضراءَ · gemini: «رغم إغلاقِ العيوبِ العشرةِ بالحروف») — لكنَّ صنفَها (نفيُ المنتِجِ قائمةَ أشكالٍ) عادَ بصيغٍ جديدةٍ غيرِ مسماةٍ في r11: انظر العيوبَ أعلاه (دَينُ الجولاتِ قائمٌ: الحرفُ يُغلقُ والصنفُ يعود)"
+  },
+  {
+   "name": "FACE_COUNT_INCONSISTENT_9_VS_11",
+   "closed_by": [
+    "grok",
+    "gemini"
+   ],
+   "summary": "تصويبُ التوثيقِ قيسَ موجودًا بالإلحاقِ في §2-ن (11 سالبًا + 4 حيّةً في الملفِّ كما يقولُ المستودعُ حرفًا) — لا يُعلَّقُ الرفضُ عليه"
+  }
+ ]
+}
