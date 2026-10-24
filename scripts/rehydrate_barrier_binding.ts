@@ -146,7 +146,8 @@ export function functionBodyOf(sf: ts.SourceFile, owner: string | null, fnName: 
  * تعبيريةٍ) لا يُنفَّذُ إلا بنداءِ تلكَ الدالّةِ لا بجريانِ الجسمِ الحاوي لها فلا يحرسُ الاختناقَ
  * الخارجيَّ · ونداءٌ بعدَ نهايةٍ غيرِ شرطيةٍ (`return`/`throw` مباشرٌ يسبقُهُ في نفسِ الكتلةِ)
  * ميّتٌ في الجريانِ المستقيمِ. **الاستدعاءُ الفوريُّ (IIFE) شفّافٌ:** الدالّةُ الداخليةُ المستدعاةُ فورًا في موضعِها
- * يُنفَّذُ جسمُها في الجريانِ نفسِهِ فلا تُقصي نداءَها — يُصعَدُ المشيُّ من موضعِ الاستدعاءِ لا من حدودِها.
+ * يُنفَّذُ جسمُها في الجريانِ نفسِهِ فلا تُقصي نداءَها — يُصعَدُ المشيُّ من موضعِ الاستدعاءِ لا من حدودِها
+ * (المولّداتُ مستثناةٌ: استدعاؤُها يُنشئُ المُكرِّرَ ولا يُنفّذُ الجسمَ حتى الاستئنافِ).
  * المشيُّ يصعدُ من النداءِ إلى جسمِ الدالّةِ نفسِهِ: أولُ عِلّةٍ ميّتةٍ تُقصي النداءَ · والوصولُ إلى الجسمِ بلا عِلّةٍ = حيٌّ.
  * (الحدُّ المسجَّل: دالّةٌ داخليةٌ معرّفةٌ باسمٍ واستُدعيت لاحقًا (`const f = () => { guard(); }; f();`) لا
  * تُحسَبُ حارسًا — إثباتُ تنفيذِها في الجريانِ تحليلٌ بينيّ خارجُ هذهِ الآليةِ؛ الشجرةُ الحيّةُ لا تستعملُهُ.)
@@ -163,9 +164,12 @@ export function callIsLiveInBody(call: ts.Node, body: ts.Node): boolean {
       ts.isMethodDeclaration(parent) || ts.isConstructorDeclaration(parent) ||
       ts.isGetAccessorDeclaration(parent) || ts.isSetAccessorDeclaration(parent)
     ) {
+      // الاستدعاءُ الفوريُّ يُنفّذُ جسمَ الدالّةِ العاديّةِ في الجريانِ نفسِهِ — إلا المولّداتِ (والمولّداتِ
+      // غيرِ المتزامنةِ): استدعاؤُها يُنشئُ المُكرِّرَ ولا يُنفّذُ الجسمَ حتى الاستئنافِ فلا شفافيةَ لها.
+      const isGenerator = (ts.isFunctionDeclaration(parent) || ts.isFunctionExpression(parent) || ts.isMethodDeclaration(parent)) && parent.asteriskToken !== undefined;
       let host: ts.Node | undefined = parent.parent;
       while (host !== undefined && (ts.isParenthesizedExpression(host) || (ts.isBinaryExpression(host) && host.operatorToken.kind === ts.SyntaxKind.CommaToken))) host = host.parent;
-      if (host !== undefined && ts.isCallExpression(host) && unwrapCallee(host.expression) === parent) {
+      if (!isGenerator && host !== undefined && ts.isCallExpression(host) && unwrapCallee(host.expression) === parent) {
         cur = host;
         continue;
       }

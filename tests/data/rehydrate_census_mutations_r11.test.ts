@@ -30,8 +30,10 @@
  * القياسُ قبل/بعد بنمطِ مسباري gemini (PROBE-04/PROBE-05): قبلُ exit=0 · بعدُ exit=1 برمزِ RC-07.
  *
  * **إلحاقٌ مؤرَّخٌ ثانٍ (2026-10-24 · تتمةُ المعالجةِ الثانيةَ عشرةَ بعدَ ملاحظةِ المراجعِ):** الحارسُ الميّتُ في
- * كتلةٍ فرعيةٍ سابقةٍ (`{ { return; } guard(); }`) عيبٌ باقٍ منَ الجنسِ نفسِهِ لا حدٌّ توثيقيٌّ — عولجَ (قاعدةُ الكتلةِ
- * الفرعيةِ الأختِ ذاتِ النهايةِ غيرِ الشرطيةِ) · والاستدعاءُ الفوريُّ (IIFE) شفّافٌ لا رفضًا كاذبًا (وجهٌ حيٌّ جديدٌ).
+ * كتلةٍ فرعيةٍ أختٍ سابقةٍ (`{ { return; } guard(); }`) عيبٌ باقٍ منَ الجنسِ نفسِهِ لا حدٌّ توثيقيٌّ — عولجَ (قاعدةُ الكتلةِ
+ * الأختِ ذاتِ النهايةِ غيرِ الشرطيةِ — الوجهُ السالبُ بصيغةِ الأختِ لا بصيغةِ العودةِ المباشرةِ التي كانت تُقاسُ قبلًا) ·
+ * والاستدعاءُ الفوريُّ (IIFE) شفّافٌ لا رفضًا كاذبًا (وجهٌ حيٌّ جديدٌ) — **والمولّداتُ مستثناةٌ منَ الشفافيةِ**
+ * (استدعاؤُها يُنشئُ المُكرِّرَ ولا يُنفّذُ الجسمَ حتى الاستئنافِ — وجهٌ سالبٌ جديدٌ).
  *
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * (docs/test-reports/phase-39-W-2026-040-remedy-11.md) وقياساتِهِ الخامّة.
@@ -107,8 +109,10 @@ const NEGATIVE: readonly Face[] = [
     mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', 'if (false) { assertExemptionsHold(entries.map((e) => e.kind)); }'); } },
   { code: 'RC-07', why: "`const dummy = () => { assertExemptionsHold([]); }; void dummy;` — نداءُ الحاجزِ داخلَ دالّةٍ داخليةٍ لا تُنداءُ لا يُنفَّذُ بجريانِ الجسمِ الحاوي فلا يحرسُ الاختناقَ (مسبارُ gemini PROBE-05 · قِيسَ قبلُ ينجو: exit=0)",
     mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', 'const dummy = () => { assertExemptionsHold([]); }; void dummy;'); } },
-  { code: 'RC-07', why: "`{ return; assertExemptionsHold(…); }` — نداءُ الحاجزِ بعدَ نهايةٍ غيرِ شرطيةٍ داخلَ كتلةٍ فرعيةٍ أختٍ سابقةٍ ميّتٌ في الجريانِ المستقيمِ فلا يحرسُ (تتمةُ المعالجةِ بعدَ ملاحظةِ المراجعِ)",
-    mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '{ return; assertExemptionsHold(entries.map((e) => e.kind)); }'); } },
+  { code: 'RC-07', why: "`{ { return; } assertExemptionsHold(…); }` — نداءُ الحاجزِ بعدَ كتلةٍ فرعيةٍ أختٍ سابقةٍ ذاتِ نهايةٍ غيرِ شرطيةٍ ميّتٌ في الجريانِ المستقيمِ فلا يحرسُ (قاعدةُ الكتلةِ الأختِ — قيسَ نجاتُها عندَ bf2fc1b قبلَ التتمةِ)",
+    mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '{ { return; } assertExemptionsHold(entries.map((e) => e.kind)); }'); } },
+  { code: 'RC-07', why: "`(function* () { assertExemptionsHold(…) })();` — استدعاءُ المولّدِ يُنشئُ المُكرِّرَ ولا يُنفّذُ جسمَهُ حتى الاستئنافِ فليسَ حارسًا حيًّا (تتمةُ المعالجةِ بعدَ ملاحظةِ المراجعِ)",
+    mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '(function* () { assertExemptionsHold(entries.map((e) => e.kind)); })();'); } },
 ];
 
 const LIVE: readonly Face[] = [
