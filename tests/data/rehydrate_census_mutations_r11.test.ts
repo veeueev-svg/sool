@@ -29,6 +29,10 @@
  * السالبانِ (الفرعُ الميّتُ · الدالّةُ الداخليةُ الميتةُ) والوجهُ الحيّ (حارسٌ تحتَ شرطٍ حيٍّ لا يُرفَض) —
  * القياسُ قبل/بعد بنمطِ مسباري gemini (PROBE-04/PROBE-05): قبلُ exit=0 · بعدُ exit=1 برمزِ RC-07.
  *
+ * **إلحاقٌ مؤرَّخٌ ثانٍ (2026-10-24 · تتمةُ المعالجةِ الثانيةَ عشرةَ بعدَ ملاحظةِ المراجعِ):** الحارسُ الميّتُ في
+ * كتلةٍ فرعيةٍ سابقةٍ (`{ { return; } guard(); }`) عيبٌ باقٍ منَ الجنسِ نفسِهِ لا حدٌّ توثيقيٌّ — عولجَ (قاعدةُ الكتلةِ
+ * الفرعيةِ الأختِ ذاتِ النهايةِ غيرِ الشرطيةِ) · والاستدعاءُ الفوريُّ (IIFE) شفّافٌ لا رفضًا كاذبًا (وجهٌ حيٌّ جديدٌ).
+ *
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * (docs/test-reports/phase-39-W-2026-040-remedy-11.md) وقياساتِهِ الخامّة.
  */
@@ -103,6 +107,8 @@ const NEGATIVE: readonly Face[] = [
     mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', 'if (false) { assertExemptionsHold(entries.map((e) => e.kind)); }'); } },
   { code: 'RC-07', why: "`const dummy = () => { assertExemptionsHold([]); }; void dummy;` — نداءُ الحاجزِ داخلَ دالّةٍ داخليةٍ لا تُنداءُ لا يُنفَّذُ بجريانِ الجسمِ الحاوي فلا يحرسُ الاختناقَ (مسبارُ gemini PROBE-05 · قِيسَ قبلُ ينجو: exit=0)",
     mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', 'const dummy = () => { assertExemptionsHold([]); }; void dummy;'); } },
+  { code: 'RC-07', why: "`{ return; assertExemptionsHold(…); }` — نداءُ الحاجزِ بعدَ نهايةٍ غيرِ شرطيةٍ داخلَ كتلةٍ فرعيةٍ أختٍ سابقةٍ ميّتٌ في الجريانِ المستقيمِ فلا يحرسُ (تتمةُ المعالجةِ بعدَ ملاحظةِ المراجعِ)",
+    mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '{ return; assertExemptionsHold(entries.map((e) => e.kind)); }'); } },
 ];
 
 const LIVE: readonly Face[] = [
@@ -118,6 +124,8 @@ const LIVE: readonly Face[] = [
     } },
   { code: '', why: "`if (entries.length > 0) { assertExemptionsHold(…) }` — حارسٌ تحتَ شرطٍ حيٍّ غيرِ ثابتِ الكذبِ يُنفَّذُ في جريانِ الجسمِ فلا يُرفَضُ (وجهُ الرفضِ الكاذبِ للمعالجةِ الثانيةَ عشرةَ)",
     mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', 'if (entries.length > 0) { assertExemptionsHold(entries.map((e) => e.kind)); }'); } },
+  { code: '', why: "`(() => { assertExemptionsHold(…) })();` — الاستدعاءُ الفوريُّ (IIFE) يُنفِّذُ جسمَهُ في الجريانِ نفسِهِ فلا يُرفَضُ (وجهُ الرفضِ الكاذبِ لتتمةِ المعالجةِ)",
+    mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '(() => { assertExemptionsHold(entries.map((e) => e.kind)); })();'); } },
   { code: '', why: 'مستدعًى محليٌّ نوعُهُ دالّةٌ مرئيّةُ الجسمِ (`() => void`) — النوعُ يفرّقُهُ عن `Function` المجهولِ الجسمِ',
     mutate: sink('liveR11TypedFn', ["  const f: () => void = () => {}; f(); void j;"]) },
   { code: '', why: 'فهرسٌ حرفيٌّ على كائنٍ محليٍّ محدودِ الأعضاءِ لا على الكائنِ العالميِّ — الأبوابُ تُقاسُ بالنوعِ لا بكلِّ فهرسٍ',

@@ -29,3 +29,17 @@ LIVE_CONTROL unmutated: exit=0
 === npm run verify (جريانٌ نظيفٌ واحدٌ — يشملُ الجولةَ كاملةً وبواباتِ verify الثلاثَ عشرةَ) ===
 VERIFY_EXIT=0 (منها check:work EXIT=0 وcheck:rehydrate-census على الشجرةِ المعالَجةِ)
 (سقطَ جريانُ verify أولٌ سابقٌ عندَ بوابةِ ضبطِ العملِ: مسارُ القياسِ كانَ محجوزًا في WORK_QUEUE وغيرَ مذكورٍ حرفيًّا في العقدِ — صُحّحَ العقدُ بالمسارِ الكاملِ وأُعيدَ الجريانُ؛ سقوطُ البوابةِ شاهدٌ أنّها تعمل)
+
+=== تتمةٌ بعدَ ملاحظةِ المراجعِ: وجوهٌ جديدةٌ وقياسُها الخامُّ (البناءُ من شجرةِ المعالجةِ الممدّدةِ) ===
+INNER_BLOCK_DEAD { return; guard(); }: exit=1
+  RC-07: ✗ [RC-07] نداءُ «assertExemptionsHold» غائبٌ عن دالّةِ الاختناقِ «read» — وجودُهُ في موضعٍ آخرَ من الملفِّ لا يثبتُ حراسةَ نقطةِ الاختناق (RULE-001).
+IIFE_LIVE (() => { guard(); })();: exit=0
+DEAD_BRANCH if(false) [انحدار]: exit=1
+  RC-07: ✗ [RC-07] نداءُ «assertExemptionsHold» غائبٌ عن دالّةِ الاختناقِ «read» — وجودُهُ في موضعٍ آخرَ من الملفِّ لا يثبتُ حراسةَ نقطةِ الاختناق (RULE-001).
+DEAD_CLOSURE uninvoked [انحدار]: exit=1
+  RC-07: ✗ [RC-07] نداءُ «assertExemptionsHold» غائبٌ عن دالّةِ الاختناقِ «read» — وجودُهُ في موضعٍ آخرَ من الملفِّ لا يثبتُ حراسةَ نقطةِ الاختناق (RULE-001).
+LIVE_CONTROL unmutated: exit=0
+(node --test dist/tests/data/rehydrate_census_mutations_r11.test.js): # tests 2 · # pass 2 · # fail 0
+=== npm test + verify على الشجرةِ الممدّدةِ (جريانٌ نظيفٌ واحدٌ) ===
+npm test: # tests 2493 · # pass 2493 · # fail 0 · NPMTEST_EXIT=0
+npm run verify: VERIFY_EXIT=0 (الجولةُ كاملةٌ وبواباتُ verify الثلاثَ عشرةَ منها check:work وcheck:rehydrate-census على الشجرةِ الممدّدةِ)

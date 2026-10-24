@@ -145,10 +145,11 @@ export function functionBodyOf(sf: ts.SourceFile, owner: string | null, fnName: 
  * `&&` الميّتُ · يمينُ `||` المصدَّقُ) ميّتٌ لا يحرسُ · ونداءٌ داخلَ دالّةٍ داخليةٍ (سهميّةٍ أو
  * تعبيريةٍ) لا يُنفَّذُ إلا بنداءِ تلكَ الدالّةِ لا بجريانِ الجسمِ الحاوي لها فلا يحرسُ الاختناقَ
  * الخارجيَّ · ونداءٌ بعدَ نهايةٍ غيرِ شرطيةٍ (`return`/`throw` مباشرٌ يسبقُهُ في نفسِ الكتلةِ)
- * ميّتٌ في الجريانِ المستقيمِ. المشيُّ يصعدُ من النداءِ إلى جسمِ الدالّةِ نفسِهِ: أولُ عِلّةٍ
- * ميّتةٍ تُقصي النداءَ · والوصولُ إلى الجسمِ بلا عِلّةٍ = حيٌّ. (الحدُّ المسجَّل: نهايةٌ غيرُ شرطيةٍ
- * داخلَ كتلةٍ فرعيةٍ سابقةٍ للنداءِ في نفسِ الكتلةِ الأمِّ لا تُدركُها هذهِ الآليةُ — النطاقُ:
- * عِلّةٌ واحدةٌ بينَ النداءِ والجسمِ.)
+ * ميّتٌ في الجريانِ المستقيمِ. **الاستدعاءُ الفوريُّ (IIFE) شفّافٌ:** الدالّةُ الداخليةُ المستدعاةُ فورًا في موضعِها
+ * يُنفَّذُ جسمُها في الجريانِ نفسِهِ فلا تُقصي نداءَها — يُصعَدُ المشيُّ من موضعِ الاستدعاءِ لا من حدودِها.
+ * المشيُّ يصعدُ من النداءِ إلى جسمِ الدالّةِ نفسِهِ: أولُ عِلّةٍ ميّتةٍ تُقصي النداءَ · والوصولُ إلى الجسمِ بلا عِلّةٍ = حيٌّ.
+ * (الحدُّ المسجَّل: دالّةٌ داخليةٌ معرّفةٌ باسمٍ واستُدعيت لاحقًا (`const f = () => { guard(); }; f();`) لا
+ * تُحسَبُ حارسًا — إثباتُ تنفيذِها في الجريانِ تحليلٌ بينيّ خارجُ هذهِ الآليةِ؛ الشجرةُ الحيّةُ لا تستعملُهُ.)
  */
 export function callIsLiveInBody(call: ts.Node, body: ts.Node): boolean {
   let cur: ts.Node = call;
@@ -162,6 +163,12 @@ export function callIsLiveInBody(call: ts.Node, body: ts.Node): boolean {
       ts.isMethodDeclaration(parent) || ts.isConstructorDeclaration(parent) ||
       ts.isGetAccessorDeclaration(parent) || ts.isSetAccessorDeclaration(parent)
     ) {
+      let host: ts.Node | undefined = parent.parent;
+      while (host !== undefined && (ts.isParenthesizedExpression(host) || (ts.isBinaryExpression(host) && host.operatorToken.kind === ts.SyntaxKind.CommaToken))) host = host.parent;
+      if (host !== undefined && ts.isCallExpression(host) && unwrapCallee(host.expression) === parent) {
+        cur = host;
+        continue;
+      }
       return false;
     }
     // شرطٌ ثابتُ الكذبِ يقتلُ فرعَهُ · وشرطٌ ثابتُ الصدقِ يقتلُ فرعَهُ الآخرَ
@@ -183,11 +190,12 @@ export function callIsLiveInBody(call: ts.Node, body: ts.Node): boolean {
       if (parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && definitelyFalsy(parent.left)) return false;
       if (parent.operatorToken.kind === ts.SyntaxKind.BarBarToken && definitelyTruthy(parent.left)) return false;
     }
-    // نهايةٌ غيرُ شرطيةٍ في نفسِ الكتلةِ تسبقُ النداءَ: ما بعدَها ميّتٌ في الجريانِ المستقيمِ
+    // نهايةٌ غيرُ شرطيةٍ في نفسِ الكتلةِ تسبقُ النداءَ (مباشرةً أو في كتلةٍ فرعيةٍ أختٍ): ما بعدَها ميّتٌ في الجريانِ المستقيمِ
     if (ts.isBlock(parent)) {
       for (const s of parent.statements) {
         if (s === cur) break;
         if (ts.isReturnStatement(s) || ts.isThrowStatement(s)) return false;
+        if (ts.isBlock(s) && s.statements.some((x) => ts.isReturnStatement(x) || ts.isThrowStatement(x))) return false;
       }
     }
     cur = parent;
