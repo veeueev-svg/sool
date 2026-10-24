@@ -60,10 +60,9 @@
   {
    "name": "RC14_ANY_CALL_NO_JOURNAL_ARG_GREENS",
    "confirmed_by": [
-    "grok",
-    "gemini"
+    "grok"
    ],
-   "summary": "الحدُّ المعلنُ (نداءٌ على مستدعًى any بلا وسيطِ يوميّةٍ لا يُقاس) بابٌ مفتوحٌ: قاسَ grok وgemini أنّ const evil: any = eval; evil('…archive_snapshot…') والنداءَ بالخاصيةِ evil.run(…) يخرجانِ EXIT=0 والتشغيلُ يكتبُ الصنفَ — وكلُّ آليةِ تنفيذٍ ديناميكيةٍ (call/apply/bind) تُرجعُ any فتصيرُ محصّنةً تلقائيًا من الفحصِ الساكنِ · والحارسُ التشغيليُّ المُستشهَدُ به غطاءً لا يُلزِمُ البوابةَ (انظر RC07_CHOKEPOINT_DEAD_GUARD_ACCEPTED) فالحدُّ مرفوضٌ بمعيارِ العقدِ §4 بإجماعِ الرافضَين"
+   "summary": "الحدُّ المعلنُ (نداءٌ على مستدعًى any بلا وسيطِ يوميّةٍ لا يُقاس) بابٌ مفتوحٌ: قاسَ grok أنّ const evil: any = eval; evil('…archive_snapshot…') والنداءَ بالخاصيةِ evil.run(…) يخرجانِ EXIT=0 والتشغيلُ يكتبُ الصنفَ — وكلُّ آليةِ تنفيذٍ ديناميكيةٍ (call/apply/bind) تُرجعُ any فتصيرُ محصّنةً تلقائيًا من الفحصِ الساكنِ · والحارسُ التشغيليُّ المُستشهَدُ به غطاءً لا يُلزِمُ البوابةَ (انظر RC07_CHOKEPOINT_DEAD_GUARD_ACCEPTED) فالحدُّ مرفوضٌ بمعيارِ العقدِ §4 — قياسُ المسبارِ عندَ grok وحدَهُ (رفضُ gemini للحدِّ استدلالٌ من عيبِ الحارسِ الميتِ الذي قاسَهُ لا مسبارٌ مستقلٌ · تصويبُ إسنادٍ معلنٌ §13.167)"
   },
   {
    "name": "RC07_CHOKEPOINT_DEAD_GUARD_ACCEPTED",
@@ -71,7 +70,7 @@
     "grok",
     "gemini"
    ],
-   "summary": "حراسةُ نقطةِ الاختناقِ في rehydrate_barrier_binding.ts تجوالٌ نحويٌّ (ts.forEachChild) بلا فحصِ وصولٍ ولا guardsOf ولا isReachable: نداءا assertRehydrateCensus وassertExemptionsHold داخلَ StateJournal.read ونداءُ assertExemptionsHold داخلَ rehydrateFromJournal ملفوفةٌ في if (false) أو إغلاقٍ ميتٍ غيرِ مستدعًى تُحسَبُ حارسةً والبوابةُ EXIT=0 (RC07_CHOKEPOINT_UNSATISFIABLE_DECOY_GREENS عندَ grok · RC07_CHOKEPOINT_UNREACHABLE_BARRIER_ACCEPTED عندَ gemini) · والتشغيلُ شاهدٌ: read() الحيُّ يرمي PERSISTENCE_REHYDRATE_EXEMPTION_CONTRADICTED والميتُ يعيدُ قيدًا صنفُهُ archive_snapshot — خرقٌ صريحٌ لقاعدةِ «لا حرسَ على معدوم» (RULE-001 · «وجودُ الشيءِ في شجرةِ النحوِ لا يقومُ مقامَ تنفيذِه») ومسارُ الإقلاعِ في src/index.ts يعتمدُ على read() حارسًا وحيدًا"
+   "summary": "حراسةُ نقطةِ الاختناقِ في rehydrate_barrier_binding.ts تجوالٌ نحويٌّ (ts.forEachChild) بلا فحصِ وصولٍ ولا guardsOf ولا isReachable: نداءا assertRehydrateCensus وassertExemptionsHold داخلَ StateJournal.read ونداءُ assertExemptionsHold داخلَ rehydrateFromJournal ملفوفةٌ في if (false) أو إغلاقٍ ميتٍ غيرِ مستدعًى تُحسَبُ حارسةً والبوابةُ EXIT=0 (RC07_CHOKEPOINT_UNSATISFIABLE_DECOY_GREENS عندَ grok · RC07_CHOKEPOINT_UNREACHABLE_BARRIER_ACCEPTED عندَ gemini) · والتشغيلُ شاهدٌ: read() الحيُّ يرمي PERSISTENCE_REHYDRATE_EXEMPTION_CONTRADICTED والميتُ يعيدُ قيدًا صنفُهُ archive_snapshot — خرقٌ صريحٌ لمبدأِ الحاجزِ المعلنِ «لا حرسَ على معدوم» (رسالةُ الحاجزِ نفسِهِ تستشهدُ بRULE-001 — ونصُّ GOVERNING_RULE.md RULE-001 هو «إنشاءُ ملفٍ ليسَ إنجازًا» فالإسنادُ إلى نصِّهِ تصويبٌ معلنٌ §13.167 · والتسبيبُ المعتمدُ معيارُ العقدِ §4 والسلوكُ المقيسُ) ومسارُ الإقلاعِ في src/index.ts يعتمدُ على read() حارسًا وحيدًا"
   },
   {
    "name": "RC14_FALSE_REJECTS_CONSTRUCTOR_AND_SAFE_INDEX",
@@ -92,7 +91,6 @@
   {
    "name": "COUNCIL7_TEN_NAMED_DEFECTS",
    "closed_by": [
-    "gpt",
     "grok",
     "gemini"
    ],
@@ -101,10 +99,9 @@
   {
    "name": "FACE_COUNT_INCONSISTENT_9_VS_11",
    "closed_by": [
-    "grok",
-    "gemini"
+    "grok"
    ],
-   "summary": "تصويبُ التوثيقِ قيسَ موجودًا بالإلحاقِ في §2-ن (11 سالبًا + 4 حيّةً في الملفِّ كما يقولُ المستودعُ حرفًا) — لا يُعلَّقُ الرفضُ عليه"
+   "summary": "تصويبُ التوثيقِ قيسَ موجودًا بالإلحاقِ في §2-ن (11 سالبًا + 4 حيّةً في الملفِّ كما يقولُ المستودعُ حرفًا) — لا يُعلَّقُ الرفضُ عليه · تصويبُ إسنادٍ معلنٌ §13.167: قياسُ الإلحاقِ عندَ grok وحدَهُ (خامُّ gemini لم يذكر الإلحاق)"
   }
  ]
 }
