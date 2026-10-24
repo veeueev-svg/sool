@@ -113,6 +113,8 @@ const NEGATIVE: readonly Face[] = [
     mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '{ { return; } assertExemptionsHold(entries.map((e) => e.kind)); }'); } },
   { code: 'RC-07', why: "`(function* () { assertExemptionsHold(…) })();` — استدعاءُ المولّدِ يُنشئُ المُكرِّرَ ولا يُنفّذُ جسمَهُ حتى الاستئنافِ فليسَ حارسًا حيًّا (تتمةُ المعالجةِ بعدَ ملاحظةِ المراجعِ)",
     mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '(function* () { assertExemptionsHold(entries.map((e) => e.kind)); })();'); } },
+  { code: 'RC-07', why: "`(async () => { await 0; assertExemptionsHold(…); })();` — الحارسُ بعدَ أوّلِ انتظارٍ في دالّةٍ غيرِ متزامنةٍ استمرارٌ مؤجّلٌ لا جريانُ جسمِ الاختناقِ فليسَ حارسًا حيًّا (المراجعةُ الثالثةُ)",
+    mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '(async () => { await 0; assertExemptionsHold(entries.map((e) => e.kind)); })();'); } },
 ];
 
 const LIVE: readonly Face[] = [
@@ -130,6 +132,8 @@ const LIVE: readonly Face[] = [
     mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', 'if (entries.length > 0) { assertExemptionsHold(entries.map((e) => e.kind)); }'); } },
   { code: '', why: "`(() => { assertExemptionsHold(…) })();` — الاستدعاءُ الفوريُّ (IIFE) يُنفِّذُ جسمَهُ في الجريانِ نفسِهِ فلا يُرفَضُ (وجهُ الرفضِ الكاذبِ لتتمةِ المعالجةِ)",
     mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '(() => { assertExemptionsHold(entries.map((e) => e.kind)); })();'); } },
+  { code: '', why: "`(async () => { assertExemptionsHold(…); await 0; })();` — الحارسُ قبلَ أوّلِ انتظارٍ تزامنيٌّ يُنفَّذُ في الجريانِ نفسِهِ فلا يُرفَضُ (وجهُ الرفضِ الكاذبِ للمراجعةِ الثالثةِ — رفضُ كلِّ دالّةٍ غيرِ متزامنةٍ ليسَ علاجًا)",
+    mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '(async () => { assertExemptionsHold(entries.map((e) => e.kind)); await 0; })();'); } },
   { code: '', why: 'مستدعًى محليٌّ نوعُهُ دالّةٌ مرئيّةُ الجسمِ (`() => void`) — النوعُ يفرّقُهُ عن `Function` المجهولِ الجسمِ',
     mutate: sink('liveR11TypedFn', ["  const f: () => void = () => {}; f(); void j;"]) },
   { code: '', why: 'فهرسٌ حرفيٌّ على كائنٍ محليٍّ محدودِ الأعضاءِ لا على الكائنِ العالميِّ — الأبوابُ تُقاسُ بالنوعِ لا بكلِّ فهرسٍ',

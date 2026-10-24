@@ -50,7 +50,7 @@ SIBLING_BLOCK_DEAD { { return; } guard(); }: exit=1 (RC-07 على «read»)
 GENERATOR_IIFE_DEAD (function* () { guard(); })();: exit=1 (RC-07 على «read»)
 IIFE_LIVE (() => { guard(); })();: exit=0
 DEAD_BRANCH if(false) [انحدار]: exit=1 · DEAD_CLOSURE uninvoked [انحدار]: exit=1 · LIVE_CONTROL: exit=0
-على bf2fc1b (قبلَ التتمةِ — البوابةُ مبنيةٌ منهُ):
+على bf2fc1b (قبلَ التتمةِ — مقارنةٌ تفاضليةٌ: استُبدلَ ملفُ rehydrate_barrier_binding.ts بنسختِهِ من bf2fc1b وبُنيت البوابةُ منه — لا بناءَ شجرةٍ كاملةٍ عندَ الالتزامِ):
 SIBLING_BLOCK_DEAD { { return; } guard(); }: exit=0 (الوجهُ ينجو — العيبُ باقٍ عندَ bf2fc1b كما قالَ المراجعُ)
 GENERATOR_IIFE_DEAD: exit=1 (يسقطُ لسببٍ أعمّ — رفضُ كلِّ دالّةٍ داخليةٍ هناك)
 IIFE_LIVE: exit=1 (الرفضُ الكاذبُ الذي عولجَ في التتمةِ)
@@ -58,3 +58,15 @@ IIFE_LIVE: exit=1 (الرفضُ الكاذبُ الذي عولجَ في التت
 === npm test + verify على الشجرةِ بعدَ التصويبِ (جريانٌ نظيفٌ واحدٌ) ===
 npm test: # tests 2493 · # pass 2493 · # fail 0 · NPMTEST_EXIT=0
 npm run verify: VERIFY_EXIT=0 (الجولةُ كاملةٌ وبواباتُ verify الثلاثَ عشرةَ على الشجرةِ المصوّبةِ)
+
+=== قيدُ فشلِ r11 الصادقِ (المراجعةُ الثانية) ===
+سقطَ الملفُ (1/2 — وجهُ المولّدِ نجا) لأنّ git checkout HEAD أزالَ تعديلَ الاستثناءِ غيرَ المُلتزمِ فبُنيت البوابةُ بلاه — الاختبارُ كشفَ الغيابَ بصحيحٍ (فشلٌ صادقٌ لا كاذبٌ)؛ شُخّصَ وأُعيدَ التطبيقُ والبناءُ والقياسُ.
+
+=== المراجعةُ الثالثةُ: الحارسُ بعدَ أوّلِ انتظارٍ (البناءُ من شجرةِ المعالجةِ الممدّدةِ بالإصلاحِ) ===
+ASYNC_IIFE_AWAIT_BEFORE_GUARD (async () => { await 0; guard(); })();: exit=1 (RC-07 على «read» — استمرارٌ مؤجّلٌ)
+ASYNC_IIFE_GUARD_BEFORE_AWAIT (async () => { guard(); await 0; })();: exit=0 (تزامنيٌّ حيٌّ)
+IIFE_LIVE [انحدار]: exit=0 · GENERATOR_IIFE [انحدار]: exit=1 · SIBLING_BLOCK_DEAD [انحدار]: exit=1 · LIVE_CONTROL: exit=0
+(node --test dist/tests/data/rehydrate_census_mutations_r11.test.js): # tests 2 · # pass 2 · # fail 0 (16 سالبًا · 7 حيّةً)
+=== npm test + verify على الشجرةِ بعدَ المراجعةِ الثالثةِ (جريانٌ نظيفٌ واحدٌ) ===
+npm test: # tests 2493 · # pass 2493 · # fail 0 · NPMTEST_EXIT=0
+npm run verify: VERIFY_EXIT=0 (الجولةُ كاملةٌ وبواباتُ verify الثلاثَ عشرةَ على الشجرةِ المُصلحةِ)
