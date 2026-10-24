@@ -33,6 +33,8 @@
  * كتلةٍ فرعيةٍ أختٍ سابقةٍ (`{ { return; } guard(); }`) عيبٌ باقٍ منَ الجنسِ نفسِهِ لا حدٌّ توثيقيٌّ — عولجَ (قاعدةُ الكتلةِ
  * الأختِ ذاتِ النهايةِ غيرِ الشرطيةِ — الوجهُ السالبُ بصيغةِ الأختِ لا بصيغةِ العودةِ المباشرةِ التي كانت تُقاسُ قبلًا) ·
  * والاستدعاءُ الفوريُّ (IIFE) شفّافٌ لا رفضًا كاذبًا (وجهٌ حيٌّ جديدٌ) — **والمولّداتُ مستثناةٌ منَ الشفافيةِ**
+ * (المراجعةُ الرابعةُ: **كلُّ الدوالِ غيرِ المتزامنةِ مرفوضةٌ بعقدِ الحراسةِ** — رميُ الحارسِ داخلَها
+ * يصيرُ رفضَ وعدٍ لا ينتشرُ تزامنيًّا فلا يوقفُ جريانَ الاختناقِ: وجهانِ سالبانِ قبلَ الانتظارِ وبعدَهُ.)
  * (استدعاؤُها يُنشئُ المُكرِّرَ ولا يُنفّذُ الجسمَ حتى الاستئنافِ — وجهٌ سالبٌ جديدٌ).
  *
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
@@ -115,6 +117,8 @@ const NEGATIVE: readonly Face[] = [
     mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '(function* () { assertExemptionsHold(entries.map((e) => e.kind)); })();'); } },
   { code: 'RC-07', why: "`(async () => { await 0; assertExemptionsHold(…); })();` — الحارسُ بعدَ أوّلِ انتظارٍ في دالّةٍ غيرِ متزامنةٍ استمرارٌ مؤجّلٌ لا جريانُ جسمِ الاختناقِ فليسَ حارسًا حيًّا (المراجعةُ الثالثةُ)",
     mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '(async () => { await 0; assertExemptionsHold(entries.map((e) => e.kind)); })();'); } },
+  { code: 'RC-07', why: "`(async () => { assertExemptionsHold(…); await 0; })();` — حارسٌ قبلَ أوّلِ انتظارٍ يُنفَّذُ تزامنيًّا **لكنّ رميَهُ يصيرُ رفضَ وعدٍ لا ينتشرُ تزامنيًّا إلى مستدعي الاختناقِ فلا يوقفُ جريانَهُ — فعقدُ الحراسةِ هو الإيقافُ لا التنفيذُ وحدهُ** (المراجعةُ الرابعةُ)",
+    mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '(async () => { assertExemptionsHold(entries.map((e) => e.kind)); await 0; })();'); } },
 ];
 
 const LIVE: readonly Face[] = [
@@ -132,8 +136,6 @@ const LIVE: readonly Face[] = [
     mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', 'if (entries.length > 0) { assertExemptionsHold(entries.map((e) => e.kind)); }'); } },
   { code: '', why: "`(() => { assertExemptionsHold(…) })();` — الاستدعاءُ الفوريُّ (IIFE) يُنفِّذُ جسمَهُ في الجريانِ نفسِهِ فلا يُرفَضُ (وجهُ الرفضِ الكاذبِ لتتمةِ المعالجةِ)",
     mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '(() => { assertExemptionsHold(entries.map((e) => e.kind)); })();'); } },
-  { code: '', why: "`(async () => { assertExemptionsHold(…); await 0; })();` — الحارسُ قبلَ أوّلِ انتظارٍ تزامنيٌّ يُنفَّذُ في الجريانِ نفسِهِ فلا يُرفَضُ (وجهُ الرفضِ الكاذبِ للمراجعةِ الثالثةِ — رفضُ كلِّ دالّةٍ غيرِ متزامنةٍ ليسَ علاجًا)",
-    mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', '(async () => { assertExemptionsHold(entries.map((e) => e.kind)); await 0; })();'); } },
   { code: '', why: 'مستدعًى محليٌّ نوعُهُ دالّةٌ مرئيّةُ الجسمِ (`() => void`) — النوعُ يفرّقُهُ عن `Function` المجهولِ الجسمِ',
     mutate: sink('liveR11TypedFn', ["  const f: () => void = () => {}; f(); void j;"]) },
   { code: '', why: 'فهرسٌ حرفيٌّ على كائنٍ محليٍّ محدودِ الأعضاءِ لا على الكائنِ العالميِّ — الأبوابُ تُقاسُ بالنوعِ لا بكلِّ فهرسٍ',

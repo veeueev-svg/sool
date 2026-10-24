@@ -70,3 +70,13 @@ IIFE_LIVE [انحدار]: exit=0 · GENERATOR_IIFE [انحدار]: exit=1 · SIB
 === npm test + verify على الشجرةِ بعدَ المراجعةِ الثالثةِ (جريانٌ نظيفٌ واحدٌ) ===
 npm test: # tests 2493 · # pass 2493 · # fail 0 · NPMTEST_EXIT=0
 npm run verify: VERIFY_EXIT=0 (الجولةُ كاملةٌ وبواباتُ verify الثلاثَ عشرةَ على الشجرةِ المُصلحةِ)
+
+=== المراجعةُ الرابعةُ: عقدُ الحراسةِ هو الإيقافُ (كلُّ غيرِ المتزامنةِ مرفوضة) ===
+ASYNC_AFTER_AWAIT (async () => { await 0; guard(); })();: exit=1 (RC-07 على «read»)
+ASYNC_BEFORE_AWAIT (async () => { guard(); await 0; })();: exit=1 (RC-07 — رفضٌ تعاقديٌّ: رميُ الحارسِ رفضُ وعدٍ لا يوقفُ الجريانَ)
+ASYNC_AWAIT_IN_ARGS (async () => { guard(await …); })();: exit=1 (RC-07)
+IIFE_LIVE [انحدار]: exit=0 · GENERATOR_IIFE [انحدار]: exit=1 · SIBLING_BLOCK_DEAD [انحدار]: exit=1 · LIVE_CONTROL: exit=0
+(node --test dist/tests/data/rehydrate_census_mutations_r11.test.js): # tests 2 · # pass 2 · # fail 0 (17 سالبًا · 6 حيّةً)
+=== npm test + verify على الشجرةِ بعدَ المراجعةِ الرابعةِ (جريانٌ نظيفٌ واحدٌ) ===
+npm test: # tests 2493 · # pass 2493 · # fail 0 · NPMTEST_EXIT=0
+npm run verify: VERIFY_EXIT=0 (الجولةُ كاملةٌ وبواباتُ verify الثلاثَ عشرةَ)

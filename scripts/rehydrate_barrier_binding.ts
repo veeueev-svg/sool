@@ -137,22 +137,6 @@ export function functionBodyOf(sf: ts.SourceFile, owner: string | null, fnName: 
   visit(sf);
   return body;
 }
-
-/** هل في جسمِ الدالّةِ انتظارٌ (`await` · `for await`) قبلَ موضعِ النداءِ؟ — الاستمرارُ المؤجّلُ ليسَ جريانَ الجسمِ */
-function hasAwaitBefore(body: ts.Node, limit: number): boolean {
-  let found = false;
-  const visit = (n: ts.Node): void => {
-    if (found || n.pos >= limit) return;
-    if (ts.isAwaitExpression(n) || (ts.isForOfStatement(n) && n.awaitModifier !== undefined)) {
-      found = true;
-      return;
-    }
-    ts.forEachChild(n, visit);
-  };
-  ts.forEachChild(body, visit);
-  return found;
-}
-
 /**
  * هل النداءُ **حيٌّ** في جريانِ جسمِ الدالّةِ؟ — النداءُ الميّتُ لا يحرسُ شيئًا (الجولةُ الثانيةَ عشرةَ
  * · علاجُ عيوبِ مجلسِ الجولةِ الثامنةِ `RC07_CHOKEPOINT_DEAD_GUARD_ACCEPTED` — خامُّ grok 4.3 وخامُّ
@@ -162,8 +146,8 @@ function hasAwaitBefore(body: ts.Node, limit: number): boolean {
  * الخارجيَّ · ونداءٌ بعدَ نهايةٍ غيرِ شرطيةٍ (`return`/`throw` مباشرٌ يسبقُهُ في نفسِ الكتلةِ)
  * ميّتٌ في الجريانِ المستقيمِ. **الاستدعاءُ الفوريُّ (IIFE) شفّافٌ:** الدالّةُ الداخليةُ المستدعاةُ فورًا في موضعِها
  * يُنفَّذُ جسمُها في الجريانِ نفسِهِ فلا تُقصي نداءَها — يُصعَدُ المشيُّ من موضعِ الاستدعاءِ لا من حدودِها
- * (المولّداتُ مستثناةٌ: استدعاؤُها يُنشئُ المُكرِّرَ ولا يُنفّذُ الجسمَ حتى الاستئنافِ) — **والحارسُ بعدَ أوّلِ
- * انتظارٍ في دالّةٍ غيرِ متزامنةٍ استمرارٌ مؤجّلٌ لا جريانُ الجسمِ** (الحارسُ قبلَهُ تزامنيٌّ فحيٌّ).
+ * (المولّداتُ والدوالُ غيرُ المتزامنةِ لا شفافيةَ لها: المولّدُ لا يُنفّذُ جسمَهُ حتى الاستئنافِ · ورميُ الحارسِ
+ * داخلَ غيرِ المتزامنةِ يصيرُ رفضَ وعدٍ لا ينتشرُ تزامنيًّا — فعقدُ الحراسةِ هو الإيقافُ، ولا إيقافَ لا حارسَ).
  * المشيُّ يصعدُ من النداءِ إلى جسمِ الدالّةِ نفسِهِ: أولُ عِلّةٍ ميّتةٍ تُقصي النداءَ · والوصولُ إلى الجسمِ بلا عِلّةٍ = حيٌّ.
  * (الحدُّ المسجَّل: دالّةٌ داخليةٌ معرّفةٌ باسمٍ واستُدعيت لاحقًا (`const f = () => { guard(); }; f();`) لا
  * تُحسَبُ حارسًا — إثباتُ تنفيذِها في الجريانِ تحليلٌ بينيّ خارجُ هذهِ الآليةِ؛ الشجرةُ الحيّةُ لا تستعملُهُ.)
@@ -182,13 +166,15 @@ export function callIsLiveInBody(call: ts.Node, body: ts.Node): boolean {
     ) {
       // الاستدعاءُ الفوريُّ يُنفّذُ جسمَ الدالّةِ العاديّةِ في الجريانِ نفسِهِ — إلا المولّداتِ (والمولّداتِ
       // غيرِ المتزامنةِ): استدعاؤُها يُنشئُ المُكرِّرَ ولا يُنفّذُ الجسمَ حتى الاستئنافِ فلا شفافيةَ لها.
+      // المولّداتُ والدوالُ غيرُ المتزامنةِ لا شفافيةَ لها مهما كانَ موضعُ النداءِ داخلَها:
+      // المولّدُ لا يُنفّذُ جسمَهُ حتى الاستئنافِ · وغيرُ المتزامنةِ رميُ حارسِها يصيرُ **رفضَ وعدٍ**
+      // لا ينتشرُ تزامنيًّا إلى مستدعي نقطةِ الاختناقِ — فعقدُ الحراسةِ هو **الإيقافُ**، وحارسٌ لا يوقفُ
+      // جريانَ الاختناقِ عندَ الفشلِ ليسَ حارسًا لهُ (المراجعةُ الرابعةُ — عقدُ الحراسةِ لا ترتيبُ النصِّ).
       const isGenerator = (ts.isFunctionDeclaration(parent) || ts.isFunctionExpression(parent) || ts.isMethodDeclaration(parent)) && parent.asteriskToken !== undefined;
       const isAsync = parent.modifiers !== undefined && parent.modifiers.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword);
       let host: ts.Node | undefined = parent.parent;
       while (host !== undefined && (ts.isParenthesizedExpression(host) || (ts.isBinaryExpression(host) && host.operatorToken.kind === ts.SyntaxKind.CommaToken))) host = host.parent;
-      if (!isGenerator && host !== undefined && ts.isCallExpression(host) && unwrapCallee(host.expression) === parent) {
-        // الدالّةُ غيرُ المتزامنةِ: جسمُها يُنفّذُ تزامنيًّا حتى أوّلِ انتظارٍ — فحارسٌ بعدَهُ استمرارٌ مؤجّلٌ لا جريانُ الجسمِ
-        if (isAsync && parent.body !== undefined && hasAwaitBefore(parent.body, call.pos)) return false;
+      if (!isGenerator && !isAsync && host !== undefined && ts.isCallExpression(host) && unwrapCallee(host.expression) === parent) {
         cur = host;
         continue;
       }
