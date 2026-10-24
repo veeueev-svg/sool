@@ -22,6 +22,13 @@
  *     (قِيسَ في الوجوهِ الحيّةِ لا السالبةِ).
  *   - `FACE_COUNT_INCONSISTENT_9_VS_11`: عيبُ توثيقٍ لا اختبارٍ — عولج بإلحاقٍ مؤرَّخٍ في عقدِ البندِ.
  *
+ * **إلحاقٌ مؤرَّخٌ (2026-10-24 · المعالجةُ الثانيةَ عشرةَ · عيوبُ مجلسِ الجولةِ الثامنةِ
+ * `RC07_CHOKEPOINT_DEAD_GUARD_ACCEPTED` — خامُّ grok 4.3 وخامُّ gemini):** الحارسُ الميّتُ لا يحرسُ —
+ * نداءُ الحاجزِ تحتَ `if (false)` أو داخلَ دالّةٍ داخليةٍ لا تُنداءُ كانَ يُقبلُ حارسًا لنقطةِ الاختناقِ
+ * فتخضرُّ البوابةُ. عولجَ في `scripts/rehydrate_barrier_binding.ts` (`callIsLiveInBody`) وأُضيفَ الوجهانِ
+ * السالبانِ (الفرعُ الميّتُ · الدالّةُ الداخليةُ الميتةُ) والوجهُ الحيّ (حارسٌ تحتَ شرطٍ حيٍّ لا يُرفَض) —
+ * القياسُ قبل/بعد بنمطِ مسباري gemini (PROBE-04/PROBE-05): قبلُ exit=0 · بعدُ exit=1 برمزِ RC-07.
+ *
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * (docs/test-reports/phase-39-W-2026-040-remedy-11.md) وقياساتِهِ الخامّة.
  */
@@ -91,6 +98,11 @@ const NEGATIVE: readonly Face[] = [
       writeFileSync(join(root, 'src/vendor/data/rehydrate_census.ts'), 'export function assertRehydrateCensus(scope: readonly string[]): void { void scope; }\nexport function assertExemptionsHold(): void { void 0; }\n');
       bootImport("import { assertRehydrateCensus } from './vendor/data/rehydrate_census';")(root);
     } },
+  // ── الحارسُ الميّتُ لا يحرسُ: المعالجةُ الثانيةَ عشرةَ (عيوبُ الجولةِ الثامنةِ · خامُّ grok 4.3 وخامُّ gemini) ──
+  { code: 'RC-07', why: "`if (false) { assertExemptionsHold(…) }` — نداءُ الحاجزِ في فرعٍ ثابتِ الكذبِ لا يُنفَّذُ أصلًا فلا يحرسُ نقطةَ الاختناقِ (مسبارُ gemini PROBE-04 · قِيسَ قبلُ ينجو: exit=0)",
+    mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', 'if (false) { assertExemptionsHold(entries.map((e) => e.kind)); }'); } },
+  { code: 'RC-07', why: "`const dummy = () => { assertExemptionsHold([]); }; void dummy;` — نداءُ الحاجزِ داخلَ دالّةٍ داخليةٍ لا تُنداءُ لا يُنفَّذُ بجريانِ الجسمِ الحاوي فلا يحرسُ الاختناقَ (مسبارُ gemini PROBE-05 · قِيسَ قبلُ ينجو: exit=0)",
+    mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', 'const dummy = () => { assertExemptionsHold([]); }; void dummy;'); } },
 ];
 
 const LIVE: readonly Face[] = [
@@ -104,6 +116,8 @@ const LIVE: readonly Face[] = [
       bootImport("import * as census from './data/rehydrate_census';")(root);
       patch(root, INDEX, CENSUS_CALL, 'if (journal) census.assertRehydrateCensus(persistenceConfig.policy.scope);');
     } },
+  { code: '', why: "`if (entries.length > 0) { assertExemptionsHold(…) }` — حارسٌ تحتَ شرطٍ حيٍّ غيرِ ثابتِ الكذبِ يُنفَّذُ في جريانِ الجسمِ فلا يُرفَضُ (وجهُ الرفضِ الكاذبِ للمعالجةِ الثانيةَ عشرةَ)",
+    mutate: (root) => { patch(root, PERSISTENCE, 'assertExemptionsHold(entries.map((e) => e.kind));', 'if (entries.length > 0) { assertExemptionsHold(entries.map((e) => e.kind)); }'); } },
   { code: '', why: 'مستدعًى محليٌّ نوعُهُ دالّةٌ مرئيّةُ الجسمِ (`() => void`) — النوعُ يفرّقُهُ عن `Function` المجهولِ الجسمِ',
     mutate: sink('liveR11TypedFn', ["  const f: () => void = () => {}; f(); void j;"]) },
   { code: '', why: 'فهرسٌ حرفيٌّ على كائنٍ محليٍّ محدودِ الأعضاءِ لا على الكائنِ العالميِّ — الأبوابُ تُقاسُ بالنوعِ لا بكلِّ فهرسٍ',

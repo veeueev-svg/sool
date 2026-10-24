@@ -21,6 +21,7 @@
  * جسمُهُ رميًا ليس حاجزًا (والسلوكُ يشهدُ لهُ اختبارُ الوحدةِ بالحقنِ — الحقنُ شرطُ البرهانِ).
  */
 import ts from "typescript";
+import { definitelyFalsy, definitelyTruthy } from "./rehydrate_reachability";
 
 /** فكُّ الأغلفةِ المسموحِ بها حولَ المُستدعى (أقواسٌ · `as` · `!` · فاصلةٌ يُؤخذُ يمينُها) */
 export function unwrapCallee(e: ts.Expression): ts.Expression {
@@ -137,7 +138,68 @@ export function functionBodyOf(sf: ts.SourceFile, owner: string | null, fnName: 
   return body;
 }
 
-/** هل تحرسُ دالّةُ الاختناقِ نداءَ الحاجزِ القانونيّ؟ `null` إن غابت الدالّةُ أصلًا */
+/**
+ * هل النداءُ **حيٌّ** في جريانِ جسمِ الدالّةِ؟ — النداءُ الميّتُ لا يحرسُ شيئًا (الجولةُ الثانيةَ عشرةَ
+ * · علاجُ عيوبِ مجلسِ الجولةِ الثامنةِ `RC07_CHOKEPOINT_DEAD_GUARD_ACCEPTED` — خامُّ grok 4.3 وخامُّ
+ * gemini): نداءٌ تحتَ شرطٍ ثابتِ الكذبِ (`if (false)` · `while (false)` · فرعُ `?:` الميّتُ · يمينُ
+ * `&&` الميّتُ · يمينُ `||` المصدَّقُ) ميّتٌ لا يحرسُ · ونداءٌ داخلَ دالّةٍ داخليةٍ (سهميّةٍ أو
+ * تعبيريةٍ) لا يُنفَّذُ إلا بنداءِ تلكَ الدالّةِ لا بجريانِ الجسمِ الحاوي لها فلا يحرسُ الاختناقَ
+ * الخارجيَّ · ونداءٌ بعدَ نهايةٍ غيرِ شرطيةٍ (`return`/`throw` مباشرٌ يسبقُهُ في نفسِ الكتلةِ)
+ * ميّتٌ في الجريانِ المستقيمِ. المشيُّ يصعدُ من النداءِ إلى جسمِ الدالّةِ نفسِهِ: أولُ عِلّةٍ
+ * ميّتةٍ تُقصي النداءَ · والوصولُ إلى الجسمِ بلا عِلّةٍ = حيٌّ. (الحدُّ المسجَّل: نهايةٌ غيرُ شرطيةٍ
+ * داخلَ كتلةٍ فرعيةٍ سابقةٍ للنداءِ في نفسِ الكتلةِ الأمِّ لا تُدركُها هذهِ الآليةُ — النطاقُ:
+ * عِلّةٌ واحدةٌ بينَ النداءِ والجسمِ.)
+ */
+export function callIsLiveInBody(call: ts.Node, body: ts.Node): boolean {
+  let cur: ts.Node = call;
+  for (let depth = 0; depth < 512; depth += 1) {
+    if (cur === body) return true;
+    const parent = cur.parent;
+    if (parent === undefined) return false;
+    // دالّةٌ داخليةٌ بينَ النداءِ وجسمِ الاختناقِ: لا يحرسُ النداءُ إلا بنداءِ تلكَ الدالّةِ هو — لا بجريانِ الجسمِ الحاوي
+    if (
+      ts.isFunctionDeclaration(parent) || ts.isFunctionExpression(parent) || ts.isArrowFunction(parent) ||
+      ts.isMethodDeclaration(parent) || ts.isConstructorDeclaration(parent) ||
+      ts.isGetAccessorDeclaration(parent) || ts.isSetAccessorDeclaration(parent)
+    ) {
+      return false;
+    }
+    // شرطٌ ثابتُ الكذبِ يقتلُ فرعَهُ · وشرطٌ ثابتُ الصدقِ يقتلُ فرعَهُ الآخرَ
+    if (ts.isIfStatement(parent)) {
+      if (cur === parent.thenStatement && definitelyFalsy(parent.expression)) return false;
+      if (cur === parent.elseStatement && definitelyTruthy(parent.expression)) return false;
+    }
+    if (ts.isConditionalExpression(parent)) {
+      if (cur === parent.whenTrue && definitelyFalsy(parent.condition)) return false;
+      if (cur === parent.whenFalse && definitelyTruthy(parent.condition)) return false;
+    }
+    // حلقةٌ لا تدورُ لا يُنفَّذُ جسمُها
+    if ((ts.isWhileStatement(parent) || ts.isForStatement(parent)) && cur === parent.statement) {
+      const cond = ts.isWhileStatement(parent) ? parent.expression : parent.condition;
+      if (cond !== undefined && definitelyFalsy(cond)) return false;
+    }
+    // ماسِكٌ قاطعٌ: يمينُ `&&` لا يُقوَّمُ إن كانَ يسارُهُ كاذبًا · ويمينُ `||` إن كانَ يسارُهُ صادقًا
+    if (ts.isBinaryExpression(parent) && cur === parent.right) {
+      if (parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken && definitelyFalsy(parent.left)) return false;
+      if (parent.operatorToken.kind === ts.SyntaxKind.BarBarToken && definitelyTruthy(parent.left)) return false;
+    }
+    // نهايةٌ غيرُ شرطيةٍ في نفسِ الكتلةِ تسبقُ النداءَ: ما بعدَها ميّتٌ في الجريانِ المستقيمِ
+    if (ts.isBlock(parent)) {
+      for (const s of parent.statements) {
+        if (s === cur) break;
+        if (ts.isReturnStatement(s) || ts.isThrowStatement(s)) return false;
+      }
+    }
+    cur = parent;
+  }
+  return false;
+}
+
+/**
+ * هل تحرسُ دالّةُ الاختناقِ نداءَ الحاجزِ القانونيّ؟ `null` إن غابت الدالّةُ أصلًا — والنداءُ
+ * يجبُ أن يكونَ **حيًّا في جريانِ الجسمِ** لا في موضعٍ ميّتٍ (`if (false)` · دالّةٌ داخليةٌ ·
+ * بعدَ نهايةٍ) — الميّتُ لا يحرسُ (الجولةُ الثانيةَ عشرةَ · عيوبُ الجولةِ الثامنةِ `RC07_CHOKEPOINT_DEAD_GUARD_ACCEPTED`).
+ */
 export function chokepointGuarded(sf: ts.SourceFile, law: BarrierLaw, owner: string | null, fn: string, barrier: string): boolean | null {
   const body = functionBodyOf(sf, owner, fn);
   if (body === null) return null;
@@ -145,7 +207,8 @@ export function chokepointGuarded(sf: ts.SourceFile, law: BarrierLaw, owner: str
   const visit = (n: ts.Node): void => {
     if (found) return;
     if (ts.isCallExpression(n) && isLawfulBarrierCall(n, law, barrier)) {
-      found = true;
+      // الحارسُ الحيُّ فقطَ يحرسُ: الميّتُ (`if (false)` · دالّةٌ داخليةٌ · بعدَ نهايةٍ) يُتجاوزُ ونبحثُ عن حارسٍ حيٍّ آخر
+      if (callIsLiveInBody(n, body)) found = true;
       return;
     }
     ts.forEachChild(n, visit);
