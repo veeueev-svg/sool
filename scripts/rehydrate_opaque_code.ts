@@ -69,6 +69,14 @@
  * ## البابُ الأول (كما هو منذ الجولة التاسعة) — تسرّبُ اليوميّةِ إلى مُستدعًى لا يُرى جسمُه
  * نداءٌ يمرّرُ يوميّةً وسيطًا إلى مُستدعًى نوعُه `any`/`unknown`/`Function`/`FunctionConstructor`
  * — جسمُه لا يُرى فلا يُبرهَنُ الغياب. (لا يُحذف بإلحاقِ الجولةِ الحاديةَ عشرةَ؛ قياسُ الجلسةِ أكده.)
+ *
+ * ## إلحاقٌ مؤرَّخٌ (2026-10-26 · المعالجةُ الرابعةَ عشرةَ · عيوبُ الجولةِ التاسعةِ الستةِ)
+ *
+ * البابُ (و) صار يفحصُ `new` كما يفحصُ النداءَ (عيبُ RC14_NEW_OF_FUNCTION_ALIAS_GREENS:
+ * `const C: any = Function; new C(…)` — أصلُ المستدعى يُسألُ عندَ المُنشئِ لا اسمُهُ المكتبيُّ
+ * وحده) — وعرّافُ الأصلِ (`scripts/rehydrate_value_origin.ts`) عولجَ في ستّ نقاطٍ موثّقةٍ في
+ * ترويستِه (عضوُ استيرادِ النطاقِ · الحرفيُّ في التعبيرِ نفسِهِ · قنواتُ الربطِ إلى العضوِ ·
+ * الاستيرادُ المستعيرُ بلا valueDeclaration · إرجاعُ الدالّةِ · المعاملُ المعلَنُ النوعِ).
  */
 import ts from "typescript";
 import { effectiveCallArguments, unwrapFlow, valueOriginOracle } from "./rehydrate_value_origin";
@@ -207,7 +215,9 @@ export function opaqueCodeReason(n: ts.Node, checker: ts.TypeChecker, couldBeJou
     }
   }
   // (و) بابُ الأصلِ (المعالجةُ الثالثةَ عشرةَ): مستدعًى — أو ترامبولينُه — أصلهُ تنفيذٌ ديناميكيّ
-  if (ts.isCallExpression(n) && n.expression.kind !== ts.SyntaxKind.ImportKeyword && n.expression.kind !== ts.SyntaxKind.SuperKeyword) {
+  // المعالجةُ الرابعةَ عشرةَ (عيب 3): البابُ يفحصُ `new` كما يفحصُ النداءَ — الكنيةُ Function
+  // تعبرُ الإسنادَ (const C: any = Function; new C(…)) فلا يخضرّ المُنشئُ المعتمُ الأصلِ
+  if ((ts.isCallExpression(n) || ts.isNewExpression(n)) && n.expression.kind !== ts.SyntaxKind.ImportKeyword && n.expression.kind !== ts.SyntaxKind.SuperKeyword) {
     const oracle = valueOriginOracle(n.getSourceFile(), checker);
     const callee = unwrapFlow(n.expression);
     const calleeOrigin = oracle.originOf(n.expression);
