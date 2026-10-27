@@ -131,11 +131,16 @@ export function collectThrows(block: ts.Block, out: ts.Expression[]): void {
   visit(block);
 }
 
-/** تعبيراتُ `return` في جسمِ دالّةٍ — بلا النزولِ إلى دالّةٍ متداخلةٍ (إرجاعُها لها) */
+/**
+ * تعبيراتُ `return` في جسمِ دالّةٍ — بلا النزولِ إلى دالّةٍ متداخلةٍ (إرجاعُها لها).
+ * المعالجةُ الخامسةَ عشرةَ: قناةُ `yield` تُجمَعُ معها — قيمُ التسليمِ التي يخرجُها المولِّدُ
+ * هي ما يصلُ إلى مستهلكِه (تقريبٌ معلَنٌ: `yield*` يُعامَلُ تعبيرَهِ قيمةً مسلَّمةً).
+ */
 export function collectReturns(block: ts.Block, out: ts.Expression[]): void {
   const visit = (n: ts.Node): void => {
     if (ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n) || ts.isMethodDeclaration(n) || ts.isGetAccessorDeclaration(n) || ts.isSetAccessorDeclaration(n)) return;
     if (ts.isReturnStatement(n) && n.expression !== undefined) out.push(n.expression);
+    if (ts.isYieldExpression(n) && n.expression !== undefined) out.push(n.expression);
     ts.forEachChild(n, visit);
   };
   visit(block);

@@ -1,10 +1,10 @@
 /**
  * scripts/rehydrate_value_origin.ts — **أصلُ القيمة**: من أين جاءت هذه القيمة؟
- * (المرحلة 39 · W-2026-040 · المعالجةُ الرابعةَ عشرةَ — عيوبُ الجولةِ التاسعةِ الستةِ)
+ * (المرحلة 39 · W-2026-040 · المعالجةُ الخامسةَ عشرةَ — عيوبُ الجولةِ العاشرةِ الستَّ عشرةَ)
  * المالك: وزارة البيانات
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * المدخلات: تعبيرٌ في شجرةِ نحوِ ملفٍّ من `src/**` ومدقّقُ أنواعِ البرنامج
- * المخرجات: أصلُ قيمةِ التعبيرِ — بياناتٌ أو تنفيذٌ ديناميكيّ أو معتمٌ أو كائنٌ عالميٌّ
+ * المخرجات: أصلُ قيمةِ التعبيرِ — بياناتٌ أو تنفيذٌ ديناميكيّ أو معتمٌ أو كائنٌ عالميّ
  * التبعيات: مُترجمُ TypeScript وحدَه
  * الصلاحيات (RULE-004): تقرأ وتُقيس؛ لا تُصلح ملفًّا ولا تكتب واحدًا
  * السجلات: لا تكتب شيئًا — الحكمُ لمن يستدعيها
@@ -22,33 +22,23 @@
  * إسنادُه) · **عالميٌّ (global)** الكائنُ العالميُّ وقيمٌ جرى أصلُها إليه · **بابٌ (door)**
  * كائناتُ الأبوابِ `Reflect` و`Object` — مفاتيحُها الانعكاسيّةُ تنفيذٌ.
  *
- * **حدٌّ معلَنٌ (ميراثُ الجولات):** التدفّقُ داخلَ ملفٍّ واحدٍ (الإسنادُ يُمسَكُ في ملفِّهِ
- * عبرَ مسحٍ كاملٍ قبلَ السؤال) مع عبورِ الاستيرادِ إلى مُعرِّفِه؛ وتمريرُ القيمِ بينَ الدوالِّ
- * عبرَ المعاملاتِ يُتعقَّبُ عندَ مواضعِ النداءِ المرئيّةِ (إلحاقُ المعالجةِ الرابعةَ عشرةَ)، أما
- * المعاملُ الذي لا يُرى موضعُ نداءٍ لدالتِهِ (تعريفٌ خارجَ الوحدةِ مثلًا) فحدُّهُ المعلَنُ باقٍ
- * (دَينُ RC-07) — الحارسُ التشغيليُّ `assertExemptionsHold` يبقى الشاهدَ السلوكيَّ عليه.
- * أمّا الإرجاعُ فينقلُ التنفيذَ والعالميّةَ والبابَ ولا ينقلُ المعتمَ (اتحادُ الإرجاعِ أدناه).
+ * **حدٌّ معلَنٌ (ميراثُ الجولات):** التدفّقُ داخلَ ملفٍّ واحدٍ معَ عبورِ الاستيرادِ إلى
+ * مُعرِّفِه (والسؤالُ عن تعبيرٍ في ملفٍّ آخرَ يُوجَّهُ إلى عرّافِهِ هو) · والمعاملُ الذي لا
+ * يُرى موضعُ نداءٍ لدالتِهِ فحدُّهُ المعلَنُ باقٍ (دَينُ RC-07) · والإرجاعُ ينقلُ التنفيذَ
+ * والعالميّةَ والبابَ ولا ينقلُ المعتمَ (اتحادُ الإرجاعِ).
  *
- * **تفكيكُ سقفِ الوحدةِ (المعالجةُ الرابعةَ عشرةَ):** حدُّ القسمةِ **سلطةٌ لا حجم** — هذا
- * الملفُ يملكُ *السؤالَ عن الأصلِ*؛ أمّا معجمُ الأصنافِ وأدواتُ الشجرةِ الخالصةُ ففي
- * `rehydrate_origin_model.ts`، وجمعُ تدفّقاتِ الربطِ في `rehydrate_binding_flows.ts`.
+ * ## إلحاقٌ مؤرَّخٌ (2026-10-27 · المعالجةُ الخامسةَ عشرةَ · عيوبُ الجولةِ العاشرةِ الستَّ عشرةَ)
  *
- * ## إلحاقٌ مؤرَّخٌ (2026-10-26 · المعالجةُ الرابعةَ عشرةَ · عيوبُ الجولةِ التاسعةِ الستةِ)
- *
- * حكمَ مجلسُ المراجعةِ في جولتِهِ التاسعةِ (محضرُ W-2026-040-9.json) أنّ جنسَ العيوبِ واحدٌ:
- * قيمةُ تنفيذٍ تصلُ إلى نداءٍ ينفّذُ نصًّا والحاجزُ يبقى أخضرَ — الحرفُ المغلقُ هو «المُهيِّئُ
- * `eval` نفسُهُ» و«الأساسُ معرّفٌ مهيّؤُهُ كائنٌ حرفيٌّ»، وما دونَ ذلكَ بابٌ. فعولجَ منَ الجذرِ:
- * **(1)** عضوُ استيرادِ النطاقِ (`ns.member`) يُحَلُّ إلى تصديرِ الوحدةِ المحلولةِ ويُسألُ
- * أصلُهُ هناك (عيبُ gpt) · **(2)** الحرفيُّ في التعبيرِ نفسِهِ: وصولٌ بأساسٍ كائنٌ حرفيٌّ أو
- * مصفوفةٌ حرفيّةٌ ينزلُ إلى العضوِ والمفتاحُ الرقميُّ يُطوى كالنصِّ (عيوبُ grok: `({ run:
- * eval }).run` · `[eval][0]` · `({ F: Function }).F`) · **(3)** `new` يسألُ العرّافَ عن أصلِ
- * المستدعى لا عن اسمِهِ المكتبيِّ وحده (`const C: any = Function; new C(…)`) · **(4)** قنواتُ
- * الربطِ تصلُ إلى العضوِ لا إلى المُهيِّئِ كاملًا: التفكيكُ وعنصرُ `for-of` والجالبُ والنشرُ
- * و`Object.assign` و`catch` وإرجاعُ الدالّةِ · **(5)** الاستيرادُ المُسمّى المستعيرُ بلا
- * `valueDeclaration` يُتبَعُ من `declarations` إلى الرمزِ المكنّى ومُهيّئِهِ (`import { evil as
- * x }`) · **(6)** المعاملُ المعلَنُ النوعِ يُسألُ عن أصلِهِ: مواضعُ نداءِ الدالّةِ تربطُ
- * المعاملَ بوسيطِهِ الفعليِّ (`f.apply`/`f.bind`/`go(eval, …)`) — والمعاملُ الذي لا يُرى
- * موضعُ نداءٍ لدالتِهِ فحدُّهُ المعلَنُ باقٍ (دَينُ RC-07) ولا يُخضَرُ كذبًا.
+ * حكمَ مجلسُ المراجعةِ في جولتِهِ العاشرةِ (محضرُ W-2026-040-10.json) أنّ جنسَ العيوبِ واحدٌ
+ * — قيمةُ تنفيذٍ تصلُ إلى نداءٍ ينفّذُ نصًّا والحاجزُ أخضرُ — وأنّ العلاجَ السابقَ أغلقَ
+ * الحرفَ لا الجنسَ. فصارَ الاستدلالُ **دلاليًّا لأصلِ القيمةِ عبرَ منظوراتِ المادةِ**
+ * (`scripts/rehydrate_value_views.ts`): العضوُ يُقرأُ من مصدرِهِ المُجسَّدِ لا من شكلِ
+ * أساسِهِ — الكائنُ الحرفيُّ والمصفوفةُ والدمجُ والصنفُ المُنشأُ ووحدةُ النطاقِ، والمعرّفُ
+ * يُتْبَعُ إلى **كلِّ** تدفّقاتِ إسنادِهِ اتحادًا، وعنصرُ التفكيكِ يُسألُ من جذرِ إعلانِهِ
+ * بمسارِ مفاتيحِهِ (متداخلًا · ذا قيمةٍ افتراضيةٍ · من دمجِ assign) وعنصرُ for-of من
+ * عناصرِ منظوراتِ المصفوفةِ، والاشتقاقُ `at`/`map`/`filter` يصلُ إلى العناصرِ، وقيمةُ تعبيرِ
+ * الإسنادِ طرفُهُ الأيمنُ وقناةُ `yield` في اتحادِ قيمةِ الدالّةِ المولِّدةِ، والاستيرادُ
+ * يُتْبَعُ إلى دالّةٍ مُصدَّرةٍ وإرجاعِها المرئيِّ وإلى التصديرِ الافتراضيِّ وتعبيرِهِ.
  */
 import ts from "typescript";
 import {
@@ -66,8 +56,7 @@ import {
   collectReturns,
   foldKey,
   globalDoor,
-  namespaceModuleOf,
-  propertyNameText,
+  isAssignment,
   unwrapFlow,
 } from "./rehydrate_origin_model";
 import type { ValueOrigin } from "./rehydrate_origin_model";
@@ -75,6 +64,8 @@ import type { ValueOrigin } from "./rehydrate_origin_model";
 export { unwrapFlow, effectiveCallArguments } from "./rehydrate_origin_model";
 export type { OriginKind, ValueOrigin } from "./rehydrate_origin_model";
 import { BindingFlows, paramFlowMap } from "./rehydrate_binding_flows";
+import { arrayViewElements, bindingElementSources, dataBaseMemberOrigin, derivedArrayValue } from "./rehydrate_value_views";
+import type { ViewContext } from "./rehydrate_value_views";
 
 const oracleCache = new WeakMap<ts.SourceFile, ValueOriginOracle>();
 
@@ -93,6 +84,7 @@ export class ValueOriginOracle {
   private readonly visiting = new Set<ts.Symbol>();
   private readonly checker: ts.TypeChecker;
   private readonly returnOriginCache = new Map<ts.Symbol, ValueOrigin | null>();
+  private ctx?: ViewContext;
 
   constructor(file: ts.SourceFile, checker: ts.TypeChecker) {
     this.checker = checker;
@@ -123,6 +115,9 @@ export class ValueOriginOracle {
       if (op === ts.SyntaxKind.AmpersandAmpersandToken || op === ts.SyntaxKind.BarBarToken || op === ts.SyntaxKind.QuestionQuestionToken) {
         return EXEC_UNION(this.originOf(u.left), this.originOf(u.right));
       }
+      // المعالجةُ الخامسةَ عشرةَ: قيمةُ تعبيرِ الإسنادِ طرفُهُ الأيمنُ — والإسنادُ المنطقيُّ (&&= · ||= · ??=) طرفاه معًا
+      if (op === ts.SyntaxKind.EqualsToken) return this.originOf(u.right);
+      if (isAssignment(op)) return EXEC_UNION(this.originOf(u.left), this.originOf(u.right));
       return DATA;
     }
     return DATA;
@@ -164,34 +159,71 @@ export class ValueOriginOracle {
       }
       return this.paramOrigin(s, d);
     }
-    // المعالجةُ الرابعةَ عشرةَ (عيب 4): المفكَّكُ من نمطِ ربطٍ إعلانُهُ BindingElement لا
-    // VariableDeclaration — وتدفّقُهُ في varFlows كما هو (التفكيكُ يربطُ كلَّ عنصرٍ بمعرّفِهِ)
-    if (d !== undefined && (ts.isVariableDeclaration(d) || ts.isBindingElement(d))) {
+    // المعالجةُ الخامسةَ عشرةَ: المفكَّكُ — مصادرُهُ من جذرِ إعلانِهِ بمسارِ مفاتيحِهِ اتحادًا
+    // معَ تدفّقاتِهِ كما كانت (التفكيكُ المتداخلُ والقيمةُ الافتراضيةُ ودمجُ assign)
+    if (d !== undefined && ts.isBindingElement(d)) {
+      if (this.visiting.has(s)) return DATA; // إسنادٌ ذاتيّ — لا أصلَ يُتبع
+      this.visiting.add(s);
+      try {
+        const flows = this.flows.varFlows.get(s);
+        let acc = flows === undefined ? DATA : flows.reduce((a, f) => EXEC_UNION(a, this.originOf(f)), DATA);
+        for (const src of bindingElementSources(d, this.viewCtx())) acc = EXEC_UNION(acc, this.originInFile(src));
+        return acc;
+      } finally {
+        this.visiting.delete(s);
+      }
+    }
+    if (d !== undefined && ts.isVariableDeclaration(d)) {
       if (this.visiting.has(s)) return DATA; // إسنادٌ ذاتيّ — لا أصلَ يُتبع
       this.visiting.add(s);
       try {
         const flows = this.flows.varFlows.get(s);
         if (flows === undefined) return DATA;
-        return flows.reduce((acc, f) => EXEC_UNION(acc, this.originOf(f)), DATA);
+        // المعالجةُ الخامسةَ عشرةَ: عنصرُ for-of على متغيّرٍ — أصلُهُ عناصرُ منظوراتِ المصفوفةِ
+        const forOf = ts.isVariableDeclarationList(d.parent) && ts.isForOfStatement(d.parent.parent);
+        return flows.reduce((acc, f) => EXEC_UNION(acc, forOf ? this.forOfElementOrigin(f) : this.originOf(f)), DATA);
       } finally {
         this.visiting.delete(s);
       }
     }
-    if (d !== undefined && ts.isImportSpecifier(d) || s.declarations?.some((x) => ts.isImportSpecifier(x)) === true) {
-      // المعالجةُ الرابعةَ عشرةَ (عيب 5): الاستيرادُ المستعيرُ بلا valueDeclaration — يُتْبَعُ من
-      // declarations إلى الرمزِ المكنّى ومُهيّئِهِ في وحدتِهِ (import { evil as x } من ملفٍ آخر)
-      const target = this.checker.getAliasedSymbol(s);
-      const td = target?.valueDeclaration;
-      if (target !== undefined && td !== undefined && ts.isVariableDeclaration(td) && td.initializer !== undefined) {
-        return valueOriginOracle(td.getSourceFile(), this.checker).originOf(td.initializer);
-      }
-      return DATA;
+    // المعالجةُ الخامسةَ عشرةَ: الاستيرادُ — مُسمًّى كانَ أو افتراضيًّا — يُتْبَعُ إلى رمزِهِ
+    // المكنّى: متغيّرٌ فمُهيِّئُهُ · دالّةٌ مُصدَّرةٌ فإرجاعُها المرئيُّ · تصديرٌ افتراضيٌّ فتعبيرُهُ
+    if ((d !== undefined && ts.isImportSpecifier(d)) || s.declarations?.some((x) => ts.isImportSpecifier(x)) === true) {
+      const imported = this.importedValue(s);
+      return imported ?? DATA;
+    }
+    if (d !== undefined && ts.isImportClause(d)) {
+      const imported = this.importedValue(s);
+      if (imported !== null) return imported;
     }
     // المعالجةُ الرابعةَ عشرةَ (عيب 4): دالّةٌ معرّفةٌ في البرنامج — قيمتُها إرجاعُها المرئيُّ
     const ret = this.functionReturnOrigin(s);
     if (ret !== null) return ret;
     // دالّةٌ أو صنفٌ معرّفٌ في البرنامج — جسمُه مرئيٌّ والنفيُ يقرؤه
     return DATA;
+  }
+
+  /** قيمةُ رمزٍ مستورَدٍ — `null` إن لم يُحَلَّ إلى شيءٍ يُسألُ */
+  private importedValue(s: ts.Symbol): ValueOrigin | null {
+    let target: ts.Symbol | undefined;
+    try {
+      target = this.checker.getAliasedSymbol(s);
+    } catch {
+      target = undefined;
+    }
+    const td = target?.valueDeclaration ?? target?.declarations?.[0];
+    if (td === undefined) return null;
+    if (ts.isVariableDeclaration(td) && td.initializer !== undefined) return this.originInFile(td.initializer);
+    if ((ts.isFunctionDeclaration(td) || ts.isFunctionExpression(td) || ts.isArrowFunction(td)) && td.body !== undefined) return this.declaredFunctionValue(td);
+    if (ts.isExportAssignment(td)) return this.originInFile(td.expression);
+    return null;
+  }
+
+  /** عنصرُ for-of: عناصرُ منظوراتِ المصفوفةِ — أو حدُّ التعبيرِ كما كانَ إن لم تُجسَّدْ */
+  private forOfElementOrigin(f: ts.Expression): ValueOrigin {
+    const els = arrayViewElements(f, this.viewCtx());
+    if (els.length === 0) return this.originOf(f);
+    return els.reduce((acc, el) => RETURN_UNION(acc, this.originInFile(el)), DATA);
   }
 
   /** قيمةُ دالّةٍ معرّفةٍ: اتحادُ تعبيراتِ الإرجاعِ في جسمِها — `null` إن لم تكن دالّةً ذاتَ جسمٍ */
@@ -228,6 +260,27 @@ export class ValueOriginOracle {
     return rets.reduce((acc, r) => RETURN_UNION(acc, this.originOf(r)), DATA);
   }
 
+  /** قيمةُ دالّةٍ معرّفةٍ في البرنامجِ — عبرَ عرّافِ ملفِّها (عامٌّ للمنظوراتِ) */
+  declaredFunctionValue(fn: ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction | ts.MethodDeclaration | ts.GetAccessorDeclaration): ValueOrigin {
+    return valueOriginOracle(fn.getSourceFile(), this.checker).bodyReturnOrigin(fn);
+  }
+
+  /** أصلُ قيمةِ تعبيرٍ في ملفِّهِ — السؤالُ يُوجَّهُ إلى عرّافِ الملفِّ الذي فيهِ التعبيرُ */
+  private originInFile(e: ts.Expression): ValueOrigin {
+    return valueOriginOracle(e.getSourceFile(), this.checker).originOf(e);
+  }
+
+  /** قيمةُ إعلانٍ — متغيّرٌ فمُهيِّئُهُ · خصيصةُ صنفٍ فمُهيِّئُها · دالّةٌ فإرجاعُها */
+  private declValueOrigin(d: ts.Declaration): ValueOrigin {
+    if (d.getSourceFile().isDeclarationFile) return DATA;
+    if (ts.isVariableDeclaration(d) && d.initializer !== undefined) return this.originInFile(d.initializer);
+    if (ts.isPropertyDeclaration(d) && d.initializer !== undefined) return this.originInFile(d.initializer);
+    if ((ts.isFunctionDeclaration(d) || ts.isFunctionExpression(d) || ts.isArrowFunction(d) || ts.isMethodDeclaration(d) || ts.isGetAccessorDeclaration(d)) && d.body !== undefined) {
+      return this.declaredFunctionValue(d);
+    }
+    return DATA;
+  }
+
   /** معاملٌ: نوعُه المحلولُ هو المتاحُ — `any`/`unknown` معتمٌ (لا برهانَ على براءةِ المصدر) */
   private paramOrigin(s: ts.Symbol, d: ts.ParameterDeclaration): ValueOrigin {
     const t = this.checker.getTypeOfSymbolAtLocation(s, d.name);
@@ -235,7 +288,24 @@ export class ValueOriginOracle {
     return DATA;
   }
 
-  /** الوصولُ بالخاصّيّةِ أو الفهرسِ — أبوابُ الكائنِ العالميّ والأشياءِ الحرفيّةِ والأبوابِ الانعكاسيّةِ */
+  /** سياقُ التجسيدِ — تدفّقاتُ المعرّفِ تُقرأُ من عرّافِ ملفِّهِ (التوجيهُ العابرُ للملفاتِ) */
+  private viewCtx(): ViewContext {
+    if (this.ctx === undefined) {
+      this.ctx = {
+        checker: this.checker,
+        flowsOf: (id) => valueOriginOracle(id.getSourceFile(), this.checker).flowsOfSymbol(id),
+      };
+    }
+    return this.ctx;
+  }
+
+  /** تدفّقاتُ إسنادِ معرّفٍ في ملفِّ هذا العرّافِ — للمنظوراتِ */
+  flowsOfSymbol(id: ts.Identifier): readonly ts.Expression[] {
+    const s = this.checker.getSymbolAtLocation(id);
+    return s === undefined ? [] : this.flows.varFlows.get(s) ?? [];
+  }
+
+  /** الوصولُ بالخاصّيّةِ أو الفهرسِ — أبوابُ الكائنِ العالميّ ومنظوراتُ المادةِ */
   private propOrigin(n: ts.PropertyAccessExpression | ts.ElementAccessExpression): ValueOrigin {
     const key = ts.isPropertyAccessExpression(n) ? n.name.text : foldKey(n.argumentExpression);
     const baseOrigin = this.originOf(n.expression);
@@ -254,7 +324,6 @@ export class ValueOriginOracle {
       if (name === "Object" && key !== null && OBJECT_DOOR_KEYS.has(key)) return EXEC("«Object.getOwnPropertyDescriptor» — واصفٌ يبلغُ القيمةَ ديناميكيًّا");
       return DATA;
     }
-    // أساسٌ بياناتٌ: كائنٌ حرفيٌّ — أصلُ الخاصّيّةِ مُهيِّئُها مدموجًا مع كلِّ إعادةِ إسنادٍ لها
     if (key === "constructor" && baseOrigin.kind === "data") {
       // منشئُ قيمةٍ دالّيّةٍ هو `Function` نفسُهُ — بابُ منشئِ الدالّةِ من نصّ (قيمةُ القاعدةِ تُتبع)
       const baseT = this.checker.getTypeAtLocation(n.expression);
@@ -262,120 +331,14 @@ export class ValueOriginOracle {
         return EXEC("منشئُ قيمةٍ دالّيّةٍ هو Function — بابُ منشئِ الدالّةِ من نصّ");
       }
     }
-    if (key !== null) {
-      const decl = this.literalRootOf(n.expression);
-      if (decl !== undefined) {
-        const flows = this.flows.propFlowsOf(decl, key).map((f) => this.originOf(f));
-        const own = this.literalMemberOrigin(decl, key) ?? DATA;
-        return flows.reduce((acc, f) => EXEC_UNION(acc, f), own);
-      }
-    }
-    // المعالجةُ الرابعةَ عشرةَ (عيب 2): الحرفيُّ في التعبيرِ نفسِهِ — الوصولُ ينزلُ إلى العضوِ
-    // لا يسقطُ إلى `data` (المفتاحُ الرقميُّ يُطوى فيُدرَكُ فهرسُ المصفوفةِ)
-    {
-      const baseU = unwrapFlow(n.expression);
-      if (ts.isObjectLiteralExpression(baseU) && key !== null) {
-        const o = this.objectLiteralMemberOrigin(baseU, key);
-        if (o !== undefined) return o;
-      }
-      if (ts.isArrayLiteralExpression(baseU) && key !== null && /^\d+$/.test(key)) {
-        const el = baseU.elements[Number(key)];
-        if (el !== undefined && !ts.isOmittedExpression(el) && !ts.isSpreadElement(el)) return this.originOf(el);
-      }
-      // المعالجةُ الرابعةَ عشرةَ (عيب 1): عضوُ استيرادِ النطاقِ — يُحَلُّ إلى تصديرِ الوحدةِ المحلولةِ
-      const ns = namespaceModuleOf(this.checker, n.expression);
-      if (ns !== undefined && key !== null) {
-        const o = this.moduleExportOrigin(ns, key);
-        if (o !== undefined) return o;
-      }
-    }
-    return DATA;
-  }
-
-  /** إن كانَ الأساسُ متغيّرًا مُهيَّئُهُ كائنٌ حرفيٌّ (أو دمجُ Object.assign الحرفيّ — المعالجةُ الرابعةَ عشرةَ) فأصلُ أعضائِهِ يُقاسُ من المُهيِّئِ */
-  private literalRootOf(base: ts.Expression): ts.Symbol | undefined {
-    const u = unwrapFlow(base);
-    if (!ts.isIdentifier(u)) return undefined;
-    const s = this.checker.getSymbolAtLocation(u);
-    const d = s?.valueDeclaration;
-    if (s === undefined || d === undefined || !ts.isVariableDeclaration(d) || d.initializer === undefined) return undefined;
-    const initU = unwrapFlow(d.initializer);
-    return ts.isObjectLiteralExpression(initU) || this.isObjectAssignCall(initU) ? s : undefined;
-  }
-
-  /** `Object.assign(…)` الحرفيُّ — دمجٌ يُقرأُ أعضاؤُهُ من وسيطاتِهِ الكائنيّةِ الحرفيّةِ */
-  private isObjectAssignCall(e: ts.Expression): e is ts.CallExpression {
-    if (!ts.isCallExpression(e)) return false;
-    const c = unwrapFlow(e.expression);
-    return ts.isPropertyAccessExpression(c) && c.name.text === "assign" && ts.isIdentifier(c.expression) && c.expression.text === "Object";
-  }
-
-  /** أصلُ تصديرٍ من وحدةٍ — `undefined` إن لم يوجدِ التصديرُ */
-  private moduleExportOrigin(moduleSym: ts.Symbol, key: string): ValueOrigin | undefined {
-    let exports: readonly ts.Symbol[];
-    try {
-      exports = this.checker.getExportsOfModule(moduleSym);
-    } catch {
-      return undefined;
-    }
-    const exp = exports.find((e) => e.name === key);
-    if (exp === undefined) return undefined;
-    const d = exp.valueDeclaration ?? exp.declarations?.[0];
-    if (d === undefined) return undefined;
-    if (ts.isVariableDeclaration(d) && d.initializer !== undefined) {
-      return valueOriginOracle(d.getSourceFile(), this.checker).originOf(d.initializer);
-    }
-    if (d.getSourceFile().isDeclarationFile && EXEC_GLOBAL_NAMES.has(exp.name)) {
-      return EXEC(`«${exp.name}» — تصديرُ تنفيذٍ من مكتبة`);
-    }
-    return DATA; // دالّةٌ أو صنفٌ معرّفٌ — جسمُهُ مرئيٌ
-  }
-
-  /** أصلُ عضوِ كائنٍ حرفيٍّ — `undefined` إن غابَ العضوُ (الجالبُ والنشرُ ودمجُ assign — المعالجةُ الرابعةَ عشرةَ) */
-  private objectLiteralMemberOrigin(obj: ts.ObjectLiteralExpression, key: string): ValueOrigin | undefined {
-    for (const p of obj.properties) {
-      if (ts.isPropertyAssignment(p) && propertyNameText(p.name) === key) return this.originOf(p.initializer);
-      if (ts.isShorthandPropertyAssignment(p) && p.name.text === key) return this.identOrigin(p.name);
-      if (ts.isGetAccessorDeclaration(p) && propertyNameText(p.name) === key) {
-        // الجالبُ: قيمتُهُ إرجاعُهُ (قناةُ الربطِ لا المُهيّئِ كاملًا)
-        return this.bodyReturnOrigin(p);
-      }
-      if (ts.isSpreadAssignment(p)) {
-        const u = unwrapFlow(p.expression);
-        if (ts.isObjectLiteralExpression(u)) {
-          const o = this.objectLiteralMemberOrigin(u, key);
-          if (o !== undefined) return o;
-        } else if (ts.isIdentifier(u)) {
-          const root = this.literalRootOf(u);
-          if (root !== undefined) {
-            const o = this.literalMemberOrigin(root, key);
-            if (o !== undefined) return o;
-          }
-        }
-      }
-    }
-    return undefined;
-  }
-
-  /** أصلُ عضوِ متغيّرٍ جذرُهُ كائنٌ حرفيٌّ أو دمجُ assign — `undefined` إن غابَ العضوُ */
-  private literalMemberOrigin(objSymbol: ts.Symbol, key: string): ValueOrigin | undefined {
-    const d = objSymbol.valueDeclaration;
-    if (d === undefined || !ts.isVariableDeclaration(d) || d.initializer === undefined) return undefined;
-    const init = unwrapFlow(d.initializer);
-    // المعالجةُ الرابعةَ عشرةَ (عيب 4): دمجُ Object.assign — الأعضاءُ من كلِّ الحرفيّاتِ المعطاة
-    if (this.isObjectAssignCall(init)) {
-      let acc: ValueOrigin | undefined;
-      for (const a of init.arguments) {
-        const au = unwrapFlow(a);
-        if (ts.isObjectLiteralExpression(au)) {
-          const o = this.objectLiteralMemberOrigin(au, key);
-          if (o !== undefined) acc = acc === undefined ? o : EXEC_UNION(acc, o);
-        }
-      }
-      return acc;
-    }
-    if (!ts.isObjectLiteralExpression(init)) return undefined;
-    return this.objectLiteralMemberOrigin(init, key);
+    // المعالجةُ الخامسةَ عشرةَ: منظوراتُ المادةِ — أصلُ العضوِ من مصدرِهِ المُجسَّدِ لا من شكلِ أساسِهِ
+    return dataBaseMemberOrigin(n, this.viewCtx(), {
+      originInFile: (e) => this.originInFile(e),
+      functionValue: (fn) => this.declaredFunctionValue(fn),
+      declValue: (d) => this.declValueOrigin(d),
+      propFlowsOf: (s, k) => this.flows.propFlowsOf(s, k),
+      originOfFlow: (f) => this.originOf(f),
+    });
   }
 
   /** نتيجةُ النداءِ: مستدعًى أصلهُ تنفيذٌ فالقيمةُ تنفيذٌ · وإلا فبياناتٌ */
@@ -385,6 +348,12 @@ export class ValueOriginOracle {
     if (ts.isPropertyAccessExpression(callee) && TRAMPOLINE_KEYS.has(callee.name.text)) {
       return this.originOf(callee.expression);
     }
+    // المعالجةُ الخامسةَ عشرةَ: اشتقاقُ المصفوفةِ — at/map/filter تصلُ إلى عناصرِ منظوراتِها
+    const derived = derivedArrayValue(n, this.viewCtx(), {
+      originInFile: (e) => this.originInFile(e),
+      callbackValue: (fn) => this.declaredFunctionValue(fn),
+    });
+    if (derived !== null) return derived;
     const calleeOrigin = this.originOf(n.expression);
     if (calleeOrigin.kind === "exec") return calleeOrigin;
     if (calleeOrigin.kind === "opaque") return calleeOrigin;

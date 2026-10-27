@@ -1,0 +1,143 @@
+خامُّ قياساتِ المعالجةِ الخامسةَ عشرةَ — W-2026-040 (الجلسة 170 · 2026-10-27)
+عيوبُ مجلسِ الجولةِ العاشرةِ الستةَ عشرةَ (W-2026-040-10.json · خامُّ gpt وخامُّ grok وخامُّ
+gemini بحروفِها):
+  RC14_BINDING_ALIAS_DESTRUCTURE_ESCAPE_GREENS · RC14_CROSS_FILE_PARAM_FLOW_ORDER_ESCAPE_GREENS ·
+  RC14_ARRAY_VARIABLE_INDEX_LOSES_ELEMENT · RC14_DESTRUCTURE_AND_FOROF_FROM_BINDING_LOSE_MEMBER ·
+  RC14_COMPUTED_AND_NESTED_LITERAL_EXTRACTION · RC14_METHOD_AND_CLASS_RETURN_UNSEEN ·
+  RC14_NAMESPACE_ALIAS_AND_DESTRUCTURE_ESCAPE · RC14_IMPORT_FUNCTION_AND_DEFAULT_UNSEEN ·
+  DECLARED_INTERPROC_APPLY_BIND_SPREAD_STILL_A_DOOR ·
+  RC14_ASSIGNMENT_EXPRESSION_AND_YIELD_LOSE_ORIGIN ·
+  RC14_NESTED_OBJECT_DESTRUCTURING_BLINDS_GATE · RC14_NESTED_ARRAY_DESTRUCTURING_BLINDS_GATE ·
+  RC14_DESTRUCTURING_DEFAULT_VALUE_BLINDS_GATE · RC14_DESTRUCTURE_FROM_OBJECT_ASSIGN_BLINDS_GATE ·
+  RC14_CLASS_PROPERTY_INITIALIZER_ESCAPE · RC14_NESTED_FUNCTION_CONSTRUCTOR_ESCAPE
+الآليةُ: منظوراتُ المادةِ (materialized views) — المعالجةُ لا تلاحقُ أشكالًا بل تبني من
+تدفّقاتِ الأصلِ القائمةِ منظورَ قيمةٍ لكلِّ ربطٍ (متغيّرٍ · عنصرِ تفكيكٍ · عنصرِ for-of ·
+معاملٍ معلنِ النوعِ) ثمّ تُسألُ منظوراتُ المادةِ عن أصلِ العضوِ لا المُهيِّئِ كاملًا:
+`scripts/rehydrate_value_views.ts` (جديد — بناءُ المنظوراتِ من كائنٍ حرفيٍّ أو مصفوفةٍ
+حرفيّةٍ أو Object.assign أو NewExpression أو تصديرِ وحدةِ نطاقٍ أو استيرادٍ، بالنزولِ
+المتداخلِ والنشرِ والمفاتيحِ المحسوبةِ الحرفيّةِ ومناهجِ الكائنِ والصنفِ وخصائصِه) ·
+`scripts/rehydrate_value_origin.ts` (أُعيدَ كتابتُه — العرّافُ يسألُ منظوراتِ المادةِ:
+التفكيكُ يصلُ إلى العضوِ عبرَ bindingElementSources · عنصرُ for-of عبرَ arrayViewElements ·
+الاستيرادُ يتبعُ جسمَ الدالّةِ والتصديرَ الافتراضيَّ في وحدتِهِ · تعبيرُ الإسنادِ الثنائيُّ
+قيمتُهُ الطرفُ الأيمنُ · propOrigin يفوّضُ إلى dataBaseMemberOrigin · callOrigin يسألُ
+derivedArrayValue لفهرسِ المتغيّرِ وat وmap) · `scripts/rehydrate_binding_flows.ts`
+(إلحاقٌ — ترامبوليناتُ apply/bind تُحَلُّ من مواضعِ النداءِ الفعليّةِ عبرَ الأنواعِ عند
+التوقيعِ في ملفِّ إعلانٍ، والنشرُ الحرفيُّ يُفكُّ وسيطاتِهِ الموضعيّةَ) ·
+`scripts/rehydrate_origin_model.ts` (إلحاقٌ — collectReturns يجمعُ yield أيضًا) ·
+`scripts/rehydrate_producers.ts` (إلحاقٌ — تهيئةُ عرّافِ الأصلِ لكلِّ ملفاتِ البرنامجِ قبلَ
+حلقةِ الأحكامِ: ترتيبُ المسحِ لم يعد يقرّرُ رؤيةَ التدفقِ بينيّ الملفاتِ).
+الآلة: node v20.20.2 · npm v10.8.2 · القياسُ في بيئةِ الجلسةِ 170 (الشجرةُ عندَ 6612183
+قبلَ الالتزامِ وفوقَهُ تغييراتُ المعالجةِ غيرُ الملتزمة)
+
+منهجُ القياسِ (جريانٌ واحدٌ · مسابرُ الجولةِ العاشرةِ بحروفِها كما في ملفِّ التطفيرِ
+tests/data/rehydrate_census_mutations_r14.test.ts): لكلِّ وجهٍ يُبنى جذرُ بوابةٍ منسوخٌ
+(config/ · src/ · scripts/) ويُلحَقُ الوجهُ بـsrc/data/persistence.ts ثمّ تُشغَّلُ البوابةُ
+(node dist/scripts/check_rehydrate_census.js بقراءةِ الجذرِ من SOOL_CHECK_ROOT) — قبلَ
+المعالجةِ بالبوابةِ المبنيةِ من التجميدِ 85f750c (worktree مستقلٌ نظيفٌ في
+/tmp/sool-freeze-r15 ببناءٍ كاملٍ — لا تشوّشَ معَ شجرةِ العملِ) · وبعدَها بالبوابةِ
+المعالَجةِ. الوجوهُ الحيّةُ الستةُ والعشرونَ تقيسُ الرفضَ الكاذبَ (القنواتُ نفسُها بريئةَ
+الأصلِ — ومنها الوجوهُ الحيّةُ العشرُ من جولاتٍ سابقةٍ).
+
+=== المرحلة 1: القياسُ قبلَ المعالجةِ (البوابةُ من التجميدِ 85f750c — العيبُ كما سمّاهُ المجلسُ) ===
+N1  gpt-1 `const box = { run: eval }; const { run }: { run: any } = box; run('…')`: exit=0  (النجاةُ — العيبُ · مسبارُ gpt)
+N2  gpt-2 معاملٌ معلَنُ النوعِ عبرَ وحدةٍ أُخرى (council10Invoke(eval, code) والتعريفُ في وحدةٍ ثانيةٍ): exit=0  (النجاةُ — العيبُ · مسبارُ gpt)
+N3  grok-1 `const arr = [eval]; const evil: any = arr[0]; evil(…)`: exit=0  (النجاةُ — العيبُ)
+N4  grok-1 `[eval].at(0)`: exit=0  (النجاةُ — العيبُ)
+N5  grok-1 `[eval].map((x: any) => x)[0]`: exit=0  (النجاةُ — العيبُ)
+N6  grok-2 `for (const run of arr)` بarr=[eval]: exit=0  (النجاةُ — العيبُ)
+N7  grok-3 `({ ['run']: eval }).run`: exit=0  (النجاةُ — العيبُ)
+N8  grok-3 `({ box: { run: eval } }).box.run`: exit=0  (النجاةُ — العيبُ)
+N9  grok-4 `const o = { run(): any { return eval; } }; o.run()(…)`: exit=0  (النجاةُ — العيبُ)
+N10 grok-4 `class Box { run(): any { return eval; } } new Box().run()(…)`: exit=0  (النجاةُ — العيبُ)
+N11 grok-5 `const box = ns; box.escaped(…)`: exit=0  (النجاةُ — العيبُ)
+N12 grok-5 `const { escaped } = ns`: exit=0  (النجاةُ — العيبُ)
+N13 grok-6 `export function get(): any { return eval }` ثمّ `import { get }` و`get()(…)`: exit=0  (النجاةُ — العيبُ)
+N14 grok-6 `export default eval` ثمّ `import evil` و`evil(…)`: exit=1  [RC-14] (الوجهُ الوحيدُ الذي كانت البوابةُ القديمةُ تراهُ — لا نجاةً فليسَ من دَينِ هذه الجولةِ: أُعيدَ تشغيلُهُ باليدِ على جذرِ التجميدِ للتثبّتِ لا افتراضًا، وأُعيدت المرحلةُ السالبةُ كاملةً فأعطتِ النتيجةَ نفسَها مرتينِ)
+N15 grok-7 `goR15.apply(null, [eval, '…'])`: exit=0  (النجاةُ — العيبُ)
+N16 grok-7 `goR15.bind(null, eval)('…')`: exit=0  (النجاةُ — العيبُ)
+N17 grok-7 `goR15(...[eval, '…'])`: exit=0  (النجاةُ — العيبُ)
+N18 grok-8 `const evil: any = (slot = eval); evil(…)`: exit=0  (النجاةُ — العيبُ)
+N19 grok-8 `function* gen(): Generator<any> { yield eval } gen().next().value(…)`: exit=0  (النجاةُ — العيبُ)
+N20 gemini-1 `const { a: { run } }: any = { a: { run: eval } }; run('…')`: exit=0  (النجاةُ — العيبُ · مسبارُ gemini)
+N21 gemini-2 `const [[run]]: any = [[eval]]; run('…')`: exit=0  (النجاةُ — العيبُ · مسبارُ gemini)
+N22 gemini-3 `const { run = eval }: any = {}; run('…')`: exit=0  (النجاةُ — العيبُ · مسبارُ gemini)
+N23 gemini-4 `const { run }: any = Object.assign({}, { run: eval }); run('…')`: exit=0  (النجاةُ — العيبُ · مسبارُ gemini)
+N24 gemini-5 `class Runner { run: any = eval } new Runner().run('…')`: exit=0  (النجاةُ — العيبُ · مسبارُ gemini)
+N25 gemini-6 `const { a: { F } }: any = { a: { F: Function } }; F('…')()`: exit=0  (النجاةُ — العيبُ · مسبارُ gemini)
+الوجوهُ الحيّةُ الستةُ والعشرونَ: كلُّها exit=0 (بلا رفضٍ كاذبٍ — والحاجزُ أخضرُ فالنجاةُ هي العيبُ)
+الشجرةُ الحيّةُ بلا تطفيرٍ (بوابةُ التجميدِ): exit=0
+=== نهايةِ المرحلةِ 1 ===
+(الخامُّ: /tmp/r15_before_neg.log و/tmp/r15_before_neg2.log و/tmp/r15_before_live.log — إعادةُ
+تشغيلِ المرحلةِ السالبةِ كاملةً للتثبّتِ من وجهِ N14 (تشغيلانِ مستقلّانِ أعطيَا النتيجةَ نفسَها) ·
+بيئةُ القياسِ worktree عندَ 85f750c مبنيةً ب`npm ci`+`npm run build` · 24 ناجيًا ووجهٌ مغطًّى)
+
+=== المرحلة 2: القياسُ بعدَ المعالجةِ (منظوراتُ المادةِ — البوابةُ نفسُها مُعالَجةً) ===
+N1:  exit=1  [RC-14] (التفكيكُ يصلُ إلى العضوِ عبرَ منظورِ المادةِ للمُعرِّفِ الوسيطِ)
+N2:  exit=1  [RC-14] (تهيئةُ العرّافِ لكلِّ ملفاتِ البرنامجِ قبلَ الأحكامِ — التدفقُ بينيَّ الملفاتِ يُرى أينما وقعَ المسحُ)
+N3:  exit=1  [RC-14] (فهرسُ المصفوفةِ المحمولةِ في متغيّرٍ يُسألُ عنصرُ منظورِها)
+N4:  exit=1  [RC-14] (at كقناةٍ مُشتقّةٍ من منظورِ المصفوفةِ)
+N5:  exit=1  [RC-14] (map يُسألُ عنصرُهُ الأوّلُ من إرجاعِهِ)
+N6:  exit=1  [RC-14] (عنصرُ for-of يصلُ إلى منظورِ المصفوفةِ)
+N7:  exit=1  [RC-14] (المفتاحُ المحسوبُ الحرفيُّ يُطوى داخلَ المنظورِ)
+N8:  exit=1  [RC-14] (النزولُ المتداخلُ داخلَ المنظورِ الواحدِ)
+N9:  exit=1  [RC-14] (منهجُ الكائنِ قيمتُهُ إرجاعُهُ داخلَ المنظورِ)
+N10: exit=1  [RC-14] (منهجُ الصنفِ المنشأِ يُسألُ منظورُهُ)
+N11: exit=1  [RC-14] (كنيةُ وحدةِ النطاقِ منظورُها تصديرُ وحدتِها)
+N12: exit=1  [RC-14] (تفكيكُ وحدةِ النطاقِ من منظورِها)
+N13: exit=1  [RC-14] (الدالّةُ المستوردةُ يُسألُ جسمُها في وحدتِها)
+N14: exit=1  [RC-14] (التصديرُ الافتراضيُّ يُتبَعُ في وحدتِهِ — كما كانَ مغطًّى ويزيدُ)
+N15: exit=1  [RC-14] (ترامبولينُ apply يُحَلُّ من مواضعِ النداءِ عبرَ الأنواعِ)
+N16: exit=1  [RC-14] (ترامبولينُ bind كذلكَ)
+N17: exit=1  [RC-14] (النشرُ الحرفيُّ يُفكُّ وسيطاتِهِ الموضعيّةَ)
+N18: exit=1  [RC-14] (قيمةُ تعبيرِ الإسنادِ الثنائيِّ هي الطرفُ الأيمنُ)
+N19: exit=1  [RC-14] (yield قناةُ إرجاعٍ تُجمعُ)
+N20: exit=1  [RC-14] (التفكيكُ الكائنيُّ المتداخلُ يهبطُ داخلَ المنظورِ)
+N21: exit=1  [RC-14] (التفكيكُ المصفوفيُّ المتداخلُ كذلكَ)
+N22: exit=1  [RC-14] (القيمةُ الافتراضيةُ تُسألُ عندَ غيابِ العضوِ)
+N23: exit=1  [RC-14] (تفكيكُ دمجِ assign من منظورِ وسيطاتِهِ)
+N24: exit=1  [RC-14] (خصيصةُ الصنفِ داخلَ منظورِ المنشأِ)
+N25: exit=1  [RC-14] (الرمزُ العالميُّ Function يحفظُ أصلهُ عبرَ التفكيكِ المتداخلِ)
+الوجوهُ الحيّةُ الستةُ والعشرونَ: كلُّها exit=0 (بلا رفضٍ كاذبٍ — القنواتُ نفسُها بريئةَ الأصلِ تُخضَرّ)
+الشجرةُ الحيّةُ بلا تطفيرٍ: exit=0
+=== نهايةِ المرحلةِ 2 ===
+(الخامُّ: /tmp/r15_after_neg.log و/tmp/r15_after_live.log — بيئةِ الجلسةِ 170 على الشجرةِ
+المعالَجةِ · 25 مرفوضًا · 26 حيًّا أخضرَ)
+
+=== تطفيرُ ملفِّ الجولةِ الرابعةَ عشرةَ (node --test dist/tests/data/rehydrate_census_mutations_r14.test.js) ===
+# tests 2 · # pass 2 · # fail 0 (25 وجهًا سالبًا · 26 وجهًا حيًّا)
+(الخامُّ: /tmp/r14_test.log · مدةُ الوجهِ السالبِ 345 ثانيةٍ)
+
+=== اختبارُ الانحدارِ — ملفُّ الجولةِ الثالثةَ عشرةَ (node --test dist/tests/data/rehydrate_census_mutations_r13.test.js) ===
+# tests 2 · # pass 2 · # fail 0 (17 سالبًا · 11 حيًّا — بلا تعديلِ وجهٍ قائم)
+(الخامُّ: /tmp/r13_test.log)
+
+=== اختبارُ الانحدارِ — ملفُّ الجولةِ الثانيةَ عشرةَ (node --test dist/tests/data/rehydrate_census_mutations_r12.test.js) ===
+# tests 2 · # pass 2 · # fail 0 (12 سالبًا · 6 حيًّا — بلا تعديلِ وجهٍ قائم)
+(الخامُّ: /tmp/r12_test.log)
+
+=== الوحداتُ تحتَ سقفِ الوحدةِ 400 (T-113: الاستثناءاتُ فارغةٌ عن قصدٍ) ===
+scripts/rehydrate_value_views.ts:        270 سطرًا (جديد — بناءُ منظوراتِ المادةِ)
+scripts/rehydrate_value_origin.ts:       363 سطرًا (أُعيدت كتابتُه — كان 394 قبلَ المعالجةِ)
+scripts/rehydrate_binding_flows.ts:      207 سطرًا (إلحاقٌ — كان 151)
+scripts/rehydrate_origin_model.ts:      221 سطرًا (إلحاقٌ — كان 216)
+scripts/rehydrate_producers.ts:         288 سطرًا (إلحاقٌ — التهيئةُ قبلَ حلقةِ الأحكامِ)
+tests/data/rehydrate_census_mutations_r14.test.ts: 398 سطرًا (جديد — 25 سالبًا · 26 حيًّا)
+check:size: أخضرُ (لا وحدةَ فوق 400 · الاستثناءاتُ بقيت فارغةً — الرَّتشُ لا يزيدُ الدَّين)
+
+=== npm test (جريانٌ نظيفٌ واحدٌ على الشجرةِ المعالَجةِ) ===
+# tests 2499
+# pass 2499
+# fail 0
+NPMTEST_EXIT=0
+(كانت 2497 عندَ الجولةِ العاشرةِ — +2 كتلتا r14 · version.json صُوّب معها: 2497 ⇒ 2499)
+
+=== npm run verify (على الشجرةِ النهائيةِ بعدَ الالتزامِ) ===
+يُقاسُ على الشجرةِ الملتزمةِ ويُلحَقُ نتيجُهُ بإلحاقٍ مؤرّخٍ بعدَ الالتزامِ (سابقةُ تقريرِ
+المعالجةِ الرابعةَ عشرةَ — الإلحاقُ لا يُحرّرُ الأصلَ) — بما فيه check:numbers
+(2499=2499) وcheck:work على فَرقِ التزامِ المعالجةِ.
+
+=== بصمةُ النطاقِ (الثابتُ 8 — تتغيّرُ بالمعالجةِ) ===
+قيمتُها المقيسةُ على الشجرةِ النهائيةِ مُقيَّدةٌ في ملحقِ §2-ق من عقدِ البندِ (خارجَ النطاقِ —
+الملفُّ هذا داخلَ النطاقِ فإثباتُ البصمةِ فيه ذاتيُّ المرجعِ) — وعددُ مساراتِ النطاقِ 86.
+(كانت 61563babf1f923e7aebc38972e849b60a2d547363e4c8d621140670e257afe1a على 82 مسارًا عندَ
+محضرِ الجولةِ العاشرةِ — التغيّرُ مقيسٌ لا مفترضٌ)

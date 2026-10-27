@@ -7,9 +7,16 @@
  * المالك: وزارة البيانات
  * القاعدة الحاكمة RULE-000: أي تعديل هنا يُوثَّق في PROGRESS.md مع تقرير اختبار
  * الصلاحيات (RULE-004): يقرأُ الشجرةَ ويكتبُ في ذاكرةِ الجلسةِ — لا ملفًّا ولا حكمًا
+ *
+ * ## إلحاقٌ مؤرَّخٌ (2026-10-27 · المعالجةُ الخامسةَ عشرةَ · عيوبُ الجولةِ العاشرةِ)
+ *
+ * الترامبولينُ (`X.call`/`X.apply`/`X.bind`) يُحَلُّ إلى دالّةِ البرنامجِ التي يستقبلُها
+ * الأساسُ — لا يُكتفى بتوقيعِ النداءِ الذي يعودُ إلى تعريفِ مكتبةٍ (`Function.apply` في
+ * `.d.ts` فكانَ يُتخطّى الربطُ) — ووسائطُهُ الفعّالةُ تُفكُّ، والنشرُ من مصفوفةٍ حرفيّةٍ
+ * (`f(...[a, b])`) يُفكُّ موضعيًّا. الماسحُ ما زالَ يجمعُ الحوافَّ وحدَها لا يُجسّدُ منظوراتٍ.
  */
 import ts from "typescript";
-import { arrayLiteralElement, bindingElementKey, callableWithParams, collectThrows, foldKey, isAssignment, objectLiteralMemberInitializer, symbolID, unwrapFlow } from "./rehydrate_origin_model";
+import { arrayLiteralElement, bindingElementKey, callableWithParams, collectThrows, foldKey, isAssignment, objectLiteralMemberInitializer, symbolID, unwrapFlow, TRAMPOLINE_KEYS } from "./rehydrate_origin_model";
 
 /**
  * قنواتُ المعاملاتِ بينَ الدوالِّ (المعالجةُ الرابعةَ عشرةَ · عيب 6): رمزُ المعاملِ ← وسيطُهُ
@@ -101,13 +108,29 @@ export class BindingFlows {
         }
       }
       // المعالجةُ الرابعةَ عشرةَ (عيب 6): مواضعُ نداءِ الدالّةِ تربطُ معاملاتِها بوسائطِها الفعليّةِ —
-      // المعاملُ المعلَنُ النوعِ يُسألُ عن أصلِهِ عندَ استدعائِهِ أو ترامبولينِهِ (لا يُخضَّرُ كذبًا)
+      // المعاملُ المعلَنُ النوعِ يُسألُ عن أصلِهِ عندَ استدعائِهِ أو ترامبولينِهِ (لا يُخضَّرُ كذبًا).
+      // المعالجةُ الخامسةَ عشرةَ (DECLARED_INTERPROC_APPLY_BIND_SPREAD_STILL_A_DOOR): الترامبولينُ
+      // (`X.call`/`X.apply`/`X.bind`) يُحَلُّ إلى دالّةِ البرنامجِ التي يستقبلُها الأساسُ (لا
+      // تعريفَ مكتبةٍ) ووسائطُهُ الفعّالةُ تُفكُّ (call/bind يُزاحُ وسيطُها · apply تُفكُّ مصفوفةُ الحرفيّاتِ) —
+      // والنشرُ `f(...[a, b])` يُفكُّ من حرفيّاتِ المصفوفةِ عنصرًا عنصرًا موضعيًّا.
       if (ts.isCallExpression(n)) {
-        const decl = this.checker.getResolvedSignature(n)?.declaration;
+        const callee = unwrapFlow(n.expression);
+        let decl = this.checker.getResolvedSignature(n)?.declaration;
+        let args: readonly ts.Expression[] = n.arguments;
+        if (decl === undefined || decl.getSourceFile().isDeclarationFile) {
+          if (ts.isPropertyAccessExpression(callee) && TRAMPOLINE_KEYS.has(callee.name.text)) {
+            const target = this.checker.getTypeAtLocation(callee.expression).getCallSignatures()[0]?.declaration;
+            if (target !== undefined && !target.getSourceFile().isDeclarationFile && callableWithParams(target)) {
+              decl = target;
+              args = effectiveTrampolineArguments(callee.name.text, n);
+            }
+          }
+        }
         if (decl !== undefined && callableWithParams(decl) && !decl.getSourceFile().isDeclarationFile) {
+          args = expandSpreadLiterals(args);
           decl.parameters.forEach((p, i) => {
             if (p.dotDotDotToken !== undefined || !ts.isIdentifier(p.name)) return;
-            const arg = n.arguments[i];
+            const arg = args[i];
             if (arg !== undefined && !ts.isSpreadElement(arg)) addParamFlow(sym(p.name), arg);
           });
         }
@@ -148,4 +171,37 @@ function addParamFlow(symbol: ts.Symbol | undefined, rhs: ts.Expression): void {
   const flows = paramFlowMap.get(symbol);
   if (flows === undefined) paramFlowMap.set(symbol, [rhs]);
   else flows.push(rhs);
+}
+
+/**
+ * وسائطُ الترامبولينِ الفعّالةُ (المعالجةُ الخامسةَ عشرةَ): `X.call(t, a, b)` ⇐ [a, b] ·
+ * `X.bind(t, a)` ⇐ [a] · `X.apply(t, [a, b])` ⇐ عناصرُ المصفوفةِ الحرفيّةِ (أو وسيطاتُها كما هي).
+ */
+function effectiveTrampolineArguments(member: string, n: ts.CallExpression): readonly ts.Expression[] {
+  if (member === "apply") {
+    const arr = n.arguments[1] !== undefined ? unwrapFlow(n.arguments[1]) : undefined;
+    if (arr !== undefined && ts.isArrayLiteralExpression(arr)) {
+      return arr.elements.filter((el) => !ts.isSpreadElement(el) && !ts.isOmittedExpression(el));
+    }
+    return n.arguments.slice(1);
+  }
+  return n.arguments.slice(1); // call · bind — وسيطُ المستقبِلِ يُزاحُ
+}
+
+/** النشرُ من مصفوفةٍ حرفيّةٍ `f(...[a, b])` — يُفكُّ موضعيًّا (المعالجةُ الخامسةَ عشرةَ) */
+function expandSpreadLiterals(args: readonly ts.Expression[]): readonly ts.Expression[] {
+  const out: ts.Expression[] = [];
+  for (const a of args) {
+    if (!ts.isSpreadElement(a)) {
+      out.push(a);
+      continue;
+    }
+    const u = unwrapFlow(a.expression);
+    if (ts.isArrayLiteralExpression(u)) {
+      for (const el of u.elements) if (!ts.isSpreadElement(el) && !ts.isOmittedExpression(el)) out.push(el);
+    } else {
+      out.push(a);
+    }
+  }
+  return out;
 }

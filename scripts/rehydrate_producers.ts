@@ -32,9 +32,17 @@
  *
  * التبعيات: مُترجمُ TypeScript وحدَه.
  */
+/*
+ * ## إلحاقٌ مؤرَّخٌ (2026-10-27 · المعالجةُ الخامسةَ عشرةَ · عيوبُ الجولةِ العاشرةِ)
+ *
+ * يُبنى عرّافُ أصلِ القيمةِ لكلِّ ملفاتِ البرنامجِ قبلَ أوّلِ حكمٍ — فتكتملُ خريطةُ قنواتِ
+ * المعاملاتِ (الحوافّ) قبلَ أيّ سؤالٍ، ويستقلُّ الحكمُ عن ترتيبِ مسحِ الملفاتِ (عيُّ الجولةِ
+ * العاشرةِ: ملفٌّ يُسألُ قبلَ أن يمسحَ ملفُّ مواضعِ نداءِ دالتِهِ تدفّقاتِهِ فعبرَ التنفيذُ الممرورُ وسيطًا).
+ */
 import { dirname, relative } from "node:path";
 import ts from "typescript";
 import { foreignCodeReason, opaqueCodeReason } from "./rehydrate_opaque_code";
+import { valueOriginOracle } from "./rehydrate_value_origin";
 
 export interface ProducerVerdict {
   /** مواضعُ نوعُ وسيطِها الحرفُ المُعفى وحدَه — منتِجٌ قطعًا */
@@ -109,6 +117,13 @@ export function typedProducerVerdicts(root: string, files: readonly string[], ex
   const program = prebuilt ?? buildSrcProgram(files);
   const checker = program.getTypeChecker();
   const fileSet = new Set(files.map((f) => ts.sys.resolvePath(f)));
+  // المعالجةُ الخامسةَ عشرةَ (RC14_CROSS_FILE_PARAM_FLOW_ORDER_ESCAPE_GREENS): بناءُ عرّافِ
+  // الأصلِ لكلِّ ملفاتِ البرنامجِ **قبلَ أوّلِ حكمٍ** — جمعُ الحوافِّ (قنواتُ المعاملاتِ)
+  // يتمُّ كاملًا فلا يعودُ حكمُ ملفٍّ رهينَ ترتيبِ مسحِهِ (كانَ الملفُّ المُسألُ قد يُسألُ قبلَ أن يمسحَ ملفُّ مواضعِ النداءِ تدفّقاتِهِ).
+  for (const sf of program.getSourceFiles()) {
+    if (sf.isDeclarationFile || !fileSet.has(ts.sys.resolvePath(sf.fileName))) continue;
+    valueOriginOracle(sf, checker);
+  }
   const persistence = program.getSourceFiles().find((sf) => /[\\/]src[\\/]data[\\/]persistence\.ts$/.test(sf.fileName));
 
   const journalTypes: ts.Type[] = [];
