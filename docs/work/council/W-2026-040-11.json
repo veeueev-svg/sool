@@ -8,36 +8,135 @@
   "session": 11,
   "commissioning": "الحزمةُ المجمّدةُ وفقَ المواصفةِ الملتزمةِ §13.187 (التجميد c543486 · مانيفستُ 93 ملفًا · بصمةُ النطاقِ 3e629ff5… على 86 مسارًا) بُنيت في بيئةِ الجلسةِ 170 وقُرئت بوّابتا CI على التجميدِ قبلَ التكليفِ (success ×2 · 2026-10-27) ثم أُعيدَ بناؤُها في بيئةِ الجلسةِ 171 منَ المواصفةِ نفسِها معلَنًا (§13.190 — بصمةُ مانيفستٍ جديدةٌ معلَنةٌ لا انتحالَ) وأُعيدَ قياسُ البصمةِ والقراءةُ البعيدةُ للبوّابتينِ يومَ 2026-10-28 (success ×2) — تشغيلٌ متتابعٌ لا تزامنَ (RULE-020): gpt أوّلًا (خامُّهُ 1b17105) ثم grok (خامُّهُ 79f15cc) ثم gemini (خامُّهُ 37e24c0)",
   "verdicts": [
-    { "member": "gpt", "model": "GPT 5.6 Terra", "verdict": "REJECTED", "report": "docs/work/council/W-2026-040-11-gpt.md", "report_sha256": "fb57f9185d00597b0cf30b76da75ffafb4703b5e951b5f8fefaee52053d8a794" },
-    { "member": "grok", "model": "Grok 4.7", "verdict": "REJECTED", "report": "docs/work/council/W-2026-040-11-grok.md", "report_sha256": "84fbd445d3a14d5526f1d680f5d6384c04662f764a98b6b281ed866819a31978" },
-    { "member": "gemini", "model": "Gemini 3.8 Flash", "verdict": "REJECTED", "report": "docs/work/council/W-2026-040-11-gemini.md", "report_sha256": "0d5876df8c0ea2a9a9f8a7556c8c73b99c70058b1a9421591f345bfed81973b9" }
+    {
+      "member": "gpt",
+      "model": "GPT 5.6 Terra",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-040-11-gpt.md",
+      "report_sha256": "fb57f9185d00597b0cf30b76da75ffafb4703b5e951b5f8fefaee52053d8a794"
+    },
+    {
+      "member": "grok",
+      "model": "Grok 4.7",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-040-11-grok.md",
+      "report_sha256": "84fbd445d3a14d5526f1d680f5d6384c04662f764a9896b281ed866819a31978"
+    },
+    {
+      "member": "gemini",
+      "model": "Gemini 3.8 Flash",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-040-11-gemini.md",
+      "report_sha256": "0d5876df8c0ea2a9a9f8a7556c8c73b99c70058b1a9421591f345bfed81973b9"
+    }
   ],
   "decision": "NOT_VERIFIED",
-  "disposition": { "kind": "IN_PROGRESS" },
+  "disposition": {
+    "kind": "IN_PROGRESS"
+  },
   "defects": [
-    { "ref": "COUNCIL11_W040_GPT_FIXED_DEPTH_CAP_FIFTH_DESCENT_GREENS", "kind": "سقفُ عمقٍ ثابتٌ في منظوراتِ المادةِ (MAX_DEPTH=4 في scripts/rehydrate_value_views.ts:35) — نزولٌ خامسٌ واحدٌ يعيدُ العيبَ: القائمةُ الفارغةُ تعودُ DATA لا OPAQUE", "evidence": "مسبارُ depth5 المستقلُّ لـgpt: قناةُ eval عبرَ خمسِ نزولاتِ مادة/عضو تكتبُ الصنفَ المعفى والحاجزُ أخضرُ EXIT=0 (probe-depth5-executable.log في خامِّهِ)", "source": "gpt" },
-    { "ref": "COUNCIL11_W040_GPT_OBJECT_ASSIGN_IDENTIFIED_ARGUMENT_UNFOLLOWED", "kind": "منظورُ assign في scripts/rehydrate_value_views.ts:121–125 يفحصُ الوسيطَ الحرفيَّ وحدَه ولا يمرّرُ الوسيطَ المعرفَ إلى materializeViews — مصدرٌ سليمٌ شكليًا محمولٌ في متغيرٍ يفلتُ", "evidence": "مسبارُ assign-alias المستقلُّ لـgpt: const source={run:eval}; Object.assign({},source) — بناءٌ وحاجزٌ أخضرانِ EXIT=0 (probe-assign-alias-executable.log في خامِّهِ)", "source": "gpt" },
-    { "ref": "COUNCIL11_W040_GROK_FOLDKEY_LITERALS_ONLY", "kind": "foldKey يطوي الحرفيّاتِ وحدَها — المفتاحُ المحسوبُ بمعرّفٍ لا يُطوى والعودُ DATA لا OPAQUE", "evidence": "31 وجهًا سالبًا مسمّى عندَ grok (الخامُّ — عيوبُهُ التسعةُ)", "source": "grok" },
-    { "ref": "COUNCIL11_W040_GROK_CLOSED_ARRAY_DERIVATION_LIST", "kind": "قائمةُ اشتقاقِ المصفوفةِ مغلقةٌ: slice/concat/flat/flatMap/find/Array.from/map بمعرّفٍ تُرجِعُ مصفوفةً معروفةَ العناصرِ فتُخضَّرُ", "evidence": "مسابرُ grok المسماةُ (الخامُّ)", "source": "grok" },
-    { "ref": "COUNCIL11_W040_GROK_OBJECT_ASSIGN_TEXT_MATCH_ONLY", "kind": "Object.assign يُطابِقُ بنصِّ الاستدعاءِ وحدَه — كنيةُ Object أو assign تُفلتُ منَ المنظورِ", "evidence": "مسابرُ grok المسماةُ (الخامُّ)", "source": "grok" },
-    { "ref": "COUNCIL11_W040_GROK_CLASS_SHAPES_UNSEEN", "kind": "أشكالُ الصنفِ غيرُ المرئيةِ: ClassExpression · منهجٌ يُرجِعُ this.run() · #run الخاص", "evidence": "مسابرُ grok المسماةُ (الخامُّ)", "source": "grok" },
-    { "ref": "COUNCIL11_W040_GROK_SIXTH_DEPTH_GREENS", "kind": "العمقُ السادسُ ينجو (MAX_DEPTH=4): عمقُ 6 خرجَ EXIT=0 وكتبَ الصنفَ — يتقاطعُ معَ عيبِ gpt الأولِ (الجنسُ واحدٌ: السقفُ الثابتُ)", "evidence": "مسبارُ grok المسمّى (الخامُّ — TOTAL_WRITES 29)", "source": "grok" },
-    { "ref": "COUNCIL11_W040_GROK_LOCAL_DYNAMIC_IMPORT_GREENS", "kind": "الاستيرادُ الديناميكيُّ المحليُّ (import() لمحدِّدٍ نسبيٍّ داخلَ src/**) ينجو — خارجَ الحدِّ المعلنِ «تدفّقٌ عبرَ .d.ts» فالبابُ أوسعُ منَ الإعلانِ", "evidence": "مسبارُ grok المسمّى DYNAMIC_IMPORT_WROTE (الخامُّ)", "source": "grok" },
-    { "ref": "COUNCIL11_W040_GROK_CALLSITE_VIA_MEMBER_DESTRUCTURING_REST_IGNORED", "kind": "موضعُ النداءِ المرئيُّ عبرَ عضوٍ أو تفكيكٍ أو بقيةٍ يُهمَلُ — نمطُ معاملِ الدالةِ يُهمَلُ كليًا فالعضوُ منَ المعاملِ لا يُسألُ عن أصلِهِ", "evidence": "مسابرُ grok المسماةُ (الخامُّ)", "source": "grok" },
-    { "ref": "COUNCIL11_W040_GROK_DECLARED_LIMIT_OPENS_ON_MEMBER_DESTRUCTURING", "kind": "الحدُّ المعلنُ ينفتحُ على العضوِ والتفكيكِ: unseenBox(box: any) وunseen({run}) بلا موضعِ نداءٍ خرجتا EXIT=0 — «لا يُخضَّرُ كذبًا» مُكذَّبٌ على propOrigin السطرِ 319", "evidence": "مسابرُ grok المسماةُ (الخامُّ)", "source": "grok" },
-    { "ref": "COUNCIL11_W040_GROK_FALSE_REJECT_PROPERTY_READ_ON_EXEC_SYMBOL", "kind": "رفضٌ كاذبٌ لقراءةِ خاصّيّةٍ على رمزِ تنفيذٍ (eval.name · Function.length · Function.prototype) — وجهٌ ثانٍ للعيبِ", "evidence": "مسابرُ grok المسماةُ (الخامُّ)", "source": "grok" },
-    { "ref": "COUNCIL11_W040_GEMINI_CLASS_STATIC_METHOD_EXEC_ESCAPE", "kind": "CLASS_STATIC_METHOD_EXEC_ESCAPE: استدعاءُ منهجٍ ساكنٍ Box.run()() — materializeViews لا تبني منظورَ صنفٍ إلا لتعبيراتِ الإنشاءِ isNewExpression فالمعرّفُ المباشرُ يعودُ بلا منظورٍ ويعودُ memberOrigin إلى DATA", "evidence": "مسبارُ gemini المستقلُّ (SOOL_CHECK_ROOT): البناءُ ناجحٌ والحاجزُ أخضرُ EXIT=0 بلا [RC-14] (الخامُّ §5)", "source": "gemini" },
-    { "ref": "COUNCIL11_W040_GEMINI_CLASS_INHERITANCE_METHOD_EXEC_ESCAPE", "kind": "CLASS_INHERITANCE_METHOD_EXEC_ESCAPE: المنهجُ الموروثُ عبرَ extends — resolveMemberValue تبحثُ في الأعضاءِ المباشرينَ وحدَهم ولا تتبعُ heritageClauses فيُعَدُّ المنهجُ الموروثُ غيرَ موجودٍ ويمرُّ eval", "evidence": "مسبارُ gemini المستقلُّ: new Derived().run()() — EXIT=0 بلا [RC-14] (الخامُّ §5)", "source": "gemini" },
-    { "ref": "COUNCIL11_W040_GEMINI_OBJECT_ASSIGN_TARGET_MUTATION_ESCAPE", "kind": "OBJECT_ASSIGN_TARGET_MUTATION_ESCAPE: Object.assign(target, …) يعدّي ربطًا قائمًا — flowsOf(target) يبقى على الحرفيِّ الأولِ {} ولا يتتبعُ التعديلَ الجانبيَّ فيمرُّ الوصولُ (يتقاطعُ معَ عيبِ gpt الثاني في جنسِ assign)", "evidence": "مسبارُ gemini المستقلُّ: const target={}; Object.assign(target,{run:eval}); target.run(…) — EXIT=0 بلا [RC-14] (الخامُّ §5)", "source": "gemini" }
+    {
+      "ref": "COUNCIL11_W040_GPT_FIXED_DEPTH_CAP_FIFTH_DESCENT_GREENS",
+      "kind": "سقفُ عمقٍ ثابتٌ في منظوراتِ المادةِ (MAX_DEPTH=4 في scripts/rehydrate_value_views.ts:35) — نزولٌ خامسٌ واحدٌ يعيدُ العيبَ: القائمةُ الفارغةُ تعودُ DATA لا OPAQUE",
+      "evidence": "مسبارُ depth5 المستقلُّ لـgpt: قناةُ eval عبرَ خمسِ نزولاتِ مادة/عضو تكتبُ الصنفَ المعفى والحاجزُ أخضرُ EXIT=0 (probe-depth5-executable.log في خامِّهِ)",
+      "source": "gpt"
+    },
+    {
+      "ref": "COUNCIL11_W040_GPT_OBJECT_ASSIGN_IDENTIFIED_ARGUMENT_UNFOLLOWED",
+      "kind": "منظورُ assign في scripts/rehydrate_value_views.ts:121–125 يفحصُ الوسيطَ الحرفيَّ وحدَه ولا يمرّرُ الوسيطَ المعرفَ إلى materializeViews — مصدرٌ سليمٌ شكليًا محمولٌ في متغيرٍ يفلتُ",
+      "evidence": "مسبارُ assign-alias المستقلُّ لـgpt: const source={run:eval}; Object.assign({},source) — بناءٌ وحاجزٌ أخضرانِ EXIT=0 (probe-assign-alias-executable.log في خامِّهِ)",
+      "source": "gpt"
+    },
+    {
+      "ref": "COUNCIL11_W040_GROK_FOLDKEY_LITERALS_ONLY",
+      "kind": "foldKey يطوي الحرفيّاتِ وحدَها — المفتاحُ المحسوبُ بمعرّفٍ لا يُطوى والعودُ DATA لا OPAQUE",
+      "evidence": "31 وجهًا سالبًا مسمّى عندَ grok (الخامُّ — عيوبُهُ التسعةُ)",
+      "source": "grok"
+    },
+    {
+      "ref": "COUNCIL11_W040_GROK_CLOSED_ARRAY_DERIVATION_LIST",
+      "kind": "قائمةُ اشتقاقِ المصفوفةِ مغلقةٌ: slice/concat/flat/flatMap/find/Array.from/map بمعرّفٍ تُرجِعُ مصفوفةً معروفةَ العناصرِ فتُخضَّرُ",
+      "evidence": "مسابرُ grok المسماةُ (الخامُّ)",
+      "source": "grok"
+    },
+    {
+      "ref": "COUNCIL11_W040_GROK_OBJECT_ASSIGN_TEXT_MATCH_ONLY",
+      "kind": "Object.assign يُطابِقُ بنصِّ الاستدعاءِ وحدَه — كنيةُ Object أو assign تُفلتُ منَ المنظورِ",
+      "evidence": "مسابرُ grok المسماةُ (الخامُّ)",
+      "source": "grok"
+    },
+    {
+      "ref": "COUNCIL11_W040_GROK_CLASS_SHAPES_UNSEEN",
+      "kind": "أشكالُ الصنفِ غيرُ المرئيةِ: ClassExpression · منهجٌ يُرجِعُ this.run() · #run الخاص",
+      "evidence": "مسابرُ grok المسماةُ (الخامُّ)",
+      "source": "grok"
+    },
+    {
+      "ref": "COUNCIL11_W040_GROK_SIXTH_DEPTH_GREENS",
+      "kind": "العمقُ السادسُ ينجو (MAX_DEPTH=4): عمقُ 6 خرجَ EXIT=0 وكتبَ الصنفَ — يتقاطعُ معَ عيبِ gpt الأولِ (الجنسُ واحدٌ: السقفُ الثابتُ)",
+      "evidence": "مسبارُ grok المسمّى (الخامُّ — TOTAL_WRITES 29)",
+      "source": "grok"
+    },
+    {
+      "ref": "COUNCIL11_W040_GROK_LOCAL_DYNAMIC_IMPORT_GREENS",
+      "kind": "الاستيرادُ الديناميكيُّ المحليُّ (import() لمحدِّدٍ نسبيٍّ داخلَ src/**) ينجو — خارجَ الحدِّ المعلنِ «تدفّقٌ عبرَ .d.ts» فالبابُ أوسعُ منَ الإعلانِ",
+      "evidence": "مسبارُ grok المسمّى DYNAMIC_IMPORT_WROTE (الخامُّ)",
+      "source": "grok"
+    },
+    {
+      "ref": "COUNCIL11_W040_GROK_CALLSITE_VIA_MEMBER_DESTRUCTURING_REST_IGNORED",
+      "kind": "موضعُ النداءِ المرئيُّ عبرَ عضوٍ أو تفكيكٍ أو بقيةٍ يُهمَلُ — نمطُ معاملِ الدالةِ يُهمَلُ كليًا فالعضوُ منَ المعاملِ لا يُسألُ عن أصلِهِ",
+      "evidence": "مسابرُ grok المسماةُ (الخامُّ)",
+      "source": "grok"
+    },
+    {
+      "ref": "COUNCIL11_W040_GROK_DECLARED_LIMIT_OPENS_ON_MEMBER_DESTRUCTURING",
+      "kind": "الحدُّ المعلنُ ينفتحُ على العضوِ والتفكيكِ: unseenBox(box: any) وunseen({run}) بلا موضعِ نداءٍ خرجتا EXIT=0 — «لا يُخضَّرُ كذبًا» مُكذَّبٌ على propOrigin السطرِ 319",
+      "evidence": "مسابرُ grok المسماةُ (الخامُّ)",
+      "source": "grok"
+    },
+    {
+      "ref": "COUNCIL11_W040_GROK_FALSE_REJECT_PROPERTY_READ_ON_EXEC_SYMBOL",
+      "kind": "رفضٌ كاذبٌ لقراءةِ خاصّيّةٍ على رمزِ تنفيذٍ (eval.name · Function.length · Function.prototype) — وجهٌ ثانٍ للعيبِ",
+      "evidence": "مسابرُ grok المسماةُ (الخامُّ)",
+      "source": "grok"
+    },
+    {
+      "ref": "COUNCIL11_W040_GEMINI_CLASS_STATIC_METHOD_EXEC_ESCAPE",
+      "kind": "CLASS_STATIC_METHOD_EXEC_ESCAPE: استدعاءُ منهجٍ ساكنٍ Box.run()() — materializeViews لا تبني منظورَ صنفٍ إلا لتعبيراتِ الإنشاءِ isNewExpression فالمعرّفُ المباشرُ يعودُ بلا منظورٍ ويعودُ memberOrigin إلى DATA",
+      "evidence": "مسبارُ gemini المستقلُّ (SOOL_CHECK_ROOT): البناءُ ناجحٌ والحاجزُ أخضرُ EXIT=0 بلا [RC-14] (الخامُّ §5)",
+      "source": "gemini"
+    },
+    {
+      "ref": "COUNCIL11_W040_GEMINI_CLASS_INHERITANCE_METHOD_EXEC_ESCAPE",
+      "kind": "CLASS_INHERITANCE_METHOD_EXEC_ESCAPE: المنهجُ الموروثُ عبرَ extends — resolveMemberValue تبحثُ في الأعضاءِ المباشرينَ وحدَهم ولا تتبعُ heritageClauses فيُعَدُّ المنهجُ الموروثُ غيرَ موجودٍ ويمرُّ eval",
+      "evidence": "مسبارُ gemini المستقلُّ: new Derived().run()() — EXIT=0 بلا [RC-14] (الخامُّ §5)",
+      "source": "gemini"
+    },
+    {
+      "ref": "COUNCIL11_W040_GEMINI_OBJECT_ASSIGN_TARGET_MUTATION_ESCAPE",
+      "kind": "OBJECT_ASSIGN_TARGET_MUTATION_ESCAPE: Object.assign(target, …) يعدّي ربطًا قائمًا — flowsOf(target) يبقى على الحرفيِّ الأولِ {} ولا يتتبعُ التعديلَ الجانبيَّ فيمرُّ الوصولُ (يتقاطعُ معَ عيبِ gpt الثاني في جنسِ assign)",
+      "evidence": "مسبارُ gemini المستقلُّ: const target={}; Object.assign(target,{run:eval}); target.run(…) — EXIT=0 بلا [RC-14] (الخامُّ §5)",
+      "source": "gemini"
+    }
   ],
   "closed_previous_defects": [
-    { "ref": "COUNCIL10_W040_UNANIMOUS_REJECTED (16 عيبًا)", "kind": "حروفُ عيوبِ الجولةِ العاشرةِ الستَّ عشرةَ سقطت عندَ إعادةِ القياسِ (grok: «على هذا التجميدِ سقطت حروفُ الجولةِ العاشرةِ التي أعدتُ قياسَها لا جنسُها» · gemini: «ردمُ ثغراتِ الجولةِ العاشرةِ الـ16 المباشرة» · gpt: القياساتُ الرسميةُ بقيت خضراءَ) — والجنسُ عادَ في أربعَ عشرةَ صيغةً مسمّاةً جديدةً (قائمةُ defects أعلاه)", "closed": true, "source": "gpt+grok+gemini (الخامُّ الثلاثةُ)" },
-    { "ref": "N14 (الوجهُ الخامسُ والعشرونُ — قياسُهُ المزدوجُ المُعلَنُ في §13.187)", "kind": "التصديرُ الافتراضيُّ export default eval + import: مقبوضٌ على هذا التجميدِ بقياسِ grok (بناءُ الوجهِ بنفسِهِ: EXIT=1 برمزِ RC-14) وقياسِ gemini ([RC-14]) — والحقيقةُ المزدوجةُ المُعلَنةُ حُسمت بالقياسِ", "closed": true, "source": "grok+gemini" }
+    {
+      "ref": "COUNCIL10_W040_UNANIMOUS_REJECTED (16 عيبًا)",
+      "kind": "حروفُ عيوبِ الجولةِ العاشرةِ الستَّ عشرةَ سقطت عندَ إعادةِ القياسِ (grok: «على هذا التجميدِ سقطت حروفُ الجولةِ العاشرةِ التي أعدتُ قياسَها لا جنسُها» · gemini: «ردمُ ثغراتِ الجولةِ العاشرةِ الـ16 المباشرة» · gpt: القياساتُ الرسميةُ بقيت خضراءَ) — والجنسُ عادَ في أربعَ عشرةَ صيغةً مسمّاةً جديدةً (قائمةُ defects أعلاه)",
+      "closed": true,
+      "source": "gpt+grok+gemini (الخامُّ الثلاثةُ)"
+    },
+    {
+      "ref": "N14 (الوجهُ الخامسُ والعشرونُ — قياسُهُ المزدوجُ المُعلَنُ في §13.187)",
+      "kind": "التصديرُ الافتراضيُّ export default eval + import: مقبوضٌ على هذا التجميدِ بقياسِ grok (بناءُ الوجهِ بنفسِهِ: EXIT=1 برمزِ RC-14) وقياسِ gemini ([RC-14]) — والحقيقةُ المزدوجةُ المُعلَنةُ حُسمت بالقياسِ",
+      "closed": true,
+      "source": "grok+gemini"
+    }
   ],
   "notes": [
-    "الإجماعُ إجماعُ رفضٍ (REJECTED ×3 — لا خلافَ ولا موافقةً واحدةً) فلا VERIFIED (RULE-020 — لا يُمنحُ VERIFIED إلا بإجماعٍ على VERIFIED · سابقةُ الجولتينِ الثامنةِ والعاشرةِ) · الانتقالُ المشروعُ الوحيدُ REVIEW ⇒ IN_PROGRESS",
-    "العددُ يكبرُ بكلِّ جولةٍ ولا يُجمَّد (معيارُ العقدِ §4): 14 عيبًا مسمّى في هذهِ الجولةِ (2 عندَ gpt · 9 عندَ grok · 3 عندَ gemini) معَ تقاطعَينِ معلنَينِ (سقفُ العمقِ عندَ gpt/grok · جنسُ assign عندَ gpt/gemini)",
-    "npm run verify عندَ gemini سقطَ EXIT=1 كما وقعَ (مهلةُ SIGTERM على r4 تحتَ حملِ البيئةِ — أخضرُ منفردًا في الأمرِ 8 وفي بيئتَي gpt/grok) — سُجِّلَ لا يُخفى ولا يُدّعى يقينُ سببِهِ · وفرقُ عدٍّ توثيقيٌّ عندَهُ (79/79 والمانيفستُ 93) معلَنٌ كسابقتِهِ في §13.186-4 — الخامُّ لا يُحرَّرُ والحكمُ لا يتغيّرُ",
-    "أُعيدَ بناءُ الحزمةِ في بيئةِ الجلسةِ 171 منَ المواصفةِ §13.187 معلَنًا (§13.190) — بصمةُ مانيفستٍ جديدةٌ معلَنةٌ لا انتحالَ (بصمةُ 170 زالت ببيئتِها — سابقةُ §13.185)"
+    "13 من العيوب الأربعة عشر مسجَّلة كوجهة هروب أخضر (EXIT=0 والحاجز الساكن أخضر على الوجه الردمي) — مقيّسة بإعادة تشغيل مسبارات gemini (ADV3/ADV9/ADV12 EXIT=0) ومسبارات gpt/grok في خامّيهما؛ عيب grok التاسع (الرفض الكاذب لقراءة خاصية على رمز تنفيذ) هو الوجه المعاكس (رفضٌ زائد) لا هروبًا أخضر — تصويب §13.192.",
+    "إسقاط حروف الجولة العاشرة مؤسَّس على قياس r14 (25 وجهًا سلبيًا مضمّنة الحروف) — EXIT=0 في محضرين اثنين عند الثلاثة أعضاء؛ أعاد grok قياس الحروف التي اختارها، و«ردم الثغرات» صياغة gemini لحالة اختبار r14 — لا تعميم على ما لم يُعد قياسه.",
+    "الجلسة 171: تصويب بالإلحاق (§13.192 في عقد W-2026-066) — بصمة grok في المحضر كانت منقولة من خطأ نسخ في §13.189 (أصلها «96» صارت «b6»)؛ القيمة المقيسة للملف المسلَّم الملتزم كلمة-بكلمة هي 84fbd445d3a14d5526f1d680f5d6384c04662f764a9896b281ed866819a31978 — صُحّح الحقل هنا؛ الخامّات الثلاثة لم تُمسّ. سجل القياس: docs/test-reports/phase-40-W-2026-066-gemini-probes-rerun.txt."
   ]
 }
