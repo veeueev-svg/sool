@@ -16,6 +16,7 @@
  * (`f(...[a, b])`) يُفكُّ موضعيًّا. الماسحُ ما زالَ يجمعُ الحوافَّ وحدَها لا يُجسّدُ منظوراتٍ.
  */
 import ts from "typescript";
+import { resolvesToAssignMerge } from "./rehydrate_value_views";
 import { arrayLiteralElement, bindingElementKey, callableWithParams, collectThrows, foldKey, isAssignment, objectLiteralMemberInitializer, symbolID, unwrapFlow, TRAMPOLINE_KEYS } from "./rehydrate_origin_model";
 
 /**
@@ -128,16 +129,82 @@ export class BindingFlows {
         }
         if (decl !== undefined && callableWithParams(decl) && !decl.getSourceFile().isDeclarationFile) {
           args = expandSpreadLiterals(args);
+          // المعالجةُ السادسةُ عشرةَ (جلسةُ grok — النقشُ 6): أنماطُ التفكيكِ في المعاملاتِ تُربَطُ عضوًا
+          // عضوًا بحجّةِ الكائنِ الحرفيِّ (والمصفوفةِ موضعيًّا) — فتُرى من موضعِ النداءِ لا من جذرِها
           decl.parameters.forEach((p, i) => {
-            if (p.dotDotDotToken !== undefined || !ts.isIdentifier(p.name)) return;
+            if (ts.isObjectBindingPattern(p.name)) {
+              const arg = args[i];
+              if (arg !== undefined && ts.isObjectLiteralExpression(arg)) {
+                for (const el of p.name.elements) {
+                  if (!ts.isBindingElement(el) || !ts.isIdentifier(el.name)) continue;
+                  const m = objectLiteralMemberInitializer(arg, el.propertyName === undefined ? el.name.text : keyOfPropertyName(el.propertyName));
+                  if (m !== undefined) addParamFlow(sym(el.name), m);
+                  else addParamFlow(sym(el.name), arg);
+                }
+              } else if (arg !== undefined && !ts.isSpreadElement(arg)) {
+                for (const el of p.name.elements) {
+                  if (ts.isBindingElement(el) && ts.isIdentifier(el.name)) addParamFlow(sym(el.name), arg);
+                }
+              }
+              return;
+            }
+            if (ts.isArrayBindingPattern(p.name)) {
+              const arg = args[i];
+              if (arg !== undefined && ts.isArrayLiteralExpression(arg)) {
+                p.name.elements.forEach((el, j) => {
+                  if (!ts.isBindingElement(el) || !ts.isIdentifier(el.name)) return;
+                  const m = arrayLiteralElement(arg, j);
+                  if (m !== undefined) addParamFlow(sym(el.name), m);
+                });
+              }
+              return;
+            }
+            if (!ts.isIdentifier(p.name)) return;
+            if (p.dotDotDotToken !== undefined) {
+              // وسيطُ الراحةِ — بقايّا الوسائطِ من الموضعِ (مصفوفةً حرفيّةً صُنعتْ من هذا النداءِ)
+              const rest = args.slice(i).filter((a) => !ts.isSpreadElement(a));
+              addParamFlow(sym(p.name), ts.factory.createArrayLiteralExpression(rest));
+              return;
+            }
             const arg = args[i];
             if (arg !== undefined && !ts.isSpreadElement(arg)) addParamFlow(sym(p.name), arg);
           });
+        }
+        // المعالجةُ السادسةُ عشرةَ (جلسةُ grok — النقشُ 6): طفرةُ `Object.assign` على هدفٍ معرّفٍ —
+        // كلُّ عضوٍ من حججِ الكائناتِ الحرفيّةِ يصيرُ تدفّقَ خاصّيّةٍ للهدفِ (الكنيّةُ والمرجعُ يُعامَلانِ دمجًا)
+        if (resolvesToAssignMerge(n, this.checker)) {
+          const target = n.arguments[0];
+          if (target !== undefined && ts.isIdentifier(target)) {
+            for (const a of n.arguments.slice(1)) {
+              if (!ts.isObjectLiteralExpression(a)) continue;
+              for (const m of a.properties) {
+                if (ts.isPropertyAssignment(m) && ts.isIdentifier(m.name)) this.addPropFlow(sym(target), m.name.text, m.initializer);
+                if (ts.isPropertyAssignment(m) && ts.isStringLiteral(m.name)) this.addPropFlow(sym(target), m.name.text, m.initializer);
+                if (ts.isSpreadAssignment(m)) this.bindSpreadToTarget(sym(target), m.expression);
+              }
+            }
+          }
         }
       }
       ts.forEachChild(n, visit);
     };
     visit(this.file);
+  }
+
+  /** نشرُ حرفيّاتِ الكائنِ على هدفِ الدمجِ — أعضاءُ المصدرِ الحرفيِّ تُربَطُ بالهدفِ */
+  private bindSpreadToTarget(targetSym: ts.Symbol | undefined, expr: ts.Expression): void {
+    const u = unwrapFlow(expr);
+    if (ts.isObjectLiteralExpression(u)) {
+      for (const m of u.properties) {
+        if (ts.isPropertyAssignment(m) && ts.isIdentifier(m.name)) this.addPropFlow(targetSym, m.name.text, m.initializer);
+      }
+      return;
+    }
+    if (ts.isIdentifier(u)) {
+      const s = this.checker.getSymbolAtLocation(u);
+      const srcDecl = s?.valueDeclaration ?? s?.declarations?.find((x) => x !== undefined);
+      if (srcDecl !== undefined && ts.isVariableDeclaration(srcDecl) && srcDecl.initializer !== undefined) this.bindSpreadToTarget(targetSym, srcDecl.initializer);
+    }
   }
 
   private collectBindingNames(name: ts.BindingName, out: ts.Identifier[]): void {
@@ -163,6 +230,11 @@ export class BindingFlows {
     if (flows === undefined) this.propFlows.set(id, [rhs]);
     else flows.push(rhs);
   }
+}
+
+/** مفتاحُ اسمِ الخاصّيّةِ في عنصرِ التفكيكِ (اسمٌ بسيطٌ أو حرفيّ) */
+function keyOfPropertyName(p: ts.PropertyName): string {
+  return ts.isIdentifier(p) ? p.text : ts.isStringLiteral(p) || ts.isNumericLiteral(p) ? p.text : "";
 }
 
 /** قناةُ المعاملِ بينَ الدوالِّ — عامّةٌ بالرموزِ (المعالجةُ الرابعةَ عشرةَ · عيب 6) */
