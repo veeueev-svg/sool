@@ -1940,9 +1940,8 @@
         "docs/work/council/W-2026-040-11-gemini.md",
         "docs/test-reports/phase-40-W-2026-066-gemini-probes-rerun.txt",
         "docs/work/council/W-2026-040-12.json",
-        "docs/work/council/W-2026-040-12-gpt.md",
-        "docs/work/council/W-2026-040-12-grok.md",
-        "docs/work/council/W-2026-040-12-gemini.md"
+        "docs/work/council/W-2026-040-12-claude-1.md",
+        "docs/work/council/W-2026-040-12-claude-2.md"
       ],
       "excluded": [
         "تعديلُ أيِّ تقريرٍ خامٍّ لعضو — يُحفظ كما كتبه",
