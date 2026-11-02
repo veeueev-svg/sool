@@ -54,6 +54,20 @@ export interface CouncilDeclaration {
   rule: string;
   min_members: number;
   members: CouncilMember[];
+  /**
+   * استثناءٌ موثَّقٌ محصورٌ للثابتِ 3 (W-2026-073 · الأمرُ الملكيُّ 01 — 2026-11-01):
+   * أمرٌ ملكيٌّ مسمّى يسمّي عائلةً (أو عائلاتٍ) يجوزُ فيها عضوانِ، لأجلِ تشكيلٍ مسمًّى وحدَه.
+   * محصورٌ بما يسمّيه: لا يُعمَّمُ على عائلةٍ لم تُسمَّ ولا على تشكيلٍ آخر، ولا يُورَثُ بجولةٍ
+   * لاحقةٍ إلا بأمرٍ ملكيٍّ جديدٍ يسمّيه. والحدُّ الأدنى والإجماعُ وسائرُ الثوابتِ لا يُمسّها.
+   */
+  same_family_exception?: { royal_order: string; families: string[]; note?: string };
+  /**
+   * سجلُ التشكيلاتِ المؤرَّخ (W-2026-073): تغييرُ عائلاتِ المجلسِ بأمرِ المالكِ لا يُسقطُ
+   * صحةَ المحاضرِ التاريخيةِ — فكلُّ محضرٍ يُتحققُ من تشكيلِ عهدِهِ (آخرُ تشكيلٍ نافذٌ
+   * في `convened_at` أو قبله) لا بالتشكيلِ الحاليِّ. وآخرُ تشكيلٍ في السجلِّ يجبُ أن يطابقَ
+   * أعضاءَ الإعلانِ الحاليينَ حرفيًّا، والتواريخُ صاعدةٌ سليمةٌ (YYYY-MM-DD).
+   */
+  formation_history?: { effective_from: string; members: CouncilMember[]; same_family_exception?: { royal_order: string; families: string[]; note?: string } }[];
 }
 export interface CouncilVerdict { member: string; model?: string; verdict: string; report: string }
 export interface CouncilDisposition { kind: string; ref?: string }
@@ -100,6 +114,34 @@ export function checkDeclaration(d: CouncilDeclaration | null | undefined): stri
   if (!Number.isInteger(d.min_members) || d.min_members < COUNCIL_MIN_MEMBERS) e.push(`min_members=${String(d.min_members)} — والأمرُ لا يقبل أقلَّ من ${COUNCIL_MIN_MEMBERS}`);
   const members = Array.isArray(d.members) ? d.members : [];
   if (members.length < Math.max(COUNCIL_MIN_MEMBERS, Number(d.min_members) || 0)) e.push(`المجلسُ ${members.length} عضوًا — دون الحدِّ المعلن`);
+  e.push(...checkMembers(members, d.same_family_exception));
+  // سجلُ التشكيلاتِ المؤرَّخ (W-2026-073): كلُّ تشكيلٍ يُفحصُ باستثناءِهِ الخاص، والاتساقُ معَ الحاليِّ مقيسٌ
+  const hist = Array.isArray(d.formation_history) ? d.formation_history : [];
+  for (let i = 0; i < hist.length; i++) {
+    const f = hist[i]!;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(f?.effective_from))) e.push(`formation_history[${i}]: تاريخُ نفاذٍ ليسَ YYYY-MM-DD`);
+    if (i > 0 && String(f?.effective_from) <= String(hist[i - 1]!.effective_from)) e.push(`formation_history[${i}]: التواريخُ ليست صاعدةً — فتشكيلانِ متنازعانِ على عهدٍ واحد`);
+    const fm = Array.isArray(f?.members) ? f.members : [];
+    if (fm.length < Math.max(COUNCIL_MIN_MEMBERS, Number(d.min_members) || 0)) e.push(`formation_history[${i}]: تشكيلُ العهدِ دونَ الحدِّ الأدنى`);
+    e.push(...checkMembers(fm, f?.same_family_exception));
+  }
+  if (hist.length > 0) {
+    const last = hist[hist.length - 1]!;
+    if (JSON.stringify(last.members) !== JSON.stringify(members)) e.push('آخرُ تشكيلٍ في formation_history لا يطابقُ أعضاءَ الإعلانِ الحاليينَ — فالسجلُ التاريخيُّ والحالُ الحاضرُ متناقضان');
+    if (JSON.stringify(last.same_family_exception ?? null) !== JSON.stringify(d.same_family_exception ?? null)) e.push('استثناءُ آخرِ تشكيلٍ في formation_history لا يطابقُ استثناءَ الإعلانِ الحاليِّ');
+  }
+  return e;
+}
+
+/**
+ * فحصُ أعضاءِ تشكيلٍ (الحاليِّ أو تاريخيٍّ) بالثابتِ 3 واستثناءِهِ الموثَّقِ المحصورِ (W-2026-073):
+ * لا يُقبلُ تكرارُ عائلةٍ إلا باستثناءٍ تامٍّ يسمّيها — فالناقصُ يُعلَنُ نقصَهُ ولا يُمرَّرُ بصمت.
+ */
+function checkMembers(members: CouncilMember[], exc: { royal_order?: string; families?: string[] } | undefined): string[] {
+  const e: string[] = [];
+  const excFams = new Set<string>(Array.isArray(exc?.families) ? exc?.families.map((f) => norm(f)) : []);
+  const excValid = typeof exc?.royal_order === 'string' && exc.royal_order.trim() !== '' && excFams.size > 0;
+  if (exc !== undefined && !excValid) e.push('استثناءُ الثابتِ 3 ناقصٌ (بلا مسارِ أمرٍ ملكيٍّ مسمًّى أو بلا عائلاتٍ مسمّاة) — والناقصُ يُعلَنُ ولا يُمرَّرُ بصمت (W-2026-073)');
   const ids = new Set<string>();
   const fams = new Set<string>();
   for (const m of members) {
@@ -107,11 +149,25 @@ export function checkDeclaration(d: CouncilDeclaration | null | undefined): stri
       if (typeof m?.[k] !== 'string' || m[k].trim() === '') e.push(`عضوٌ بلا «${k}» — والهويّةُ المعلنةُ شرطٌ لا تجميل`);
     }
     if (ids.has(norm(m?.id))) e.push(`معرّفُ عضوٍ مكرّر «${m.id}»`);
-    if (fams.has(norm(m?.family))) e.push(`عائلةٌ مكرّرة «${m.family}» — لا يجلس عضوان من عائلةٍ واحدة (الثابت 3)`);
+    if (fams.has(norm(m?.family)) && !(excValid && excFams.has(norm(m?.family)))) e.push(`عائلةٌ مكرّرة «${m.family}» — لا يجلس عضوان من عائلةٍ واحدة (الثابت 3) إلا باستثناءٍ موثَّقٍ يسمّيها (W-2026-073)`);
     ids.add(norm(m?.id));
     fams.add(norm(m?.family));
   }
   return e;
+}
+
+/**
+ * تشكيلُ عهدِ تاريخٍ ما (W-2026-073): آخرُ تشكيلٍ في السجلِّ نافذٌ في ذلكَ التاريخِ أو قبله،
+ * والحاليُّ إن لم يكن ثمّةَ سجلٌّ. فالمحضرُ يُحكمُ بتشكيلِ عهدِهِ لا بتشكيلِ الغدِ.
+ */
+export function formationFor(d: CouncilDeclaration, date: string): { members: CouncilMember[]; same_family_exception?: { royal_order: string; families: string[]; note?: string } } {
+  const hist = Array.isArray(d.formation_history) ? d.formation_history : [];
+  if (hist.length === 0) return { members: d.members, same_family_exception: d.same_family_exception };
+  // ما سبقَ أولَ تشكيلٍ في السجلِّ فمجلسُهُ لم يكنْ — فلا يُقبلُ حكمُهُ بصمتٍ (W-2026-073)
+  let chosen: { effective_from: string; members: CouncilMember[]; same_family_exception?: { royal_order: string; families: string[]; note?: string } } | null = null;
+  for (const f of hist) if (String(f.effective_from) <= String(date)) chosen = f;
+  if (chosen === null) return { members: [] };
+  return chosen;
 }
 
 /** يفحص محضرًا واحدًا مقابلَ الإعلان (الثوابت 1–4) */
@@ -124,20 +180,22 @@ export function checkRecord(r: CouncilRecord, d: CouncilDeclaration, fileExists:
   if (!Number.isInteger(r?.session) || (r?.session as number) < 1) e.push(`${tag}: بلا رقمِ جلسةٍ صالحٍ (session عددٌ صحيحٌ ≥ 1) — فالتاريخُ يومٌ لا يرتّبُ جلستين في يومٍ واحد (الثابت 7)`);
   if (r?.decision === 'VERIFIED' && !/^[0-9a-f]{64}$/.test(String(r?.scope_digest ?? ''))) e.push(`${tag}: محضرُ VERIFIED بلا scope_digest — والحكمُ الذي لا يُربط بما رُوجع يُرقّي ما لم يُراجَع (الثابت 6)`);
   if (typeof r?.executor_family !== 'string' || r.executor_family.trim() === '') e.push(`${tag}: بلا عائلةِ المنفّذ — فلا يُقاس اختلافُ العائلات (الثابت 3)`);
-  const byId = new Map(d.members.map((m) => [norm(m.id), m]));
+  // W-2026-073: المحضرُ يُحكمُ بتشكيلِ عهدِهِ (آخرُ تشكيلٍ نافذٍ في convened_at أو قبله) — فتغييرُ العائلاتِ بأمرِ المالكِ لا يُسقطُ التاريخَ ولا يُقبلُ حكمُ من لم يُعلَنْ في عهدِهِ
+  const formation = formationFor(d, String(r?.convened_at ?? ''));
+  const byId = new Map(formation.members.map((m) => [norm(m.id), m]));
   const seen = new Set<string>();
   const verdicts = Array.isArray(r?.verdicts) ? r.verdicts : [];
   for (const v of verdicts) {
     const m = byId.get(norm(v?.member));
-    if (m === undefined) { e.push(`${tag}: حكمٌ من غيرِ عضوٍ معلن «${String(v?.member)}»`); continue; }
+    if (m === undefined) { e.push(`${tag}: حكمٌ من غيرِ عضوٍ معلنٍ في عهدِ محضرِهِ «${String(v?.member)}»`); continue; }
     if (seen.has(norm(v.member))) e.push(`${tag}: حكمان للعضو «${v.member}»`);
     seen.add(norm(v.member));
     if (norm(m.family) === norm(r.executor_family)) e.push(`${tag}: العضو «${m.id}» من عائلةِ المنفّذ (${m.family}) — والمراجعُ لا يكون من عائلةِ من يراجعه (الثابت 3)`);
     if (!has(COUNCIL_VERDICTS, v.verdict)) e.push(`${tag}: حكمُ «${m.id}» خارجَ المعجم «${String(v.verdict)}»`);
     if (typeof v.report !== 'string' || v.report.trim() === '' || !fileExists(v.report)) e.push(`${tag}: تقريرُ «${m.id}» الخامُّ غيرُ محفوظ «${String(v?.report)}» (الثابت 4)`);
   }
-  for (const m of d.members) if (!seen.has(norm(m.id))) e.push(`${tag}: لا حكمَ للعضو «${m.id}» — والقرارُ بلا كلِّ الأعضاء ليس قرارَ مجلس`);
-  const unanimous = verdicts.length > 0 && seen.size === d.members.length && verdicts.every((v) => v.verdict === 'VERIFIED');
+  for (const m of formation.members) if (!seen.has(norm(m.id))) e.push(`${tag}: لا حكمَ للعضو «${m.id}» في تشكيلِ عهدِ المحضرِ — والقرارُ بلا كلِّ أعضاءِ العهدِ ليس قرارَ مجلس`);
+  const unanimous = verdicts.length > 0 && seen.size === formation.members.length && verdicts.every((v) => v.verdict === 'VERIFIED');
   if (!has(COUNCIL_DECISIONS, r?.decision)) e.push(`${tag}: قرارٌ خارجَ المعجم «${String(r?.decision)}»`);
   else if (r.decision === 'VERIFIED' && !unanimous) e.push(`${tag}: القرارُ VERIFIED بلا إجماع — والخلافُ لا يُرقّي (الثابت 2)`);
   else if (r.decision === 'NOT_VERIFIED') {

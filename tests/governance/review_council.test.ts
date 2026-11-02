@@ -135,6 +135,62 @@ test('مجلس: إعلانٌ بعضوٍ واحد، أو عائلتين مكرّ�
   assert.ok(checkDeclaration(null).length > 0);
 });
 
+test('مجلس: استثناءُ الثابتِ 3 الموثَّقُ (W-2026-073 · الأمرُ الملكيُّ 01) — محصورٌ لا مُعمَّم', () => {
+  // عائلةٌ مكرّرةٌ بلا استثناء ⇒ يسقط كما كان (الثابتُ 3 سليمٌ لغيرِ المستثنى)
+  const twin = decl({ members: [decl().members[0]!, { id: 'gpt2', model: 'GPT 5.5', provider: 'OpenAI', family: 'gpt' }] });
+  assert.ok(checkDeclaration(twin).some((m) => /الثابت 3/.test(m)));
+  // وباستثناءٍ تامٍّ يسمّي العائلةَ المكررةَ ⇒ يُقبل
+  const exc = { same_family_exception: { royal_order: 'docs/royal-orders/x.md', families: ['GPT'] } };
+  assert.deepEqual(checkDeclaration({ ...twin, ...exc }), []);
+  // وباستثناءٍ يسمّي عائلةً أخرى غيرَ المكررةِ ⇒ يسقط (المحصورُ لا يُعمَّم)
+  const otherExc = { same_family_exception: { royal_order: 'docs/royal-orders/x.md', families: ['Claude'] } };
+  assert.ok(checkDeclaration({ ...twin, ...otherExc }).some((m) => /الثابت 3/.test(m)));
+  // وباستثناءٍ ناقصِ الحقولِ (مسارٌ فارغٌ أو عائلاتٌ فارغة) ⇒ يُعلَنُ النقصُ ويسقط
+  const bare1 = { same_family_exception: { royal_order: ' ', families: ['GPT'] } };
+  const bare2 = { same_family_exception: { royal_order: 'docs/royal-orders/x.md', families: [] } };
+  for (const b of [bare1, bare2]) assert.ok(checkDeclaration({ ...twin, ...b }).some((m) => /ناقص|الثابت 3/.test(m)), JSON.stringify(b));
+  // واستثناءٌ لعائلةٍ غيرِ مكررةٍ في الأعضاء ⇒ مقبولٌ (لا يُعمَّمُ الرفض)
+  assert.deepEqual(checkDeclaration({ ...decl(), ...exc }), []);
+});
+
+test('مجلس: سجلُ التشكيلاتِ المؤرَّخ (W-2026-073) — المحضرُ يُحكمُ بتشكيلِ عهدِهِ لا بتشكيلِ الغدِ', () => {
+  const newFormation = [
+    { id: 'claude-1', model: 'Claude Opus 5.5', provider: 'Anthropic', family: 'Claude' },
+    { id: 'claude-2', model: 'Claude Opus 5.5', provider: 'Anthropic', family: 'Claude' },
+  ];
+  const exc = { royal_order: 'docs/royal-orders/x.md', families: ['Claude'] };
+  const d = decl({
+    members: newFormation,
+    same_family_exception: exc,
+    formation_history: [
+      { effective_from: '2026-10-03', members: decl().members },
+      { effective_from: '2026-11-01', members: newFormation, same_family_exception: exc },
+    ],
+  });
+  assert.deepEqual(checkDeclaration(d), []);
+  // محضرٌ من عهدِ التشكيلِ القديمِ (gpt·grok) بتاريخٍ قبلَ التغييرِ ⇒ صحيحٌ كما كانَ — فالتاريخُ لا يسقطُ
+  assert.deepEqual(evaluateCouncil(d, verified, [rec({ convened_at: '2026-10-20' })], yes), []);
+  // ومحضرٌ بتشكيلِ العهدِ الجديدِ في عهدِهِ الجديدِ ⇒ صحيحٌ (الاستثناءُ المسمّى)
+  const claudeRec = rec({
+    convened_at: '2026-11-01',
+    executor_family: 'GLM',
+    verdicts: [
+      { member: 'claude-1', verdict: 'VERIFIED', report: 'r' },
+      { member: 'claude-2', verdict: 'VERIFIED', report: 'r' },
+    ],
+  });
+  assert.deepEqual(evaluateCouncil(d, verified, [claudeRec], yes), []);
+  // ومحضرٌ بتشكيلٍ قديمٍ في العهدِ الجديدِ ⇒ يسقط (حكمٌ من غيرِ عضوٍ معلنٍ في عهدِ محضرِهِ)
+  assert.ok(evaluateCouncil(d, verified, [rec({ convened_at: '2026-11-01' })], yes).some((m) => /من غيرِ عضوٍ معلنٍ في عهدِ محضرِهِ/.test(m)));
+  // ومحضرٌ بتاريخٍ يسبقُ أولَ تشكيلٍ في السجلِّ ⇒ يسقطُ أحكامُهُ — فمجلسَهُ لم يكنْ
+  assert.ok(evaluateCouncil(d, verified, [rec({ convened_at: '2026-09-01' })], yes).some((m) => /من غيرِ عضوٍ معلنٍ في عهدِ محضرِهِ/.test(m)));
+  // والاتساقُ مقيس: آخرُ تشكيلٍ لا يطابقُ الحاليِّ ⇒ يسقط، والتواريخُ غيرُ صاعدةٍ ⇒ تسقط
+  const mismatch = { ...d, formation_history: [{ effective_from: '2026-11-01', members: decl().members }] };
+  assert.ok(checkDeclaration(mismatch).some((m) => /لا يطابقُ أعضاءَ الإعلانِ/.test(m)));
+  const unsorted = { ...d, formation_history: [...d.formation_history!.slice().reverse()] };
+  assert.ok(checkDeclaration(unsorted).some((m) => /ليست صاعدةً/.test(m)));
+});
+
 test('مجلس: ثلاثةُ أعضاءٍ من عائلاتٍ مختلفة — الإجماعُ يلزم الثلاثة', () => {
   const three = decl({ members: [...decl().members, { id: 'gemini', model: 'Gemini', provider: 'Google', family: 'Gemini' }] });
   assert.deepEqual(checkDeclaration(three), []);
@@ -208,4 +264,8 @@ test('مجلس: الحالُ الحقيقيُّ للمستودع — لا VERIFI
   const realDigest = (scope: readonly string[]): string => scopeDigest(scope, fileHash, sha);
   assert.deepEqual(evaluateRaw(d, q.work_items, records, (p) => existsSync(p) && readFileSync(p, 'utf8').trim() !== '', realDigest), []);
   assert.ok(existsSync(d.authority), 'قرارُ المالك المسمّى في الإعلان موجود');
+  // واستثناءُ الثابتِ 3 إن وُجدَ فملفُّ الأمرِ الملكيِّ المسمّى فيهِ قائمٌ (W-2026-073)
+  if (d.same_family_exception?.royal_order) {
+    assert.ok(existsSync(d.same_family_exception.royal_order), 'الأمرُ الملكيُّ المسمّى في استثناءِ الثابتِ 3 موجود');
+  }
 });

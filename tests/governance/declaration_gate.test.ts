@@ -36,7 +36,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   ROOT, allCriteriaMet, editIn, runCheck, withRoot, withTampered, writeOrder,
@@ -65,7 +65,14 @@ test('T-127: نسبةُ 100% وثمّ صفٌّ ليس ✅ تُسقط البوا�
 });
 
 test('T-127: اعتمادٌ ملكيٌّ مدَّعًى في version.json بلا أمرٍ مقيَّد يُسقط البوابة', () => {
-  withTampered(VERSION, (t) => t.replace(/"royal_approval": *"[^"]*"/, '"royal_approval": "granted"'), (r) => {
+  // (W-2026-073) سُجِّلَ أولُ أمرٍ ملكيٍّ فعليٍّ في المستودع، فلم يعد خلوُّ السجلِ حالَ المستودع —
+  // يُصطنعُ هنا في النسخة: لا أمرَ مقيَّدًا + دعوى اعتمادٍ ⇒ رسالةُ «بلا أمرٍ موقَّعٍ مقيَّد» بعينها
+  withRoot((root) => {
+    editIn(root, VERSION, (t) => t.replace(/"royal_approval": *"[^"]*"/, '"royal_approval": "granted"'));
+    for (const f of readdirSync(join(root, 'docs/royal-orders'))) {
+      if (f.endsWith('.md') && f !== 'README.md') rmSync(join(root, 'docs/royal-orders', f));
+    }
+  }, (r) => {
     assert.equal(r.code, 1, r.out);
     assert.match(r.out, /بلا أمرٍ ملكيٍّ موقَّعٍ مقيَّد/);
   });

@@ -4,30 +4,88 @@
   "min_members": 2,
   "members": [
     {
-      "id": "gpt",
-      "model": "GPT 5.6 Terra",
-      "provider": "OpenAI",
-      "family": "GPT",
-      "runtime_id": "gpt_5_6_terra",
-      "availability_checked_at": "2026-10-03"
+      "id": "claude-1",
+      "model": "Claude Opus 5.5",
+      "provider": "Anthropic",
+      "family": "Claude",
+      "runtime_id": "claude_opus_5_5",
+      "availability_checked_at": "2026-11-01"
     },
     {
-      "id": "grok",
-      "model": "Grok 4.7",
-      "provider": "xAI",
-      "family": "Grok",
-      "runtime_id": "grok_4_7",
-      "availability_checked_at": "2026-10-03"
-    },
-    {
-      "id": "gemini",
-      "model": "Gemini 3.8 Flash",
-      "provider": "Google",
-      "family": "Gemini",
-      "runtime_id": "gemini_3_8_flash",
-      "availability_checked_at": "2026-10-03"
+      "id": "claude-2",
+      "model": "Claude Opus 5.5",
+      "provider": "Anthropic",
+      "family": "Claude",
+      "runtime_id": "claude_opus_5_5",
+      "availability_checked_at": "2026-11-01"
     }
   ],
-  "expansion": "العضوُ الثالث (Gemini 3.8 Flash · Google) أُضيف بأمر المالك في 2026-10-03 (ADR-0054 §6). ويتّسع المجلسُ لعضوٍ رابعٍ أو أكثر بعائلةٍ مختلفةٍ عن كلِّ عضوٍ قائم وعن عائلةِ المنفّذ، ويُسجَّل القرارُ قبل انعقاد الجلسة. والإجماعُ يبقى قاعدةَ القرار أيًّا كان العدد.",
-  "availability_note": "تحقّقٌ 2026-10-03: شُغّل وكيلٌ بمعرّف التشغيل لكلّ عضو فأجاب الثلاثة. Grok 4.6 الذي سمّاه الأمرُ غيرُ متاح على منصّة التشغيل، فاستُبدل بـGrok 4.7 (العائلة والمزوّد نفساهما) بأمر المالك «حدّث المجلس تلقائيًا» (ADR-0054 §7). الهويّةُ الذاتيّة غيرُ موثوقة: gemini_3_8_flash عرّف نفسَه «Gemini 3.7 Flash»؛ فالمرجعُ معرّفُ التشغيل لا إقرارُ النموذج."
+  "same_family_exception": {
+    "royal_order": "docs/royal-orders/2026-11-01-01-council-accessible-models-constant3-exception.md",
+    "families": [
+      "Claude"
+    ],
+    "note": "استثناءٌ موثَّقٌ محصورٌ بالأمرِ الملكيِّ 01 (2026-11-01): تشكيلٌ مسمًّى من عضوَينِ معزولَينِ من عائلة Claude وحدَها — لأمرِ المالكِ «قم بتشغيل جولة من النماذج اللتي تستطيع الوصول اليها في بيئتك» بعدَ أن قِيسَ أنَّ لا عائلةَ أخرى متاحةً على الخطة (الجولاتُ 172–176) والمفاتيحُ مرفوضةٌ (§13.204). لا يُعمَّمُ على عائلةٍ أخرى ولا على تشكيلٍ آخرَ ولا يُورَثُ بجولةٍ لاحقةٍ إلا بأمرٍ ملكيٍّ جديدٍ يسمّيه. الأعضاءُ منَ عائلةِ المنسِّقِ بأمرٍ ملكيٍّ صريحٍ — يُعلَنُ في المحضرِ ولا يُخفى."
+  },
+  "expansion": "أُعلنت العائلاتُ الجديدةُ بأمرِ المالكِ (الأمرُ الملكيُّ 01 · 2026-11-01 · W-2026-073): عضوانِ معزولانِ من عائلة Claude — استثناءً موثَّقًا محصورًا للثابتِ 3. والإجماعُ يبقى قاعدةَ القرارِ أيًّا كانَ العدد.",
+  "availability_note": "تحقّقٌ 2026-11-01 (الجلسة 176): كلُّ محاولاتِ تشغيلِ النماذجِ منَ العائلاتِ الأخرى (gpt_6_1_sol · kimi_k3 · deepseek_v4_pro_0813 · grok_4_7 · gemini_4_argon) ارتدَّت إلى Claude Opus 5.5 بإعلانِ منصةِ التشغيل («isn't on this user's plan») — والخزانةُ فارغةٌ والمفتاحانِ مرفوضانِ منَ المالكِ (§13.204). فالتشكيلُ المسمّى في الأمرِ الملكيِّ هو المتاحُ وحدَه. والهويّةُ الذاتيّةُ غيرُ موثوقة: المرجعُ معرّفُ التشغيلِ وإعلانُ المنصةِ لا إقرارُ النموذج.",
+  "formation_history": [
+    {
+      "effective_from": "2026-10-03",
+      "members": [
+        {
+          "id": "gpt",
+          "model": "GPT 5.6 Terra",
+          "provider": "OpenAI",
+          "family": "GPT",
+          "runtime_id": "gpt_5_6_terra",
+          "availability_checked_at": "2026-10-03"
+        },
+        {
+          "id": "grok",
+          "model": "Grok 4.7",
+          "provider": "xAI",
+          "family": "Grok",
+          "runtime_id": "grok_4_7",
+          "availability_checked_at": "2026-10-03"
+        },
+        {
+          "id": "gemini",
+          "model": "Gemini 3.8 Flash",
+          "provider": "Google",
+          "family": "Gemini",
+          "runtime_id": "gemini_3_8_flash",
+          "availability_checked_at": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "effective_from": "2026-11-01",
+      "members": [
+        {
+          "id": "claude-1",
+          "model": "Claude Opus 5.5",
+          "provider": "Anthropic",
+          "family": "Claude",
+          "runtime_id": "claude_opus_5_5",
+          "availability_checked_at": "2026-11-01"
+        },
+        {
+          "id": "claude-2",
+          "model": "Claude Opus 5.5",
+          "provider": "Anthropic",
+          "family": "Claude",
+          "runtime_id": "claude_opus_5_5",
+          "availability_checked_at": "2026-11-01"
+        }
+      ],
+      "same_family_exception": {
+        "royal_order": "docs/royal-orders/2026-11-01-01-council-accessible-models-constant3-exception.md",
+        "families": [
+          "Claude"
+        ],
+        "note": "استثناءٌ موثَّقٌ محصورٌ بالأمرِ الملكيِّ 01 (2026-11-01): تشكيلٌ مسمًّى من عضوَينِ معزولَينِ من عائلة Claude وحدَها — لأمرِ المالكِ «قم بتشغيل جولة من النماذج اللتي تستطيع الوصول اليها في بيئتك» بعدَ أن قِيسَ أنَّ لا عائلةَ أخرى متاحةً على الخطة (الجولاتُ 172–176) والمفاتيحُ مرفوضةٌ (§13.204). لا يُعمَّمُ على عائلةٍ أخرى ولا على تشكيلٍ آخرَ ولا يُورَثُ بجولةٍ لاحقةٍ إلا بأمرٍ ملكيٍّ جديدٍ يسمّيه. الأعضاءُ منَ عائلةِ المنسِّقِ بأمرٍ ملكيٍّ صريحٍ — يُعلَنُ في المحضرِ ولا يُخفى."
+      }
+    }
+  ]
 }
