@@ -1,0 +1,80 @@
+{
+  "item": "W-2026-040",
+  "commit": "e94199fd110debb513cfb56d51e9fcc04a60f942",
+  "scope_digest": "515b430e22304f49a4722f38fee660b470ee37b140b117acd3b2d48aa0c495e0",
+  "executor_family": "GLM (الجلسة 176 — المعالجةُ السادسةَ عشرةَ 044aac2+911b57d+e94199f)",
+  "launcher_family": "Perplexity Computer — GLM-5.3 (الجلسة 177 — بيئةٌ جديدةٌ أُعيدَ فيها بناءُ الحزمةِ منَ المواصفةِ §13.207 معلَنًا §13.208)",
+  "convened_at": "2026-11-03",
+  "session": 12,
+  "commissioning": "التشكيلُ المسمّى بالأمرِ الملكيِّ 01 (استثناءُ الثابتِ 3 الموثَّق في docs/royal-orders/RO-01-same-family-claude-exception.md — عائلةُ Claude وحدَها متاحةٌ في بيئةِ التكليفِ بعدَ رفضِ المالكِ للنموذجينِ الآمنينِ §13.204): claude-1 · claude-2 — الحزمةُ المجمّدةُ وفقَ المواصفةِ الملتزمةِ §13.207 (التجميد e94199f · مانيفستُ 101 ملفًا [10 جوهريةً + 90 تاريخيةً: 44 مجلسًا + 46 تقريرَ اختبارٍ بالعدِّ المصوَّبِ 3b9327e] · بصمةُ النطاقِ 515b430e… على 91 مسارًا) بُنيت في بيئةِ الجلسةِ 177 منَ المواصفةِ معلَنًا (§13.208 — سابقةُ §13.190) وقُرئ المانيفستُ في كلِّ جذرٍ معزولٍ (EXIT=0 × 2) وقُرئت بوّابتا CI على التجميدِ قبلَ التكليفِ (2026-11-03: التاجُ 40771111746 success · شاهدُ الحصرِ 40771111745 success) — تشغيلٌ متتابعٌ لا تزامنَ (RULE-020): claude-1 أوّلًا (خامُّهُ ad8fbad · 2026-11-04) ثمّ claude-2 (خامُّهُ fbab910 · 2026-11-04) — بوّابتا الدمجِ على خامِّ claude-1 قُرئتا بعدَ الدفعِ (التاجُ 41883018716 success · شاهدُ الحصرِ 41883018860 success)",
+  "verdicts": [
+    {
+      "member": "claude-1",
+      "model": "Claude Opus 5.5",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-040-12-claude-1.md",
+      "report_sha256": "1d1fa323ac85e4daa0f7bb3620d301816bcbcbc9502569466d92f40f69c4fa3b"
+    },
+    {
+      "member": "claude-2",
+      "model": "Claude Opus 5.5",
+      "verdict": "REJECTED",
+      "report": "docs/work/council/W-2026-040-12-claude-2.md",
+      "report_sha256": "1ab9b9a464eb4ee48c9f97548149e53909a6ce918a950cd111ddd8a53f120dfc"
+    }
+  ],
+  "decision": "NOT_VERIFIED",
+  "disposition": {
+    "kind": "IN_PROGRESS"
+  },
+  "defects": [
+    {
+      "ref": "COUNCIL12_W040_C1_KIND_ARG_DECLARED_TYPE_TRUSTED",
+      "kind": "حكمُ «لا مُنتِج» على وسيطِ الصنفِ يُستنتجُ منَ النوعِ الساكنِ المعلَنِ (literalsOf(declaredTypeOf(arg)) في scripts/rehydrate_producers.ts) فكلُّ قيمةٍ من مصدرِ any (JSON.parse وأمثاله) تُسنَدُ إلى حرفيٍّ بريءٍ تمرُّ — ثمانيةُ وجوهٍ أوّلُها بلا أيِّ تحويلٍ ولا any مكتوبٍ",
+      "evidence": "مسباراتُ claude-1 الخامُّ: الحاجزُ EXIT=0 وtsc EXIT=0 وتشغيلٌ فعليٌّ كتبَ archive_snapshot على القرصِ — قناةٌ لم تُسَمَّ في أيِّ جولةٍ سابقةٍ ولا يغطّيها أيٌّ منَ الحدودِ الخمسةِ المعلنةِ (يتقاطعُ معَ COUNCIL12_W040_C2_KIND_LITERAL_TYPE_TRUSTED_UNSOUNDLY)",
+      "source": "claude-1"
+    },
+    {
+      "ref": "COUNCIL12_W040_C1_INDEX_SIGNATURE_RECEIVER_CAST_GREENS",
+      "kind": "تحويلُ المستقبِلِ j as unknown as Record<string,fn> (أو {[k:string]:fn}) ثمّ مفتاحٌ محسوبٌ أو حلقةٌ على أسماءِ خصائصِ النموذجِ الأوليِّ تعبُرُ — ثلاثةُ وجوهٍ بينما الصيغةُ نفسُها عبرَ any تسقطُ بـ[RC-14] — إصلاحٌ ناقصٌ لعيبِ الجولةِ 4 AS_UNKNOWN_AS_STRUCTURAL_RECORD_GREENS_STATIC_GATE",
+      "evidence": "مسباراتُ claude-1 الخامُّ: الحاجزُ EXIT=0 وtsc EXIT=0 وكتابةُ archive_snapshot فعليةٌ (يتقاطعُ معَ COUNCIL12_W040_C2_RECEIVER_LAUNDERED_THROUGH_INDEX_SIGNATURE)",
+      "source": "claude-1"
+    },
+    {
+      "ref": "COUNCIL12_W040_C1_DEPTH_LIMIT_MISSTATED",
+      "kind": "الحدُّ المعلنُ (3 قفزاتٍ) في مسحِ الاستنفادِ أضيقُ منَ المقيسِ — وجهٌ بعمقِ 9 والرمزُ eval حرفيٌّ في الدالةِ نفسِها نجَا EXIT=0 وكتبَ archive_snapshot — الإعلانُ غيرُ صادقٍ",
+      "evidence": "مسبارُ claude-1 الخامُّ (عمقُ 9 · eval حرفيٌّ)",
+      "source": "claude-1"
+    },
+    {
+      "ref": "COUNCIL12_W040_C2_KIND_LITERAL_TYPE_TRUSTED_UNSOUNDLY",
+      "kind": "طبقةُ نفيِ المنتِجِ تثقُ بنظامِ الأنواعِ غيرِ السليمِ (soundness) في TypeScript: حكمُ kind يُوثَّقُ بنوعِهِ الحرفيِّ المعلَنِ فتنجو كتابةٌ مباشرةٌ لصنفٍ معفى بلا eval ولا as أصلًا — أوسعُ أبوابِ الحاجزِ لأنهُ لا يحتاجُ قناةَ تنفيذٍ",
+      "evidence": "مسباراتُ claude-2 الخامُّ (A1/A2/A7/A8/A10 — منها overload تُرجِعُ 'memory_record' نوعًا و'archive_snapshot' قيمةً بلا as وبلا any): TSC=0 · GATE_EXIT=0 · كتابةُ قيدٍ kind: archive_snapshot فعليةٌ ثمّ j.read() رمى PERSISTENCE_REHYDRATE_EXEMPTION_CONTRADICTED · الضبطُ الموجبُ A0 ⇒ EXIT=1 [RC-04]",
+      "source": "claude-2"
+    },
+    {
+      "ref": "COUNCIL12_W040_C2_RECEIVER_LAUNDERED_THROUGH_INDEX_SIGNATURE",
+      "kind": "المستقبِلُ يُغسَلُ عبرَ object ثمّ نوعِ فهرسةٍ (Record<string,F> أو {[k:string]:fn}) فمفتاحٌ محسوبٌ و.call تعبُرُ",
+      "evidence": "مسبارُ claude-2 الخامُّ (A4): GATE_EXIT=0 · كتابةٌ فعليةٌ مؤكَّدة",
+      "source": "claude-2"
+    },
+    {
+      "ref": "COUNCIL12_W040_C2_EXEC_VALUE_ESCAPES_VIA_CONTAINER_AND_MUTATION",
+      "kind": "جنسُ عيبِ الجولةِ 11 («قائمةُ الاشتقاقِ المغلقة») انتقلَ إلى صيغةٍ أخرى ولم يُعالَج منَ الجذرِ: قيمةٌ تنفيذيةٌ تفلتُ عبرَ حاويةٍ (Map/Set) أو تعديلٍ (push) أو النموذجِ الأوليِّ (setPrototypeOf) — القاعدةُ (1) «الاستلامُ يُسألُ لا يُعمَّمُ» لا تمسكُها رغمَ حضورِ eval نحويًّا",
+      "evidence": "مسباراتُ claude-2 الخامُّ (V4/V5/P3/P1): GATE_EXIT=0 · كتابةٌ فعليةٌ مؤكَّدة — والضبطُ: V1/V2/V6/V8/V9/P7/P11/P12/P13 ممسوكةٌ [RC-14]",
+      "source": "claude-2"
+    },
+    {
+      "ref": "COUNCIL12_W040_C2_TEXT_TO_CODE_VIA_CHILD_PROCESS_UNSEEN",
+      "kind": "الحاجزُ لا يعدُّ child_process + node -e قناةَ نصٍّ إلى شفرةٍ — وزنٌ أدنى",
+      "evidence": "مسبارُ claude-2 الخامُّ (V15): GATE_EXIT=0 · كتابةٌ فعليةٌ في تخطيطٍ فيه dist/",
+      "source": "claude-2"
+    },
+    {
+      "ref": "COUNCIL12_W040_C2_UNRELATED_RECORD_METHOD_FALSE_REJECT",
+      "kind": "رفضٌ كاذبٌ جديدٌ (الوجهُ الثاني للعيبِ): دالةُ record غيرُ ذاتِ صلةٍ بالصنفِ المعفى رُفِضت كذبًا",
+      "evidence": "مسبارُ claude-2 الخامُّ (L11): EXIT=1",
+      "source": "claude-2"
+    }
+  ]
+}
