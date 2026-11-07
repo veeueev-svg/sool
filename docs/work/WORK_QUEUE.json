@@ -5,7 +5,7 @@
   "gate": "scripts/check_work.mjs",
   "history": "docs/work/WORK_LOG.md",
   "id_pattern": "W-YYYY-NNN",
-  "updated_at": "2026-11-01",
+  "updated_at": "2026-11-07",
   "statuses": [
     "PROPOSED",
     "CLAIMED",
@@ -1984,6 +1984,7 @@
         "تصويب بالإلحاق — الجولة 11 (الجلسة 171): بصمة grok صُحّحت إلى القيمة المقيسة (تحقق كل بصمات الجولات 1–11: عدم تطابق واحد فقط)؛ «بصمة المانيفست تختلف» في §13.190 صُوّبت إلى «غير معلومة ولا يمكن المقارنة — الأصل لم يُسجَّل»؛ ادعاء «كلها EXIT=0» في ملاحظات المحضر صُوّب (عيب الرفض الكاذب وجه معاكس)؛ إعادة تشغيل مسبارات gemini مرتين — النتائج متطابقة (3 هروب EXIT=0 + N14 ملتقط EXIT=1 + LIVE1/LIVE2 EXIT=0) — سجل خام: docs/test-reports/phase-40-W-2026-066-gemini-probes-rerun.txt؛ انحراف توجيهي مسجَّل: كُتب «الأوامر الخمسة والعشرين» والأصل 24 (commands.txt). مقيسة، غير مُخفاة."
       ],
       "discoveries": [
+        "COUNCIL_FAMILY_RECHECK_20261107T132409Z: بأمر ابدا أُعيد فحص Kimi/DeepSeek/Grok/Gemini متتابعة في نافذة 13:23:16Z–13:24:09Z؛ الأربعة ارتدت إلى Claude، والخام ملحق في rechecks بملف الإتاحة. قُرئ CI على 457407b: التاج 42341560755 success (2546/2546) وشاهد الحصر 42341560713 success؛ PR135 مفتوح بلا مراجعة أو دمج؛ لم يرتفع عائق الإتاحة أو حجز W-2026-073، والحالة لا تتغير.",
         "COUNCIL_FAMILY_RUNTIME_UNAVAILABLE_20261107: الأمر الملكي 02 سجل تفويض تغيير العائلات؛ Claude + Kimi + DeepSeek هو الاختيار المستهدف وGrok/Gemini احتياط. أربعة معرفات غير Claude ارتدت إلى Claude في استدعاءات المنصة المتتابعة. الدليل: docs/test-reports/W-2026-066-2026-11-07-availability.json. لا يُدعى أن جميع نماذج المنصة اختُبرت.",
         "COUNCIL_DECLARATION_LOCKED_W073_20261107: الإعلان الحالي محجوز لـW-2026-073 في REVIEW؛ لم يُمس. REVIEW_COUNCIL.md وRULE-020 يسردان التشكيل القديم بينما JSON يحمل استثناء Claude؛ مصدر التشكيل الحالي JSON وformation_history والأمر 01، لا السرد التاريخي. تحديث الوثيقة لاحقًا يلزمه نطاق مشروع.",
         "COUNCIL12_ORDER_PATH_MISMATCH_20261107: commissioning في محضر W-2026-040-12.json يذكر docs/royal-orders/RO-01-same-family-claude-exception.md غير الموجود؛ المرجع القائم في REVIEW_COUNCIL.json هو docs/royal-orders/2026-11-01-01-council-accessible-models-constant3-exception.md. سُجل التصويب بالإلحاق ولم يُعدل المحضر التاريخي.",
