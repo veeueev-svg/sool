@@ -1,0 +1,56 @@
+{
+  "work_item": "W-2026-066",
+  "date_utc": "2026-11-07",
+  "base_commit": "99d3cd356f32bdb0a2cb021190c785be09eb6b7b",
+  "purpose": "Availability probes only; NOT a council round, review, or identity self-attestation.",
+  "execution": "Sequential; each preceding probe completed before the next spawn.",
+  "commissioning_prompt": "Availability probe only, NOT a council round and NOT a review. Do not access repository, read files, edit files, or run tests. Reply with one line 'Availability probe completed'. Do not infer or attest your own model identity; runtime metadata is the evidence.",
+  "records": [
+    {
+      "requested_model": "claude_opus_5_5",
+      "tool_response": {
+        "task_name": "/root/claude_availability_probe",
+        "model": {"display_name": "Claude Opus 5.5", "reasoning_effort": "medium"}
+      },
+      "agent_reply": "Availability probe completed"
+    },
+    {
+      "requested_model": "grok_4_7",
+      "tool_response": {
+        "task_name": "/root/grok_availability_probe",
+        "model": {"display_name": "Claude Opus 5.5", "reasoning_effort": "medium"},
+        "note": "`grok_4_7` isn't on this user's plan; the agent runs on Claude Opus 5.5."
+      },
+      "agent_reply": "Availability probe completed"
+    },
+    {
+      "requested_model": "gemini_4_argon",
+      "tool_response": {
+        "task_name": "/root/gemini_availability_probe",
+        "model": {"display_name": "Claude Opus 5.5", "reasoning_effort": "medium"},
+        "note": "`gemini_4_argon` isn't on this user's plan; the agent runs on Claude Opus 5.5."
+      },
+      "agent_reply": "Availability probe completed"
+    },
+    {
+      "requested_model": "kimi_k3",
+      "tool_response": {
+        "task_name": "/root/kimi_availability_probe",
+        "model": {"display_name": "Claude Opus 5.5", "reasoning_effort": "medium"},
+        "note": "`kimi_k3` isn't on this user's plan; the agent runs on Claude Opus 5.5."
+      },
+      "agent_reply": "Availability probe completed"
+    },
+    {
+      "requested_model": "deepseek_v4_pro_0813",
+      "tool_response": {
+        "task_name": "/root/deepseek_availability_probe",
+        "model": {"display_name": "Claude Opus 5.5", "reasoning_effort": "medium"},
+        "note": "`deepseek_v4_pro_0813` isn't on this user's plan; the agent runs on Claude Opus 5.5."
+      },
+      "agent_reply": "Availability probe completed"
+    }
+  ],
+  "evidence_limit": "Tool responses transcribed from this task. Not provider-signed provenance, not a claim of availability of every platform model, and not an organizational independence proof.",
+  "outcome": "Only Claude was observed among these five requested runtimes. No council round was launched."
+}
